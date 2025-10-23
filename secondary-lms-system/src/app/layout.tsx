@@ -1,29 +1,27 @@
 import type { Metadata } from "next";
-import { Poppins, Inter } from "next/font/google";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
 
-const poppins = Poppins({
-    subsets: ["latin"],
-    weight: ["400", "500", "600", "700"],
-    variable: "--font-poppins",
-});
-
-const inter = Inter({
-    subsets: ["latin"],
-    variable: "--font-inter",
+// Configure Roboto font for the entire application
+const roboto = Roboto({
+    subsets: ["vietnamese", "latin"],
+    weight: ["400", "500", "700", "900"],
+    display: "swap",
+    variable: "--font-roboto",
 });
 
 export const metadata: Metadata = {
     title: {
-        template: "%s | LMS Học Sinh THCS",
-        default: "LMS - Hệ Thống Quản Lý Học Tập",
+        template: "%s | LMS - Hệ Thống Học Tập THCS",
+        default: "EduVerse - Học tập thông minh, tương lai rực rỡ",
     },
     description:
-        "Hệ thống quản lý học tập trực tuyến cho học sinh THCS - Lịch sử, Địa lý, Tiếng Anh",
+        "Nền tảng học trực tuyến hiện đại dành cho học sinh THCS. Học tập thông minh, tương lai rực rỡ ✨",
     keywords: [
         "LMS",
-        "học tập trực tuyến",
+        "EduVerse", 
+        "học trực tuyến",
         "THCS",
         "Lịch sử",
         "Địa lý",
@@ -39,7 +37,7 @@ export default function RootLayout({
     return (
         <html lang="vi" suppressHydrationWarning>
             <body
-                className={`${poppins.variable} ${inter.variable} font-poppins antialiased`}
+                className={`${roboto.variable} font-roboto antialiased`}
             >
                 {children}
                 <Toaster />

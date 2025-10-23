@@ -114,7 +114,7 @@ export default function RegisterForm() {
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-[440px] w-full animate-fade-in relative z-10">
             <div className="text-center mb-3">
                 <div
-                    className="text-6xl mb-4 inline-block animate-float"
+                    className="text-6xl mb-4 inline-block animate-float-3d"
                     role="img"
                     aria-label="Biểu tượng tạo tài khoản"
                 >

@@ -80,7 +80,7 @@ export default function LoginForm() {
             {/* Logo Section */}
             <div className="text-center mb-1">
                 <div
-                    className="text-6xl mb-3 inline-block animate-float"
+                    className="text-6xl mb-3 inline-block animate-float-3d"
                     role="img"
                     aria-label="Biểu tượng học tập"
                 >
@@ -178,7 +178,7 @@ export default function LoginForm() {
                 {/* Forgot Password */}
                 <div className="text-right">
                     <Link
-                        href="/auth/forgot-password"
+                        href="/auth/reset-password"
                         className=" text-blue-400 hover:text-blue-600 font-medium hover:underline"
                         aria-label="Quên mật khẩu"
                     >
