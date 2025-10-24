@@ -1,3 +1,5 @@
-﻿export default function GradingForm() {
-    return (<div>GradingForm</div>);
+﻿"use client";
+
+export default function GradingForm() {
+  return (<div>GradingForm</div>);
 }
