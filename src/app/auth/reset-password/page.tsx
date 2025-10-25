@@ -1,5 +1,4 @@
 import React from 'react';
-import Image from 'next/image';
 import ResetPassword from '@/components/auth/reset-password/ResetPassword';
 
 export default function ResetPasswordPage() {
@@ -9,15 +8,6 @@ export default function ResetPasswordPage() {
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[url('/background-pattern.png')] opacity-5" />
       </div>
-
-      {/* Logo */}
-      <Image
-        src="/logo.svg"
-        alt="Logo"
-        width={48}
-        height={48}
-        className="w-auto mb-8 relative z-10"
-      />
 
       {/* Reset Password Form */}
       <ResetPassword />

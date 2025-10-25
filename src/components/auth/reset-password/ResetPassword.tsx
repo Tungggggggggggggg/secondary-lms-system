@@ -9,9 +9,15 @@ import SuccessStep from './SuccessStep';
 
 type Step = 1 | 2 | 3 | 4;
 
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
 export default function ResetPassword() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [email, setEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -19,8 +25,17 @@ export default function ResetPassword() {
   const handleEmailSubmit = async (submittedEmail: string) => {
     try {
       setIsLoading(true);
-      // TODO: API call to send reset code
-      await new Promise((r) => setTimeout(r, 1000));
+      const res = await fetch('/api/auth/reset-password/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: submittedEmail }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Có lỗi xảy ra');
+      }
       
       setEmail(submittedEmail);
       setCurrentStep(2);
@@ -30,11 +45,10 @@ export default function ResetPassword() {
         variant: 'success',
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Error sending reset code:', err);
       toast({
         title: '❌ Không thể gửi mã xác nhận',
-        description: 'Vui lòng thử lại sau.',
+        description: err instanceof Error ? err.message : 'Vui lòng thử lại sau.',
         variant: 'destructive',
       });
     } finally {
@@ -42,24 +56,35 @@ export default function ResetPassword() {
     }
   };
 
-  const handleVerifyCode = async (verificationCode: string) => {
+  const handleVerifyCode = async (code: string) => {
     try {
       setIsLoading(true);
-      // TODO: API call to verify code
-      await new Promise((r) => setTimeout(r, 1000));
-      console.log('Verifying code:', verificationCode);
+      const res = await fetch('/api/auth/reset-password/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email,
+          token: code 
+        }),
+      });
 
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Có lỗi xảy ra');
+      }
+
+      setVerificationCode(code);
       setCurrentStep(3);
       toast({
         title: '✅ Xác thực thành công!',
         variant: 'success',
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Error verifying code:', err);
       toast({
         title: '❌ Mã xác nhận không đúng',
-        description: 'Vui lòng kiểm tra và thử lại.',
+        description: err instanceof Error ? err.message : 'Vui lòng kiểm tra và thử lại.',
         variant: 'destructive',
       });
     } finally {
@@ -70,19 +95,27 @@ export default function ResetPassword() {
   const handleResendCode = async () => {
     try {
       setIsLoading(true);
-      // TODO: API call to resend code
-      await new Promise((r) => setTimeout(r, 1000));
+      const res = await fetch('/api/auth/reset-password/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Có lỗi xảy ra');
+      }
 
       toast({
         title: '📧 Đã gửi lại mã xác nhận!',
         variant: 'success',
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Error resending code:', err);
       toast({
         title: '❌ Không thể gửi lại mã',
-        description: 'Vui lòng thử lại sau.',
+        description: err instanceof Error ? err.message : 'Vui lòng thử lại sau.',
         variant: 'destructive',
       });
     } finally {
@@ -93,9 +126,28 @@ export default function ResetPassword() {
   const handlePasswordSubmit = async (password: string) => {
     try {
       setIsLoading(true);
-      // TODO: API call to reset password
-      await new Promise((r) => setTimeout(r, 1000));
-      console.log('Resetting password for:', email, 'New password length:', password.length);
+      const res = await fetch('/api/auth/reset-password/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email,
+          token: verificationCode,
+          password 
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        if (data.details) {
+          // Validation errors
+          const errors = (data.details as ValidationError[])
+            .map(error => error.message)
+            .join('\n');
+          throw new Error(errors);
+        }
+        throw new Error(data.error || 'Có lỗi xảy ra');
+      }
 
       setCurrentStep(4);
       toast({
@@ -103,20 +155,11 @@ export default function ResetPassword() {
         variant: 'success',
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Error resetting password:', err);
-      if (err instanceof Error) {
-        toast({
-          title: '❌ ' + err.message,
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: '❌ Không thể đặt lại mật khẩu',
-          description: 'Vui lòng thử lại sau.',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: '❌ ' + (err instanceof Error ? err.message : 'Không thể đặt lại mật khẩu'),
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }

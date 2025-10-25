@@ -35,4 +35,11 @@ export function cn(...inputs: ClassValue[]): string {
 	return result.join(' ');
 }
 
+/**
+ * Tạo mã xác nhận ngẫu nhiên gồm 6 số
+ */
+export function generateResetToken(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 export default cn;

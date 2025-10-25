@@ -73,7 +73,7 @@ export default function NewPasswordStep({ onSubmit, isLoading }: NewPasswordStep
     <>
       <div className="logo-section text-center mb-8">
         <div 
-          className="text-6xl mb-4 inline-block animate-float" 
+          className="text-6xl mb-4 inline-block animate-float-3d" 
           role="img" 
           aria-label="Biểu tượng mật khẩu mới"
         >

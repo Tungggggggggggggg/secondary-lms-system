@@ -1,8 +1,6 @@
 'use client';
 
 import { useGsapInit, useNavbarScroll, useSmoothScroll, useProgressBarAnimation, useMobileMenu } from '@/hooks/use-gsap';
-import { useSession, signOut } from 'next-auth/react';
-import Link from 'next/link';
 
 // Core Components
 import Navbar from '@/components/landing/Navbar';
@@ -20,8 +18,6 @@ export default function Home() {
     useSmoothScroll();
     useProgressBarAnimation();
     useMobileMenu();
-
-    const { data: session } = useSession();
 
     return (
         <main className="min-h-screen overflow-x-hidden bg-white">
