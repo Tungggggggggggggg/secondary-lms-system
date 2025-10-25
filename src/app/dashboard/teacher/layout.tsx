@@ -1,13 +1,18 @@
-import { ReactNode } from 'react';
+"use client";
+import Sidebar from "@/components/teacher/Sidebar";
+import Header from "@/components/teacher/Header";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
-interface TeacherLayoutProps {
-  children: ReactNode;
-}
-
-export default function TeacherLayout({ children }: TeacherLayoutProps) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen">
-      {children}
-    </div>
+    <ProtectedRoute allowedRoles={['teacher']}>
+      <div className="flex">
+        <Sidebar />
+        <main className="ml-72 min-h-screen w-full bg-gray-50">
+          <Header />
+          {children}
+        </main>
+      </div>
+    </ProtectedRoute>
   );
 }
