@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - EduVerse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        .gradient-border {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .gradient-border:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        .hover-lift:hover {
+            transform: translateY(-5px);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-72 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white shadow-2xl z-50">
+        <div class="p-6">
+            <div class="flex items-center gap-3 mb-10">
+                <span class="text-4xl">🎓</span>
+                <span class="text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">EduVerse</span>
+            </div>
+
+            <div class="bg-white/10 rounded-2xl p-4 mb-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-14 h-14 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center text-2xl font-bold">
+                        HS
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg">Nguyễn Văn A</h3>
+                        <p class="text-white/80 text-sm">Học sinh</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="space-y-2">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all bg-white/30 shadow-lg">
+                    <span class="text-xl">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all hover:bg-white/20">
+                    <span class="text-xl">📚</span>
+                    <span>Khóa học</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all hover:bg-white/20">
+                    <span class="text-xl">✍️</span>
+                    <span>Bài tập</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all hover:bg-white/20">
+                    <span class="text-xl">📈</span>
+                    <span>Điểm số</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all hover:bg-white/20">
+                    <span class="text-xl">📅</span>
+                    <span>Lịch học</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all hover:bg-white/20">
+                    <span class="text-xl">⚙️</span>
+                    <span>Hồ sơ</span>
+                </a>
+            </nav>
+
+            <div class="absolute bottom-6 left-6 right-6">
+                <button class="w-full flex items-center gap-3 px-4 py-3 bg-red-500/20 rounded-xl font-semibold hover:bg-red-500/30 transition-all">
+                    <span class="text-xl">🚪</span>
+                    <span>Đăng xuất</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-72 min-h-screen w-full bg-gray-50">
+        <div class="p-8 space-y-8">
+        <!-- Header -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Chào mừng trở lại! 👋</h1>
+            <p class="text-gray-600">Hôm nay là Thứ Sáu, 24 tháng 10, 2025</p>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
+            <button class="gradient-border rounded-2xl p-6 text-center hover-lift group">
+                <div class="text-5xl mb-3 animate-float">📚</div>
+                <h3 class="font-bold text-gray-800 mb-2">Bài học mới</h3>
+                <p class="text-sm text-gray-600">Tiếp tục học tập</p>
+            </button>
+            <button class="gradient-border rounded-2xl p-6 text-center hover-lift group">
+                <div class="text-5xl mb-3 animate-float">✍️</div>
+                <h3 class="font-bold text-gray-800 mb-2">Làm bài tập</h3>
+                <p class="text-sm text-gray-600">Hoàn thành assignment</p>
+            </button>
+            <button class="gradient-border rounded-2xl p-6 text-center hover-lift group">
+                <div class="text-5xl mb-3 animate-float">📊</div>
+                <h3 class="font-bold text-gray-800 mb-2">Xem điểm</h3>
+                <p class="text-sm text-gray-600">Kiểm tra kết quả</p>
+            </button>
+            <button class="gradient-border rounded-2xl p-6 text-center hover-lift group">
+                <div class="text-5xl mb-3 animate-float">🎯</div>
+                <h3 class="font-bold text-gray-800 mb-2">Mục tiêu</h3>
+                <p class="text-sm text-gray-600">Theo dõi tiến độ</p>
+            </button>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white hover-lift">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
+                        📖
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-extrabold">24</div>
+                        <div class="text-white/80 text-sm">Bài học</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="bg-white/20 px-2 py-1 rounded-full">↑ 5</span>
+                    <span class="text-white/80">Bài mới tuần này</span>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white hover-lift">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
+                        ✍️
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-extrabold">12</div>
+                        <div class="text-white/80 text-sm">Bài tập</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="bg-white/20 px-2 py-1 rounded-full">8</span>
+                    <span class="text-white/80">Đã nộp</span>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl p-6 text-white hover-lift">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
+                        ⭐
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-extrabold">8.5</div>
+                        <div class="text-white/80 text-sm">Điểm trung bình</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="bg-white/20 px-2 py-1 rounded-full">↑ 0.3</span>
+                    <span class="text-white/80">so với tháng trước</span>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl p-6 text-white hover-lift">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
+                        🔥
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-extrabold">7</div>
+                        <div class="text-white/80 text-sm">Ngày liên tiếp</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="bg-white/20 px-2 py-1 rounded-full">+2</span>
+                    <span class="text-white/80">So với tuần trước</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Left Column (2/3 width) -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- My Classes -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+                            🏫 Lớp học của tôi
+                        </h2>
+                        <a href="#" class="text-sm font-semibold text-purple-600 hover:text-purple-700">Xem tất cả →</a>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- Class Card 1 -->
+                        <div class="gradient-border rounded-xl p-5 hover-lift cursor-pointer">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center text-xl">📜</div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-800">Lịch sử 8A</h3>
+                                        <p class="text-sm text-gray-600">Thầy Nguyễn Văn An</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold mb-1">Đang học</div>
+                                    <div class="text-xs text-gray-500">Tiến độ: 67%</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 text-sm text-gray-600">
+                                <span>📖 8/12 bài học</span>
+                                <span>⏱️ 25 phút còn lại</span>
+                                <span class="ml-auto bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-semibold">Bài tập chờ làm</span>
+                            </div>
+                        </div>
+
+                        <!-- Class Card 2 -->
+                        <div class="gradient-border rounded-xl p-5 hover-lift cursor-pointer">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center text-xl">🌍</div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-800">Địa lý 9D</h3>
+                                        <p class="text-sm text-gray-600">Cô Trần Thị Bình</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold mb-1">Đang học</div>
+                                    <div class="text-xs text-gray-500">Tiến độ: 62%</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 text-sm text-gray-600">
+                                <span>📖 5/8 bài học</span>
+                                <span>⏱️ 45 phút còn lại</span>
+                                <span class="ml-auto bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold">Đã hoàn thành</span>
+                            </div>
+                        </div>
+
+                        <!-- Class Card 3 -->
+                        <div class="gradient-border rounded-xl p-5 hover-lift cursor-pointer">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center text-xl">🇬🇧</div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-800">Tiếng Anh 7</h3>
+                                        <p class="text-sm text-gray-600">Cô Phạm Thị Lan</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold mb-1">Đang học</div>
+                                    <div class="text-xs text-gray-500">Tiến độ: 80%</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 text-sm text-gray-600">
+                                <span>📖 12/15 bài học</span>
+                                <span>⏱️ 15 phút còn lại</span>
+                                <span class="ml-auto bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-semibold">Cần ôn tập</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column (1/3 width) -->
+            <div class="space-y-8">
+                <!-- Upcoming Assignments -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h2 class="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">📋 Bài tập sắp tới</h2>
+                    
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-red-500 bg-red-50 rounded-r-xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-red-600 bg-red-100 px-2 py-1 rounded-full">SẮP HẾT HẠN</span>
+                                <span class="text-xs text-gray-500">Hôm nay</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">Bài tập Lịch sử chương 3</h4>
+                            <p class="text-sm text-gray-600">Còn 3 giờ để nộp</p>
+                        </div>
+
+                        <div class="border-l-4 border-yellow-500 bg-yellow-50 rounded-r-xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">QUAN TRỌNG</span>
+                                <span class="text-xs text-gray-500">Mai</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">Project Tiếng Anh</h4>
+                            <p class="text-sm text-gray-600">Nhóm 4 thành viên</p>
+                        </div>
+
+                        <div class="border-l-4 border-blue-500 bg-blue-50 rounded-r-xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full">BÌNH THƯỜNG</span>
+                                <span class="text-xs text-gray-500">T4</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">Làm bài tập Địa lý</h4>
+                            <p class="text-sm text-gray-600">Chương 5 - Khí hậu</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h2 class="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">🔔 Hoạt động gần đây</h2>
+                    <div class="space-y-4">
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">✅</div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800">
+                                    <span class="font-semibold">Đã nộp bài tập</span> Lịch sử chương 3
+                                </p>
+                                <p class="text-xs text-gray-500">2 giờ trước</p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold">⭐</div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800">
+                                    <span class="font-semibold">Nhận điểm 9.5</span> Quiz Tiếng Anh
+                                </p>
+                                <p class="text-xs text-gray-500">1 ngày trước</p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-r from-purple-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">📚</div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800">
+                                    <span class="font-semibold">Hoàn thành bài học</span> Địa lý Châu Á
+                                </p>
+                                <p class="text-xs text-gray-500">2 ngày trước</p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center text-white font-bold">🔥</div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800">
+                                    <span class="font-semibold">Streak 7 ngày!</span> Học liên tục
+                                </p>
+                                <p class="text-xs text-gray-500">3 ngày trước</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weekly Goals -->
+                <div class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-6 text-white">
+                    <h2 class="text-xl font-extrabold mb-4 flex items-center gap-2">🎯 Mục tiêu tuần này</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm">Hoàn thành bài học</span>
+                                <span class="text-sm font-bold">12/12</span>
+                            </div>
+                            <div class="h-2 bg-white/20 rounded-full overflow-hidden">
+                                <div class="h-full bg-white rounded-full" style="width: 100%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm">Nộp bài tập</span>
+                                <span class="text-sm font-bold">5/8</span>
+                            </div>
+                            <div class="h-2 bg-white/20 rounded-full overflow-hidden">
+                                <div class="h-full bg-white rounded-full" style="width: 63%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm">Đạt điểm cao</span>
+                                <span class="text-sm font-bold">3/3</span>
+                            </div>
+                            <div class="h-2 bg-white/20 rounded-full overflow-hidden">
+                                <div class="h-full bg-white rounded-full" style="width: 100%"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/10 rounded-xl p-3 mt-4 flex items-center gap-2">
+                            <span class="text-2xl">🔥</span>
+                            <div>
+                                <div class="font-bold">Streak 7 ngày!</div>
+                                <div class="text-xs text-white/80">Bạn đã học 7 ngày liên tiếp</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Content -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 mt-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-extrabold text-gray-800 flex items-center gap-2">📚 Thư viện nội dung gần đây</h2>
+                <a href="#" class="text-sm font-semibold text-purple-600 hover:text-purple-700">Xem tất cả →</a>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="gradient-border rounded-xl p-5 hover-lift cursor-pointer">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center text-xl">📜</div>
+                        <div class="flex-1">
+                            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold">Lịch sử</span>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-gray-800 mb-2">Chiến tranh thế giới lần 2</h3>
+                    <p class="text-sm text-gray-600 mb-3">Tổng quan về cuộc chiến tranh</p>
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                        <span>👁️ 156 lượt xem</span>
+                        <span>⭐ 25 thích</span>
+                        <span>💬 8 bình luận</span>
+                    </div>
+                </div>
+                <div class="gradient-border rounded-xl p-5 hover-lift cursor-pointer">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-12 h-12 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center text-xl">🌍</div>
+                        <div class="flex-1">
+                            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-semibold">Địa lý</span>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-gray-800 mb-2">Châu Á và châu Mỹ</h3>
+                    <p class="text-sm text-gray-600 mb-3">Đặc điểm địa lý tự nhiên</p>
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                        <span>👁️ 124 lượt xem</span>
+                        <span>⭐ 18 thích</span>
+                        <span>💬 5 bình luận</span>
+                    </div>
+                </div>
+                <div class="gradient-border rounded-xl p-5 hover-lift cursor-pointer">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center text-xl">🇬🇧</div>
+                        <div class="flex-1">
+                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold">Tiếng Anh</span>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-gray-800 mb-2">Thì hiện tại hoàn thành</h3>
+                    <p class="text-sm text-gray-600 mb-3">Cách sử dụng và bài tập thực hành</p>
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                        <span>👁️ 189 lượt xem</span>
+                        <span>⭐ 42 thích</span>
+                        <span>💬 15 bình luận</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievements Section -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h2 class="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">🏆 Thành tích</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl p-6 text-white text-center">
+                    <div class="text-4xl mb-2">📚</div>
+                    <h3 class="font-bold text-sm mb-1">Học bá</h3>
+                    <p class="text-xs opacity-90">100 bài học</p>
+                </div>
+                <div class="bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl p-6 text-white text-center">
+                    <div class="text-4xl mb-2">⭐</div>
+                    <h3 class="font-bold text-sm mb-1">Xuất sắc</h3>
+                    <p class="text-xs opacity-90">Điểm TB > 8.5</p>
+                </div>
+                <div class="bg-gradient-to-br from-purple-400 to-purple-500 rounded-xl p-6 text-white text-center">
+                    <div class="text-4xl mb-2">💯</div>
+                    <h3 class="font-bold text-sm mb-1">100% Hoàn thành</h3>
+                    <p class="text-xs opacity-90">Tất cả bài tập</p>
+                </div>
+                <div class="bg-gradient-to-br from-pink-400 to-pink-500 rounded-xl p-6 text-white text-center">
+                    <div class="text-4xl mb-2">🔥</div>
+                    <h3 class="font-bold text-sm mb-1">7 Ngày Streak</h3>
+                    <p class="text-xs opacity-90">Học liên tục</p>
+                </div>
+            </div>
+        </div>
+        </div>
+    </main>
+</body>
+</html>
