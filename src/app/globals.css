@@ -1,0 +1,256 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 224 71.4% 4.1%;
+        --card: 0 0% 100%;
+        --card-foreground: 224 71.4% 4.1%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 224 71.4% 4.1%;
+        --primary: 230 94% 82%;
+        --primary-foreground: 210 20% 98%;
+        --secondary: 260 94% 77%;
+        --secondary-foreground: 220.9 39.3% 11%;
+        --muted: 220 14.3% 95.9%;
+        --muted-foreground: 220 8.9% 46.1%;
+        --accent: 317 94% 78%;
+        --accent-foreground: 220.9 39.3% 11%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 20% 98%;
+        --border: 220 13% 91%;
+        --input: 220 13% 91%;
+        --ring: 262.1 83.3% 57.8%;
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --background: 224 71.4% 4.1%;
+        --foreground: 210 20% 98%;
+        --card: 224 71.4% 4.1%;
+        --card-foreground: 210 20% 98%;
+        --popover: 224 71.4% 4.1%;
+        --popover-foreground: 210 20% 98%;
+        --primary: 263.4 70% 50.4%;
+        --primary-foreground: 210 20% 98%;
+        --secondary: 215 27.9% 16.9%;
+        --secondary-foreground: 210 20% 98%;
+        --muted: 215 27.9% 16.9%;
+        --muted-foreground: 217.9 10.6% 64.9%;
+        --accent: 215 27.9% 16.9%;
+        --accent-foreground: 210 20% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 20% 98%;
+        --border: 215 27.9% 16.9%;
+        --input: 215 27.9% 16.9%;
+        --ring: 263.4 70% 50.4%;
+    }
+}
+
+@layer base {
+    * {
+        border-color: hsl(var(--border));
+    }
+    body {
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* ============================================
+   CRITICAL: Fallback để đảm bảo nội dung hiển thị
+   ngay cả khi JavaScript/GSAP chưa load
+   ============================================ */
+.hero-content h1,
+.hero-content p,
+.hero-cta,
+.hero-stats,
+.hero-mockup,
+.floating-card-1,
+.floating-card-2,
+.subject-card,
+.feature-item,
+.role-card {
+    /* Mặc định hiển thị - GSAP sẽ override khi chạy */
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Float Animations */
+/* @keyframes float {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(30px, -30px) rotate(120deg); }
+    66% { transform: translate(-20px, 20px) rotate(240deg); }
+} */
+
+/* @keyframes floatCard {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes spin {
+    from { transform: rotateY(0deg); }
+    to { transform: rotateY(360deg); }
+} */
+
+/* Animation mới cho Hero Mockup - chỉ float nhẹ nhàng, KHÔNG xoay */
+@keyframes floatGentle {
+    0%, 100% { 
+        transform: translateY(0px) scale(1);
+    }
+    50% { 
+        transform: translateY(-20px) scale(1.02);
+    }
+}
+
+/* Animation với hiệu ứng 3D nhẹ - perspective tilt */
+@keyframes float3D {
+    0%, 100% { 
+        transform: translateY(0px) rotateX(0deg) rotateY(0deg);
+    }
+    25% { 
+        transform: translateY(-15px) rotateX(2deg) rotateY(-3deg);
+    }
+    50% { 
+        transform: translateY(-25px) rotateX(0deg) rotateY(0deg);
+    }
+    75% { 
+        transform: translateY(-15px) rotateX(-2deg) rotateY(3deg);
+    }
+}
+
+.animate-float {
+    animation: float 15s infinite ease-in-out;
+}
+
+.animate-float-delay {
+    animation: float 20s infinite ease-in-out;
+}
+
+.animate-float-slow {
+    animation: floatGentle 6s infinite ease-in-out;
+}
+
+/* Class thay thế nếu muốn hiệu ứng 3D */
+.animate-float-3d {
+    animation: float3D 8s infinite ease-in-out;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+}
+
+/* Navigation Links Underline Animation */
+.nav-links a {
+    position: relative;
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)));
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+
+/* Navbar Scroll Effect */
+#navbar.scrolled {
+    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+}
+
+/* Role Card Hover */
+.role-card:hover .role-card-icon {
+    animation: spin 0.6s ease-in-out;
+}
+
+/* Mobile Menu */
+.mobile-menu-active .nav-links,
+.mobile-menu-active .nav-cta {
+    display: flex;
+}
+
+/* Utility Classes */
+.text-gradient {
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)));
+}
+
+.btn-gradient {
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)));
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.15);
+    transition: all 0.2s ease;
+}
+
+.btn-gradient:hover {
+    box-shadow: 0 16px 40px rgba(102, 126, 234, 0.18);
+    transform: translateY(-2px);
+}
+
+/* Custom Scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)) #e5e7eb;
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: theme('colors.gray.200');
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--primary));
+    border-radius: 20px;
+    border: 2px solid theme('colors.gray.200');
+}
+
+/* Progress Bars */
+.progress-fill {
+    transition: width 2s ease;
+}
+
+/* Subject Cards */
+.subject-card:hover::before {
+    transform: scaleX(1);
+}
+
+/* Button Styles */
+.btn-outline.btn-white {
+    @apply border-2 border-white/80 text-white hover:bg-white hover:text-primary transition-all duration-300 backdrop-blur-sm;
+    text-shadow: none;
+}
+
+.btn-outline.btn-white:hover {
+    @apply shadow-lg shadow-white/20;
+}
+
+/* Accessibility */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+    @apply outline-2 outline-primary outline-offset-2;
+}

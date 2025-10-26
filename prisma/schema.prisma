@@ -1,15 +1,63 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Schema Prisma cho hệ thống LMS
+// Tối ưu hóa cho xác thực credentials và quản lý phiên làm việc
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+// Model User - Quản lý thông tin người dùng
+model User {
+  // Thông tin xác thực
+  id       String  @id @default(cuid())
+  email    String  @unique // Email dùng để đăng nhập
+  password String  // Mật khẩu đã được mã hóa
+
+  // Thông tin cá nhân
+  fullname String  // Họ và tên đầy đủ
+  role     String? // Vai trò: 'teacher' | 'student' | 'parent'
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Quan hệ
+  sessions Session[]
+
+  @@map("users")
+}
+
+// Model Session - Quản lý phiên đăng nhập
+model Session {
+  // Thông tin phiên
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  expires      DateTime
+
+  // Quan hệ với User
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// Model PasswordReset - Quản lý yêu cầu đặt lại mật khẩu
+model PasswordReset {
+  // Thông tin token reset
+  id         String   @id @default(cuid())
+  email      String   // Email của người dùng yêu cầu reset
+  token      String   @unique // Mã xác thực 6 số
+  expires    DateTime // Thời gian hết hạn của mã
+  completed  Boolean  @default(false) // Trạng thái đã reset password chưa
+  
+  // Metadata
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("password_resets")
 }
