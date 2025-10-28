@@ -6,8 +6,7 @@ import MyClasses from "@/components/student/MyClasses";
 import UpcomingAssignments from "@/components/student/UpcomingAssignments";
 import RecentActivity from "@/components/student/RecentActivity";
 import WeeklyGoals from "@/components/student/WeeklyGoals";
-import RecentContent from "@/components/student/RecentContent";
-import Achievements from "@/components/student/Achievements";
+import JoinClass from "@/components/student/JoinClass";
 
 export default function StudentDashboardPage() {
   return (
@@ -24,14 +23,12 @@ export default function StudentDashboardPage() {
           <MyClasses />
         </div>
         <div className="space-y-8">
+          {/* <JoinClass /> */}
           <UpcomingAssignments />
           <RecentActivity />
-          <WeeklyGoals />
+   
         </div>
       </div>
-
-      <RecentContent />
-      <Achievements />
     </>
   );
 }

@@ -15,11 +15,11 @@ export default function Sidebar({ role = "student" }: SidebarProps) {
     role === "student"
       ? [
           { icon: "📊", label: "Dashboard", href: "/student/dashboard" },
-          { icon: "📚", label: "Khóa học", href: "/student/explore" },
-          { icon: "✍️", label: "Bài tập", href: "/student/assignments" },
-          { icon: "📈", label: "Điểm số", href: "/student/grades" },
-          { icon: "📅", label: "Lịch học", href: "/student/classes" },
-          { icon: "⚙️", label: "Hồ sơ", href: "/student/profile" },
+          { icon: "📚", label: "Lớp học", href: "/dashboard/student/classes" },
+          { icon: "✍️", label: "Bài tập", href: "/dashboard/student/assignments" },
+          { icon: "📈", label: "Điểm số", href: "/dashboard/student/grades" },
+          { icon: "📅", label: "Lịch học", href: "/dashboard/student/schedule" },
+          { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/student/profile" },
         ]
       : [];
 
