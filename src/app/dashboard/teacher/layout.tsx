@@ -1,7 +1,7 @@
 'use client';
 
-import Sidebar from "@/components/teacher/Sidebar";
-import Header from "@/components/teacher/Header";
+import Sidebar from "@/components/teacher/dashboard/Sidebar";
+import Header from "@/components/teacher/dashboard/Header";
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   return (

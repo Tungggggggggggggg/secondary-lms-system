@@ -28,6 +28,8 @@ model User {
 
   // Quan hệ
   sessions Session[]
+  teacherClassrooms Classroom[] @relation("TeacherClassrooms") // Lớp học mà giáo viên tạo
+  studentClassrooms ClassroomStudent[] // Lớp học mà học sinh tham gia
 
   @@map("users")
 }
@@ -60,4 +62,44 @@ model PasswordReset {
   updatedAt  DateTime @updatedAt
 
   @@map("password_resets")
+}
+
+// Model Classroom - Quản lý thông tin lớp học
+model Classroom {
+  id          String   @id @default(cuid())
+  name        String   // Tên lớp học
+  description String?  // Mô tả về lớp học
+  code        String   @unique // Mã lớp học để học sinh tham gia
+  icon        String   // Icon của lớp học
+  maxStudents Int     // Số lượng học sinh tối đa
+  isActive    Boolean @default(true) // Trạng thái hoạt động của lớp
+
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Quan hệ với giáo viên tạo lớp
+  teacherId   String
+  teacher     User     @relation("TeacherClassrooms", fields: [teacherId], references: [id])
+
+  // Quan hệ với học sinh trong lớp
+  students    ClassroomStudent[]
+
+  @@map("classrooms")
+}
+
+// Model ClassroomStudent - Quan hệ nhiều-nhiều giữa Classroom và Student
+model ClassroomStudent {
+  id          String   @id @default(cuid())
+  joinedAt    DateTime @default(now())
+  
+  // Quan hệ
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+  
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id])
+
+  @@unique([classroomId, studentId])
+  @@map("classroom_students")
 }
