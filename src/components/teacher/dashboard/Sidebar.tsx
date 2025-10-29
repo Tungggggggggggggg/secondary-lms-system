@@ -10,6 +10,7 @@ export default function Sidebar() {
 
   const menuItems = [
     { icon: "📊", label: "Dashboard", href: "/dashboard/teacher/dashboard" },
+    { icon: "🏫", label: "Lớp học", href: "/dashboard/teacher/classrooms" },
     { icon: "📚", label: "Khóa học", href: "/dashboard/teacher/courses" },
     { icon: "✍️", label: "Bài tập", href: "/dashboard/teacher/assignments" },
     { icon: "👥", label: "Học sinh", href: "/dashboard/teacher/students" },

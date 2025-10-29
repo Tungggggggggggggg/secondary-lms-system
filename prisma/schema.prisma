@@ -11,6 +11,14 @@ datasource db {
   directUrl = env("DATABASE_URL")
 }
 
+// Enum cho vai trò người dùng
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
 // Model User - Quản lý thông tin người dùng
 model User {
   // Thông tin xác thực
@@ -20,7 +28,7 @@ model User {
 
   // Thông tin cá nhân
   fullname String  // Họ và tên đầy đủ
-  role     String? // Vai trò: 'teacher' | 'student' | 'parent'
+  role     UserRole @default(STUDENT) // Vai trò người dùng
 
   // Metadata
   createdAt DateTime @default(now())
@@ -30,6 +38,8 @@ model User {
   sessions Session[]
   teacherClassrooms Classroom[] @relation("TeacherClassrooms") // Lớp học mà giáo viên tạo
   studentClassrooms ClassroomStudent[] // Lớp học mà học sinh tham gia
+  createdCourses Course[] // Khóa học được tạo bởi giáo viên
+  submissions AssignmentSubmission[] // Bài nộp của học sinh
 
   @@map("users")
 }
@@ -70,9 +80,9 @@ model Classroom {
   name        String   // Tên lớp học
   description String?  // Mô tả về lớp học
   code        String   @unique // Mã lớp học để học sinh tham gia
-  icon        String   // Icon của lớp học
-  maxStudents Int     // Số lượng học sinh tối đa
-  isActive    Boolean @default(true) // Trạng thái hoạt động của lớp
+  icon        String   @default("📚") // Icon của lớp học
+  maxStudents Int      @default(30) // Số lượng học sinh tối đa
+  isActive    Boolean  @default(true) // Trạng thái hoạt động của lớp
 
   // Metadata
   createdAt   DateTime @default(now())
@@ -82,10 +92,86 @@ model Classroom {
   teacherId   String
   teacher     User     @relation("TeacherClassrooms", fields: [teacherId], references: [id])
 
-  // Quan hệ với học sinh trong lớp
+  // Quan hệ với học sinh trong lớp và khóa học
   students    ClassroomStudent[]
+  courses     ClassroomCourse[]
 
   @@map("classrooms")
+}
+
+// Model Course - Quản lý khóa học
+model Course {
+  id          String   @id @default(cuid())
+  title       String   // Tên khóa học
+  description String?  // Mô tả khóa học
+  coverImage  String?  // Ảnh bìa khóa học
+
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Quan hệ
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  classrooms  ClassroomCourse[] // Các lớp học có khóa học này
+  lessons     Lesson[] // Các bài học trong khóa
+  assignments Assignment[] // Các bài tập trong khóa
+
+  @@map("courses")
+}
+
+// Model Lesson - Quản lý bài học
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String   // Tiêu đề bài học
+  content     String   @db.Text // Nội dung bài học
+  order       Int      // Thứ tự bài học trong khóa
+
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Quan hệ với khóa học
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("lessons")
+}
+
+// Model Assignment - Quản lý bài tập
+model Assignment {
+  id          String    @id @default(cuid())
+  title       String    // Tiêu đề bài tập
+  description String?   @db.Text // Mô tả bài tập
+  dueDate     DateTime? // Hạn nộp bài
+
+  // Metadata
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Quan hệ
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[] // Các bài nộp của học sinh
+
+  @@map("assignments")
+}
+
+// Model AssignmentSubmission - Quản lý bài nộp
+model AssignmentSubmission {
+  id          String   @id @default(cuid())
+  content     String   @db.Text // Nội dung bài nộp
+  grade       Float?   // Điểm số
+  feedback    String?  // Nhận xét của giáo viên
+  submittedAt DateTime @default(now())
+
+  // Quan hệ
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("assignment_submissions")
 }
 
 // Model ClassroomStudent - Quan hệ nhiều-nhiều giữa Classroom và Student
@@ -95,11 +181,26 @@ model ClassroomStudent {
   
   // Quan hệ
   classroomId String
-  classroom   Classroom @relation(fields: [classroomId], references: [id])
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   
   studentId   String
-  student     User     @relation(fields: [studentId], references: [id])
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([classroomId, studentId])
   @@map("classroom_students")
+}
+
+// Model ClassroomCourse - Quan hệ nhiều-nhiều giữa Classroom và Course
+model ClassroomCourse {
+  id          String   @id @default(cuid())
+  addedAt     DateTime @default(now())
+
+  // Quan hệ
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  courseId    String 
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, courseId])
+  @@map("classroom_courses")
 }

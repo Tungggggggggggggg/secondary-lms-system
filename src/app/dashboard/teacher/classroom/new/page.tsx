@@ -1,4 +1,4 @@
-import CreateClassroom from "@/components/teacher/classroom/CreateClassroom";
+import CreateClassroom from "@/components/teacher/classrooms/CreateClassroom";
 
 export const metadata = {
   title: "Tạo lớp học mới | EduVerse",

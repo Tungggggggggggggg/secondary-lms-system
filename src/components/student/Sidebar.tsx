@@ -14,7 +14,7 @@ export default function Sidebar({ role = "student" }: SidebarProps) {
   const menu =
     role === "student"
       ? [
-          { icon: "📊", label: "Dashboard", href: "/student/dashboard" },
+          { icon: "📊", label: "Dashboard", href: "../student/dashboard" },
           { icon: "📚", label: "Lớp học", href: "/dashboard/student/classes" },
           { icon: "✍️", label: "Bài tập", href: "/dashboard/student/assignments" },
           { icon: "📈", label: "Điểm số", href: "/dashboard/student/grades" },

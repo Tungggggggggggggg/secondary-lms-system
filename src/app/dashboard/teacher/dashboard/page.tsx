@@ -1,6 +1,5 @@
 "use client";
 
-import QuickActions from "@/components/teacher/dashboard/QuickActions";
 import StatsOverview from "@/components/teacher/dashboard/StatsOverview";
 import RecentClasses from "@/components/teacher/dashboard/RecentClasses";
 import PerformanceChart from "@/components/teacher/dashboard/PerformanceChart";
@@ -12,7 +11,6 @@ import Achievements from "@/components/teacher/dashboard/Achievements";
 export default function DashboardPage() {
   return (
     <div className="p-8 space-y-8">
-      <QuickActions />
       <StatsOverview />
 
       <div className="grid lg:grid-cols-3 gap-8">

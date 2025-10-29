@@ -1,6 +1,5 @@
 // src/app/parent/dashboard/page.tsx
 import HeaderParent from "@/components/parent/Header";
-import ChildSelector from "@/components/parent/ChildSelector";
 import QuickStats from "@/components/parent/QuickStats";
 import AcademicPerformance from "@/components/parent/AcademicPerformance";
 import RecentActivities from "@/components/parent/RecentActivities";
@@ -17,7 +16,6 @@ export default function ParentDashboardPage() {
         subtitle="Theo dõi tiến độ học tập của con bạn - Hôm nay là Thứ Sáu, 24 tháng 10, 2025"
       />
 
-      <ChildSelector />
       <QuickStats />
 
       <div className="grid lg:grid-cols-3 gap-8">
