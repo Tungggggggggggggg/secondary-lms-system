@@ -3,16 +3,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 export default function SidebarParent() {
+  const { data: session } = useSession();
   const pathname = usePathname();
   const menu = [
-    { icon: "📊", label: "Dashboard", href: "/parent/dashboard" },
+    { icon: "📊", label: "Dashboard", href: "/dashboard/parent/dashboard" },
     { icon: "👨‍👩‍👧", label: "Con của tôi", href: "/parent/children" },
     { icon: "📈", label: "Tiến độ học tập", href: "/parent/progress" },
     { icon: "📅", label: "Lịch học", href: "/parent/schedule" },
     { icon: "💬", label: "Liên hệ GV", href: "/parent/contact" },
-    { icon: "⚙️", label: "Hồ sơ", href: "/parent/profile" },
+    { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/parent/profile" },
   ];
 
   return (
@@ -28,10 +30,10 @@ export default function SidebarParent() {
         <div className="bg-white/10 rounded-2xl p-4 mb-8">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-14 h-14 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center text-2xl font-bold">
-              PH
+              {session?.user?.name?.charAt(0).toUpperCase() || "PH"}
             </div>
             <div>
-              <h3 className="font-bold text-lg">Nguyễn Văn B</h3>
+              <h3 className="font-bold text-lg">{session?.user?.name || "Phụ huynh"}</h3>
               <p className="text-white/80 text-sm">Phụ huynh</p>
             </div>
           </div>
@@ -58,7 +60,10 @@ export default function SidebarParent() {
         </nav>
 
         <div className="absolute bottom-6 left-6 right-6">
-          <button className="w-full flex items-center gap-3 px-4 py-3 bg-red-500/20 rounded-xl font-semibold hover:bg-red-500/30 transition-all">
+          <button
+            onClick={() => signOut({ callbackUrl: "/auth/login" })}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-red-500/20 rounded-xl font-semibold hover:bg-red-500/30 transition-all"
+          >
             <span className="text-xl">🚪</span>
             <span>Đăng xuất</span>
           </button>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Label from "@/components/ui/label";
 
-export default function ProfileForm() {
+export default function ParentProfileForm() {
   const { data: session, update } = useSession();
   const { toast } = useToast();
 
@@ -89,91 +89,86 @@ export default function ProfileForm() {
     }
   }
 
-  const initial = (profile.fullname || "").charAt(0).toUpperCase() || "G";
+  const initial = (profile.fullname || "").charAt(0).toUpperCase() || "P";
 
   return (
-    <div className="space-y-8">
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex items-center gap-6 mb-6">
-          <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center text-4xl text-white font-bold">
-            {initial}
+    <div className="space-y-6">
+      <div className="bg-white border rounded-2xl p-6">
+       
+
+        <form onSubmit={handleSaveProfile} className="space-y-4">
+          <div>
+            <Label htmlFor="fullname" className="text-sm font-medium text-gray-700">Họ và tên</Label>
+            <Input
+              id="fullname"
+              value={profile.fullname}
+              onChange={(e) => setProfile({ ...profile, fullname: e.target.value })}
+              className="mt-1"
+              required
+            />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">{profile.fullname || "Giáo viên"}</h2>
-            <p className="text-gray-600">Giáo viên THCS</p>
+            <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={profile.email}
+              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+              className="mt-1"
+              required
+            />
           </div>
-        </div>
-
-        <form onSubmit={handleSaveProfile} className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Họ và tên</Label>
-              <Input
-                type="text"
-                value={profile.fullname}
-                onChange={(e) => setProfile({ ...profile, fullname: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200"
-                required
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Email</Label>
-              <Input
-                type="email"
-                value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200"
-                required
-              />
-            </div>
-          </div>
-
           <div className="flex justify-end">
-            <Button type="submit" disabled={isSavingProfile}>{isSavingProfile ? "Đang lưu..." : "Lưu thay đổi"}</Button>
+            <Button type="submit" disabled={isSavingProfile}>{isSavingProfile ? "Đang cập nhật..." : "Lưu thay đổi"}</Button>
           </div>
         </form>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-6">Đổi mật khẩu</h3>
-        <form onSubmit={handleChangePassword} className="space-y-5">
+      <div className="bg-white border rounded-2xl p-6">
+        <h2 className="text-xl font-semibold mb-4">Đổi mật khẩu</h2>
+        <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">Mật khẩu hiện tại</Label>
+            <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">Mật khẩu hiện tại</Label>
             <Input
+              id="currentPassword"
               type="password"
               value={passwords.currentPassword}
               onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200"
+              className="mt-1"
               required
             />
           </div>
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Mật khẩu mới</Label>
+              <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">Mật khẩu mới</Label>
               <Input
+                id="newPassword"
                 type="password"
                 value={passwords.newPassword}
                 onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200"
+                className="mt-1"
                 required
               />
             </div>
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Xác nhận mật khẩu mới</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Xác nhận mật khẩu mới</Label>
               <Input
+                id="confirmPassword"
                 type="password"
                 value={passwords.confirmPassword}
                 onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200"
+                className="mt-1"
                 required
               />
             </div>
           </div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={isChangingPassword}>{isChangingPassword ? "Đang đổi..." : "Đổi mật khẩu"}</Button>
+            <Button type="submit" disabled={isChangingPassword}>{isChangingPassword ? "Đang đổi mật khẩu..." : "Đổi mật khẩu"}</Button>
           </div>
         </form>
       </div>
     </div>
   );
 }
+
+

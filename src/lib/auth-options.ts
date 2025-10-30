@@ -43,6 +43,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.fullname,
+          fullname: user.fullname, // Also include fullname explicitly
           role: user.role,
         };
       },
@@ -67,7 +68,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
-        token.name = user.fullname || null;
+        // Try to get name from user.fullname first, then user.name
+        token.name = (user as any).fullname || user.name || null;
+        token.fullname = (user as any).fullname || null;
         token.role = user.role; // Thêm vai trò vào JWT
       }
       return token;
@@ -77,6 +80,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = (token.name as string) || '';
+        session.user.fullname = (token as any).fullname || '';
         session.user.role = token.role;
       }
       return session;
