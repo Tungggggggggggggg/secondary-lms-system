@@ -19,6 +19,18 @@ enum UserRole {
   PARENT
 }
 
+// Kiểu bài tập
+enum AssignmentType {
+  ESSAY
+  QUIZ
+}
+
+// Kiểu câu hỏi trắc nghiệm
+enum QuestionType {
+  SINGLE
+  MULTIPLE
+}
+
 // Model User - Quản lý thông tin người dùng
 model User {
   // Thông tin xác thực
@@ -40,6 +52,8 @@ model User {
   studentClassrooms ClassroomStudent[] // Lớp học mà học sinh tham gia
   createdCourses Course[] // Khóa học được tạo bởi giáo viên
   submissions AssignmentSubmission[] // Bài nộp của học sinh
+  createdAssignments Assignment[] // Bài tập được tạo bởi giáo viên
+  questionComments QuestionComment[] // Bình luận của người dùng ở câu hỏi
 
   @@map("users")
 }
@@ -144,17 +158,64 @@ model Assignment {
   title       String    // Tiêu đề bài tập
   description String?   @db.Text // Mô tả bài tập
   dueDate     DateTime? // Hạn nộp bài
+  type        AssignmentType @default(ESSAY)
 
   // Metadata
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // Quan hệ
-  courseId    String
-  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  courseId    String?
+  course      Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions   Question[]
   submissions AssignmentSubmission[] // Các bài nộp của học sinh
 
   @@map("assignments")
+}
+
+// Câu hỏi trắc nghiệm
+model Question {
+  id           String       @id @default(cuid())
+  content      String       @db.Text
+  type         QuestionType @default(SINGLE)
+  order        Int
+
+  assignmentId String
+  assignment   Assignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  options      Option[]
+  comments     QuestionComment[]
+
+  @@map("questions")
+}
+
+// Phương án trả lời của câu hỏi trắc nghiệm
+model Option {
+  id         String   @id @default(cuid())
+  label      String
+  content    String   @db.Text
+  isCorrect  Boolean  @default(false)
+  order      Int
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_options")
+}
+
+// Bình luận ở từng câu hỏi
+model QuestionComment {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("question_comments")
 }
 
 // Model AssignmentSubmission - Quản lý bài nộp

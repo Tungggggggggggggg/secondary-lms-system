@@ -31,6 +31,25 @@ export async function middleware(req: Request) {
         }
     }
 
+    // Chặn truy cập cross-role: nếu vào teacher nhưng không phải TEACHER
+    if (pathname.startsWith('/dashboard/teacher') && role && role !== 'TEACHER') {
+        const target = roleToDashboard[role] ?? '/';
+        return NextResponse.redirect(new URL(target, url));
+    }
+    if (pathname.startsWith('/dashboard/student') && role && role !== 'STUDENT') {
+        const target = roleToDashboard[role] ?? '/';
+        return NextResponse.redirect(new URL(target, url));
+    }
+    if (pathname.startsWith('/dashboard/parent') && role && role !== 'PARENT') {
+        const target = roleToDashboard[role] ?? '/';
+        return NextResponse.redirect(new URL(target, url));
+    }
+
+    // Nếu chưa đăng nhập mà truy cập vùng dashboard -> chuyển login
+    if (!token && pathname.startsWith('/dashboard')) {
+        return NextResponse.redirect(new URL('/auth/login', url));
+    }
+
     // Chuẩn hóa truy cập root theo vai trò (vd '/dashboard/teacher' -> '/dashboard/teacher/dashboard')
     if (pathname === "/dashboard/teacher" || pathname === "/dashboard/student" || pathname === "/dashboard/parent") {
         const normalized = `${pathname}/dashboard`;
