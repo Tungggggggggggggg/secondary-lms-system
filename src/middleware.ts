@@ -1,11 +1,47 @@
 import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export function middleware() {
+const roleToDashboard: Record<string, string> = {
+    TEACHER: "/dashboard/teacher/dashboard",
+    STUDENT: "/dashboard/student/dashboard",
+    PARENT: "/dashboard/parent/dashboard",
+};
+
+export async function middleware(req: Request) {
+    const url = new URL(req.url);
+    const pathname = url.pathname;
+
+    // Lấy token nếu có để biết vai trò người dùng
+    const token = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET });
+    const role = (token?.role as string | undefined) ?? undefined;
+
+    // Nếu đã đăng nhập và đang vào trang login, chuyển hướng về dashboard theo vai trò
+    if (token && pathname.startsWith("/auth/login")) {
+        const target = role ? roleToDashboard[role] : "/";
+        if (target && pathname !== target) {
+            return NextResponse.redirect(new URL(target, url));
+        }
+    }
+
+    // Điều hướng trang gốc hoặc '/dashboard' đến dashboard theo vai trò nếu đã đăng nhập
+    if (token && (pathname === "/" || pathname === "/dashboard")) {
+        const target = role ? roleToDashboard[role] : "/";
+        if (target && pathname !== target) {
+            return NextResponse.redirect(new URL(target, url));
+        }
+    }
+
+    // Chuẩn hóa truy cập root theo vai trò (vd '/dashboard/teacher' -> '/dashboard/teacher/dashboard')
+    if (pathname === "/dashboard/teacher" || pathname === "/dashboard/student" || pathname === "/dashboard/parent") {
+        const normalized = `${pathname}/dashboard`;
+        return NextResponse.redirect(new URL(normalized, url));
+    }
+
     return NextResponse.next();
 }
 
 export const config = {
     matcher: [
-        "/((?!api|auth|_next/static|_next/image|favicon.ico).*)",
+        "/((?!api|_next/static|_next/image|favicon.ico).*)",
     ],
 };

@@ -20,22 +20,22 @@ const prismaClientSingleton = () => {
   return client
 }
 
-// Trong môi trường development, sử dụng biến global để tránh tạo nhiều instances
+// Global để tránh multiple instances ở dev
 declare global {
   // eslint-disable-next-line no-var
-  var prisma: undefined | ReturnType<typeof prismaClientSingleton>
+  var prisma: ReturnType<typeof prismaClientSingleton> | undefined
 }
 
-try {
-  if (!globalThis.prisma) {
-    console.log('Creating new Prisma Client instance...')
-    globalThis.prisma = prismaClientSingleton()
-  } else {
-    console.log('Using existing Prisma Client instance...')
-  }
-} catch (error) {
-  console.error('Error initializing Prisma Client:', error)
-  throw error
+// Bảo đảm luôn có instance và kiểu không undefined
+let _prisma: ReturnType<typeof prismaClientSingleton>
+if (!globalThis.prisma) {
+  console.log('Creating new Prisma Client instance...')
+  _prisma = prismaClientSingleton()
+  globalThis.prisma = _prisma
+} else {
+  console.log('Using existing Prisma Client instance...')
+  _prisma = globalThis.prisma
 }
 
-export default globalThis.prisma
+export const prisma = _prisma
+export default prisma
