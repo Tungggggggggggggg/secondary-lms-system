@@ -4,8 +4,8 @@ import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
 import { Prisma, AssignmentType, QuestionType, UserRole } from '@prisma/client'
 
-// Lấy danh sách bài tập theo giáo viên hiện tại
-export async function GET() {
+// Lấy danh sách bài tập theo giáo viên hiện tại - TỐI ƯU SELECT + pagination
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -18,15 +18,27 @@ export async function GET() {
       return NextResponse.json({ success: true, data: [] }, { status: 200 })
     }
 
+    // Phân trang từ query param
+    const url = req?.url ? new URL(req.url, 'http://localhost') : null;
+    const take = url?.searchParams.get('take') ? Number(url?.searchParams.get('take')) : 10;
+    const skip = url?.searchParams.get('skip') ? Number(url?.searchParams.get('skip')) : 0;
+    // Truy vấn TỐI ƯU SELECT chỉ trường cần, bỏ include dư thừa
     const assignments = await prisma.assignment.findMany({
       where: { authorId: session.user.id },
       orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: { submissions: true, questions: true },
-        },
-      },
-    })
+      take,
+      skip,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        dueDate: true,
+        type: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { submissions: true, questions: true } }
+      }
+    });
 
     return NextResponse.json({ success: true, data: assignments }, { status: 200 })
   } catch (error) {

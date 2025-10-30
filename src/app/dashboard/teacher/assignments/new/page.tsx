@@ -30,6 +30,14 @@ export default function NewAssignmentPage() {
         },
     ]);
 
+    // Thêm state cho câu hỏi tự luận
+    const [essayQuestion, setEssayQuestion] = useState<string>("");
+
+    const isPastDate = (input: string) => {
+        if (!input) return false;
+        return new Date(input) < new Date();
+    };
+
     const addQuestion = () => {
         setQuestions((prev) => [
             ...prev,
@@ -108,12 +116,25 @@ export default function NewAssignmentPage() {
                 toast.error("Vui lòng nhập tiêu đề bài tập");
                 return;
             }
-            const payload: any = {
+            if (isPastDate(dueDate)) {
+                toast.error("Hạn nộp phải là ngày trong tương lai");
+                return;
+            }
+            if (tab === "ESSAY" && !essayQuestion.trim()) {
+                toast.error("Vui lòng nhập nội dung câu hỏi tự luận!");
+                return;
+            }
+            const payload: Record<string, unknown> = {
                 title,
                 description: description || null,
                 dueDate: dueDate ? new Date(dueDate).toISOString() : null,
                 type: tab,
             };
+            if (tab === "ESSAY") {
+                payload.questions = [
+                    { content: essayQuestion.trim(), type: "ESSAY", order: 1 },
+                ];
+            }
             if (tab === "QUIZ") {
                 if (questions.length === 0) {
                     toast.error("Quiz cần ít nhất 1 câu hỏi");
@@ -151,7 +172,14 @@ export default function NewAssignmentPage() {
     };
 
     return (
-        <div className="p-8">
+        <div className="max-w-3xl mx-auto py-10 px-4 md:px-0">
+            {/* Nút quay về */}
+            <button
+                className="mb-6 px-5 py-2 flex items-center gap-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm"
+                onClick={() => router.back()}
+            >
+                <span className="text-lg">←</span> Quay về danh sách bài tập
+            </button>
             <div className="mb-6 flex items-center justify-between">
                 <h1 className="text-3xl font-extrabold text-gray-800">
                     Tạo bài tập mới
@@ -163,7 +191,8 @@ export default function NewAssignmentPage() {
                             tab === "ESSAY"
                                 ? "bg-purple-600 text-white"
                                 : "bg-white border text-gray-700"
-                        }`}
+                        }
+                        `}
                     >
                         Tự luận
                     </button>
@@ -173,13 +202,13 @@ export default function NewAssignmentPage() {
                             tab === "QUIZ"
                                 ? "bg-purple-600 text-white"
                                 : "bg-white border text-gray-700"
-                        }`}
+                        }
+                        `}
                     >
                         Trắc nghiệm
                     </button>
                 </div>
             </div>
-
             <div className="bg-white rounded-2xl shadow p-6 space-y-6">
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -201,37 +230,79 @@ export default function NewAssignmentPage() {
                         onChange={(e) => setDescription(e.target.value)}
                         rows={4}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
-                        placeholder="Mô tả ngắn về yêu cầu bài tập"
+                        placeholder="Mô tả ngắn về yêu cầu bài tập (tuỳ chọn)"
                     />
                 </div>
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Hạn nộp
+                        Hạn nộp *
                     </label>
                     <input
                         type="datetime-local"
                         value={dueDate}
+                        min={new Date().toISOString().slice(0, 16)}
                         onChange={(e) => setDueDate(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                        className={`w-full px-4 py-3 border-2 ${
+                            isPastDate(dueDate)
+                                ? "border-red-500"
+                                : "border-gray-200"
+                        } rounded-xl focus:border-purple-500 outline-none`}
                     />
+                    {isPastDate(dueDate) && (
+                        <div className="text-red-500 mt-1 text-sm">
+                            Ngày hạn nộp phải là ở tương lai!
+                        </div>
+                    )}
                 </div>
-
                 {tab === "ESSAY" && (
-                    <div className="p-4 bg-purple-50 rounded-xl text-purple-800 text-sm">
-                        Bài tập tự luận: học sinh sẽ nộp văn bản/tệp. Bạn có thể
-                        thêm hướng dẫn chi tiết trong mô tả.
+                    <div className="bg-purple-50 rounded-xl border-l-4 border-purple-500 p-6 mt-2 flex flex-col gap-3">
+                        {/* Thêm input nhập câu hỏi tự luận */}
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Câu hỏi/Đề bài tự luận *
+                        </label>
+                        <textarea
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none bg-white"
+                            rows={2}
+                            placeholder="Nhập nội dung câu hỏi/đề bài tự luận..."
+                            value={essayQuestion}
+                            onChange={(e) => setEssayQuestion(e.target.value)}
+                        />
+                        <div className="text-xs text-gray-500 mb-1 mt-1">
+                            Học sinh sẽ nộp văn bản hoặc file. Giáo viên có thể
+                            chỉ định rõ định dạng (ví dụ PDF, Word...) hoặc gợi
+                            ý cách trình bày.
+                        </div>
+                        <div className="py-2 pl-3 mt-2 bg-white shadow-inner rounded-xl border border-indigo-100 max-w-[350px] mx-auto">
+                            <div className="flex items-center gap-1 mb-2 text-xs text-gray-400">
+                                <span>👤</span>Mẫu KQ học sinh nộp:
+                            </div>
+                            <div className="text-sm text-gray-800 whitespace-pre-line">
+                                {
+                                    "File: Bai_tap_lich_su.pdf\n   Hoặc nội dung văn bản ở đây..."
+                                }
+                            </div>
+                        </div>
+                        <ul className="list-disc pl-6 text-purple-800 mt-1 text-xs">
+                            <li>
+                                Bạn có thể mô tả chi tiết ở phần trên cho rõ yêu
+                                cầu
+                            </li>
+                            <li>
+                                Học sinh tự viết dài hoặc upload file đáp án
+                            </li>
+                            <li>Kết quả sẽ hiển thị tại trang chấm bài tập</li>
+                        </ul>
                     </div>
                 )}
-
                 {tab === "QUIZ" && (
                     <div className="space-y-6">
                         {questions.map((q, idx) => (
                             <div
                                 key={idx}
-                                className="border border-gray-200 rounded-xl p-4"
+                                className="border border-gray-200 rounded-xl p-4 bg-gray-50"
                             >
                                 <div className="flex items-center justify-between mb-3">
-                                    <h3 className="font-semibold text-gray-800">
+                                    <h3 className="font-semibold text-indigo-700">
                                         Câu {idx + 1}
                                     </h3>
                                     <div className="flex gap-2">
@@ -244,13 +315,15 @@ export default function NewAssignmentPage() {
                                                             ? {
                                                                   ...qq,
                                                                   type: e.target
-                                                                      .value as any,
+                                                                      .value as
+                                                                      | "SINGLE"
+                                                                      | "MULTIPLE",
                                                                   options:
                                                                       qq.options.map(
                                                                           (
-                                                                              o
+                                                                              opt
                                                                           ) => ({
-                                                                              ...o,
+                                                                              ...opt,
                                                                               isCorrect:
                                                                                   false,
                                                                           })
@@ -260,7 +333,7 @@ export default function NewAssignmentPage() {
                                                     )
                                                 )
                                             }
-                                            className="px-3 py-2 border rounded-lg"
+                                            className="px-3 py-2 border rounded-lg bg-white"
                                         >
                                             <option value="SINGLE">
                                                 Chọn 1 đáp án
@@ -271,9 +344,9 @@ export default function NewAssignmentPage() {
                                         </select>
                                         <button
                                             onClick={() => removeQuestion(idx)}
-                                            className="px-3 py-2 border rounded-lg text-red-600"
+                                            className="px-3 py-2 border rounded-lg text-red-600 text-xs"
                                         >
-                                            Xóa câu
+                                            Xoá câu
                                         </button>
                                     </div>
                                 </div>
@@ -357,9 +430,9 @@ export default function NewAssignmentPage() {
                                                 onClick={() =>
                                                     removeOption(idx, j)
                                                 }
-                                                className="px-3 py-2 border rounded-lg"
+                                                className="px-3 py-2 border rounded-lg text-xs"
                                             >
-                                                Xóa
+                                                Xoá
                                             </button>
                                         </div>
                                     ))}
@@ -367,7 +440,7 @@ export default function NewAssignmentPage() {
                                 <div className="mt-3">
                                     <button
                                         onClick={() => addOption(idx)}
-                                        className="px-3 py-2 bg-gray-100 rounded-lg"
+                                        className="px-3 py-2 bg-gray-100 rounded-lg text-xs"
                                     >
                                         + Thêm đáp án
                                     </button>
@@ -376,23 +449,22 @@ export default function NewAssignmentPage() {
                         ))}
                         <button
                             onClick={addQuestion}
-                            className="px-4 py-2 bg-gray-100 rounded-xl"
+                            className="px-4 py-2 bg-gradient-to-l from-indigo-100 to-purple-100 rounded-xl"
                         >
                             + Thêm câu hỏi
                         </button>
                     </div>
                 )}
-
                 <div className="pt-4 flex justify-end gap-3">
                     <button
                         onClick={() => router.back()}
-                        className="px-6 py-3 border rounded-xl"
+                        className="px-6 py-3 border border-red-400 text-red-600 rounded-xl font-semibold hover:bg-red-50"
                     >
-                        Hủy
+                        Huỷ tạo bài
                     </button>
                     <button
                         onClick={submit}
-                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl"
+                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl shadow hover:brightness-110 font-bold"
                     >
                         Tạo bài tập
                     </button>
