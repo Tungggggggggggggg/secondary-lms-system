@@ -155,7 +155,7 @@ export default function AssignmentDetailPage() {
                         )}
                     </p>
                 </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
+                <div className="flex flex-col items-end gap-2 shrink-0">
                     <AssignmentTypeChip type={detail.type} />
                     <span className="text-xs text-gray-500 mt-2">
                         <span className="font-semibold">Hạn nộp: </span>
@@ -163,6 +163,30 @@ export default function AssignmentDetailPage() {
                             ? new Date(detail.dueDate).toLocaleString()
                             : "Không rõ"}
                     </span>
+                    <button
+                        className="mt-1 px-4 py-2 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition"
+                        onClick={async () => {
+                            const ok = window.confirm(
+                                "Bạn muốn xoá bài tập này? Hành động không thể hoàn tác."
+                            );
+                            if (!ok) return;
+                            try {
+                                const res = await fetch(`/api/assignments/${assignmentId}`, { method: "DELETE" });
+                                const data = await res.json().catch(() => ({}));
+                                if (!res.ok) {
+                                    toast({ title: "Xoá bài tập thất bại", description: (data as any)?.message, variant: "destructive" });
+                                    return;
+                                }
+                                toast({ title: "Đã xoá bài tập", variant: "success" });
+                                router.push("/dashboard/teacher/assignments");
+                            } catch (err) {
+                                console.error("[AssignmentDetail] Xoá thất bại:", err);
+                                toast({ title: "Có lỗi xảy ra", variant: "destructive" });
+                            }
+                        }}
+                    >
+                        🗑️ Xoá bài tập
+                    </button>
                 </div>
             </div>
             {/* Danh sách câu hỏi */}

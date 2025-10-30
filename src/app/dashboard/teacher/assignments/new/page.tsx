@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 type QuizOption = { label: string; content: string; isCorrect: boolean };
 type QuizQuestion = {
@@ -13,6 +13,7 @@ type QuizQuestion = {
 
 export default function NewAssignmentPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const [tab, setTab] = useState<"ESSAY" | "QUIZ">("ESSAY");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -113,15 +114,15 @@ export default function NewAssignmentPage() {
     const submit = async () => {
         try {
             if (!title.trim()) {
-                toast.error("Vui lòng nhập tiêu đề bài tập");
+                toast({ title: "Vui lòng nhập tiêu đề bài tập", variant: "destructive" });
                 return;
             }
             if (isPastDate(dueDate)) {
-                toast.error("Hạn nộp phải là ngày trong tương lai");
+                toast({ title: "Hạn nộp phải là ngày trong tương lai", variant: "destructive" });
                 return;
             }
             if (tab === "ESSAY" && !essayQuestion.trim()) {
-                toast.error("Vui lòng nhập nội dung câu hỏi tự luận!");
+                toast({ title: "Vui lòng nhập nội dung câu hỏi tự luận!", variant: "destructive" });
                 return;
             }
             const payload: Record<string, unknown> = {
@@ -137,7 +138,7 @@ export default function NewAssignmentPage() {
             }
             if (tab === "QUIZ") {
                 if (questions.length === 0) {
-                    toast.error("Quiz cần ít nhất 1 câu hỏi");
+                    toast({ title: "Quiz cần ít nhất 1 câu hỏi", variant: "destructive" });
                     return;
                 }
                 payload.questions = questions.map((q, idx) => ({
@@ -160,14 +161,14 @@ export default function NewAssignmentPage() {
             const data = await res.json();
             if (!res.ok) {
                 console.error("[CREATE ASSIGNMENT] error:", data);
-                toast.error(data?.message || "Tạo bài tập thất bại");
+                toast({ title: "Tạo bài tập thất bại", description: data?.message, variant: "destructive" });
                 return;
             }
-            toast.success("Đã tạo bài tập thành công");
+            toast({ title: "Đã tạo bài tập thành công", variant: "success" });
             router.push("/dashboard/teacher/assignments");
         } catch (e) {
             console.error("[CREATE ASSIGNMENT] unexpected:", e);
-            toast.error("Có lỗi xảy ra, vui lòng thử lại");
+            toast({ title: "Có lỗi xảy ra, vui lòng thử lại", variant: "destructive" });
         }
     };
 

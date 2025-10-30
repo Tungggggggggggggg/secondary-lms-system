@@ -27,6 +27,7 @@ enum AssignmentType {
 
 // Kiểu câu hỏi trắc nghiệm
 enum QuestionType {
+  ESSAY
   SINGLE
   MULTIPLE
 }

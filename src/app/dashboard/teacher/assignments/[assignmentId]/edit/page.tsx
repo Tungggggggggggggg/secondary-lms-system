@@ -46,10 +46,24 @@ export default function AssignmentEditPage() {
     // đồng bộ với dữ liệu detail nếu dạng QUIZ
     const [questions, setQuestions] = useState<Question[]>([]);
 
+    // Quản lý input hạn nộp (datetime-local)
+    const [dueDateInput, setDueDateInput] = useState<string>("");
+
     // Đồng bộ questions khi có detail mới
     useEffect(() => {
         if (detail && detail.questions)
             setQuestions(detail.questions as Question[]);
+        // Đồng bộ hạn nộp vào input (ISO truncated to minutes)
+        if (detail?.dueDate) {
+            try {
+                const iso = new Date(detail.dueDate).toISOString().slice(0, 16);
+                setDueDateInput(iso);
+            } catch {
+                setDueDateInput("");
+            }
+        } else {
+            setDueDateInput("");
+        }
     }, [detail]);
 
     // Handler thêm/sửa/xóa câu hỏi
@@ -87,6 +101,47 @@ export default function AssignmentEditPage() {
     const handleUpdateQuestion = (qIdx: number, data: Partial<Question>) => {
         setQuestions((prev) =>
             prev.map((q, i) => (i === qIdx ? { ...q, ...data } : q))
+        );
+    };
+    const handleChangeQuestionType = (
+        qIdx: number,
+        newType: Question["type"]
+    ) => {
+        setQuestions((prev) =>
+            prev.map((q, i) => {
+                if (i !== qIdx) return q;
+                if (newType === "ESSAY") {
+                    return { ...q, type: "ESSAY", options: undefined };
+                }
+                // Ensure options exist and normalize when switching to quiz types
+                let nextOptions = q.options && q.options.length >= 2
+                    ? q.options.map((o, j) => ({
+                          ...o,
+                          label: String.fromCharCode(65 + j),
+                      }))
+                    : [
+                          {
+                              id: "opt-" + Math.random(),
+                              label: "A",
+                              content: "",
+                              isCorrect: false,
+                          },
+                          {
+                              id: "opt-" + Math.random(),
+                              label: "B",
+                              content: "",
+                              isCorrect: false,
+                          },
+                      ];
+                if (newType === "SINGLE") {
+                    const firstCorrectIdx = nextOptions.findIndex((o) => o.isCorrect);
+                    nextOptions = nextOptions.map((o, j) => ({
+                        ...o,
+                        isCorrect: firstCorrectIdx >= 0 ? j === firstCorrectIdx : false,
+                    }));
+                }
+                return { ...q, type: newType, options: nextOptions };
+            })
         );
     };
     // Sửa option của quiz question
@@ -163,6 +218,11 @@ export default function AssignmentEditPage() {
         );
     };
     // Handler submit/lưu
+    const isPastDate = (input: string) => {
+        if (!input) return false;
+        return new Date(input) < new Date();
+    };
+
     const handleSave = async () => {
         try {
             // Validate mạnh
@@ -171,6 +231,10 @@ export default function AssignmentEditPage() {
                     title: "Thiếu thông tin bài tập!",
                     variant: "destructive",
                 });
+                return;
+            }
+            if (dueDateInput && isPastDate(dueDateInput)) {
+                toast({ title: "Hạn nộp phải ở tương lai", variant: "destructive" });
                 return;
             }
             if (detail.type === "QUIZ") {
@@ -193,7 +257,7 @@ export default function AssignmentEditPage() {
                         });
                         return;
                     }
-                    if (!q.options || q.options.length < 2) {
+                    if (q.type !== "ESSAY" && (!q.options || q.options.length < 2)) {
                         toast({
                             title: `Câu hỏi số ${i + 1} cần ít nhất 2 đáp án!`,
                             variant: "destructive",
@@ -202,7 +266,7 @@ export default function AssignmentEditPage() {
                     }
                     if (
                         q.type === "SINGLE" &&
-                        !q.options.some((o: Option) => o.isCorrect)
+                        (!q.options || !q.options.some((o: Option) => o.isCorrect))
                     ) {
                         toast({
                             title: `Câu hỏi số ${
@@ -214,7 +278,7 @@ export default function AssignmentEditPage() {
                     }
                     if (
                         q.type === "MULTIPLE" &&
-                        !q.options.some((o: Option) => o.isCorrect)
+                        (!q.options || !q.options.some((o: Option) => o.isCorrect))
                     ) {
                         toast({
                             title: `Câu hỏi ${
@@ -231,7 +295,11 @@ export default function AssignmentEditPage() {
             const res = await fetch(`/api/assignments/${detail.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...detail, questions }),
+                body: JSON.stringify({
+                    ...detail,
+                    dueDate: dueDateInput ? new Date(dueDateInput).toISOString() : null,
+                    questions,
+                }),
             });
             const result = await res.json();
             if (!res.ok || !result.success) {
@@ -343,6 +411,32 @@ export default function AssignmentEditPage() {
                             value={detail.description ?? ""}
                             readOnly
                         />
+                        <label className="text-sm font-semibold text-gray-700 mt-5">
+                            Hạn nộp
+                        </label>
+                        <input
+                            type="datetime-local"
+                            className="w-full border px-4 py-2 rounded-lg mt-2"
+                            value={dueDateInput}
+                            min={new Date().toISOString().slice(0, 16)}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                setDueDateInput(v);
+                                setDetail((prev) =>
+                                    prev
+                                        ? {
+                                              ...prev,
+                                              dueDate: v ? new Date(v).toISOString() : undefined,
+                                          }
+                                        : prev
+                                );
+                            }}
+                        />
+                        {dueDateInput && new Date(dueDateInput) < new Date() && (
+                            <div className="text-xs text-red-600 mt-1">
+                                Ngày hạn nộp phải là ở tương lai
+                            </div>
+                        )}
                     </div>
                     <div className="flex flex-col items-end gap-2 min-w-[180px] mt-3 md:mt-0">
                         <span
@@ -403,10 +497,10 @@ export default function AssignmentEditPage() {
                                     <select
                                         value={q.type}
                                         onChange={(e) =>
-                                            handleUpdateQuestion(idx, {
-                                                type: e.target
-                                                    .value as Question["type"],
-                                            })
+                                            handleChangeQuestionType(
+                                                idx,
+                                                e.target.value as Question["type"]
+                                            )
                                         }
                                         className="px-3 py-2 border rounded-lg bg-white"
                                     >

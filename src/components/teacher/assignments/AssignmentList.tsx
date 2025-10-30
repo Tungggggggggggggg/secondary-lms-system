@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAssignments } from "@/hooks/use-assignments";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +9,19 @@ export default function AssignmentList() {
     const router = useRouter();
     const { assignments, loading, error, refresh } = useAssignments();
     const { toast } = useToast(); // Hook toast
+    const [confirmAssignmentId, setConfirmAssignmentId] = useState<string | null>(null);
+
+    // Trigger toast when error changes (must be before any early returns to keep hook order stable)
+    useEffect(() => {
+        if (error) {
+            console.error("[AssignmentList] Lỗi:", error);
+            toast({
+                title: "Lỗi tải danh sách bài tập",
+                description: error,
+                variant: "destructive",
+            });
+        }
+    }, [error, toast]);
 
     // Helper lấy màu sắc status (không cần loại bài)
     const getStatusColor = (status: string) => {
@@ -58,14 +72,7 @@ export default function AssignmentList() {
             </div>
         );
     }
-
     if (error) {
-        console.error("[AssignmentList] Lỗi:", error);
-        toast({
-            title: "Lỗi tải danh sách bài tập",
-            description: error,
-            variant: "destructive",
-        });
         return (
             <div className="text-center text-red-500 py-8">
                 Đã xảy ra lỗi khi lấy danh sách bài tập: {error}
@@ -167,6 +174,15 @@ export default function AssignmentList() {
                             >
                                 Xem bài nộp
                             </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmAssignmentId(assignment.id);
+                                }}
+                                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                            >
+                                🗑️ Xoá
+                            </button>
                         </div>
                     </div>
 
@@ -188,6 +204,46 @@ export default function AssignmentList() {
                     </div>
                 </div>
             ))}
+            {/* Modal xác nhận xoá */}
+            {confirmAssignmentId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmAssignmentId(null)} />
+                    <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md border">
+                        <h3 className="text-lg font-semibold mb-2">Xác nhận xoá bài tập</h3>
+                        <p className="text-sm text-gray-600 mb-4">Hành động này không thể hoàn tác. Bạn chắc chắn muốn xoá?</p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                className="px-4 py-2 rounded-xl border text-gray-700 hover:bg-gray-50"
+                                onClick={() => setConfirmAssignmentId(null)}
+                            >
+                                Huỷ
+                            </button>
+                            <button
+                                className="px-4 py-2 rounded-xl bg-red-600 text-white hover:brightness-110"
+                                onClick={async () => {
+                                    const id = confirmAssignmentId;
+                                    try {
+                                        const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok) {
+                                            toast({ title: "Xoá bài tập thất bại", description: (data as any)?.message, variant: "destructive" });
+                                            return;
+                                        }
+                                        toast({ title: "Đã xoá bài tập", variant: "success" });
+                                        setConfirmAssignmentId(null);
+                                        refresh();
+                                    } catch (err) {
+                                        console.error("[DELETE ASSIGNMENT]", err);
+                                        toast({ title: "Có lỗi xảy ra", variant: "destructive" });
+                                    }
+                                }}
+                            >
+                                Xoá
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
-import { Prisma, UserRole, AssignmentType } from '@prisma/client'
+import { Prisma, UserRole, AssignmentType, QuestionType } from '@prisma/client'
 
 // Lấy chi tiết bài tập (chỉ giáo viên chủ sở hữu)
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
@@ -115,16 +115,21 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           // Thêm lại câu hỏi mới
           for (const [qIndex, q] of questions.entries()) {
             const { content, type: questionType, order, options } = q;
+            // Cho phép ESSAY|SINGLE|MULTIPLE
+            const qTypeUpper = (typeof questionType === 'string' ? questionType.toUpperCase() : '') as string;
+            if (!Object.values(QuestionType).includes(qTypeUpper as any)) {
+              throw new Error(`Invalid question type at index ${qIndex}`);
+            }
             const newQuestion = await tx.question.create({
               data: {
                 assignmentId: params.id,
                 content,
-                type: questionType,
+                type: qTypeUpper as any,
                 order: order ?? qIndex + 1,
               }
             });
             // Nếu có options (trắc nghiệm): thêm đáp án
-            if (options && Array.isArray(options) && options.length > 0) {
+            if (qTypeUpper !== 'ESSAY' && options && Array.isArray(options) && options.length > 0) {
               for (const [oIdx, opt] of options.entries()) {
                 await tx.option.create({
                   data: {
