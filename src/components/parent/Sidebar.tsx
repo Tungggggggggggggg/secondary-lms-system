@@ -4,10 +4,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { isActivePath } from "../../utils/routing";
+import SidebarToggleButton from "../shared/SidebarToggleButton";
 
 export default function SidebarParent() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const { expanded, toggle } = useSidebarState("sidebar:parent");
   const menu = [
     { icon: "📊", label: "Dashboard", href: "/dashboard/parent/dashboard" },
     { icon: "👨‍👩‍👧", label: "Con của tôi", href: "/parent/children" },
@@ -18,13 +22,18 @@ export default function SidebarParent() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-72 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white shadow-2xl z-50">
+    <aside className={`fixed left-0 top-0 h-full ${expanded ? "w-72" : "w-20"} bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white shadow-2xl z-50 transition-[width] duration-300 ease-in-out`}>
       <div className="p-6 relative h-full">
-        <div className="flex items-center gap-3 mb-10">
-          <span className="text-4xl">🎓</span>
-          <span className="text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">
-            EduVerse
-          </span>
+        <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl">🎓</span>
+            {expanded && (
+              <span className="text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">
+                EduVerse
+              </span>
+            )}
+          </div>
+          <SidebarToggleButton expanded={expanded} onToggle={toggle} ariaControls="parent-sidebar" />
         </div>
 
         <div className="bg-white/10 rounded-2xl p-4 mb-8">
@@ -32,20 +41,24 @@ export default function SidebarParent() {
             <div className="w-14 h-14 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center text-2xl font-bold">
               {session?.user?.name?.charAt(0).toUpperCase() || "PH"}
             </div>
-            <div>
-              <h3 className="font-bold text-lg">{session?.user?.name || "Phụ huynh"}</h3>
-              <p className="text-white/80 text-sm">Phụ huynh</p>
-            </div>
+            {expanded && (
+              <div>
+                <h3 className="font-bold text-lg">{session?.user?.name || "Phụ huynh"}</h3>
+                <p className="text-white/80 text-sm">Phụ huynh</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <nav className="space-y-2">
+        <nav id="parent-sidebar" className="space-y-2">
           {menu.map((item) => {
-            const active = pathname === item.href;
+            const active = isActivePath(pathname, item.href);
             return (
               <Link
                 key={item.label}
                 href={item.href}
+                title={!expanded ? item.label : undefined}
+                aria-label={!expanded ? item.label : undefined}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
                   active
                     ? "bg-white/30 shadow-lg"
@@ -53,7 +66,7 @@ export default function SidebarParent() {
                 }`}
               >
                 <span className="text-xl">{item.icon}</span>
-                <span>{item.label}</span>
+                {expanded && <span>{item.label}</span>}
               </Link>
             );
           })}
@@ -63,9 +76,11 @@ export default function SidebarParent() {
           <button
             onClick={() => signOut({ callbackUrl: "/auth/login" })}
             className="w-full flex items-center gap-3 px-4 py-3 bg-red-500/20 rounded-xl font-semibold hover:bg-red-500/30 transition-all"
+            title={!expanded ? "Đăng xuất" : undefined}
+            aria-label={!expanded ? "Đăng xuất" : undefined}
           >
             <span className="text-xl">🚪</span>
-            <span>Đăng xuất</span>
+            {expanded && <span>Đăng xuất</span>}
           </button>
         </div>
       </div>

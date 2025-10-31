@@ -30,3 +30,30 @@ export interface AssignmentDetail {
   type?: string;
   // Các trường khác có thể mở rộng
 }
+
+// Tìm kiếm lớp học (Student - Class Search)
+export type SearchClassesQuery = {
+  q?: string;
+  subject?: string;
+  teacher?: string;
+  grade?: string;
+  visibility?: "PUBLIC" | "JOINABLE";
+  sort?: "relevance" | "newest";
+  cursor?: string;
+  limit?: number;
+};
+
+export type SearchClassItem = {
+  id: string;
+  name: string;
+  code: string;
+  subject?: string;
+  teacherName: string;
+  createdAt: string;
+  joined: boolean;
+};
+
+export type SearchClassesResponse = {
+  items: SearchClassItem[];
+  nextCursor?: string;
+};

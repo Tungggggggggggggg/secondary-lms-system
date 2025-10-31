@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { CreateClassroomDTO, ClassroomResponse } from '@/types/classroom';
+import { SearchClassesQuery, SearchClassesResponse } from '@/types/api';
 
 export const useClassroom = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -81,6 +82,55 @@ export const useClassroom = () => {
     classrooms,
     fetchClassrooms,
     createClassroom,
+    searchClassrooms: useCallback(
+      async (
+        params: SearchClassesQuery,
+        options?: { signal?: AbortSignal }
+      ): Promise<SearchClassesResponse> => {
+        try {
+          setError(null);
+          const usp = new URLSearchParams();
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && String(v).length > 0) {
+              usp.set(k, String(v));
+            }
+          });
+          const res = await fetch(`/api/classrooms/search?${usp.toString()}`, {
+            method: 'GET',
+            signal: options?.signal,
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data?.error || 'Không thể tìm kiếm lớp học');
+          }
+          return data as SearchClassesResponse;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+          setError(msg);
+          throw err;
+        }
+      },
+      []
+    ),
+    getClassroomById: useCallback(async (id: string): Promise<ClassroomResponse | null> => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await fetch(`/api/classrooms/${id}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || 'Không thể tải lớp học');
+        }
+        return data as ClassroomResponse;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+        setError(msg);
+        console.error('[getClassroomById] Lỗi:', msg);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    }, []),
     isLoading,
     error,
   };
