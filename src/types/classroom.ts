@@ -17,6 +17,12 @@ export interface ClassroomResponse {
   createdAt: Date;
   updatedAt: Date;
   teacherId: string;
+  joinedAt?: Date; // Thời gian học sinh tham gia (chỉ có khi lấy từ API student)
+  teacher?: {
+    id: string;
+    fullname: string;
+    email: string;
+  };
   _count?: {
     students: number;
   }

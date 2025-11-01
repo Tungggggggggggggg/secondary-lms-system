@@ -8,7 +8,7 @@ type Props = {
     classroom: Pick<ClassroomResponse, "id" | "name" | "code" | "icon" | "teacher" | "_count">;
 };
 
-export default function ClassroomHeader({ classroom }: Props) {
+export default function StudentClassroomHeader({ classroom }: Props) {
     const headerRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         if (!headerRef.current) return;
@@ -30,11 +30,12 @@ export default function ClassroomHeader({ classroom }: Props) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-white/10 px-3 py-1.5 text-sm">{classroom._count?.students ?? 0} học sinh</span>
+                    <span className="rounded-md bg-white/10 px-3 py-1.5 text-sm">
+                        {classroom._count?.students ?? 0} học sinh
+                    </span>
                 </div>
             </div>
         </div>
     );
 }
-
 

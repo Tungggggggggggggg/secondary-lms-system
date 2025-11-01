@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth-options";
-import { ClassroomMember, Role } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,12 +15,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Kiểm tra role phải là học sinh
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+    });
+    if (!user || user.role !== UserRole.STUDENT) {
+      return NextResponse.json(
+        { success: false, message: "Chỉ học sinh mới có thể tham gia lớp học" },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { code } = body;
 
     if (!code) {
       return NextResponse.json(
-        { success: false, message: "Class code is required" },
+        { success: false, message: "Mã lớp học không được để trống" },
         { status: 400 }
       );
     }
@@ -29,10 +40,10 @@ export async function POST(req: NextRequest) {
     const classroom = await prisma.classroom.findUnique({
       where: { code },
       include: {
-        members: true,
+        students: true,
         _count: {
           select: {
-            members: true
+            students: true
           }
         }
       }
@@ -46,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Kiểm tra xem đã là thành viên chưa
-    const isMember = classroom.members.some(member => member.userId === session.user.id);
+    const isMember = classroom.students.some(student => student.studentId === user.id);
     if (isMember) {
       return NextResponse.json(
         { success: false, message: "Bạn đã là thành viên của lớp học này" },
@@ -55,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Kiểm tra số lượng học sinh tối đa
-    if (classroom._count.members >= classroom.maxStudents) {
+    if (classroom._count.students >= classroom.maxStudents) {
       return NextResponse.json(
         { success: false, message: "Lớp học đã đạt số lượng học sinh tối đa" },
         { status: 400 }
@@ -63,18 +74,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Thêm học sinh vào lớp
-    const member = await prisma.classroomMember.create({
+    const classroomStudent = await prisma.classroomStudent.create({
       data: {
         classroomId: classroom.id,
-        userId: session.user.id,
-        role: session.user.role
+        studentId: user.id
+      },
+      include: {
+        classroom: {
+          include: {
+            teacher: { select: { id: true, fullname: true, email: true } },
+          }
+        }
       }
     });
 
     return NextResponse.json({
       success: true,
       message: "Tham gia lớp học thành công",
-      member
+      data: classroomStudent
     });
 
   } catch (error) {

@@ -23,7 +23,7 @@ export default function Sidebar({ role = "student" }: SidebarProps) {
                   {
                       icon: "📊",
                       label: "Dashboard",
-                      href: "../student/dashboard",
+                      href: "/dashboard/student/dashboard",
                   },
                   {
                       icon: "📚",

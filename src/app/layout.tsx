@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
+import { Toaster as SonnerToaster } from "sonner";
 import NextAuthProvider from "@/components/providers/NextAuthProvider";
 
 // Configure Roboto font for the entire application
@@ -57,6 +58,7 @@ export default function RootLayout({
                     {children}
                 </NextAuthProvider>
                 <Toaster />
+                <SonnerToaster position="top-right" />
             </body>
         </html>
     );

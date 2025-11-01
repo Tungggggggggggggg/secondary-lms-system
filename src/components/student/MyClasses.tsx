@@ -1,79 +1,131 @@
-// src/components/student/MyClasses.tsx
+"use client";
+
+import { useEffect } from "react";
+import { useClassroom } from "@/hooks/use-classroom";
+import Link from "next/link";
+
 export default function MyClasses() {
-    const classes = [
-      {
-        icon: "📜",
-        color: "from-yellow-400 to-yellow-500",
-        title: "Lịch sử 8A",
-        teacher: "Thầy Nguyễn Văn An",
-        progress: "67%",
-        status: "Bài tập chờ làm",
-        statusColor: "bg-yellow-100 text-yellow-700",
-      },
-      {
-        icon: "🌍",
-        color: "from-emerald-400 to-emerald-500",
-        title: "Địa lý 9D",
-        teacher: "Cô Trần Thị Bình",
-        progress: "62%",
-        status: "Đã hoàn thành",
-        statusColor: "bg-green-100 text-green-700",
-      },
-      {
-        icon: "🇬🇧",
-        color: "from-blue-400 to-blue-500",
-        title: "Tiếng Anh 7",
-        teacher: "Cô Phạm Thị Lan",
-        progress: "80%",
-        status: "Cần ôn tập",
-        statusColor: "bg-orange-100 text-orange-700",
-      },
-    ];
-  
+  const { classrooms, isLoading, error, fetchClassrooms } = useClassroom();
+
+  // Tự động fetch khi component mount
+  useEffect(() => {
+    fetchClassrooms();
+  }, [fetchClassrooms]);
+
+  if (isLoading) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
             🏫 Lớp học của tôi
           </h2>
-          <a href="#" className="text-sm font-semibold text-purple-600 hover:text-purple-700">
-            Xem tất cả →
-          </a>
         </div>
-  
         <div className="space-y-4">
-          {classes.map((cls) => (
-            <div key={cls.title} className="gradient-border rounded-xl p-5 hover-lift cursor-pointer">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-12 h-12 bg-gradient-to-r ${cls.color} rounded-xl flex items-center justify-center text-xl`}
-                  >
-                    {cls.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-800">{cls.title}</h3>
-                    <p className="text-sm text-gray-600">{cls.teacher}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold mb-1">
-                    Đang học
-                  </div>
-                  <div className="text-xs text-gray-500">Tiến độ: {cls.progress}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span>📖 8/12 bài học</span>
-                <span>⏱️ 25 phút còn lại</span>
-                <span className={`ml-auto px-2 py-1 rounded-full text-xs font-semibold ${cls.statusColor}`}>
-                  {cls.status}
-                </span>
-              </div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-24 bg-gray-200 rounded-xl"></div>
             </div>
           ))}
         </div>
       </div>
     );
   }
-  
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+            🏫 Lớp học của tôi
+          </h2>
+        </div>
+        <div className="text-red-500 text-center py-4">
+          Có lỗi xảy ra: {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!classrooms || classrooms.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+            🏫 Lớp học của tôi
+          </h2>
+          <Link
+            href="/dashboard/student/classes/join"
+            className="text-sm font-semibold text-purple-600 hover:text-purple-700"
+          >
+            Tham gia lớp mới →
+          </Link>
+        </div>
+        <div className="text-center py-12 text-gray-500">
+          <p className="mb-4">Bạn chưa tham gia lớp học nào.</p>
+          <Link
+            href="/dashboard/student/classes/join"
+            className="inline-block px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+          >
+            Tham gia lớp học đầu tiên
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+          🏫 Lớp học của tôi
+        </h2>
+        <Link
+          href="/dashboard/student/classes/join"
+          className="text-sm font-semibold text-purple-600 hover:text-purple-700"
+        >
+          Tham gia lớp mới →
+        </Link>
+      </div>
+
+      <div className="space-y-4">
+        {classrooms.map((classroom) => (
+          <Link
+            key={classroom.id}
+            href={`/dashboard/student/classes/${classroom.id}`}
+            className="gradient-border rounded-xl p-5 hover-lift cursor-pointer block"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl flex items-center justify-center text-xl">
+                  {classroom.icon}
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-800">{classroom.name}</h3>
+                  <p className="text-sm text-gray-600">
+                    {classroom.teacher?.fullname || "Giáo viên"}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold mb-1">
+                  Đang học
+                </div>
+                <div className="text-xs text-gray-500">
+                  {classroom._count?.students || 0} học sinh
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <span>📖 Mã lớp: {classroom.code}</span>
+              {classroom.joinedAt && (
+                <span>
+                  🕐 Tham gia: {new Date(classroom.joinedAt).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}

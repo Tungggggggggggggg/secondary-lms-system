@@ -78,10 +78,43 @@ export const useClassroom = () => {
     }
   };
 
+  // Hàm tham gia lớp học bằng mã
+  const joinClassroom = async (code: string): Promise<ClassroomResponse | null> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('[joinClassroom] Tham gia lớp học với mã:', code);
+      const response = await fetch('/api/classrooms/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('[joinClassroom] Lỗi response:', result.message);
+        throw new Error(result.message || 'Có lỗi xảy ra khi tham gia lớp học');
+      }
+      console.log('[joinClassroom] Tham gia thành công:', result.data);
+      // Refresh danh sách lớp học sau khi tham gia
+      await fetchClassrooms();
+      return result.data?.classroom || result.data;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+      setError(msg);
+      console.error('[joinClassroom] Lỗi:', msg);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     classrooms,
     fetchClassrooms,
     createClassroom,
+    joinClassroom,
     searchClassrooms: useCallback(
       async (
         params: SearchClassesQuery,

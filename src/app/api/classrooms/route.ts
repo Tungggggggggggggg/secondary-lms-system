@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth-options";
 import { generateClassroomCode } from "@/lib/utils";
 import { Prisma, UserRole } from "@prisma/client";
 
-// Handler GET: Lấy danh sách lớp học cho giáo viên hiện tại
+// Handler GET: Lấy danh sách lớp học cho giáo viên hoặc học sinh hiện tại
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -16,26 +16,54 @@ export async function GET() {
         { status: 401 }
       );
     }
-    // Chỉ lấy lớp học của giáo viên
     const user = await prisma.user.findUnique({
       where: { email: session.user.email! },
     });
-    if (!user || user.role !== UserRole.TEACHER) {
-      // Nếu người dùng đã xác thực nhưng không phải teacher, trả về mảng rỗng
-      // (frontend sẽ xử lý hiển thị phù hợp). Ghi log chi tiết để dễ debug.
-      console.warn(`[WARN] [GET] User ${user?.id ?? 'unknown'} with role=${user?.role ?? 'unknown'} tried to access teacher classrooms`);
-      return NextResponse.json({ success: true, data: [] }, { status: 200 });
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "User not found" },
+        { status: 404 }
+      );
     }
-    // Lấy danh sách lớp học
-    const classrooms = await prisma.classroom.findMany({
-      where: { teacherId: user.id },
-      include: {
-        _count: { select: { students: true } },
-      },
-    });
-    // Log
-    console.log(`[INFO] [GET] Lấy danh sách lớp học cho teacher: ${user.id}`);
-    return NextResponse.json({ success: true, data: classrooms }, { status: 200 });
+
+    // Nếu là giáo viên: trả về lớp học do giáo viên tạo
+    if (user.role === UserRole.TEACHER) {
+      const classrooms = await prisma.classroom.findMany({
+        where: { teacherId: user.id },
+        include: {
+          _count: { select: { students: true } },
+        },
+      });
+      console.log(`[INFO] [GET] Lấy danh sách lớp học cho teacher: ${user.id}`);
+      return NextResponse.json({ success: true, data: classrooms }, { status: 200 });
+    }
+
+    // Nếu là học sinh: trả về lớp học mà học sinh đã tham gia
+    if (user.role === UserRole.STUDENT) {
+      const studentClassrooms = await prisma.classroomStudent.findMany({
+        where: { studentId: user.id },
+        include: {
+          classroom: {
+            include: {
+              teacher: { select: { id: true, fullname: true, email: true } },
+              _count: { select: { students: true } },
+            },
+          },
+        },
+        orderBy: { joinedAt: 'desc' },
+      });
+      const classrooms = studentClassrooms.map(sc => ({
+        ...sc.classroom,
+        joinedAt: sc.joinedAt, // Thông tin thời gian tham gia
+      }));
+      console.log(`[INFO] [GET] Lấy danh sách lớp học cho student: ${user.id}`);
+      return NextResponse.json({ success: true, data: classrooms }, { status: 200 });
+    }
+
+    // Các role khác trả về rỗng
+    console.warn(`[WARN] [GET] User ${user.id} with role=${user.role} tried to access classrooms`);
+    return NextResponse.json({ success: true, data: [] }, { status: 200 });
   } catch (error) {
     console.error("[ERROR] [GET] Lỗi lấy danh sách lớp học:", error);
     return NextResponse.json(

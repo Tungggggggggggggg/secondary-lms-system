@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClassroom } from "@/hooks/use-classroom";
 import { ClassroomResponse } from "@/types/classroom";
@@ -10,6 +10,9 @@ import { ClassroomResponse } from "@/types/classroom";
 export default function ClassroomList() {
   const router = useRouter();
   const { classrooms, isLoading, error, fetchClassrooms } = useClassroom();
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name" | "students">("newest");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Khi component mount, tự động lấy danh sách lớp học
   // Lấy danh sách lớp học chỉ 1 lần khi component mount
@@ -23,6 +26,58 @@ export default function ClassroomList() {
       console.error('[ClassroomList] Lỗi:', error);
     }
   }, [error]);
+
+  // Filter và sort classrooms
+  const filteredAndSortedClassrooms = useMemo(() => {
+    if (!classrooms) return [];
+
+    let filtered = [...classrooms];
+
+    // Filter theo status
+    if (statusFilter === "active") {
+      filtered = filtered.filter((c) => c.isActive);
+    } else if (statusFilter === "archived") {
+      filtered = filtered.filter((c) => !c.isActive);
+    }
+
+    // Filter theo search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (c) =>
+          c.name.toLowerCase().includes(query) ||
+          c.code.toLowerCase().includes(query) ||
+          c.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort
+    switch (sortBy) {
+      case "name":
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "students":
+        filtered.sort(
+          (a, b) => (b._count?.students ?? 0) - (a._count?.students ?? 0)
+        );
+        break;
+      case "oldest":
+        filtered.sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        break;
+      case "newest":
+      default:
+        filtered.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        break;
+    }
+
+    return filtered;
+  }, [classrooms, statusFilter, sortBy, searchQuery]);
 
   if (isLoading) {
     return (
@@ -58,23 +113,67 @@ export default function ClassroomList() {
   }
 
   return (
-    <div className="grid md:grid-cols-3 gap-6">
-      {/* Create new classroom card */}
-      <div
-        onClick={() => router.push("/dashboard/teacher/classrooms/new")}
-        className="bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl p-6 text-white hover:shadow-xl transition-all cursor-pointer hover:-translate-y-1"
-      >
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="text-5xl mb-3">➕</div>
-            <h3 className="text-xl font-bold mb-2">Tạo lớp học mới</h3>
-            <p className="text-white/80">Tạo không gian học tập mới</p>
-          </div>
+    <>
+      {/* Filter & Search */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <select
+            value={statusFilter}
+            onChange={(e) =>
+              setStatusFilter(
+                e.target.value as "all" | "active" | "archived"
+              )
+            }
+            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+          >
+            <option value="all">Tất cả lớp học</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="archived">Đã lưu trữ</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) =>
+              setSortBy(
+                e.target.value as "newest" | "oldest" | "name" | "students"
+              )
+            }
+            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+          >
+            <option value="newest">Mới nhất</option>
+            <option value="oldest">Cũ nhất</option>
+            <option value="name">Theo tên</option>
+            <option value="students">Số học sinh</option>
+          </select>
+        </div>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm kiếm lớp học..."
+            className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64"
+          />
+          <span className="absolute left-3 top-2.5">🔍</span>
         </div>
       </div>
 
-      {classrooms && classrooms.length > 0 ? (
-        classrooms.map((classroom: ClassroomResponse) => (
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Create new classroom card */}
+        <div
+          onClick={() => router.push("/dashboard/teacher/classrooms/new")}
+          className="bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl p-6 text-white hover:shadow-xl transition-all cursor-pointer hover:-translate-y-1"
+        >
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="text-5xl mb-3">➕</div>
+              <h3 className="text-xl font-bold mb-2">Tạo lớp học mới</h3>
+              <p className="text-white/80">Tạo không gian học tập mới</p>
+            </div>
+          </div>
+        </div>
+
+        {filteredAndSortedClassrooms.length > 0 ? (
+          filteredAndSortedClassrooms.map((classroom: ClassroomResponse) => (
           <div
             key={classroom.id}
             onClick={() => router.push(`/dashboard/teacher/classrooms/${classroom.id}`)}
@@ -95,15 +194,18 @@ export default function ClassroomList() {
             </div>
             <div className="flex items-center justify-between text-sm text-gray-600">
               <span>Mã lớp: {classroom.code}</span>
-              <span>{classroom.maxStudents} học sinh</span>
+              <span>{classroom._count?.students ?? 0} học sinh</span>
             </div>
           </div>
-        ))
-      ) : (
-        <div className="col-span-3 text-center text-gray-500 py-8">
-          Không có lớp học nào.
-        </div>
-      )}
-    </div>
+          ))
+        ) : (
+          <div className="col-span-3 text-center text-gray-500 py-8">
+            {classrooms && classrooms.length > 0
+              ? "Không tìm thấy lớp học nào phù hợp với bộ lọc."
+              : "Không có lớp học nào."}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

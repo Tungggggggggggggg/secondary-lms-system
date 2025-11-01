@@ -35,33 +35,8 @@ export default function ClassroomsPage() {
         </div>
       </div>
 
-      {/* Filter & Search */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <select className="px-4 py-2 bg-white rounded-xl border border-gray-200">
-            <option value="all">Tất cả lớp học</option>
-            <option value="active">Đang hoạt động</option>
-            <option value="archived">Đã lưu trữ</option>
-          </select>
-          <select className="px-4 py-2 bg-white rounded-xl border border-gray-200">
-            <option value="newest">Mới nhất</option>
-            <option value="oldest">Cũ nhất</option>
-            <option value="name">Theo tên</option>
-            <option value="students">Số học sinh</option>
-          </select>
-        </div>
-        <div className="relative">
-          <input 
-            type="text"
-            placeholder="Tìm kiếm lớp học..."
-            className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64"
-          />
-          <span className="absolute left-3 top-2.5">🔍</span>
-        </div>
-      </div>
-
-  {/* Classroom List */}
-  <ClassroomList />
+      {/* Classroom List */}
+      <ClassroomList />
     </div>
   );
 }
