@@ -16,9 +16,10 @@ const prismaClientSingleton = () => {
           { level: 'error', emit: 'stdout' },
           { level: 'warn', emit: 'stdout' },
         ],
-    // Connection pooling configuration
-    // Note: Connection pooling được quản lý bởi DATABASE_URL (có thể dùng connection pooler như PgBouncer)
-    // Trong Next.js serverless, mỗi request có thể tạo Prisma Client mới, nên cần singleton pattern
+    // OPTIMIZE: Connection pooling configuration
+    // Note: Connection pooling được quản lý bởi DATABASE_URL
+    // Với Supabase, connection pooling được xử lý tự động
+    // Đảm bảo DATABASE_URL sử dụng connection pooler nếu có (ví dụ: ?pgbouncer=true)
   })
 
   // Log slow queries để debug performance issues (chỉ trong development)
@@ -35,27 +36,41 @@ const prismaClientSingleton = () => {
   return client
 }
 
-// Global để tránh multiple instances ở dev
+// Global để tránh multiple instances
+// OPTIMIZE: Singleton pattern để tránh tạo nhiều Prisma Client instances
+// Trong Next.js:
+// - Development: hot reload có thể tạo nhiều instances nếu không có global cache
+// - Production: serverless functions có thể share process, global giúp reuse instance
 declare global {
   // eslint-disable-next-line no-var
   var prisma: ReturnType<typeof prismaClientSingleton> | undefined
 }
 
 // Bảo đảm luôn có instance và kiểu không undefined
-// OPTIMIZE: Singleton pattern để tránh tạo nhiều Prisma Client instances
-// Trong Next.js development, hot reload có thể tạo nhiều instances nếu không có global cache
+// Sử dụng globalThis để hoạt động trong cả Node.js và browser environments
+const globalForPrisma = globalThis as unknown as {
+  prisma: ReturnType<typeof prismaClientSingleton> | undefined
+}
+
 let _prisma: ReturnType<typeof prismaClientSingleton>
 
-if (!globalThis.prisma) {
+if (!globalForPrisma.prisma) {
   // Chỉ log trong development để tránh spam logs trong production
   if (process.env.NODE_ENV === 'development') {
     console.log('[PRISMA] Creating new Prisma Client instance...')
   }
   _prisma = prismaClientSingleton()
-  globalThis.prisma = _prisma
+  globalForPrisma.prisma = _prisma
 } else {
   // Sử dụng instance đã có
-  _prisma = globalThis.prisma
+  _prisma = globalForPrisma.prisma
+}
+
+// OPTIMIZE: Disconnect khi app shutdown (chủ yếu cho development)
+if (process.env.NODE_ENV === 'development') {
+  process.on('beforeExit', async () => {
+    await _prisma.$disconnect()
+  })
 }
 
 export const prisma = _prisma

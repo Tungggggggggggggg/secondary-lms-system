@@ -35,12 +35,12 @@ enum QuestionType {
 // Model User - Quản lý thông tin người dùng
 model User {
   // Thông tin xác thực
-  id       String  @id @default(cuid())
-  email    String  @unique // Email dùng để đăng nhập
-  password String  // Mật khẩu đã được mã hóa
+  id       String @id @default(cuid())
+  email    String @unique // Email dùng để đăng nhập
+  password String // Mật khẩu đã được mã hóa
 
   // Thông tin cá nhân
-  fullname String  // Họ và tên đầy đủ
+  fullname String // Họ và tên đầy đủ
   role     UserRole @default(STUDENT) // Vai trò người dùng
 
   // Metadata
@@ -48,13 +48,13 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Quan hệ
-  sessions Session[]
-  teacherClassrooms Classroom[] @relation("TeacherClassrooms") // Lớp học mà giáo viên tạo
-  studentClassrooms ClassroomStudent[] // Lớp học mà học sinh tham gia
-  createdCourses Course[] // Khóa học được tạo bởi giáo viên
-  submissions AssignmentSubmission[] // Bài nộp của học sinh
+  sessions           Session[]
+  teacherClassrooms  Classroom[]            @relation("TeacherClassrooms") // Lớp học mà giáo viên tạo
+  studentClassrooms  ClassroomStudent[] // Lớp học mà học sinh tham gia
+  createdCourses     Course[] // Khóa học được tạo bởi giáo viên
+  submissions        AssignmentSubmission[] // Bài nộp của học sinh
   createdAssignments Assignment[] // Bài tập được tạo bởi giáo viên
-  questionComments QuestionComment[] // Bình luận của người dùng ở câu hỏi
+  questionComments   QuestionComment[] // Bình luận của người dùng ở câu hỏi
 
   @@map("users")
 }
@@ -76,36 +76,36 @@ model Session {
 // Model PasswordReset - Quản lý yêu cầu đặt lại mật khẩu
 model PasswordReset {
   // Thông tin token reset
-  id         String   @id @default(cuid())
-  email      String   // Email của người dùng yêu cầu reset
-  token      String   @unique // Mã xác thực 6 số
-  expires    DateTime // Thời gian hết hạn của mã
-  completed  Boolean  @default(false) // Trạng thái đã reset password chưa
-  
+  id        String   @id @default(cuid())
+  email     String // Email của người dùng yêu cầu reset
+  token     String   @unique // Mã xác thực 6 số
+  expires   DateTime // Thời gian hết hạn của mã
+  completed Boolean  @default(false) // Trạng thái đã reset password chưa
+
   // Metadata
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("password_resets")
 }
 
 // Model Classroom - Quản lý thông tin lớp học
 model Classroom {
-  id          String   @id @default(cuid())
-  name        String   // Tên lớp học
-  description String?  // Mô tả về lớp học
-  code        String   @unique // Mã lớp học để học sinh tham gia
-  icon        String   @default("📚") // Icon của lớp học
-  maxStudents Int      @default(30) // Số lượng học sinh tối đa
-  isActive    Boolean  @default(true) // Trạng thái hoạt động của lớp
+  id          String  @id @default(cuid())
+  name        String // Tên lớp học
+  description String? // Mô tả về lớp học
+  code        String  @unique // Mã lớp học để học sinh tham gia
+  icon        String  @default("📚") // Icon của lớp học
+  maxStudents Int     @default(30) // Số lượng học sinh tối đa
+  isActive    Boolean @default(true) // Trạng thái hoạt động của lớp
 
   // Metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Quan hệ với giáo viên tạo lớp
-  teacherId   String
-  teacher     User     @relation("TeacherClassrooms", fields: [teacherId], references: [id])
+  teacherId String
+  teacher   User   @relation("TeacherClassrooms", fields: [teacherId], references: [id])
 
   // Quan hệ với học sinh trong lớp, khóa học và bài tập
   students    ClassroomStudent[]
@@ -118,18 +118,18 @@ model Classroom {
 
 // Model Course - Quản lý khóa học
 model Course {
-  id          String   @id @default(cuid())
-  title       String   // Tên khóa học
-  description String?  // Mô tả khóa học
-  coverImage  String?  // Ảnh bìa khóa học
+  id          String  @id @default(cuid())
+  title       String // Tên khóa học
+  description String? // Mô tả khóa học
+  coverImage  String? // Ảnh bìa khóa học
 
   // Metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Quan hệ
   authorId    String
-  author      User     @relation(fields: [authorId], references: [id])
+  author      User              @relation(fields: [authorId], references: [id])
   classrooms  ClassroomCourse[] // Các lớp học có khóa học này
   lessons     Lesson[] // Các bài học trong khóa
   assignments Assignment[] // Các bài tập trong khóa
@@ -139,57 +139,58 @@ model Course {
 
 // Model Lesson - Quản lý bài học
 model Lesson {
-  id          String   @id @default(cuid())
-  title       String   // Tiêu đề bài học
-  content     String   @db.Text // Nội dung bài học
-  order       Int      // Thứ tự bài học trong khóa
+  id      String @id @default(cuid())
+  title   String // Tiêu đề bài học
+  content String @db.Text // Nội dung bài học
+  order   Int // Thứ tự bài học trong khóa
 
   // Metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Quan hệ với khóa học
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("lessons")
 }
 
 // Model Assignment - Quản lý bài tập
 model Assignment {
-  id          String    @id @default(cuid())
-  title       String    // Tiêu đề bài tập
-  description String?   @db.Text // Mô tả bài tập
+  id          String         @id @default(cuid())
+  title       String // Tiêu đề bài tập
+  description String?        @db.Text // Mô tả bài tập
   dueDate     DateTime? // Hạn nộp bài
   type        AssignmentType @default(ESSAY)
 
   // Metadata
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Quan hệ
   authorId    String
-  author      User      @relation(fields: [authorId], references: [id])
+  author      User                   @relation(fields: [authorId], references: [id])
   courseId    String?
-  course      Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course      Course?                @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions   Question[]
   submissions AssignmentSubmission[] // Các bài nộp của học sinh
   classrooms  AssignmentClassroom[] // Các lớp học có bài tập này
 
   @@index([authorId]) // Index cho query assignments của teacher
+  @@index([authorId, createdAt]) // Composite index cho teacher queries với sorting
   @@index([dueDate]) // Index cho query assignments theo deadline
   @@map("assignments")
 }
 
 // Câu hỏi trắc nghiệm
 model Question {
-  id           String       @id @default(cuid())
-  content      String       @db.Text
-  type         QuestionType @default(SINGLE)
-  order        Int
+  id      String       @id @default(cuid())
+  content String       @db.Text
+  type    QuestionType @default(SINGLE)
+  order   Int
 
   assignmentId String
-  assignment   Assignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignment   Assignment        @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   options      Option[]
   comments     QuestionComment[]
 
@@ -199,11 +200,11 @@ model Question {
 
 // Phương án trả lời của câu hỏi trắc nghiệm
 model Option {
-  id         String   @id @default(cuid())
-  label      String
-  content    String   @db.Text
-  isCorrect  Boolean  @default(false)
-  order      Int
+  id        String  @id @default(cuid())
+  label     String
+  content   String  @db.Text
+  isCorrect Boolean @default(false)
+  order     Int
 
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
@@ -213,9 +214,9 @@ model Option {
 
 // Bình luận ở từng câu hỏi
 model QuestionComment {
-  id         String   @id @default(cuid())
-  content    String   @db.Text
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
 
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
@@ -230,15 +231,15 @@ model QuestionComment {
 model AssignmentSubmission {
   id          String   @id @default(cuid())
   content     String   @db.Text // Nội dung bài nộp
-  grade       Float?   // Điểm số
-  feedback    String?  // Nhận xét của giáo viên
+  grade       Float? // Điểm số
+  feedback    String? // Nhận xét của giáo viên
   submittedAt DateTime @default(now())
 
   // Quan hệ
   assignmentId String
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   studentId    String
-  student      User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([assignmentId, studentId]) // Composite index cho lookup submission nhanh
   @@index([studentId, submittedAt]) // Index cho grades queries (sort by submittedAt)
@@ -247,31 +248,32 @@ model AssignmentSubmission {
 
 // Model ClassroomStudent - Quan hệ nhiều-nhiều giữa Classroom và Student
 model ClassroomStudent {
-  id          String   @id @default(cuid())
-  joinedAt    DateTime @default(now())
-  
+  id       String   @id @default(cuid())
+  joinedAt DateTime @default(now())
+
   // Quan hệ
   classroomId String
   classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  
-  studentId   String
-  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([classroomId, studentId])
   @@index([studentId]) // Index cho query classrooms của student
+  @@index([studentId, joinedAt]) // Composite index cho student queries sắp xếp theo thời gian tham gia
   @@index([classroomId]) // Index cho query students của classroom
   @@map("classroom_students")
 }
 
 // Model ClassroomCourse - Quan hệ nhiều-nhiều giữa Classroom và Course
 model ClassroomCourse {
-  id          String   @id @default(cuid())
-  addedAt     DateTime @default(now())
+  id      String   @id @default(cuid())
+  addedAt DateTime @default(now())
 
   // Quan hệ
   classroomId String
   classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  courseId    String 
+  courseId    String
   course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([classroomId, courseId])
@@ -281,17 +283,18 @@ model ClassroomCourse {
 // Model AssignmentClassroom - Quan hệ nhiều-nhiều giữa Assignment và Classroom
 // Cho phép một bài tập được thêm vào nhiều lớp học
 model AssignmentClassroom {
-  id          String   @id @default(cuid())
-  addedAt     DateTime @default(now()) // Thời gian thêm bài tập vào lớp
+  id      String   @id @default(cuid())
+  addedAt DateTime @default(now()) // Thời gian thêm bài tập vào lớp
 
   // Quan hệ
-  classroomId String
-  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  classroomId  String
+  classroom    Classroom  @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   assignmentId String
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
   @@unique([classroomId, assignmentId]) // Một bài tập chỉ có thể được thêm vào một lớp một lần
   @@index([assignmentId]) // Index cho query assignments theo assignmentId
   @@index([classroomId]) // Index cho query assignments theo classroomId
+  @@index([classroomId, addedAt]) // Composite index cho queries sắp xếp theo thời gian thêm
   @@map("assignment_classrooms")
 }

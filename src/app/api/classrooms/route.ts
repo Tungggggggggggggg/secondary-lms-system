@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
 
     // Nếu là giáo viên: trả về lớp học do giáo viên tạo
     if (user.role === UserRole.TEACHER) {
+      // OPTIMIZE: Sử dụng index [teacherId] đã có sẵn
       const classrooms = await prisma.classroom.findMany({
         where: { teacherId: user.id },
         select: {
@@ -31,8 +32,10 @@ export async function GET(req: NextRequest) {
           teacherId: true,
           createdAt: true,
           updatedAt: true,
+          // OPTIMIZE: _count được giữ lại vì cần thiết, nhưng có thể optimize sau nếu chậm
           _count: { select: { students: true } },
         },
+        orderBy: { createdAt: 'desc' }, // Sắp xếp để consistent ordering
       });
       console.log(`[INFO] [GET] Lấy danh sách lớp học cho teacher: ${user.id}`);
       return NextResponse.json({ success: true, data: classrooms }, { status: 200 });
@@ -40,6 +43,7 @@ export async function GET(req: NextRequest) {
 
     // Nếu là học sinh: trả về lớp học mà học sinh đã tham gia
     if (user.role === UserRole.STUDENT) {
+      // OPTIMIZE: Sử dụng composite index [studentId, joinedAt] cho query sắp xếp
       const studentClassrooms = await prisma.classroomStudent.findMany({
         where: { studentId: user.id },
         select: {
@@ -56,11 +60,12 @@ export async function GET(req: NextRequest) {
               createdAt: true,
               updatedAt: true,
               teacher: { select: { id: true, fullname: true, email: true } },
+              // OPTIMIZE: _count được giữ lại vì cần thiết, nhưng có thể optimize sau nếu chậm
               _count: { select: { students: true } },
             },
           },
         },
-        orderBy: { joinedAt: 'desc' },
+        orderBy: { joinedAt: 'desc' }, // Sử dụng composite index [studentId, joinedAt]
       });
       const classrooms = studentClassrooms.map(sc => ({
         ...sc.classroom,

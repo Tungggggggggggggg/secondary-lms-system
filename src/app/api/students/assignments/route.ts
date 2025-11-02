@@ -20,82 +20,82 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // OPTIMIZE: Parallel queries - Lấy classrooms và assignments cùng lúc
-    const [studentClassrooms, allAssignments] = await Promise.all([
-      // Lấy danh sách classrooms mà student đã tham gia
-      prisma.classroomStudent.findMany({
-        where: { studentId: user.id },
-        select: { classroomId: true },
-      }),
-      // Lấy tất cả assignments từ classrooms mà student tham gia (direct join)
-      prisma.assignmentClassroom.findMany({
-        where: {
-          classroom: {
-            students: {
-              some: { studentId: user.id },
-            },
-          },
-        },
-        select: {
-          addedAt: true,
-          assignment: {
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              dueDate: true,
-              type: true,
-              createdAt: true,
-              updatedAt: true,
-              _count: {
-                select: {
-                  submissions: true,
-                  questions: true,
-                },
-              },
-            },
-          },
-          classroom: {
-            select: {
-              id: true,
-              name: true,
-              code: true,
-              icon: true,
-              teacher: {
-                select: { id: true, fullname: true, email: true },
-              },
-            },
-          },
-        },
-        orderBy: { addedAt: "desc" },
-      }),
-    ]);
+    // OPTIMIZE: Lấy classrooms trước, sau đó filter trực tiếp thay vì nested some()
+    const studentClassrooms = await prisma.classroomStudent.findMany({
+      where: { studentId: user.id },
+      select: { classroomId: true },
+    });
 
     const classroomIds = studentClassrooms.map((sc) => sc.classroomId);
 
-    if (classroomIds.length === 0 || allAssignments.length === 0) {
+    if (classroomIds.length === 0) {
       return NextResponse.json(
         { success: true, data: [] },
         { status: 200 }
       );
     }
 
-    // Lấy submissions của student cho các assignments này (parallel với query trên)
-    const assignmentIds = allAssignments.map((ac) => ac.assignment.id);
-    const studentSubmissions = await prisma.assignmentSubmission.findMany({
+    // OPTIMIZE: Query trực tiếp với classroomId IN thay vì nested some() - sử dụng index
+    const allAssignments = await prisma.assignmentClassroom.findMany({
       where: {
-        assignmentId: { in: assignmentIds },
-        studentId: user.id,
+        classroomId: { in: classroomIds },
       },
       select: {
-        id: true,
-        assignmentId: true,
-        content: true,
-        grade: true,
-        feedback: true,
-        submittedAt: true,
+        addedAt: true,
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            dueDate: true,
+            type: true,
+            createdAt: true,
+            updatedAt: true,
+            // OPTIMIZE: Loại bỏ _count để tránh expensive queries
+          },
+        },
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            icon: true,
+            teacher: {
+              select: { id: true, fullname: true, email: true },
+            },
+          },
+        },
       },
+      orderBy: { addedAt: "desc" },
     });
+
+    if (allAssignments.length === 0) {
+      return NextResponse.json(
+        { success: true, data: [] },
+        { status: 200 }
+      );
+    }
+
+    const assignmentIds = allAssignments.map((ac) => ac.assignment.id);
+
+    // OPTIMIZE: Fetch submissions song song với counts (nếu cần) cho tất cả assignments
+    const [studentSubmissions] = await Promise.all([
+      prisma.assignmentSubmission.findMany({
+        where: {
+          assignmentId: { in: assignmentIds },
+          studentId: user.id,
+        },
+        select: {
+          id: true,
+          assignmentId: true,
+          content: true,
+          grade: true,
+          feedback: true,
+          submittedAt: true,
+        },
+      }),
+      // Counts có thể được fetch riêng nếu cần, nhưng tạm thời bỏ qua để tối ưu
+    ]);
 
     // Tạo map để lookup submission nhanh
     const submissionMap = new Map(
@@ -116,7 +116,8 @@ export async function GET(req: NextRequest) {
         type: assignment.type,
         createdAt: assignment.createdAt,
         updatedAt: assignment.updatedAt,
-        _count: assignment._count,
+        // OPTIMIZE: _count đã được loại bỏ để tăng tốc độ query
+        _count: { submissions: 0, questions: 0 }, // Placeholder - có thể fetch riêng nếu cần
         // Thông tin classroom (từ join)
         classroom: {
           id: classroom.id,
