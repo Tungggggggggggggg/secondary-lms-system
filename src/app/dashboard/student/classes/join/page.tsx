@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
+import BackButton from "@/components/ui/back-button";
 import { useClassroom } from "@/hooks/use-classroom";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -38,11 +40,26 @@ export default function JoinClassPage() {
         }
     };
 
+    // Breadcrumb items
+    const breadcrumbItems: BreadcrumbItem[] = [
+        { label: "Dashboard", href: "/dashboard/student/dashboard" },
+        { label: "Lớp học", href: "/dashboard/student/classes" },
+        { label: "Tham gia lớp", href: "/dashboard/student/classes/join" },
+    ];
+
     return (
-        <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg">
-            <h1 className="text-2xl font-bold mb-6 text-center">
-                Tham gia lớp học
-            </h1>
+        <div className="max-w-md mx-auto p-6">
+            <div className="mb-4">
+                <Breadcrumb items={breadcrumbItems} />
+            </div>
+            <div className="mb-4 flex items-center justify-end">
+                <BackButton href="/dashboard/student/classes" />
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                <h1 className="text-2xl font-bold mb-6 text-center">
+                    Tham gia lớp học
+                </h1>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -69,14 +86,6 @@ export default function JoinClassPage() {
                     {isLoading ? "Đang xử lý..." : "Tham gia lớp"}
                 </Button>
             </form>
-
-            <div className="mt-6 text-center">
-                <button
-                    onClick={() => router.back()}
-                    className="text-sm text-gray-600 hover:text-gray-800"
-                >
-                    ← Quay lại
-                </button>
             </div>
         </div>
     );

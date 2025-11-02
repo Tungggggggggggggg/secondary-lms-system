@@ -1,5 +1,7 @@
 import StudentClassroomTabs from "@/components/student/classroom/StudentClassroomTabs";
 import StudentClassroomHeader from "@/components/student/classroom/StudentClassroomHeader";
+import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
+import BackButton from "@/components/ui/back-button";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
@@ -60,8 +62,19 @@ export default async function StudentClassroomLayout({ children, params }: Props
         _count: classroom._count,
     };
 
+    // Breadcrumb items cho classroom detail pages
+    const breadcrumbItems: BreadcrumbItem[] = [
+        { label: "Dashboard", href: "/dashboard/student/dashboard" },
+        { label: "Lớp học", href: "/dashboard/student/classes" },
+        { label: classroom.name, href: `/dashboard/student/classes/${classId}` },
+    ];
+
     return (
         <div className="px-6 py-4">
+            <div className="mb-4 flex items-center justify-between">
+                <Breadcrumb items={breadcrumbItems} />
+                <BackButton href="/dashboard/student/classes" />
+            </div>
             <StudentClassroomHeader classroom={classroomData} />
             <StudentClassroomTabs classId={classId} />
             <div className="mt-6">{children}</div>

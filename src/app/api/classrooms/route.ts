@@ -1,29 +1,19 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth-options";
 import { generateClassroomCode } from "@/lib/utils";
 import { Prisma, UserRole } from "@prisma/client";
+import { getAuthenticatedUser } from "@/lib/api-utils";
 
 // Handler GET: Lấy danh sách lớp học cho giáo viên hoặc học sinh hiện tại
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    // Sử dụng getAuthenticatedUser (không yêu cầu role cụ thể)
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
-      );
-    }
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-    });
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
       );
     }
 
@@ -31,7 +21,16 @@ export async function GET() {
     if (user.role === UserRole.TEACHER) {
       const classrooms = await prisma.classroom.findMany({
         where: { teacherId: user.id },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          code: true,
+          icon: true,
+          maxStudents: true,
+          teacherId: true,
+          createdAt: true,
+          updatedAt: true,
           _count: { select: { students: true } },
         },
       });
@@ -43,9 +42,19 @@ export async function GET() {
     if (user.role === UserRole.STUDENT) {
       const studentClassrooms = await prisma.classroomStudent.findMany({
         where: { studentId: user.id },
-        include: {
+        select: {
+          joinedAt: true,
           classroom: {
-            include: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              code: true,
+              icon: true,
+              maxStudents: true,
+              teacherId: true,
+              createdAt: true,
+              updatedAt: true,
               teacher: { select: { id: true, fullname: true, email: true } },
               _count: { select: { students: true } },
             },
@@ -75,23 +84,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    // Kiểm tra xác thực
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    // Sử dụng getAuthenticatedUser với caching
+    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
-      );
-    }
-
-    // Kiểm tra role teacher
-  const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-    });
-    if (!user || user.role !== UserRole.TEACHER) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Teacher role required" },
-        { status: 403 }
       );
     }
 

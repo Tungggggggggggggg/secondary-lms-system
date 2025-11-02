@@ -7,13 +7,20 @@ import { Prisma, AssignmentType, QuestionType, UserRole } from '@prisma/client'
 // Lấy danh sách bài tập theo giáo viên hiện tại - TỐI ƯU SELECT + pagination
 export async function GET(req: NextRequest) {
   try {
+    // NOTE: getAuthenticatedUser sử dụng email, nhưng route này dùng session.user.id
+    // Giữ nguyên logic để tránh breaking changes, nhưng có thể optimize sau
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    if (!session?.user?.id && !session?.user?.email) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
 
     // Chỉ giáo viên mới có danh sách bài tập (tạo)
-    const user = await prisma.user.findUnique({ where: { id: session.user.id } })
+    const user = session.user.id
+      ? await prisma.user.findUnique({ where: { id: session.user.id } })
+      : session.user.email
+      ? await prisma.user.findUnique({ where: { email: session.user.email } })
+      : null;
+
     if (!user || user.role !== UserRole.TEACHER) {
       return NextResponse.json({ success: true, data: [] }, { status: 200 })
     }
@@ -22,9 +29,42 @@ export async function GET(req: NextRequest) {
     const url = req?.url ? new URL(req.url, 'http://localhost') : null;
     const take = url?.searchParams.get('take') ? Number(url?.searchParams.get('take')) : 10;
     const skip = url?.searchParams.get('skip') ? Number(url?.searchParams.get('skip')) : 0;
+    
+    // Lấy classroomId từ query params nếu có (để filter assignments)
+    const classroomId = url?.searchParams.get('classroomId');
+    const availableForClassroom = url?.searchParams.get('availableForClassroom');
+    
+    // Xây dựng where clause
+    const whereClause: { authorId: string; id?: { in?: string[]; notIn?: string[] } } = { authorId: user.id };
+    
+    // Nếu có classroomId, lấy assignments đã được thêm vào classroom đó
+    if (classroomId && !availableForClassroom) {
+      const assignmentIds = await prisma.assignmentClassroom.findMany({
+        where: { classroomId },
+        select: { assignmentId: true },
+      });
+      whereClause.id = {
+        in: assignmentIds.map((ac) => ac.assignmentId),
+      };
+    }
+    
+    // Nếu availableForClassroom=true, lấy assignments CHƯA được thêm vào classroom
+    if (classroomId && availableForClassroom === 'true') {
+      const assignmentIds = await prisma.assignmentClassroom.findMany({
+        where: { classroomId },
+        select: { assignmentId: true },
+      });
+      const addedAssignmentIds = assignmentIds.map((ac) => ac.assignmentId);
+      if (addedAssignmentIds.length > 0) {
+        whereClause.id = {
+          notIn: addedAssignmentIds,
+        };
+      }
+    }
+    
     // Truy vấn TỐI ƯU SELECT chỉ trường cần, bỏ include dư thừa
     const assignments = await prisma.assignment.findMany({
-      where: { authorId: session.user.id },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       take,
       skip,
@@ -50,12 +90,19 @@ export async function GET(req: NextRequest) {
 // Tạo bài tập mới (essay hoặc quiz)
 export async function POST(req: NextRequest) {
   try {
+    // NOTE: getAuthenticatedUser sử dụng email, nhưng route này dùng session.user.id
+    // Giữ nguyên logic để tránh breaking changes
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    if (!session?.user?.id && !session?.user?.email) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
 
-    const me = await prisma.user.findUnique({ where: { id: session.user.id } })
+    const me = session.user.id
+      ? await prisma.user.findUnique({ where: { id: session.user.id } })
+      : session.user.email
+      ? await prisma.user.findUnique({ where: { email: session.user.email } })
+      : null;
+
     if (!me || me.role !== UserRole.TEACHER) {
       return NextResponse.json({ success: false, message: 'Forbidden - Teacher only' }, { status: 403 })
     }

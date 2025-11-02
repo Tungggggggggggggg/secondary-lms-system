@@ -2,20 +2,35 @@ import { PrismaClient } from '@prisma/client'
 
 // PrismaClient được khởi tạo với cấu hình tối ưu cho production
 const prismaClientSingleton = () => {
+  const isDevelopment = process.env.NODE_ENV === 'development'
+
   const client = new PrismaClient({
-    log: [
-      { level: 'query', emit: 'event' },
-      { level: 'error', emit: 'stdout' },
-      { level: 'info', emit: 'stdout' },
-      { level: 'warn', emit: 'stdout' },
-    ],
+    // Optimize logging: Chỉ log queries trong development, log errors trong production
+    log: isDevelopment
+      ? [
+          { level: 'query', emit: 'event' },
+          { level: 'error', emit: 'stdout' },
+          { level: 'warn', emit: 'stdout' },
+        ]
+      : [
+          { level: 'error', emit: 'stdout' },
+          { level: 'warn', emit: 'stdout' },
+        ],
+    // Connection pooling configuration
+    // Note: Connection pooling được quản lý bởi DATABASE_URL (có thể dùng connection pooler như PgBouncer)
+    // Trong Next.js serverless, mỗi request có thể tạo Prisma Client mới, nên cần singleton pattern
   })
 
-  // Log queries để debug
-  client.$on('query', (e: { query: string; duration: number }) => {
-    console.log('Query: ' + e.query)
-    console.log('Duration: ' + e.duration + 'ms')
-  })
+  // Log slow queries để debug performance issues (chỉ trong development)
+  if (isDevelopment) {
+    client.$on('query', (e: { query: string; duration: number; params: string }) => {
+      // Chỉ log queries chậm (> 100ms) để tránh spam logs
+      if (e.duration > 100) {
+        console.log(`[SLOW QUERY] Duration: ${e.duration}ms`)
+        console.log(`[SLOW QUERY] Query: ${e.query}`)
+      }
+    })
+  }
 
   return client
 }
@@ -27,13 +42,19 @@ declare global {
 }
 
 // Bảo đảm luôn có instance và kiểu không undefined
+// OPTIMIZE: Singleton pattern để tránh tạo nhiều Prisma Client instances
+// Trong Next.js development, hot reload có thể tạo nhiều instances nếu không có global cache
 let _prisma: ReturnType<typeof prismaClientSingleton>
+
 if (!globalThis.prisma) {
-  console.log('Creating new Prisma Client instance...')
+  // Chỉ log trong development để tránh spam logs trong production
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[PRISMA] Creating new Prisma Client instance...')
+  }
   _prisma = prismaClientSingleton()
   globalThis.prisma = _prisma
 } else {
-  console.log('Using existing Prisma Client instance...')
+  // Sử dụng instance đã có
   _prisma = globalThis.prisma
 }
 

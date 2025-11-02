@@ -107,10 +107,12 @@ model Classroom {
   teacherId   String
   teacher     User     @relation("TeacherClassrooms", fields: [teacherId], references: [id])
 
-  // Quan hệ với học sinh trong lớp và khóa học
+  // Quan hệ với học sinh trong lớp, khóa học và bài tập
   students    ClassroomStudent[]
   courses     ClassroomCourse[]
+  assignments AssignmentClassroom[] // Các bài tập được thêm vào lớp
 
+  @@index([teacherId]) // Index cho query classrooms của teacher
   @@map("classrooms")
 }
 
@@ -172,7 +174,10 @@ model Assignment {
   course      Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions   Question[]
   submissions AssignmentSubmission[] // Các bài nộp của học sinh
+  classrooms  AssignmentClassroom[] // Các lớp học có bài tập này
 
+  @@index([authorId]) // Index cho query assignments của teacher
+  @@index([dueDate]) // Index cho query assignments theo deadline
   @@map("assignments")
 }
 
@@ -188,6 +193,7 @@ model Question {
   options      Option[]
   comments     QuestionComment[]
 
+  @@index([assignmentId, order]) // Composite index cho query questions theo assignment và order
   @@map("questions")
 }
 
@@ -216,6 +222,7 @@ model QuestionComment {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([questionId, createdAt]) // Composite index cho pagination comments (sort by createdAt desc)
   @@map("question_comments")
 }
 
@@ -233,6 +240,8 @@ model AssignmentSubmission {
   studentId    String
   student      User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  @@index([assignmentId, studentId]) // Composite index cho lookup submission nhanh
+  @@index([studentId, submittedAt]) // Index cho grades queries (sort by submittedAt)
   @@map("assignment_submissions")
 }
 
@@ -249,6 +258,8 @@ model ClassroomStudent {
   student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([classroomId, studentId])
+  @@index([studentId]) // Index cho query classrooms của student
+  @@index([classroomId]) // Index cho query students của classroom
   @@map("classroom_students")
 }
 
@@ -265,4 +276,22 @@ model ClassroomCourse {
 
   @@unique([classroomId, courseId])
   @@map("classroom_courses")
+}
+
+// Model AssignmentClassroom - Quan hệ nhiều-nhiều giữa Assignment và Classroom
+// Cho phép một bài tập được thêm vào nhiều lớp học
+model AssignmentClassroom {
+  id          String   @id @default(cuid())
+  addedAt     DateTime @default(now()) // Thời gian thêm bài tập vào lớp
+
+  // Quan hệ
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, assignmentId]) // Một bài tập chỉ có thể được thêm vào một lớp một lần
+  @@index([assignmentId]) // Index cho query assignments theo assignmentId
+  @@index([classroomId]) // Index cho query assignments theo classroomId
+  @@map("assignment_classrooms")
 }

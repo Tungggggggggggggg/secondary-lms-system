@@ -1,85 +1,65 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 
-interface Submission {
-  id: string;
-  content: string;
-  grade?: number;
-  feedback?: string;
-  submittedAt: string;
-  student?: {
-    id: string;
-    fullname: string;
-    email: string;
-  };
-}
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
+import BackButton from "@/components/ui/back-button";
+import SubmissionsList from "@/components/teacher/submissions/SubmissionsList";
 
 /**
  * Trang chấm bài assignment submissions
  */
 export default function AssignmentSubmissionsPage() {
   const params = useParams() as { assignmentId: string };
+  const router = useRouter();
   const { assignmentId } = params;
 
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [assignmentType, setAssignmentType] = useState<"ESSAY" | "QUIZ">("ESSAY");
 
+  // Fetch assignment type để hiển thị đúng UI
   useEffect(() => {
-    async function fetchSubmissions() {
+    async function fetchAssignmentType() {
       try {
-        setLoading(true);
-        setError(null);
-        // Gọi API submissions (cần backend support: /api/assignments/[id]/submissions)
-        const res = await fetch(`/api/assignments/${assignmentId}/submissions`);
+        const res = await fetch(`/api/assignments/${assignmentId}`);
         const result = await res.json();
-        if (!result.success) {
-          setError(result.message || "Không lấy được submissions");
-          setSubmissions([]);
-          console.error('[SubmissionsPage] API trả về lỗi:', result.message);
-          return;
+        if (result.success && result.data) {
+          setAssignmentType(result.data.type || "ESSAY");
         }
-        setSubmissions(result.data as Submission[]);
-        console.log('[SubmissionsPage] Lấy submissions thành công:', result.data);
-      } catch (err: unknown) {
-        let msg = 'Lỗi không xác định';
-        if (err instanceof Error) msg = err.message;
-        setError(msg);
-        setSubmissions([]);
-        console.error('[SubmissionsPage] Lỗi khi fetch:', err);
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.error("[SubmissionsPage] Lỗi khi lấy assignment type:", err);
       }
     }
-    if (assignmentId) fetchSubmissions();
+    if (assignmentId) fetchAssignmentType();
   }, [assignmentId]);
 
-  if (loading) return <div className="py-10 text-center text-gray-500">Đang tải danh sách submissions...</div>;
-  if (error) return <div className="py-10 text-center text-red-500">Lỗi: {error}</div>;
-  if (!submissions.length) return <div className="py-10 text-center text-gray-400">Chưa có học sinh nào nộp bài cho assignment này.</div>;
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
+    { label: "Bài tập", href: "/dashboard/teacher/assignments" },
+    { label: "Chấm bài", href: `#` },
+  ];
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-4">📝 Danh sách bài nộp</h1>
-      <div className="space-y-6">
-        {submissions.map((s) => (
-          <div key={s.id} className="bg-white p-6 rounded-2xl shadow flex justify-between items-center">
-            <div>
-              <div className="font-semibold">{s.student?.fullname || 'Không rõ tên'} ({s.student?.email})</div>
-              <div className="text-sm text-gray-500">Nộp lúc: {new Date(s.submittedAt).toLocaleString()}</div>
-              <div className="mt-2 text-gray-800 whitespace-pre-wrap">{s.content}</div>
-            </div>
-            <div className="text-right">
-              <div>
-                <span className="font-bold">{s.grade ?? '-'} điểm</span>
-              </div>
-              <div className="text-xs text-gray-400 mt-2">Feedback: {s.feedback || '(chưa có)'}</div>
-              {/* TODO: Nút chấm, cập nhật điểm, feedback... */}
-            </div>
-          </div>
-        ))}
+    <div className="px-6 py-4">
+      <div className="mb-4 flex items-center justify-between">
+        <Breadcrumb items={breadcrumbItems} />
+        <BackButton
+          href={`/dashboard/teacher/assignments/${assignmentId}`}
+        />
       </div>
+
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          Chấm bài tập
+        </h1>
+        <p className="text-gray-600">
+          Xem và chấm điểm các bài nộp của học sinh
+        </p>
+      </div>
+
+      <SubmissionsList
+        assignmentId={assignmentId}
+        assignmentType={assignmentType}
+      />
     </div>
   );
 }

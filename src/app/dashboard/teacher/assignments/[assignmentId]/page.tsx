@@ -2,7 +2,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils"; // Giả định utils có hàm cn cho className
+import { cn } from "@/lib/utils";
+import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
+import BackButton from "@/components/ui/back-button";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AssignmentCommentsView from "@/components/teacher/comments/AssignmentCommentsView";
 import type { AssignmentDetail } from "@/types/api";
 
 // Helper hiển thị Chip loại bài tập
@@ -119,30 +124,20 @@ export default function AssignmentDetailPage() {
             </div>
         );
 
+    const breadcrumbItems: BreadcrumbItem[] = [
+        { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
+        { label: "Bài tập", href: "/dashboard/teacher/assignments" },
+        { label: detail.title, href: `#` },
+    ];
+
     return (
-        <div className="max-w-3xl mx-auto py-10 px-4 md:px-0">
-            {/* Nút quay về đẹp */}
-            <button
-                className="mb-7 px-5 py-2 flex items-center gap-2 rounded-xl bg-gradient-to-r from-gray-100 to-purple-100 hover:from-purple-200 hover:to-gray-100 text-gray-700 text-base shadow transition-all font-semibold"
-                aria-label="Quay về danh sách bài tập"
-                onClick={() => {
-                    try {
-                        if (window.history.length > 1) {
-                            window.history.back();
-                        } else {
-                            router.push("/dashboard/teacher/assignments");
-                        }
-                    } catch {
-                        router.push("/dashboard/teacher/assignments");
-                        toast({
-                            title: "Không thể quay lại!",
-                            variant: "destructive",
-                        });
-                    }
-                }}
-            >
-                <span className="text-lg">←</span> Quay về
-            </button>
+        <div className="px-6 py-4">
+            <div className="mb-4 flex items-center justify-between">
+                <Breadcrumb items={breadcrumbItems} />
+                <BackButton href="/dashboard/teacher/assignments" />
+            </div>
+
+            <div className="max-w-5xl mx-auto">
             {/* Header assignment */}
             <div className="bg-white shadow rounded-2xl p-8 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-6 border">
                 <div className="flex-1">
@@ -163,8 +158,9 @@ export default function AssignmentDetailPage() {
                             ? new Date(detail.dueDate).toLocaleString()
                             : "Không rõ"}
                     </span>
-                    <button
-                        className="mt-1 px-4 py-2 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition"
+                    <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={async () => {
                             const ok = window.confirm(
                                 "Bạn muốn xoá bài tập này? Hành động không thể hoàn tác."
@@ -186,11 +182,20 @@ export default function AssignmentDetailPage() {
                         }}
                     >
                         🗑️ Xoá bài tập
-                    </button>
+                    </Button>
                 </div>
             </div>
-            {/* Danh sách câu hỏi */}
-            <div className="bg-white rounded-2xl p-6 shadow border">
+
+            {/* Tabs: Questions và Discussions */}
+            <Tabs defaultValue="questions" className="mt-6">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="questions">Câu hỏi</TabsTrigger>
+                    <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="questions" className="mt-6">
+                    {/* Danh sách câu hỏi */}
+                    <div className="bg-white rounded-2xl p-6 shadow border">
                 <h2 className="text-lg font-bold mb-4 text-indigo-700 flex items-center gap-2">
                     <span>📄</span> Danh sách câu hỏi
                 </h2>
@@ -287,6 +292,22 @@ export default function AssignmentDetailPage() {
                             </li>
                         ))}
                 </ol>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="discussions" className="mt-6">
+                    <AssignmentCommentsView assignmentId={assignmentId} />
+                </TabsContent>
+            </Tabs>
+
+            {/* Quick Actions */}
+            <div className="mt-6 flex justify-end">
+                <Button
+                    onClick={() => router.push(`/dashboard/teacher/assignments/${assignmentId}/submissions`)}
+                    size="lg"
+                >
+                    📝 Chấm bài tập
+                </Button>
             </div>
         </div>
     );

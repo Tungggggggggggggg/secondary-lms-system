@@ -1,7 +1,6 @@
 "use client";
 
-
-// ...existing code...
+import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
 import ClassroomList from "@/components/teacher/classrooms/ClassroomList";
 
 
@@ -9,8 +8,16 @@ import ClassroomList from "@/components/teacher/classrooms/ClassroomList";
 export default function ClassroomsPage() {
   // Không gọi fetchClassrooms ở đây nữa, ClassroomList sẽ tự lấy dữ liệu qua hook
 
+  // Breadcrumb items cho trang danh sách lớp học
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
+    { label: "Lớp học", href: "/dashboard/teacher/classrooms" },
+  ];
+
   return (
     <div className="p-8">
+      <Breadcrumb items={breadcrumbItems} className="mb-4" />
+      
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>

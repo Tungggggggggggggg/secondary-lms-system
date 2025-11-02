@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClassroom } from "@/hooks/use-classroom";
 import { ClassroomResponse } from "@/types/classroom";
+import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
 
 export default function ClassesPage() {
     const router = useRouter();
@@ -98,8 +99,16 @@ export default function ClassesPage() {
         );
     }
 
+    // Breadcrumb items cho trang danh sách lớp học
+    const breadcrumbItems: BreadcrumbItem[] = [
+        { label: "Dashboard", href: "/dashboard/student/dashboard" },
+        { label: "Lớp học", href: "/dashboard/student/classes" },
+    ];
+
     return (
         <div className="p-8">
+            <Breadcrumb items={breadcrumbItems} className="mb-4" />
+            
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-800 mb-2">Lớp học của tôi</h1>
