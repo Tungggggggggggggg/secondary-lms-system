@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import gsap from "gsap";
 import { useClassroomStudents } from "@/hooks/use-classroom-students";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 export default function ClassroomPeople() {
     const params = useParams();
     const classroomId = params.classroomId as string;
+    const router = useRouter();
     const { students, isLoading, error, fetchClassroomStudents, getStatistics, searchStudents } = useClassroomStudents();
     const [searchQuery, setSearchQuery] = useState("");
     const [searchInput, setSearchInput] = useState("");
@@ -35,9 +36,10 @@ export default function ClassroomPeople() {
     const stats = getStatistics();
     const filteredStudents = searchQuery ? searchStudents(searchQuery) : students;
 
-    const handleSearch = () => {
-        setSearchQuery(searchInput.trim());
-    };
+    useEffect(() => {
+        const t = setTimeout(() => setSearchQuery(searchInput.trim()), 300);
+        return () => clearTimeout(t);
+    }, [searchInput]);
 
     return (
         <div ref={rootRef} className="space-y-6">
@@ -75,7 +77,7 @@ export default function ClassroomPeople() {
                         }
                     }}
                 />
-                <Button onClick={handleSearch} variant="outline">
+                <Button variant="outline" disabled>
                     Tìm kiếm
                 </Button>
             </div>
@@ -152,6 +154,12 @@ export default function ClassroomPeople() {
                                             </p>
                                         )}
                                     </div>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => router.push(`/dashboard/teacher/classrooms/${classroomId}/people/${student.id}`)}
+                                    >
+                                        Xem chi tiết
+                                    </Button>
                                 </div>
                             </div>
                         ))}

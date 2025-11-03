@@ -56,6 +56,12 @@ model User {
   createdAssignments Assignment[] // Bài tập được tạo bởi giáo viên
   questionComments   QuestionComment[] // Bình luận của người dùng ở câu hỏi
 
+  // Back-relations bổ sung
+  assignmentFilesUploaded   AssignmentFile[]
+  announcementsAuthored     Announcement[]
+  announcementCommentsAuthored AnnouncementComment[]
+  announcementAttachmentsUploaded AnnouncementAttachment[]
+
   @@map("users")
 }
 
@@ -111,6 +117,7 @@ model Classroom {
   students    ClassroomStudent[]
   courses     ClassroomCourse[]
   assignments AssignmentClassroom[] // Các bài tập được thêm vào lớp
+  announcements Announcement[]
 
   @@index([teacherId]) // Index cho query classrooms của teacher
   @@map("classrooms")
@@ -175,6 +182,7 @@ model Assignment {
   questions   Question[]
   submissions AssignmentSubmission[] // Các bài nộp của học sinh
   classrooms  AssignmentClassroom[] // Các lớp học có bài tập này
+  files       AssignmentFile[] // Tài liệu/đính kèm của bài tập
 
   @@index([authorId]) // Index cho query assignments của teacher
   @@index([authorId, createdAt]) // Composite index cho teacher queries với sorting
@@ -297,4 +305,83 @@ model AssignmentClassroom {
   @@index([classroomId]) // Index cho query assignments theo classroomId
   @@index([classroomId, addedAt]) // Composite index cho queries sắp xếp theo thời gian thêm
   @@map("assignment_classrooms")
+}
+
+// Model AssignmentFile - Lưu metadata file được upload lên Supabase Storage
+model AssignmentFile {
+  id            String   @id @default(cuid())
+  name          String   // Tên file gốc để hiển thị
+  path          String   // Đường dẫn trong bucket
+  size          Int      // Byte
+  mimeType      String   // Mime type lưu để phục vụ header tải xuống
+  createdAt     DateTime @default(now())
+
+  // Quan hệ
+  assignmentId  String
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  uploadedById  String
+  uploadedBy    User       @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@index([createdAt])
+  @@map("assignment_files")
+}
+
+// Thông báo (announcement) trong lớp học
+model Announcement {
+  id          String   @id @default(cuid())
+  content     String   @db.Text // Nội dung thông báo
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Quan hệ
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  comments    AnnouncementComment[]
+  attachments AnnouncementAttachment[]
+
+  @@index([classroomId, createdAt]) // Query thông báo theo lớp, newest-first
+  @@index([authorId])
+  @@map("announcements")
+}
+
+// Bình luận cho thông báo
+model AnnouncementComment {
+  id             String   @id @default(cuid())
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  // Quan hệ
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([announcementId, createdAt]) // Phục vụ pagination bình luận
+  @@index([authorId])
+  @@map("announcement_comments")
+}
+
+// File đính kèm cho thông báo (lưu ở bucket Supabase "lessons")
+model AnnouncementAttachment {
+  id             String   @id @default(cuid())
+  name           String   // Tên file hiển thị
+  path           String   // Đường dẫn trong bucket
+  size           Int
+  mimeType       String
+  createdAt      DateTime @default(now())
+
+  // Quan hệ
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  uploadedById   String
+  uploadedBy     User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([announcementId])
+  @@index([createdAt])
+  @@index([announcementId, createdAt])
+  @@map("announcement_attachments")
 }

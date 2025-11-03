@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { User, UserRole } from "@prisma/client";
 import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 /**
  * Request-scoped cache để tránh query user nhiều lần trong cùng một request
@@ -72,6 +73,56 @@ export async function getAuthenticatedUser(
     userCache.set(req, null);
     return null;
   }
+}
+
+/**
+ * Tạo requestId cho logging theo request.
+ */
+export function getRequestId(req?: NextRequest): string {
+  try {
+    const headerId = req?.headers.get("x-request-id");
+    return headerId || crypto.randomUUID();
+  } catch {
+    return Math.random().toString(36).slice(2);
+  }
+}
+
+/**
+ * Tạo phản hồi lỗi chuẩn hóa.
+ */
+export function errorResponse(
+  status: number,
+  message: string,
+  meta?: Record<string, unknown>
+) {
+  return NextResponse.json(
+    { success: false, message, ...(meta || {}) },
+    { status }
+  );
+}
+
+/**
+ * Wrapper thêm logging quanh handler.
+ */
+export function withApiLogging<T extends (...args: any[]) => Promise<Response>>(
+  handler: T,
+  action: string
+): T {
+  return (async (...args: any[]) => {
+    const req: NextRequest | undefined = args[0];
+    const requestId = getRequestId(req);
+    const start = Date.now();
+    try {
+      const res = await handler(...args);
+      const ms = Date.now() - start;
+      console.log(`[INFO] ${action} OK {requestId:${requestId}, ms:${ms}}`);
+      return res;
+    } catch (err) {
+      const ms = Date.now() - start;
+      console.error(`[ERROR] ${action} FAIL {requestId:${requestId}, ms:${ms}}`, err);
+      throw err;
+    }
+  }) as T;
 }
 
 /**

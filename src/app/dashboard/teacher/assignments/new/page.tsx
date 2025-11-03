@@ -1,5 +1,21 @@
 "use client";
 
+import AssignmentForm from "@/components/teacher/assignments/AssignmentForm";
+
+export default function NewAssignmentPage() {
+  return (
+    <div className="p-8 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Tạo bài tập mới</h1>
+        <p className="text-gray-600">Nhập thông tin và đính kèm tài liệu (≤ 20MB mỗi file)</p>
+      </div>
+      <AssignmentForm />
+    </div>
+  );
+}
+
+"use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";

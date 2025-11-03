@@ -67,6 +67,47 @@ export default function GradesPage() {
     return filtered;
   }, [grades, sortBy, searchQuery]);
 
+  // Export CSV helper
+  function toCsvValue(v: unknown): string {
+    const s = v === null || v === undefined ? "" : String(v);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function downloadCsv() {
+    const rows: string[] = [];
+    rows.push([
+      "Classroom",
+      "Assignment",
+      "Type",
+      "Grade",
+      "Feedback",
+      "SubmittedAt",
+    ].map(toCsvValue).join(","));
+
+    for (const g of filteredAndSortedGrades) {
+      rows.push([
+        g.classroom?.name || "",
+        g.assignmentTitle,
+        g.assignmentType,
+        g.grade !== null && g.grade !== undefined ? g.grade.toFixed(1) : "",
+        g.feedback || "",
+        new Date(g.submittedAt).toISOString(),
+      ].map(toCsvValue).join(","));
+    }
+
+    const csv = "\ufeff" + rows.join("\n"); // BOM UTF-8
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "grades.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   // Breadcrumb items
   const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Dashboard", href: "/dashboard/student/dashboard" },
@@ -104,6 +145,9 @@ export default function GradesPage() {
               Đã chấm: <span className="font-medium">{statistics.totalGraded}</span> bài
             </div>
           )}
+          <div className="ml-auto">
+            <Button onClick={downloadCsv}>Xuất CSV</Button>
+          </div>
         </div>
       </div>
 

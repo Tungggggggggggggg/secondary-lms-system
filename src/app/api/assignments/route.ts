@@ -3,18 +3,16 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
 import { Prisma, AssignmentType, QuestionType, UserRole } from '@prisma/client'
+import { createAssignmentSchema, paginationSchema } from '@/types/api'
 
 // Lấy danh sách bài tập theo giáo viên hiện tại - TỐI ƯU SELECT + pagination
 export async function GET(req: NextRequest) {
   try {
-    // NOTE: getAuthenticatedUser sử dụng email, nhưng route này dùng session.user.id
-    // Giữ nguyên logic để tránh breaking changes, nhưng có thể optimize sau
     const session = await getServerSession(authOptions)
     if (!session?.user?.id && !session?.user?.email) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
 
-    // Chỉ giáo viên mới có danh sách bài tập (tạo)
     const user = session.user.id
       ? await prisma.user.findUnique({ where: { id: session.user.id } })
       : session.user.email
@@ -25,19 +23,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: [] }, { status: 200 })
     }
 
-    // Phân trang từ query param
     const url = req?.url ? new URL(req.url, 'http://localhost') : null;
-    const take = url?.searchParams.get('take') ? Number(url?.searchParams.get('take')) : 10;
-    const skip = url?.searchParams.get('skip') ? Number(url?.searchParams.get('skip')) : 0;
-    
-    // Lấy classroomId từ query params nếu có (để filter assignments)
+    const takeParam = url?.searchParams.get('take') ?? undefined;
+    const skipParam = url?.searchParams.get('skip') ?? undefined;
+
+    const { take, skip } = paginationSchema.parse({ take: takeParam, skip: skipParam });
+
     const classroomId = url?.searchParams.get('classroomId');
     const availableForClassroom = url?.searchParams.get('availableForClassroom');
-    
-    // Xây dựng where clause
+
     const whereClause: { authorId: string; id?: { in?: string[]; notIn?: string[] } } = { authorId: user.id };
-    
-    // Nếu có classroomId, lấy assignments đã được thêm vào classroom đó
+
     if (classroomId && !availableForClassroom) {
       const assignmentIds = await prisma.assignmentClassroom.findMany({
         where: { classroomId },
@@ -47,8 +43,7 @@ export async function GET(req: NextRequest) {
         in: assignmentIds.map((ac) => ac.assignmentId),
       };
     }
-    
-    // Nếu availableForClassroom=true, lấy assignments CHƯA được thêm vào classroom
+
     if (classroomId && availableForClassroom === 'true') {
       const assignmentIds = await prisma.assignmentClassroom.findMany({
         where: { classroomId },
@@ -61,8 +56,7 @@ export async function GET(req: NextRequest) {
         };
       }
     }
-    
-    // Truy vấn TỐI ƯU SELECT chỉ trường cần, bỏ include dư thừa
+
     const assignments = await prisma.assignment.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
@@ -90,8 +84,6 @@ export async function GET(req: NextRequest) {
 // Tạo bài tập mới (essay hoặc quiz)
 export async function POST(req: NextRequest) {
   try {
-    // NOTE: getAuthenticatedUser sử dụng email, nhưng route này dùng session.user.id
-    // Giữ nguyên logic để tránh breaking changes
     const session = await getServerSession(authOptions)
     if (!session?.user?.id && !session?.user?.email) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
@@ -107,34 +99,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Forbidden - Teacher only' }, { status: 403 })
     }
 
-    const body = await req.json()
-    const { title, description, dueDate, type, questions } = body as {
-      title?: string
-      description?: string
-      dueDate?: string | null
-      type?: string
-      questions?: Array<{ content: string; type: string; options: Array<{ label: string; content: string; isCorrect: boolean }>; order: number }>
+    const bodyRaw = await req.json()
+    const parsed = createAssignmentSchema.safeParse(bodyRaw)
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, message: 'Invalid payload', errors: parsed.error.flatten() }, { status: 400 })
     }
 
-    if (!title || !type) {
-      return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 })
-    }
+    const { title, description, dueDate, type, questions } = parsed.data
 
-    const normalizedType = type.toUpperCase()
-    if (!Object.values(AssignmentType).includes(normalizedType as AssignmentType)) {
-      return NextResponse.json({ success: false, message: 'Invalid assignment type' }, { status: 400 })
-    }
+    const normalizedType = type.toUpperCase() as AssignmentType
 
-    // Chuẩn bị data tạo
     const data: Prisma.AssignmentCreateInput = {
       title,
       description: description ?? null,
       dueDate: dueDate ? new Date(dueDate) : null,
-      type: normalizedType as AssignmentType,
+      type: normalizedType,
       author: { connect: { id: me.id } },
     }
 
-    // Nếu là quiz, validate câu hỏi và phương án
     if (data.type === AssignmentType.QUIZ) {
       if (!questions || !Array.isArray(questions) || questions.length === 0) {
         return NextResponse.json({ success: false, message: 'Quiz requires at least 1 question' }, { status: 400 })
@@ -146,10 +128,11 @@ export async function POST(req: NextRequest) {
           if (!Object.values(QuestionType).includes(qType as QuestionType)) {
             throw new Error(`Invalid question type at index ${idx}`)
           }
-          if (!q.options || q.options.length < 2) {
+          const opts = q.options || []
+          if (opts.length < 2) {
             throw new Error(`Question ${idx + 1} must have at least 2 options`)
           }
-          const numCorrect = q.options.filter(o => !!o.isCorrect).length
+          const numCorrect = opts.filter(o => !!o.isCorrect).length
           if (qType === 'SINGLE' && numCorrect !== 1) {
             throw new Error(`Question ${idx + 1} (SINGLE) must have exactly 1 correct option`)
           }
@@ -161,7 +144,7 @@ export async function POST(req: NextRequest) {
             type: qType as QuestionType,
             order: typeof q.order === 'number' ? q.order : idx + 1,
             options: {
-              create: q.options.map((opt, j) => ({
+              create: opts.map((opt, j) => ({
                 label: opt.label || String.fromCharCode(65 + j),
                 content: opt.content,
                 isCorrect: !!opt.isCorrect,

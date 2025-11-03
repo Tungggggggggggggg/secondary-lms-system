@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
-import { getAuthenticatedUser, isTeacherOfClassroom } from "@/lib/api-utils";
+import { getAuthenticatedUser, isTeacherOfClassroom, isTeacherOfAssignment } from "@/lib/api-utils";
 
 /**
  * GET /api/classrooms/[id]/assignments
