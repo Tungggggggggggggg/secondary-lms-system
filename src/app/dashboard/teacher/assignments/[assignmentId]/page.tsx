@@ -159,8 +159,7 @@ export default function AssignmentDetailPage() {
                             : "Không rõ"}
                     </span>
                     <Button
-                        variant="destructive"
-                        size="sm"
+                        variant="outline"
                         onClick={async () => {
                             const ok = window.confirm(
                                 "Bạn muốn xoá bài tập này? Hành động không thể hoàn tác."
@@ -309,6 +308,7 @@ export default function AssignmentDetailPage() {
                     📝 Chấm bài tập
                 </Button>
             </div>
+        </div>
         </div>
     );
 }

@@ -248,6 +248,9 @@ export default function StudentAssignmentDetailPage() {
               isLoading={isLoading}
               dueDate={assignment.dueDate}
               isSubmitted={hasSubmission}
+              openAt={(assignment as any).openAt || null}
+              lockAt={(assignment as any).lockAt || null}
+              timeLimitMinutes={(assignment as any).timeLimitMinutes ?? null}
             />
           ) : (
             <QuizAssignmentForm

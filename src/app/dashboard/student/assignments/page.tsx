@@ -15,8 +15,12 @@ function AssignmentCard({ assignment }: { assignment: StudentAssignment }) {
   const router = useRouter();
   const now = new Date();
   const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
+  const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
+  const lockAt = (assignment as any).lockAt ? new Date((assignment as any).lockAt) : (dueDate || null);
   const isOverdue = dueDate && dueDate < now && !assignment.submission;
   const isUrgent = dueDate && dueDate > now && (dueDate.getTime() - now.getTime()) < 24 * 60 * 60 * 1000; // Còn < 24h
+  const beforeStart = openAt && now < openAt;
+  const afterEnd = lockAt && now > lockAt;
 
   return (
     <div
@@ -60,17 +64,11 @@ function AssignmentCard({ assignment }: { assignment: StudentAssignment }) {
       </div>
 
       <div className="mt-4 space-y-2">
-        {dueDate && (
+        {(openAt || lockAt) && (
           <p className="text-sm text-gray-600">
-            📅 Hạn nộp:{" "}
+            ⏱️ Lịch:&nbsp;
             <span className="font-medium text-gray-800">
-              {dueDate.toLocaleDateString("vi-VN", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {openAt ? openAt.toLocaleString("vi-VN") : "Hiện tại"} → {lockAt ? lockAt.toLocaleString("vi-VN") : "Không giới hạn"}
             </span>
           </p>
         )}
@@ -106,8 +104,17 @@ function AssignmentCard({ assignment }: { assignment: StudentAssignment }) {
               router.push(`/dashboard/student/assignments/${assignment.id}`);
             }}
             variant={assignment.submission ? "outline" : "default"}
+            disabled={!!beforeStart || !!afterEnd}
           >
-            {assignment.submission ? "Xem bài nộp" : isOverdue ? "Đã quá hạn" : "Làm bài tập"}
+            {assignment.submission
+              ? "Xem bài nộp"
+              : beforeStart
+              ? "Chưa mở"
+              : afterEnd
+              ? "Đã kết thúc"
+              : isOverdue
+              ? "Đã quá hạn"
+              : "Làm bài tập"}
           </Button>
         </div>
       </div>

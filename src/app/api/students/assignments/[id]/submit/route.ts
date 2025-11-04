@@ -23,9 +23,10 @@ export async function POST(
 
     const assignmentId = params.id;
     const body = await req.json();
-    const { content, answers } = body as {
+    const { content, answers, newAttempt } = body as {
       content?: string;
       answers?: Array<{ questionId: string; optionIds: string[] }>;
+      newAttempt?: boolean;
     };
 
     // Optimize: Parallel queries - Kiểm tra classroom membership + lấy assignment
@@ -113,23 +114,12 @@ export async function POST(
       }
     }
 
-    // Kiểm tra đã submit chưa
-    const existingSubmission = await prisma.assignmentSubmission.findFirst({
-      where: {
-        assignmentId,
-        studentId: user.id,
-      },
+    // Tìm attempt hiện tại (nếu có)
+    const latestSubmission = await prisma.assignmentSubmission.findFirst({
+      where: { assignmentId, studentId: user.id },
+      orderBy: { attempt: "desc" },
+      select: { id: true, attempt: true, grade: true },
     });
-
-    if (existingSubmission) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Assignment already submitted. Use PUT to update submission.",
-        },
-        { status: 409 }
-      );
-    }
 
     // Kiểm tra deadline (nếu có)
     if (assignment.dueDate && new Date(assignment.dueDate) < new Date()) {
@@ -180,13 +170,14 @@ export async function POST(
       submissionContent = content.trim();
     }
 
-    // Tạo submission
+    // Tạo submission (multi-attempts: nếu đã có -> tăng attempt)
     const submission = await prisma.assignmentSubmission.create({
       data: {
         assignmentId,
         studentId: user.id,
         content: submissionContent,
         grade: calculatedGrade, // Auto-grade cho quiz
+        attempt: (latestSubmission?.attempt ?? 0) + 1,
       },
       include: {
         assignment: {
@@ -201,7 +192,7 @@ export async function POST(
     });
 
     console.log(
-      `[INFO] [POST] /api/students/assignments/${assignmentId}/submit - Student ${user.id} submitted ${assignment.type} assignment${calculatedGrade !== null ? ` with auto-grade: ${calculatedGrade.toFixed(2)}` : ""}`
+      `[INFO] [POST] /api/students/assignments/${assignmentId}/submit - Student ${user.id} submitted attempt ${(latestSubmission?.attempt ?? 0) + 1} (${assignment.type})${calculatedGrade !== null ? ` with auto-grade: ${calculatedGrade.toFixed(2)}` : ""}`
     );
 
     return NextResponse.json(

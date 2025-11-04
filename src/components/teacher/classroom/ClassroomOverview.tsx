@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTeacherAnnouncements } from "@/hooks/use-teacher-announcements";
 import { useLessons } from "@/hooks/use-lessons";
+import AttachmentLink from "@/components/newsfeed/AttachmentLink";
 
 export default function ClassroomOverview() {
     const rootRef = useRef<HTMLDivElement>(null);
@@ -104,10 +105,10 @@ export default function ClassroomOverview() {
                                 {a.attachments && a.attachments.length > 0 && (
                                     <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 mb-3">
                                         <div className="font-medium mb-1">Đính kèm</div>
-                                        <ul className="list-disc ml-5">
+                                        <ul className="space-y-1">
                                             {a.attachments.map((f) => (
-                                                <li key={f.id} className="break-all">
-                                                    {f.name} <span className="text-xs text-gray-400">({Math.round(f.size/1024)} KB)</span>
+                                                <li key={f.id}>
+                                                    <AttachmentLink file={{ id: f.id, name: f.name, size: f.size, mimeType: f.mimeType }} />
                                                 </li>
                                             ))}
                                         </ul>

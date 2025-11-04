@@ -18,6 +18,9 @@ export default function AssignmentForm({ classroomId }: Props) {
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [dueDate, setDueDate] = useState<string>("");
+	const [openAt, setOpenAt] = useState<string>("");
+	const [lockAt, setLockAt] = useState<string>("");
+	const [timeLimitMinutes, setTimeLimitMinutes] = useState<string>("");
 	const [type, setType] = useState<AssignmentType>("ESSAY");
 	const [createdAssignmentId, setCreatedAssignmentId] = useState<string | null>(null);
 	const [files, setFiles] = useState<File[]>([]);
@@ -34,11 +37,27 @@ export default function AssignmentForm({ classroomId }: Props) {
 				toast({ title: "Thiếu tiêu đề", description: "Vui lòng nhập tiêu đề bài tập", variant: "destructive" });
 				return;
 			}
+			if (openAt && lockAt && new Date(lockAt) <= new Date(openAt)) {
+				toast({ title: "Khoá bài phải sau thời gian mở", variant: "destructive" });
+				return;
+			}
+			if (timeLimitMinutes && Number(timeLimitMinutes) <= 0) {
+				toast({ title: "Giới hạn thời gian phải > 0 phút", variant: "destructive" });
+				return;
+			}
 			setIsCreating(true);
 			const res = await fetch("/api/assignments", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ title, description, dueDate: dueDate || null, type }),
+				body: JSON.stringify({
+					title,
+					description,
+					dueDate: dueDate || null,
+					type,
+					openAt: openAt ? new Date(openAt).toISOString() : null,
+					lockAt: lockAt ? new Date(lockAt).toISOString() : null,
+					timeLimitMinutes: timeLimitMinutes ? Number(timeLimitMinutes) : null,
+				}),
 			});
 			const json = await res.json();
 			if (!res.ok) throw new Error(json?.message || "Không thể tạo bài tập");
@@ -79,6 +98,21 @@ export default function AssignmentForm({ classroomId }: Props) {
 			<div className="grid gap-3">
 				<label className="font-medium">Hạn nộp</label>
 				<Input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+			</div>
+			<div className="grid md:grid-cols-3 gap-3">
+				<div className="grid gap-2">
+					<label className="font-medium">Cho học sinh làm từ</label>
+					<Input type="datetime-local" value={openAt} onChange={(e) => setOpenAt(e.target.value)} />
+				</div>
+				<div className="grid gap-2">
+					<label className="font-medium">Khoá bài lúc</label>
+					<Input type="datetime-local" value={lockAt} onChange={(e) => setLockAt(e.target.value)} />
+				</div>
+				<div className="grid gap-2">
+					<label className="font-medium">Giới hạn thời gian (phút)</label>
+					<Input type="number" min={1} value={timeLimitMinutes} onChange={(e) => setTimeLimitMinutes(e.target.value)} placeholder="VD: 45" />
+					<span className="text-xs text-gray-500">Để trống nếu không giới hạn</span>
+				</div>
 			</div>
 			<div className="grid gap-3">
 				<label className="font-medium">Loại bài tập</label>

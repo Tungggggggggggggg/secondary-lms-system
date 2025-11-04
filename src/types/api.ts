@@ -68,6 +68,17 @@ export const createAssignmentSchema = z.object({
     .datetime({ offset: true })
     .optional()
     .nullable(),
+  openAt: z
+    .string()
+    .datetime({ offset: true })
+    .optional()
+    .nullable(),
+  lockAt: z
+    .string()
+    .datetime({ offset: true })
+    .optional()
+    .nullable(),
+  timeLimitMinutes: z.coerce.number().int().positive().optional().nullable(),
   type: z.enum(["ESSAY", "QUIZ"]),
   questions: z
     .array(

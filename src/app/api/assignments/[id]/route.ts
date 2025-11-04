@@ -87,18 +87,21 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       console.error('[ASSIGNMENT PUT] Body parse error:', error);
       return NextResponse.json({ success: false, message: 'Invalid JSON body' }, { status: 400 });
     }
-    const { title, description, dueDate, type, questions } = body || {};
+    const { title, description, dueDate, type, questions, openAt, lockAt, timeLimitMinutes } = body || {};
     if (!title || !type) {
       return NextResponse.json({ success: false, message: 'Thiếu trường bắt buộc title/type' }, { status: 400 });
     }
     // type cần về đúng enum
     const normalizedType = (typeof type === 'string' ? type.toUpperCase() : '') as AssignmentType;
-    const updateData = {
+    const updateData: any = {
       title,
       description: description ?? null,
       dueDate: dueDate ? new Date(dueDate) : null,
       type: normalizedType,
       updatedAt: new Date(),
+      openAt: openAt ? new Date(openAt) : null,
+      lockAt: lockAt ? new Date(lockAt) : null,
+      timeLimitMinutes: typeof timeLimitMinutes === 'number' ? timeLimitMinutes : null,
     };
     // Nếu truyền questions: cập nhật lại toàn bộ câu hỏi và đáp án (xoá hết cũ, insert mới)
     let updatedAssignment;

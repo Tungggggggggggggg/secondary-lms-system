@@ -80,6 +80,7 @@ export async function GET(
           grade: true,
           feedback: true,
           submittedAt: true,
+          attempt: true,
           student: {
             select: {
               id: true,

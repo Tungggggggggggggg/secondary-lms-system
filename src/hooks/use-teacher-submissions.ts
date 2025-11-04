@@ -9,6 +9,7 @@ export interface TeacherSubmission {
   grade: number | null;
   feedback: string | null;
   submittedAt: string;
+  attempt?: number;
   student: {
     id: string;
     fullname: string;

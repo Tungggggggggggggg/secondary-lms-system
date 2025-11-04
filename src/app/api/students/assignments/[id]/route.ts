@@ -41,11 +41,14 @@ export async function GET(
       // Lấy assignment detail
       prisma.assignment.findUnique({
         where: { id: assignmentId },
-        select: {
+        select: ({
           id: true,
           title: true,
           description: true,
           dueDate: true,
+          openAt: true,
+          lockAt: true,
+          timeLimitMinutes: true,
           type: true,
           createdAt: true,
           updatedAt: true,
@@ -77,7 +80,7 @@ export async function GET(
           _count: {
             select: { submissions: true, questions: true },
           },
-        },
+        } as any),
       }),
       // Lấy submission của student (nếu có)
       prisma.assignmentSubmission.findFirst({
@@ -123,15 +126,19 @@ export async function GET(
     }
 
     // Transform data để trả về (kèm submission)
+    const a: any = assignmentData as any;
     const assignmentDetail = {
       id: assignmentData.id,
       title: assignmentData.title,
       description: assignmentData.description,
       dueDate: assignmentData.dueDate,
       type: assignmentData.type,
+      openAt: a.openAt ?? null,
+      lockAt: a.lockAt ?? assignmentData.dueDate,
+      timeLimitMinutes: a.timeLimitMinutes ?? null,
       createdAt: assignmentData.createdAt,
       updatedAt: assignmentData.updatedAt,
-      author: assignmentData.author,
+      author: (assignmentData as any).author,
       classroom: {
         id: classroom.id,
         name: classroom.name,
@@ -139,7 +146,7 @@ export async function GET(
         icon: classroom.icon,
         teacher: classroom.teacher,
       },
-      questions: assignmentData.questions.map((q) => ({
+      questions: (assignmentData as any).questions.map((q: any) => ({
         id: q.id,
         content: q.content,
         type: q.type,
@@ -147,7 +154,7 @@ export async function GET(
         options: q.options, // Options KHÔNG có isCorrect
         _count: q._count,
       })),
-      _count: assignmentData._count,
+      _count: (assignmentData as any)._count,
       // Include submission trong response (COMBINED)
       submission: submission
         ? {
@@ -156,6 +163,7 @@ export async function GET(
             grade: submission.grade,
             feedback: submission.feedback,
             submittedAt: submission.submittedAt.toISOString(),
+            attempt: (submission as any).attempt ?? 1,
           }
         : null,
     };

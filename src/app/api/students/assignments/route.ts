@@ -36,11 +36,11 @@ export async function GET(req: NextRequest) {
     }
 
     // OPTIMIZE: Query trực tiếp với classroomId IN thay vì nested some() - sử dụng index
-    const allAssignments = await prisma.assignmentClassroom.findMany({
+    const allAssignments = (await prisma.assignmentClassroom.findMany({
       where: {
         classroomId: { in: classroomIds },
       },
-      select: {
+      select: ({
         addedAt: true,
         assignment: {
           select: {
@@ -48,6 +48,9 @@ export async function GET(req: NextRequest) {
             title: true,
             description: true,
             dueDate: true,
+            openAt: true,
+            lockAt: true,
+            timeLimitMinutes: true,
             type: true,
             createdAt: true,
             updatedAt: true,
@@ -65,9 +68,9 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-      },
+      } as any),
       orderBy: { addedAt: "desc" },
-    });
+    })) as any;
 
     if (allAssignments.length === 0) {
       return NextResponse.json(
@@ -76,7 +79,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const assignmentIds = allAssignments.map((ac) => ac.assignment.id);
+    const assignmentIds = (allAssignments as any[]).map((ac: any) => ac.assignment.id);
 
     // OPTIMIZE: Fetch submissions song song với counts (nếu cần) cho tất cả assignments
     const [studentSubmissions] = await Promise.all([
@@ -103,8 +106,8 @@ export async function GET(req: NextRequest) {
     );
 
     // Transform data để trả về (optimize: sử dụng classroom từ join)
-    const assignments = allAssignments.map((ac) => {
-      const assignment = ac.assignment;
+    const assignments = (allAssignments as any[]).map((ac: any) => {
+      const assignment = ac.assignment as any;
       const submission = submissionMap.get(assignment.id);
       const classroom = ac.classroom;
 
@@ -113,6 +116,9 @@ export async function GET(req: NextRequest) {
         title: assignment.title,
         description: assignment.description,
         dueDate: assignment.dueDate,
+        openAt: assignment.openAt,
+        lockAt: assignment.lockAt ?? assignment.dueDate,
+        timeLimitMinutes: assignment.timeLimitMinutes,
         type: assignment.type,
         createdAt: assignment.createdAt,
         updatedAt: assignment.updatedAt,

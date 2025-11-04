@@ -168,6 +168,10 @@ model Assignment {
   title       String // Tiêu đề bài tập
   description String?        @db.Text // Mô tả bài tập
   dueDate     DateTime? // Hạn nộp bài
+  // Thời gian mở/khoá và giới hạn thời gian làm bài (phút)
+  openAt      DateTime?
+  lockAt      DateTime?
+  timeLimitMinutes Int?
   type        AssignmentType @default(ESSAY)
 
   // Metadata
@@ -242,6 +246,7 @@ model AssignmentSubmission {
   grade       Float? // Điểm số
   feedback    String? // Nhận xét của giáo viên
   submittedAt DateTime @default(now())
+  attempt     Int      @default(1)
 
   // Quan hệ
   assignmentId String
@@ -249,7 +254,8 @@ model AssignmentSubmission {
   studentId    String
   student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@index([assignmentId, studentId]) // Composite index cho lookup submission nhanh
+  @@unique([assignmentId, studentId, attempt])
+  @@index([assignmentId, studentId]) // Index phụ cho lookup nhanh
   @@index([studentId, submittedAt]) // Index cho grades queries (sort by submittedAt)
   @@map("assignment_submissions")
 }

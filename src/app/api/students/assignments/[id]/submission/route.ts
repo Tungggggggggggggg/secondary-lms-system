@@ -42,12 +42,14 @@ export async function GET(
         assignmentId,
         studentId: user.id,
       },
+      orderBy: { attempt: "desc" },
       select: {
         id: true,
         content: true,
         grade: true,
         feedback: true,
         submittedAt: true,
+        attempt: true,
         assignment: {
           select: {
             id: true,
@@ -74,6 +76,7 @@ export async function GET(
       feedback: submission.feedback,
       submittedAt: submission.submittedAt.toISOString(),
       assignment: submission.assignment,
+      attempt: submission.attempt,
     };
 
     console.log(

@@ -105,14 +105,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Invalid payload', errors: parsed.error.flatten() }, { status: 400 })
     }
 
-    const { title, description, dueDate, type, questions } = parsed.data
+    const { title, description, dueDate, type, questions, openAt, lockAt, timeLimitMinutes } = parsed.data
 
     const normalizedType = type.toUpperCase() as AssignmentType
 
-    const data: Prisma.AssignmentCreateInput = {
+    const data: any = {
       title,
       description: description ?? null,
       dueDate: dueDate ? new Date(dueDate) : null,
+      openAt: openAt ? new Date(openAt) : null,
+      lockAt: lockAt ? new Date(lockAt) : null,
+      timeLimitMinutes: typeof timeLimitMinutes === 'number' ? timeLimitMinutes : null,
       type: normalizedType,
       author: { connect: { id: me.id } },
     }
@@ -157,7 +160,8 @@ export async function POST(req: NextRequest) {
     }
 
     const created = await prisma.assignment.create({
-      data,
+      // Cast để tương thích khi chưa chạy prisma generate sau migration
+      data: data as any,
       include: { questions: { include: { options: true } } },
     })
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAssignmentDetail } from "@/hooks/use-student-assignments";
@@ -29,6 +29,16 @@ export default function QuizAssignmentForm({
 }: QuizAssignmentFormProps) {
   const { toast } = useToast();
 
+  // Timing: derive start/end/timeLimit
+  const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
+  const lockAt = (assignment as any).lockAt ? new Date((assignment as any).lockAt) : (dueDate ? new Date(dueDate) : null);
+  const timeLimitMinutes = (assignment as any).timeLimitMinutes as number | null | undefined;
+  const storageKey = `quiz_started_at_${assignment.id}`;
+  const draftKey = `quiz_draft_${assignment.id}`;
+  const [startedAt, setStartedAt] = useState<Date | null>(null);
+  const [remainingSec, setRemainingSec] = useState<number | null>(null);
+  const autoSubmittedRef = useRef(false);
+
   // Tạo map từ initialAnswers để dễ dàng lookup
   const initialAnswersMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
@@ -40,6 +50,84 @@ export default function QuizAssignmentForm({
 
   // State để lưu câu trả lời hiện tại
   const [answers, setAnswers] = useState<Map<string, Set<string>>>(initialAnswersMap);
+
+  // Load draft answers from localStorage when mount (if not submitted)
+  useEffect(() => {
+    if (isSubmitted) return;
+    try {
+      const raw = typeof window !== "undefined" ? window.localStorage.getItem(draftKey) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw) as Array<{ questionId: string; optionIds: string[] }> | null;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map<string, Set<string>>();
+          parsed.forEach((a) => map.set(a.questionId, new Set(a.optionIds)));
+          setAnswers(map);
+        }
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignment.id, isSubmitted]);
+
+  // Persist draft on answers change (debounced)
+  useEffect(() => {
+    if (isSubmitted) return;
+    const id = window.setTimeout(() => {
+      try {
+        const arr = Array.from(answers.entries()).map(([questionId, set]) => ({ questionId, optionIds: Array.from(set) }));
+        window.localStorage.setItem(draftKey, JSON.stringify(arr));
+      } catch {}
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [answers, draftKey, isSubmitted]);
+
+  // Initialize startedAt from storage or now when interactive
+  useEffect(() => {
+    if (isSubmitted) return; // no timer for submitted
+    const now = new Date();
+    const stored = typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
+    if (stored) {
+      const d = new Date(stored);
+      if (!isNaN(d.getTime())) setStartedAt(d);
+    } else {
+      setStartedAt(now);
+      try { window.localStorage.setItem(storageKey, now.toISOString()); } catch {}
+    }
+  }, [isSubmitted, storageKey]);
+
+  // Compute effective deadline and drive countdown
+  useEffect(() => {
+    if (isSubmitted) return;
+    if (!startedAt) return;
+    let effectiveDeadline: Date | null = lockAt ? new Date(lockAt) : null;
+    if (timeLimitMinutes && timeLimitMinutes > 0) {
+      const limitEnd = new Date(startedAt.getTime() + timeLimitMinutes * 60 * 1000);
+      effectiveDeadline = effectiveDeadline ? new Date(Math.min(effectiveDeadline.getTime(), limitEnd.getTime())) : limitEnd;
+    }
+    if (!effectiveDeadline) return;
+
+    const tick = () => {
+      const now = new Date();
+      const sec = Math.max(0, Math.floor((effectiveDeadline!.getTime() - now.getTime()) / 1000));
+      setRemainingSec(sec);
+      if (sec <= 0 && !autoSubmittedRef.current) {
+        autoSubmittedRef.current = true;
+        // Auto-submit best-effort: chỉ gửi nếu có ít nhất 1 câu đã chọn
+        const answersArray = Array.from(answers.entries()).map(([questionId, optionIds]) => ({
+          questionId,
+          optionIds: Array.from(optionIds),
+        }));
+        if (answersArray.some((a) => a.optionIds.length > 0)) {
+          onSubmit(answersArray).catch(() => {});
+        } else {
+          // Không gửi request rỗng để tránh 400; chỉ khoá UI (isOverdue sẽ true)
+          try { window.localStorage.removeItem(draftKey); } catch {}
+        }
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [answers, lockAt, isSubmitted, onSubmit, startedAt, timeLimitMinutes]);
 
   // Toggle option selection
   const toggleOption = (questionId: string, optionId: string, questionType: string) => {
@@ -104,9 +192,17 @@ export default function QuizAssignmentForm({
     }));
 
     await onSubmit(answersArray);
+    try { window.localStorage.removeItem(draftKey); } catch {}
   };
 
-  const isOverdue = dueDate && new Date(dueDate) < new Date();
+  // Overdue when countdown has reached 0 (preferred), else fallback to endAt check
+  const isOverdue = remainingSec != null ? remainingSec <= 0 : !!(lockAt && new Date() > lockAt);
+  const countdownLabel = useMemo(() => {
+    if (remainingSec == null) return null;
+    const m = Math.floor(remainingSec / 60);
+    const s = remainingSec % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }, [remainingSec]);
 
   return (
     <form
@@ -129,6 +225,11 @@ export default function QuizAssignmentForm({
             style={{ width: `${(answeredCount / totalQuestions) * 100}%` }}
           />
         </div>
+        {countdownLabel && (
+          <div className="mt-3 text-right text-sm text-blue-800" aria-live="polite">
+            ⏳ Thời gian còn lại: <span className="font-semibold">{countdownLabel}</span>
+          </div>
+        )}
       </div>
 
       {/* Questions list */}

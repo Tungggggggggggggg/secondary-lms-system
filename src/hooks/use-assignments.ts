@@ -6,6 +6,9 @@ export interface AssignmentT {
   title: string;
   description?: string;
   dueDate?: string;
+  openAt?: string | null;
+  lockAt?: string | null;
+  timeLimitMinutes?: number | null;
   type: string;
   createdAt: string;
   updatedAt: string;

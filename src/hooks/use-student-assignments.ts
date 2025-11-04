@@ -22,6 +22,7 @@ export interface StudentAssignment extends AssignmentT {
     grade: number | null;
     feedback: string | null;
     submittedAt: string;
+    attempt?: number;
   } | null;
   status: "pending" | "submitted" | "overdue";
 }
@@ -52,6 +53,7 @@ export interface SubmissionResponse {
   grade: number | null;
   feedback: string | null;
   submittedAt: string;
+  attempt?: number;
   assignment: {
     id: string;
     title: string;

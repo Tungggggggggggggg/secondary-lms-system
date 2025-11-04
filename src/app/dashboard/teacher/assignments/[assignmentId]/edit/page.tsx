@@ -23,6 +23,9 @@ interface AssignmentDetail {
     title: string;
     description?: string;
     dueDate?: string;
+    openAt?: string | null;
+    lockAt?: string | null;
+    timeLimitMinutes?: number | null;
     type: "ESSAY" | "QUIZ";
     createdAt: string;
     updatedAt: string;
@@ -46,8 +49,11 @@ export default function AssignmentEditPage() {
     // đồng bộ với dữ liệu detail nếu dạng QUIZ
     const [questions, setQuestions] = useState<Question[]>([]);
 
-    // Quản lý input hạn nộp (datetime-local)
+    // Quản lý input hạn nộp (datetime-local) và mốc thời gian
     const [dueDateInput, setDueDateInput] = useState<string>("");
+    const [openAtInput, setOpenAtInput] = useState<string>("");
+    const [lockAtInput, setLockAtInput] = useState<string>("");
+    const [timeLimitInput, setTimeLimitInput] = useState<string>("");
 
     // Đồng bộ questions khi có detail mới
     useEffect(() => {
@@ -64,6 +70,29 @@ export default function AssignmentEditPage() {
         } else {
             setDueDateInput("");
         }
+
+        // Đồng bộ openAt
+        if (detail?.openAt) {
+            try {
+                const iso = new Date(detail.openAt).toISOString().slice(0, 16);
+                setOpenAtInput(iso);
+            } catch { setOpenAtInput(""); }
+        } else { setOpenAtInput(""); }
+
+        // Đồng bộ lockAt
+        if (detail?.lockAt) {
+            try {
+                const iso = new Date(detail.lockAt).toISOString().slice(0, 16);
+                setLockAtInput(iso);
+            } catch { setLockAtInput(""); }
+        } else { setLockAtInput(""); }
+
+        // Đồng bộ time limit
+        setTimeLimitInput(
+            typeof detail?.timeLimitMinutes === "number" && detail.timeLimitMinutes > 0
+                ? String(detail.timeLimitMinutes)
+                : ""
+        );
     }, [detail]);
 
     // Handler thêm/sửa/xóa câu hỏi
@@ -222,6 +251,10 @@ export default function AssignmentEditPage() {
         if (!input) return false;
         return new Date(input) < new Date();
     };
+    const isEndBeforeStart = (start?: string, end?: string) => {
+        if (!start || !end) return false;
+        return new Date(end) <= new Date(start);
+    };
 
     const handleSave = async () => {
         try {
@@ -298,6 +331,9 @@ export default function AssignmentEditPage() {
                 body: JSON.stringify({
                     ...detail,
                     dueDate: dueDateInput ? new Date(dueDateInput).toISOString() : null,
+                    openAt: openAtInput ? new Date(openAtInput).toISOString() : null,
+                    lockAt: lockAtInput ? new Date(lockAtInput).toISOString() : null,
+                    timeLimitMinutes: timeLimitInput ? Number(timeLimitInput) : null,
                     questions,
                 }),
             });
@@ -437,6 +473,46 @@ export default function AssignmentEditPage() {
                                 Ngày hạn nộp phải là ở tương lai
                             </div>
                         )}
+
+                        {/* Mốc thời gian mở/khoá và giới hạn thời gian */}
+                        <div className="grid md:grid-cols-3 gap-3 mt-5">
+                            <div className="grid gap-2">
+                                <label className="text-sm font-semibold text-gray-700">Cho học sinh làm từ</label>
+                                <input
+                                    type="datetime-local"
+                                    className="border px-4 py-2 rounded-lg"
+                                    value={openAtInput}
+                                    onChange={(e) => setOpenAtInput(e.target.value)}
+                                />
+                                {openAtInput && isPastDate(openAtInput) && (
+                                    <span className="text-xs text-red-600">Phải ở tương lai</span>
+                                )}
+                            </div>
+                            <div className="grid gap-2">
+                                <label className="text-sm font-semibold text-gray-700">Khoá bài lúc</label>
+                                <input
+                                    type="datetime-local"
+                                    className={`border px-4 py-2 rounded-lg ${isEndBeforeStart(openAtInput, lockAtInput) ? "border-red-500" : ""}`}
+                                    value={lockAtInput}
+                                    onChange={(e) => setLockAtInput(e.target.value)}
+                                />
+                                {isEndBeforeStart(openAtInput, lockAtInput) && (
+                                    <span className="text-xs text-red-600">Khoá phải sau thời điểm mở</span>
+                                )}
+                            </div>
+                            <div className="grid gap-2">
+                                <label className="text-sm font-semibold text-gray-700">Giới hạn thời gian (phút)</label>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    className="border px-4 py-2 rounded-lg"
+                                    value={timeLimitInput}
+                                    onChange={(e) => setTimeLimitInput(e.target.value)}
+                                    placeholder="VD: 45"
+                                />
+                                <span className="text-xs text-gray-500">Để trống nếu không giới hạn</span>
+                            </div>
+                        </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 min-w-[180px] mt-3 md:mt-0">
                         <span

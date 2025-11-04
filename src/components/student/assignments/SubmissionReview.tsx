@@ -34,6 +34,9 @@ export default function SubmissionReview({
       <div className="mb-6 pb-6 border-b border-gray-200">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Bài nộp của bạn</h2>
         <div className="flex items-center gap-4 text-sm text-gray-600">
+          <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border">
+            Lần nộp #{(submission as any).attempt ?? 1}
+          </span>
           <span>
             Nộp lúc:{" "}
             <span className="font-semibold text-gray-800">

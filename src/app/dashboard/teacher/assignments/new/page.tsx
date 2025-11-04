@@ -1,21 +1,5 @@
 "use client";
 
-import AssignmentForm from "@/components/teacher/assignments/AssignmentForm";
-
-export default function NewAssignmentPage() {
-  return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Tạo bài tập mới</h1>
-        <p className="text-gray-600">Nhập thông tin và đính kèm tài liệu (≤ 20MB mỗi file)</p>
-      </div>
-      <AssignmentForm />
-    </div>
-  );
-}
-
-"use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +18,9 @@ export default function NewAssignmentPage() {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [dueDate, setDueDate] = useState<string>("");
+    const [openAt, setOpenAt] = useState<string>("");
+    const [lockAt, setLockAt] = useState<string>("");
+    const [timeLimitMinutes, setTimeLimitMinutes] = useState<string>("");
 
     // Quiz state
     const [questions, setQuestions] = useState<QuizQuestion[]>([
@@ -53,6 +40,11 @@ export default function NewAssignmentPage() {
     const isPastDate = (input: string) => {
         if (!input) return false;
         return new Date(input) < new Date();
+    };
+
+    const isEndBeforeStart = (start: string, end: string) => {
+        if (!start || !end) return false;
+        return new Date(end) <= new Date(start);
     };
 
     const addQuestion = () => {
@@ -137,6 +129,18 @@ export default function NewAssignmentPage() {
                 toast({ title: "Hạn nộp phải là ngày trong tương lai", variant: "destructive" });
                 return;
             }
+            if (openAt && isPastDate(openAt)) {
+                toast({ title: "Thời gian mở bài phải ở tương lai", variant: "destructive" });
+                return;
+            }
+            if (lockAt && isEndBeforeStart(openAt, lockAt)) {
+                toast({ title: "Thời gian khoá bài phải sau thời gian mở", variant: "destructive" });
+                return;
+            }
+            if (timeLimitMinutes && Number(timeLimitMinutes) <= 0) {
+                toast({ title: "Giới hạn thời gian phải lớn hơn 0 phút", variant: "destructive" });
+                return;
+            }
             if (tab === "ESSAY" && !essayQuestion.trim()) {
                 toast({ title: "Vui lòng nhập nội dung câu hỏi tự luận!", variant: "destructive" });
                 return;
@@ -146,6 +150,9 @@ export default function NewAssignmentPage() {
                 description: description || null,
                 dueDate: dueDate ? new Date(dueDate).toISOString() : null,
                 type: tab,
+                openAt: openAt ? new Date(openAt).toISOString() : null,
+                lockAt: lockAt ? new Date(lockAt).toISOString() : null,
+                timeLimitMinutes: timeLimitMinutes ? Number(timeLimitMinutes) : null,
             };
             if (tab === "ESSAY") {
                 payload.questions = [
@@ -270,6 +277,44 @@ export default function NewAssignmentPage() {
                             Ngày hạn nộp phải là ở tương lai!
                         </div>
                     )}
+                </div>
+                <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Cho học sinh làm từ</label>
+                        <input
+                            type="datetime-local"
+                            value={openAt}
+                            onChange={(e) => setOpenAt(e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                        />
+                        {openAt && isPastDate(openAt) && (
+                            <div className="text-red-500 mt-1 text-sm">Thời gian mở bài phải ở tương lai</div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Khoá bài lúc</label>
+                        <input
+                            type="datetime-local"
+                            value={lockAt}
+                            onChange={(e) => setLockAt(e.target.value)}
+                            className={`w-full px-4 py-3 border-2 ${lockAt && isEndBeforeStart(openAt, lockAt) ? "border-red-500" : "border-gray-200"} rounded-xl focus:border-purple-500 outline-none`}
+                        />
+                        {lockAt && isEndBeforeStart(openAt, lockAt) && (
+                            <div className="text-red-500 mt-1 text-sm">Khoá bài phải sau thời gian mở</div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Giới hạn thời gian (phút)</label>
+                        <input
+                            type="number"
+                            min={1}
+                            placeholder="Ví dụ: 45"
+                            value={timeLimitMinutes}
+                            onChange={(e) => setTimeLimitMinutes(e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                        />
+                        <div className="text-xs text-gray-500 mt-1">Để trống nếu không giới hạn trong khung thời gian</div>
+                    </div>
                 </div>
                 {tab === "ESSAY" && (
                     <div className="bg-purple-50 rounded-xl border-l-4 border-purple-500 p-6 mt-2 flex flex-col gap-3">

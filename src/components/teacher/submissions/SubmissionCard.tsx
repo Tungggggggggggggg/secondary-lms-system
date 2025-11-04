@@ -29,6 +29,7 @@ export default function SubmissionCard({
             <h3 className="text-lg font-bold text-gray-800">
               {submission.student.fullname}
             </h3>
+            <Badge className="bg-gray-200 text-gray-700">Lần nộp #{(submission as any).attempt ?? 1}</Badge>
             {isGraded && (
               <Badge className="bg-green-600 text-white">Đã chấm</Badge>
             )}
@@ -84,7 +85,6 @@ export default function SubmissionCard({
         <Button
           onClick={() => onGrade(submission)}
           variant={isGraded ? "outline" : "default"}
-          size="sm"
         >
           {isGraded ? "Xem/Sửa điểm" : "Chấm bài"}
         </Button>

@@ -22,6 +22,9 @@ export default function AssignmentDetailHeader({
 }: AssignmentDetailHeaderProps) {
   const now = new Date();
   const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
+  const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
+  const lockAt = (assignment as any).lockAt ? new Date((assignment as any).lockAt) : (dueDate || null);
+  const timeLimitMinutes = (assignment as any).timeLimitMinutes as number | null | undefined;
   const isOverdue = dueDate && dueDate < now && !submission;
   const isUpcoming = dueDate && dueDate > now;
 
@@ -42,6 +45,11 @@ export default function AssignmentDetailHeader({
             </span>
             {submission && (
               <Badge className="bg-green-600 text-white">Đã nộp</Badge>
+            )}
+            {submission && (
+              <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border">
+                Lần nộp #{(submission as any).attempt ?? 1}
+              </span>
             )}
             {isOverdue && !submission && (
               <Badge className="bg-red-600 text-white">Quá hạn</Badge>
@@ -75,20 +83,18 @@ export default function AssignmentDetailHeader({
             {assignment.classroom.teacher.fullname}
           </p>
         </div>
-        {dueDate && (
+        {(openAt || lockAt) && (
           <div>
-            <p className="text-xs text-gray-500 mb-1">Hạn nộp</p>
-            <p className={`text-sm font-semibold ${
-              isOverdue ? "text-red-600" : isUpcoming ? "text-blue-600" : "text-gray-800"
-            }`}>
-              {dueDate.toLocaleDateString("vi-VN", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+            <p className="text-xs text-gray-500 mb-1">Khung thời gian</p>
+            <p className="text-sm font-semibold text-gray-800">
+              {openAt ? openAt.toLocaleString("vi-VN") : "Hiện tại"} → {lockAt ? lockAt.toLocaleString("vi-VN") : "Không giới hạn"}
             </p>
+          </div>
+        )}
+        {typeof timeLimitMinutes === "number" && timeLimitMinutes > 0 && (
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Giới hạn thời gian</p>
+            <p className="text-sm font-semibold text-gray-800">{timeLimitMinutes} phút</p>
           </div>
         )}
         <div>
