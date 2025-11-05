@@ -365,9 +365,15 @@ model AnnouncementComment {
   announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   authorId       String
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Hỗ trợ nested comments (reply)
+  parentId       String?
+  parent         AnnouncementComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        AnnouncementComment[] @relation("CommentReplies")
 
   @@index([announcementId, createdAt]) // Phục vụ pagination bình luận
   @@index([authorId])
+  @@index([parentId]) // Index cho query replies
   @@map("announcement_comments")
 }
 
