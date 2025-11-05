@@ -39,6 +39,7 @@ export default function StudentAssignmentDetailPage() {
 
   const [assignment, setAssignment] = useState<StudentAssignmentDetail | null>(null);
   const [submission, setSubmission] = useState<SubmissionResponse | null>(null);
+  const [fileSubmitted, setFileSubmitted] = useState<{ submittedAt: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"work" | "review">("work");
 
   // Load assignment detail và submission
@@ -56,8 +57,16 @@ export default function StudentAssignmentDetailPage() {
       const submissionData = await fetchSubmission(assignmentId);
       if (submissionData) {
         setSubmission(submissionData);
-        // Nếu đã nộp, mặc định hiển thị tab review
         setActiveTab("review");
+      } else {
+        // Kiểm tra nộp file kiểu mới
+        try {
+          const resp = await fetch(`/api/submissions/self?assignmentId=${assignmentId}`);
+          const j = await resp.json();
+          if (j?.success && j.data) {
+            setFileSubmitted({ submittedAt: j.data.submittedAt });
+          }
+        } catch {}
       }
     }
 
@@ -214,8 +223,8 @@ export default function StudentAssignmentDetailPage() {
     );
   }
 
-  const hasSubmission = submission !== null;
-  const canEdit = hasSubmission && submission.grade === null; // Chỉ edit được nếu chưa chấm
+  const hasSubmission = submission !== null || !!fileSubmitted;
+  const canEdit = !!submission && submission.grade === null; // Chỉ edit được nếu chưa chấm
 
   return (
     <div className="p-6">
@@ -224,7 +233,7 @@ export default function StudentAssignmentDetailPage() {
         <BackButton href="/dashboard/student/assignments" />
       </div>
 
-      <AssignmentDetailHeader assignment={assignment} submission={submission || undefined} />
+      <AssignmentDetailHeader assignment={assignment} submission={(submission ? (submission as any) : (fileSubmitted ? { id: "file", submittedAt: fileSubmitted.submittedAt, grade: null, feedback: null } : undefined))} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "work" | "review")}>
@@ -239,19 +248,19 @@ export default function StudentAssignmentDetailPage() {
 
         <TabsContent value="work">
           {assignment.type === "ESSAY" ? (
-            <EssayAssignmentForm
-              assignmentId={assignmentId}
-              onSubmit={hasSubmission && canEdit ? handleUpdateSubmission : handleEssaySubmit}
-              initialContent={
-                hasSubmission && assignment.type === "ESSAY" ? submission.content : undefined
-              }
-              isLoading={isLoading}
-              dueDate={assignment.dueDate}
-              isSubmitted={hasSubmission}
-              openAt={(assignment as any).openAt || null}
-              lockAt={(assignment as any).lockAt || null}
-              timeLimitMinutes={(assignment as any).timeLimitMinutes ?? null}
-            />
+            <div className="bg-white rounded-xl p-6 shadow">
+              <p className="text-sm text-gray-700 mb-3">
+                Bài tập tự luận này yêu cầu <span className="font-semibold">nộp file</span> (PDF/DOCX/TXT/...). Hãy nhấn nút bên dưới để tải tệp và nộp bài.
+              </p>
+              <div className="flex items-center gap-3">
+                <Button onClick={() => router.push(`/dashboard/student/assignments/${assignmentId}/submit`)}>
+                  Nộp bài bằng file
+                </Button>
+                {hasSubmission && (
+                  <span className="text-sm text-green-700">Bạn đã nộp bài. Có thể nộp lại để thay thế.</span>
+                )}
+              </div>
+            </div>
           ) : (
             <QuizAssignmentForm
               assignment={assignment}
@@ -261,10 +270,10 @@ export default function StudentAssignmentDetailPage() {
                   : handleQuizSubmit
               }
               initialAnswers={
-                hasSubmission && assignment.type === "QUIZ"
+                submission && assignment.type === "QUIZ"
                   ? (() => {
                       try {
-                        return JSON.parse(submission.content);
+                        return JSON.parse(submission?.content ?? "[]");
                       } catch {
                         return [];
                       }
@@ -278,7 +287,7 @@ export default function StudentAssignmentDetailPage() {
           )}
         </TabsContent>
 
-        {hasSubmission && (
+        {submission && (
           <TabsContent value="review">
             <SubmissionReview assignment={assignment} submission={submission} />
           </TabsContent>

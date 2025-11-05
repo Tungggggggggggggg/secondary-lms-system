@@ -34,3 +34,30 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## File-based Essay Submissions (Setup)
+
+Env variables:
+
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE
+- NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=lms-submissions (or SUPABASE_STORAGE_BUCKET on server)
+
+Storage:
+
+- Run SQL in `supabase/essay_submissions.sql` on Supabase (SQL editor) to create bucket and RLS policies.
+
+Migrations:
+
+- Run `npx prisma migrate deploy` (or `prisma migrate dev`) to create `submissions` and `submission_files` tables.
+
+Student upload:
+
+- Page: `src/app/dashboard/student/assignments/[assignmentId]/submit/page.tsx` uploads to Supabase Storage and registers at `/api/submissions`.
+
+Teacher review:
+
+- List: `src/app/api/assignments/[id]/file-submissions`
+- Download signed URLs: `src/app/api/submissions/[submissionId]/files`
+- UI: `src/app/dashboard/teacher/assignments/[assignmentId]/submissions/files/page.tsx`

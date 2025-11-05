@@ -10,6 +10,9 @@ export interface TeacherSubmission {
   feedback: string | null;
   submittedAt: string;
   attempt?: number;
+  // Extended fields for file-based submissions
+  isFileSubmission?: boolean;
+  filesCount?: number;
   student: {
     id: string;
     fullname: string;

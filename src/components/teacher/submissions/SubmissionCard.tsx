@@ -82,12 +82,31 @@ export default function SubmissionCard({
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
-        <Button
-          onClick={() => onGrade(submission)}
-          variant={isGraded ? "outline" : "default"}
-        >
-          {isGraded ? "Xem/Sửa điểm" : "Chấm bài"}
-        </Button>
+        {submission.isFileSubmission ? (
+          <Button
+            onClick={async () => {
+              try {
+                const resp = await fetch(`/api/submissions/${submission.id}/files`);
+                const j = await resp.json();
+                if (j.success) {
+                  for (const f of j.data.files) {
+                    if (f.url) window.open(f.url, "_blank");
+                  }
+                }
+              } catch {}
+            }}
+            variant="outline"
+          >
+            Tải file ({submission.filesCount ?? 0})
+          </Button>
+        ) : (
+          <Button
+            onClick={() => onGrade(submission)}
+            variant={isGraded ? "outline" : "default"}
+          >
+            {isGraded ? "Xem/Sửa điểm" : "Chấm bài"}
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -397,3 +397,33 @@ model AnnouncementAttachment {
   @@index([announcementId, createdAt])
   @@map("announcement_attachments")
 }
+
+// Nộp bài tự luận bằng file (Supabase Storage)
+model Submission {
+  id           String   @id @default(cuid())
+  assignmentId String
+  studentId    String
+  status       String   @default("submitted")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  files        SubmissionFile[]
+
+  @@index([assignmentId, studentId])
+  @@map("submissions")
+}
+
+model SubmissionFile {
+  id           String   @id @default(cuid())
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  storagePath  String // submissions/{assignmentId}/{studentId}/{uuid}-{fileName}
+  createdAt    DateTime @default(now())
+
+  @@index([submissionId])
+  @@map("submission_files")
+}
