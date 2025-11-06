@@ -19,4 +19,9 @@ export const teacherClassroomPath = (classroomId: string) => `/dashboard/teacher
 export const teacherClassroomAssignmentsPath = (classroomId: string) => `${teacherClassroomPath(classroomId)}/assignments`;
 export const teacherClassroomPeoplePath = (classroomId: string) => `${teacherClassroomPath(classroomId)}/people`;
 export const teacherClassroomGradesPath = (classroomId: string) => `${teacherClassroomPath(classroomId)}/grades`;
+export const teacherAnnouncementDetailPath = (classroomId: string, announcementId: string) => `${teacherClassroomPath(classroomId)}/announcements/${announcementId}`;
+
+// Student class route builders
+export const studentClassPath = (classId: string) => `/dashboard/student/classes/${classId}`;
+export const studentAnnouncementDetailPath = (classId: string, announcementId: string) => `${studentClassPath(classId)}/announcements/${announcementId}`;
 

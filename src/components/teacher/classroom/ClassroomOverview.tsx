@@ -1,191 +1,164 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useTeacherAnnouncements, AnnouncementComment } from "@/hooks/use-teacher-announcements";
+import { useTeacherAnnouncements } from "@/hooks/use-teacher-announcements";
 import { useLessons } from "@/hooks/use-lessons";
-import PostCard, { PostItem, CommentItem } from "@/components/newsfeed/PostCard";
+import AnnouncementsFeed from "@/components/newsfeed/AnnouncementsFeed";
 
+/**
+ * Component tổng quan lớp học cho giáo viên
+ * Hiển thị phần đăng bài và danh sách announcements
+ */
 export default function ClassroomOverview() {
     const rootRef = useRef<HTMLDivElement>(null);
     const params = useParams();
     const classroomId = params.classroomId as string;
 
-    const {
-        announcements,
-        isLoading,
-        fetchAnnouncements,
-        createAnnouncement,
-        addComment,
-        comments,
-        commentsTotal,
-        commentsLoading,
-        commentsPagination,
-        fetchComments,
-        fetchedComments,
-    } = useTeacherAnnouncements();
+    // Hook để tạo announcement mới (chỉ giáo viên mới có)
+    const { createAnnouncement, fetchAnnouncements } = useTeacherAnnouncements();
     const { uploadToAnnouncement } = useLessons();
 
+    // State cho phần đăng bài
     const [content, setContent] = useState("");
     const [files, setFiles] = useState<File[]>([]);
+    // Key để force refresh AnnouncementsFeed sau khi đăng bài
+    const [refreshKey, setRefreshKey] = useState(0);
 
+    // Animation khi component mount hoặc announcements thay đổi
     useEffect(() => {
         if (!rootRef.current) return;
-        gsap.fromTo(
-            rootRef.current.querySelectorAll("section,aside"),
-            { opacity: 0, y: 10 },
-            { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: "power1.out" }
-        );
-    }, [announcements]);
-
-    useEffect(() => {
-        if (classroomId) fetchAnnouncements(classroomId, 1, 10);
-    }, [classroomId, fetchAnnouncements]);
-
-    // Tự động load comments cho tất cả announcements khi có announcements (idempotent)
-    useEffect(() => {
-        if (announcements.length === 0) return;
-        announcements.forEach((ann) => {
-            if (!fetchedComments[ann.id]) {
-                fetchComments(ann.id, 1, 10);
-            }
-        });
-    }, [announcements, fetchedComments, fetchComments]);
-
-    const canPost = useMemo(() => !!classroomId && content.trim().length > 0, [classroomId, content]);
-
-    async function handlePost() {
-        if (!classroomId || !content.trim()) return;
-        const created = await createAnnouncement(classroomId, content.trim());
-        if (created && files.length > 0) {
-            await uploadToAnnouncement(created.id, files);
-            await fetchAnnouncements(classroomId, 1, 10);
+        try {
+            gsap.fromTo(
+                rootRef.current.querySelectorAll("h2, div[class*='rounded']"),
+                { opacity: 0, y: 10 },
+                { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: "power1.out" }
+            );
+        } catch (error) {
+            console.error(`[ERROR] ClassroomOverview - GSAP animation:`, error);
         }
-        setContent("");
-        setFiles([]);
+    }, [classroomId]);
+
+    // Kiểm tra có thể đăng bài hay không
+    const canPost = useMemo(
+        () => !!classroomId && content.trim().length > 0,
+        [classroomId, content]
+    );
+
+    /**
+     * Handler để đăng bài mới
+     */
+    async function handlePost() {
+        if (!classroomId || !content.trim()) {
+            console.warn(`[WARN] ClassroomOverview - Cannot post: classroomId or content missing`);
+            return;
+        }
+
+        try {
+            console.log(`[INFO] ClassroomOverview - Creating announcement for classroom ${classroomId}`);
+            
+            // Tạo announcement
+            const created = await createAnnouncement(classroomId, content.trim());
+            
+            if (!created) {
+                console.error(`[ERROR] ClassroomOverview - Failed to create announcement`);
+                return;
+            }
+
+            // Upload files nếu có
+            if (created && files.length > 0) {
+                console.log(`[INFO] ClassroomOverview - Uploading ${files.length} files to announcement ${created.id}`);
+                await uploadToAnnouncement(created.id, files);
+                
+                // Refresh danh sách announcements sẽ được AnnouncementsFeed tự động xử lý
+            }
+
+            // Reset form
+            setContent("");
+            setFiles([]);
+            
+            // Trigger refresh AnnouncementsFeed
+            setRefreshKey((prev) => prev + 1);
+            
+            console.log(`[INFO] ClassroomOverview - Successfully posted announcement`);
+        } catch (error) {
+            console.error(`[ERROR] ClassroomOverview - Handle post:`, error);
+        }
     }
 
-    // Handler để fetch comments cho một announcement
-    const handleFetchComments = useCallback(
-        (announcementId: string, pageNum?: number) => {
-            fetchComments(announcementId, pageNum || 1, 10, { force: pageNum !== 1 });
-        },
-        [fetchComments]
-    );
-
-    // Handler để add comment (hỗ trợ reply với parentId)
-    const handleAddComment = useCallback(
-        async (announcementId: string, content: string, parentId?: string | null): Promise<boolean> => {
-            const success = await addComment(announcementId, content, parentId);
-            if (success && classroomId) {
-                await fetchAnnouncements(classroomId, 1, 10);
-            }
-            return success;
-        },
-        [addComment, classroomId, fetchAnnouncements]
-    );
-
-    // Map announcements sang PostItem format
-    const posts: PostItem[] = useMemo(() => {
-        return announcements.map((ann) => ({
-            id: ann.id,
-            content: ann.content,
-            createdAt: ann.createdAt,
-            author: ann.author,
-            attachments: ann.attachments?.map((att) => ({
-                id: att.id,
-                name: att.name,
-                size: att.size,
-                mimeType: att.mimeType,
-            })),
-            _count: ann._count,
-        }));
-    }, [announcements]);
-
-    // Map comments từ hook sang CommentItem format (với nested structure)
-    const getCommentsForPost = useCallback(
-        (announcementId: string): CommentItem[] => {
-            const postComments = comments[announcementId] || [];
-            return postComments.map((comment: AnnouncementComment) => ({
-                id: comment.id,
-                content: comment.content,
-                createdAt: comment.createdAt,
-                parentId: comment.parentId,
-                author: comment.author,
-                replies: comment.replies?.map((reply) => ({
-                    id: reply.id,
-                    content: reply.content,
-                    createdAt: reply.createdAt,
-                    parentId: reply.parentId,
-                    author: reply.author,
-                })),
-            }));
-        },
-        [comments]
-    );
-
     return (
-        <div ref={rootRef} className="grid gap-6 md:grid-cols-3">
-            <section className="md:col-span-2 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
-                <h2 className="text-base font-semibold mb-3">Bảng tin</h2>
+        <div ref={rootRef} className="space-y-4">
+            {/* Title giống như student */}
+            <h2 className="text-lg font-semibold">Bảng tin</h2>
 
-                <div className="mb-4 space-y-3">
+            {/* Form đăng bài (chỉ giáo viên mới có) - Card riêng */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-5 shadow-sm">
+                <div className="space-y-4">
                     <Textarea
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
                         placeholder="Chia sẻ thông báo cho lớp..."
+                        className="min-h-[120px] text-base"
                     />
                     <div className="flex items-center gap-3">
-                        <input
-                            type="file"
-                            multiple
-                            onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
-                        />
-                        <Button onClick={handlePost} disabled={!canPost}>
+                        <label className="cursor-pointer">
+                            <input
+                                type="file"
+                                multiple
+                                onChange={(e) =>
+                                    setFiles(e.target.files ? Array.from(e.target.files) : [])
+                                }
+                                className="hidden"
+                                id="file-input"
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="text-sm"
+                                onClick={() => document.getElementById("file-input")?.click()}
+                            >
+                                Chọn tệp
+                            </Button>
+                        </label>
+                        {files.length > 0 && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {files.length} tệp đã chọn
+                            </span>
+                        )}
+                        <Button
+                            onClick={handlePost}
+                            disabled={!canPost}
+                            className="ml-auto"
+                        >
                             Đăng
                         </Button>
                     </div>
                     {files.length > 0 && (
-                        <div className="text-xs text-gray-500">
-                            Đính kèm: {files.map((f) => f.name).join(", ")}
+                        <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 rounded-lg p-2">
+                            <span className="font-medium">Đính kèm: </span>
+                            {files.map((f, idx) => (
+                                <span key={idx}>
+                                    {f.name}
+                                    {idx < files.length - 1 ? ", " : ""}
+                                </span>
+                            ))}
                         </div>
                     )}
                 </div>
+            </div>
 
-                {isLoading ? (
-                    <div className="space-y-3">
-                        <Skeleton className="h-16 w-full" />
-                        <Skeleton className="h-16 w-full" />
-                        <Skeleton className="h-16 w-full" />
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {posts.map((post) => (
-                            <PostCard
-                                key={post.id}
-                                post={post}
-                                recentComments={[]} // Teacher không cần recent comments
-                                recentCommentsLoading={false}
-                                commentsTotal={commentsTotal[post.id] || 0}
-                                comments={getCommentsForPost(post.id)}
-                                commentsLoading={commentsLoading[post.id] || false}
-                                commentsPagination={commentsPagination[post.id]}
-                                onFetchComments={handleFetchComments}
-                                onAddComment={handleAddComment}
-                                showComments={true}
-                            />
-                        ))}
-                    </div>
-                )}
-            </section>
-            <aside className="rounded-lg border border-gray-200 dark:border-gray-800 p-4">
-                <h3 className="text-base font-semibold mb-3">Sắp tới</h3>
-                <div className="text-sm text-gray-500">Chưa có hoạt động nào nhé~</div>
-            </aside>
+            {/* Component chung hiển thị announcements */}
+            {classroomId && (
+                <AnnouncementsFeed
+                    key={`${classroomId}-${refreshKey}`}
+                    classroomId={classroomId}
+                    role="teacher"
+                    pageSize={10}
+                />
+            )}
         </div>
     );
 }
