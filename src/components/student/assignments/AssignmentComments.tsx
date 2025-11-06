@@ -59,13 +59,13 @@ export default function AssignmentComments({
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!commentContent.trim() || !selectedQuestionId) {
+    if (!commentContent.trim() || (assignment.questions.length > 0 && !selectedQuestionId)) {
       return;
     }
 
     const result = await createAssignmentComment(assignment.id, {
       content: commentContent.trim(),
-      questionId: selectedQuestionId,
+      questionId: selectedQuestionId || undefined,
     });
 
     if (result) {
@@ -92,25 +92,27 @@ export default function AssignmentComments({
       {/* Comment form */}
       {showCommentForm && (
         <form onSubmit={handleSubmitComment} className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Chọn câu hỏi để bình luận <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={selectedQuestionId || ""}
-              onChange={(e) => setSelectedQuestionId(e.target.value)}
-              className="w-full px-4 py-2 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500"
-              required
-            >
-              <option value="">-- Chọn câu hỏi --</option>
-              {assignment.questions.map((question) => (
-                <option key={question.id} value={question.id}>
-                  Câu {question.order}: {question.content.substring(0, 50)}
-                  {question.content.length > 50 ? "..." : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          {assignment.questions.length > 0 && (
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Chọn câu hỏi để bình luận <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedQuestionId || ""}
+                onChange={(e) => setSelectedQuestionId(e.target.value)}
+                className="w-full px-4 py-2 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                required
+              >
+                <option value="">-- Chọn câu hỏi --</option>
+                {assignment.questions.map((question) => (
+                  <option key={question.id} value={question.id}>
+                    Câu {question.order}: {question.content.substring(0, 50)}
+                    {question.content.length > 50 ? "..." : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Nội dung bình luận <span className="text-red-500">*</span>
@@ -137,7 +139,7 @@ export default function AssignmentComments({
             </Button>
             <Button
               type="submit"
-              disabled={!commentContent.trim() || !selectedQuestionId || isLoading}
+              disabled={!commentContent.trim() || (assignment.questions.length > 0 && !selectedQuestionId) || isLoading}
             >
               {isLoading ? "Đang gửi..." : "Gửi bình luận"}
             </Button>

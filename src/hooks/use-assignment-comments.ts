@@ -34,7 +34,7 @@ export interface CommentsResponse {
  */
 export interface CommentRequest {
   content: string;
-  questionId?: string; // Required for assignment level comments
+  questionId?: string; // Optional: nếu là bài tự luận không có câu hỏi, backend sẽ tạo "câu hỏi thảo luận" mặc định
 }
 
 /**
@@ -174,9 +174,7 @@ export function useAssignmentComments() {
           `[createAssignmentComment] Bắt đầu tạo comment cho assignment: ${assignmentId}`
         );
 
-        if (!data.questionId) {
-          throw new Error("questionId is required for assignment comments");
-        }
+        // questionId có thể không có đối với bài tự luận -> backend sẽ tự xử lý
 
         const response = await fetch(
           `/api/students/assignments/${assignmentId}/comments`,

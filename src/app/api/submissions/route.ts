@@ -13,6 +13,32 @@ interface IncomingFileMeta {
     storagePath: string;
 }
 
+// GET: lấy submission hiện tại (bao gồm file) của học sinh cho 1 assignment
+export async function GET(req: NextRequest) {
+    try {
+        const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+        if (!user) {
+            return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+        }
+
+        const url = new URL(req.url);
+        const assignmentId = url.searchParams.get("assignmentId");
+        if (!assignmentId) {
+            return NextResponse.json({ success: false, message: "assignmentId is required" }, { status: 400 });
+        }
+
+        const submission = await prisma.submission.findFirst({
+            where: { assignmentId, studentId: user.id },
+            include: { files: true },
+        });
+
+        return NextResponse.json({ success: true, data: submission || null });
+    } catch (error) {
+        console.error("[ERROR] [GET] /api/submissions", error);
+        return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    }
+}
+
 export async function POST(req: NextRequest) {
     try {
         const user = await getAuthenticatedUser(req, UserRole.STUDENT);
@@ -21,7 +47,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { assignmentId, files } = body as { assignmentId?: string; files?: IncomingFileMeta[] };
+        const { assignmentId, files, status } = body as { assignmentId?: string; files?: IncomingFileMeta[]; status?: "draft" | "submitted" };
         if (!assignmentId || !Array.isArray(files) || files.length === 0) {
             return NextResponse.json({ success: false, message: "assignmentId and files are required" }, { status: 400 });
         }
@@ -53,13 +79,17 @@ export async function POST(req: NextRequest) {
         let submissionId = existing?.id;
         if (!submissionId) {
             const created = await prisma.submission.create({
-                data: { assignmentId, studentId: user.id },
+                data: { assignmentId, studentId: user.id, status: status === "submitted" ? "submitted" : "draft" },
                 select: { id: true },
             });
             submissionId = created.id;
         } else {
             // Clean previous files
             await prisma.submissionFile.deleteMany({ where: { submissionId } });
+            // update status if provided
+            if (status === "submitted" || status === "draft") {
+                await prisma.submission.update({ where: { id: submissionId }, data: { status } });
+            }
         }
 
         // Save files metadata
@@ -78,6 +108,36 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, data: { submissionId } }, { status: 201 });
     } catch (error) {
         console.error("[ERROR] [POST] /api/submissions", error);
+        return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    }
+}
+
+// PUT: xác nhận nộp bài (chuyển từ draft -> submitted)
+export async function PUT(req: NextRequest) {
+    try {
+        const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+        if (!user) {
+            return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { assignmentId } = body as { assignmentId?: string };
+        if (!assignmentId) {
+            return NextResponse.json({ success: false, message: "assignmentId is required" }, { status: 400 });
+        }
+
+        const submission = await prisma.submission.findFirst({
+            where: { assignmentId, studentId: user.id },
+            select: { id: true, status: true },
+        });
+        if (!submission) {
+            return NextResponse.json({ success: false, message: "Submission not found" }, { status: 404 });
+        }
+
+        await prisma.submission.update({ where: { id: submission.id }, data: { status: "submitted" } });
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("[ERROR] [PUT] /api/submissions", error);
         return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
     }
 }

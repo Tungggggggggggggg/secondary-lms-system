@@ -163,28 +163,35 @@ export async function POST(
       );
     }
 
-    if (!questionId) {
-      return NextResponse.json(
-        { success: false, message: "questionId is required" },
-        { status: 400 }
-      );
-    }
+    // Cho phép thiếu questionId (đối với bài tự luận không có câu hỏi)
 
     // Optimize: Parallel queries - Kiểm tra classroom membership + question validation
-    const [classroomId, question] = await Promise.all([
-      getStudentClassroomForAssignment(user.id, assignmentId),
-      prisma.question.findFirst({
-        where: {
-          id: questionId,
-          assignmentId,
-        },
-        select: {
-          id: true,
-          content: true,
-          order: true,
-        },
-      }),
-    ]);
+    const classroomId = await getStudentClassroomForAssignment(user.id, assignmentId);
+    let targetQuestionId = questionId || null;
+    if (!targetQuestionId) {
+      // Tạo/tìm câu hỏi thảo luận mặc định cho assignment tự luận
+      const found = await prisma.question.findFirst({
+        where: { assignmentId, order: 0, type: 'ESSAY', content: { startsWith: '[DISCUSSION]'} },
+        select: { id: true },
+      });
+      if (found) targetQuestionId = found.id;
+      else {
+        const created = await prisma.question.create({
+          data: { assignmentId, order: 0, type: 'ESSAY', content: '[DISCUSSION] Thảo luận chung' },
+          select: { id: true },
+        });
+        targetQuestionId = created.id;
+      }
+    } else {
+      // Validate question thuộc assignment
+      const valid = await prisma.question.findFirst({ where: { id: targetQuestionId, assignmentId }, select: { id: true } });
+      if (!valid) {
+        return NextResponse.json(
+          { success: false, message: "Question not found or not belong to this assignment" },
+          { status: 404 }
+        );
+      }
+    }
 
     if (!classroomId) {
       return NextResponse.json(
@@ -196,17 +203,10 @@ export async function POST(
       );
     }
 
-    if (!question) {
-      return NextResponse.json(
-        { success: false, message: "Question not found or not belong to this assignment" },
-        { status: 404 }
-      );
-    }
-
     // Tạo comment
     const comment = await prisma.questionComment.create({
       data: {
-        questionId,
+        questionId: targetQuestionId!,
         userId: user.id,
         content: content.trim(),
       },
@@ -229,7 +229,7 @@ export async function POST(
     });
 
     console.log(
-      `[INFO] [POST] /api/students/assignments/${assignmentId}/comments - Student ${user.id} created comment on question ${questionId}`
+      `[INFO] [POST] /api/students/assignments/${assignmentId}/comments - Student ${user.id} created comment on question ${targetQuestionId}`
     );
 
     return NextResponse.json(

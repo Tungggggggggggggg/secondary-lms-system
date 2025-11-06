@@ -8,6 +8,7 @@ interface SubmissionCardProps {
   submission: TeacherSubmission;
   assignmentType: "ESSAY" | "QUIZ";
   onGrade: (submission: TeacherSubmission) => void;
+  assignmentId?: string;
 }
 
 /**
@@ -17,12 +18,13 @@ export default function SubmissionCard({
   submission,
   assignmentType,
   onGrade,
+  assignmentId,
 }: SubmissionCardProps) {
   const isGraded = submission.grade !== null;
   const submittedDate = new Date(submission.submittedAt);
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all">
+    <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer" onClick={() => onGrade(submission)}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
@@ -83,22 +85,36 @@ export default function SubmissionCard({
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
         {submission.isFileSubmission ? (
-          <Button
-            onClick={async () => {
-              try {
-                const resp = await fetch(`/api/submissions/${submission.id}/files`);
-                const j = await resp.json();
-                if (j.success) {
-                  for (const f of j.data.files) {
-                    if (f.url) window.open(f.url, "_blank");
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              onClick={async () => {
+                try {
+                  const resp = await fetch(`/api/submissions/${submission.id}/files`);
+                  const j = await resp.json();
+                  if (j.success && Array.isArray(j.data.files)) {
+                    let delay = 0;
+                    for (const f of j.data.files) {
+                      if (!f.url) continue;
+                      setTimeout(() => {
+                        const a = document.createElement("a");
+                        a.href = f.url;
+                        a.download = f.fileName || "file";
+                        a.target = "_blank";
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                      }, delay);
+                      delay += 250;
+                    }
                   }
-                }
-              } catch {}
-            }}
-            variant="outline"
-          >
-            Tải file ({submission.filesCount ?? 0})
-          </Button>
+                } catch {}
+              }}
+              variant="outline"
+            >
+              Tải file ({submission.filesCount ?? 0})
+            </Button>
+            <Button onClick={() => onGrade(submission)}>Xem/Chấm</Button>
+          </div>
         ) : (
           <Button
             onClick={() => onGrade(submission)}

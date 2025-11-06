@@ -77,6 +77,7 @@ export async function GET(
         feedback: true,
         submittedAt: true,
         attempt: true,
+        studentId: true,
         student: { select: { id: true, fullname: true, email: true } },
       },
       orderBy: { submittedAt: "desc" },
@@ -104,8 +105,26 @@ export async function GET(
       : [];
     const studentMap = new Map(students.map((u) => [u.id, u] as const));
 
+    // fetch existing grades for file-based submissions from assignmentSubmission table
+    const fileGrades = studentIds.length
+      ? await prisma.assignmentSubmission.findMany({
+          where: { assignmentId, studentId: { in: studentIds } },
+          select: { studentId: true, grade: true, feedback: true },
+        })
+      : [];
+    const fileGradeMap = new Map(fileGrades.map((g) => [g.studentId, { grade: g.grade, feedback: g.feedback }] as const));
+
+    // Build set of studentIds that submitted via files
+    const fileStudentIds = new Set(fileSubsRaw.map((s) => s.studentId));
+
+    // Filter out text submissions that are only placeholders for grading file-based submissions
+    const filteredTextSubs = textSubs.filter((s) => {
+      const isPlaceholder = (!s.content || s.content.trim() === "") && fileStudentIds.has(s.studentId);
+      return !isPlaceholder;
+    });
+
     const merged = [
-      ...textSubs.map((s) => ({
+      ...filteredTextSubs.map((s) => ({
         id: s.id,
         content: s.content,
         grade: s.grade,
@@ -119,8 +138,8 @@ export async function GET(
       ...fileSubsRaw.map((s) => ({
         id: s.id,
         content: `Nộp file (${s._count.files} tệp)`,
-        grade: null,
-        feedback: null,
+        grade: fileGradeMap.get(s.studentId)?.grade ?? null,
+        feedback: fileGradeMap.get(s.studentId)?.feedback ?? null,
         submittedAt: s.createdAt.toISOString(),
         attempt: 1,
         student: studentMap.get(s.studentId) || { id: s.studentId, fullname: "", email: "" },

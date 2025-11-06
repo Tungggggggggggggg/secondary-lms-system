@@ -43,6 +43,7 @@ export default function SubmissionsList({
   const [selectedSubmission, setSelectedSubmission] =
     useState<SubmissionDetail | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [fileList, setFileList] = useState<Array<{ fileName: string; mimeType: string; url: string | null }> | undefined>(undefined);
 
   // Fetch submissions khi filter thay đổi
   useEffect(() => {
@@ -59,8 +60,30 @@ export default function SubmissionsList({
 
   // Handle grade button click
   const handleGrade = async (submission: TeacherSubmission) => {
+    // If file-based submission, fetch file list and create a minimal detail object
+    if (submission.isFileSubmission) {
+      try {
+        const resp = await fetch(`/api/submissions/${submission.id}/files`);
+        const j = await resp.json();
+        if (j.success) {
+          setFileList(j.data.files || []);
+        } else {
+          setFileList(undefined);
+        }
+      } catch {
+        setFileList(undefined);
+      }
+      const mock: SubmissionDetail = {
+        ...submission,
+        assignment: { id: assignmentId, title: "", type: "ESSAY", dueDate: null },
+      } as any;
+      setSelectedSubmission(mock);
+      setIsDialogOpen(true);
+      return;
+    }
     const detail = await fetchSubmissionDetail(assignmentId, submission.id);
     if (detail) {
+      setFileList(undefined);
       setSelectedSubmission(detail);
       setIsDialogOpen(true);
     }
@@ -69,20 +92,30 @@ export default function SubmissionsList({
   // Handle grade submission
   const handleGradeSubmit = async (grade: number, feedback?: string) => {
     if (!selectedSubmission) return false;
-    const success = await gradeSubmission(
-      assignmentId,
-      selectedSubmission.id,
-      grade,
-      feedback
-    );
-    if (success) {
+    try {
+      if ((selectedSubmission as any).isFileSubmission) {
+        // Grade file-based submission via file-grade endpoint
+        const res = await fetch(`/api/assignments/${assignmentId}/file-grade`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentId: (selectedSubmission as any).student.id, grade, feedback }),
+        });
+        const j = await res.json();
+        if (!res.ok || !j.success) throw new Error(j?.message || "Chấm điểm thất bại");
+      } else {
+        const ok = await gradeSubmission(assignmentId, selectedSubmission.id, grade, feedback);
+        if (!ok) return false;
+      }
       // Refresh submissions
       fetchSubmissions(assignmentId, {
         status: statusFilter,
         search: searchQuery || undefined,
       });
+      return true;
+    } catch (e) {
+      console.error("[handleGradeSubmit]", e);
+      return false;
     }
-    return success;
   };
 
   const stats = getStatistics();
@@ -141,21 +174,18 @@ export default function SubmissionsList({
         <div className="flex gap-2">
           <Button
             variant={statusFilter === "all" ? "default" : "outline"}
-            size="sm"
             onClick={() => setStatusFilter("all")}
           >
             Tất cả
           </Button>
           <Button
             variant={statusFilter === "graded" ? "default" : "outline"}
-            size="sm"
             onClick={() => setStatusFilter("graded")}
           >
             Đã chấm
           </Button>
           <Button
             variant={statusFilter === "ungraded" ? "default" : "outline"}
-            size="sm"
             onClick={() => setStatusFilter("ungraded")}
           >
             Chưa chấm
@@ -186,11 +216,12 @@ export default function SubmissionsList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {submissions.map((submission) => (
-            <SubmissionCard
+              <SubmissionCard
               key={submission.id}
               submission={submission}
               assignmentType={assignmentType}
-              onGrade={handleGrade}
+                onGrade={handleGrade}
+                assignmentId={assignmentId}
             />
           ))}
         </div>
@@ -222,6 +253,7 @@ export default function SubmissionsList({
         submission={selectedSubmission}
         assignmentId={assignmentId}
         onGrade={handleGradeSubmit}
+        fileList={fileList}
       />
     </div>
   );

@@ -58,11 +58,28 @@ export async function GET(
       orderBy: { addedAt: "desc" },
     });
 
+    // Also count file-based submissions
+    const assignmentIds = assignmentClassrooms.map((ac) => ac.assignment.id);
+    const fileCounts = assignmentIds.length
+      ? await prisma.submission.groupBy({
+          by: ["assignmentId"],
+          where: { assignmentId: { in: assignmentIds } },
+          _count: { assignmentId: true },
+        })
+      : [];
+    const fileCountMap = new Map(fileCounts.map((c) => [c.assignmentId, c._count.assignmentId] as const));
+
     // Transform data để trả về
-    const assignments = assignmentClassrooms.map((ac) => ({
-      ...ac.assignment,
-      addedAt: ac.addedAt.toISOString(), // Thời gian được thêm vào lớp
-    }));
+    const assignments = assignmentClassrooms.map((ac) => {
+      const base = ac.assignment as any;
+      const fileCount = fileCountMap.get(base.id) || 0;
+      return {
+        ...base,
+        addedAt: ac.addedAt.toISOString(),
+        _count: { ...base._count, submissions: (base._count?.submissions || 0) + fileCount },
+        fileSubmissions: fileCount,
+      };
+    });
 
     console.log(
       `[INFO] [GET] /api/classrooms/${classroomId}/assignments - Found ${assignments.length} assignments`

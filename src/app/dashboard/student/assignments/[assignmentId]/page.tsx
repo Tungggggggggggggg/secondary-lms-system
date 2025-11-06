@@ -16,7 +16,21 @@ import AssignmentDetailHeader from "@/components/student/assignments/AssignmentD
 import EssayAssignmentForm from "@/components/student/assignments/EssayAssignmentForm";
 import QuizAssignmentForm from "@/components/student/assignments/QuizAssignmentForm";
 import SubmissionReview from "@/components/student/assignments/SubmissionReview";
+import FileSubmissionPanel from "@/components/student/assignments/FileSubmissionPanel";
 import AssignmentComments from "@/components/student/assignments/AssignmentComments";
+// Helpers for image preview signed URLs
+const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const publicUrlForStored = (path: string) => {
+  const clean = path.replace(/^\//, "");
+  if (SUPABASE_URL) return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${clean}`;
+  return `/storage/v1/object/public/${BUCKET}/${clean}`;
+};
+const isImageByName = (name?: string) => {
+  if (!name) return false;
+  const lower = name.toLowerCase();
+  return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].some((ext) => lower.endsWith(ext));
+};
 
 /**
  * Trang chi tiết assignment cho student
@@ -39,7 +53,31 @@ export default function StudentAssignmentDetailPage() {
 
   const [assignment, setAssignment] = useState<StudentAssignmentDetail | null>(null);
   const [submission, setSubmission] = useState<SubmissionResponse | null>(null);
-  const [fileSubmitted, setFileSubmitted] = useState<{ submittedAt: string } | null>(null);
+  const [fileSubmission, setFileSubmission] = useState<{ id: string; status: string; files: Array<{ id?: string; fileName: string; mimeType: string; sizeBytes: number; storagePath: string }> } | null>(null);
+  const [signedUrlByPath, setSignedUrlByPath] = useState<Record<string, string>>({});
+
+  const handleDownload = async (path: string, filename: string) => {
+    try {
+      let url = signedUrlByPath[path];
+      if (!url) {
+        const r = await fetch(`/api/submissions/signed-url?path=${encodeURIComponent(path)}`);
+        const j = await r.json();
+        if (r.ok && j?.success && j.data?.url) {
+          url = j.data.url;
+          setSignedUrlByPath((prev) => ({ ...prev, [path]: url! }));
+        } else {
+          url = publicUrlForStored(path);
+        }
+      }
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "download";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {}
+  };
   const [activeTab, setActiveTab] = useState<"work" | "review">("work");
 
   // Load assignment detail và submission
@@ -53,18 +91,50 @@ export default function StudentAssignmentDetailPage() {
         setAssignment(assignmentData);
       }
 
-      // Load submission
+      // Load submission (essay/quiz legacy)
       const submissionData = await fetchSubmission(assignmentId);
       if (submissionData) {
         setSubmission(submissionData);
+        // Nếu nội dung trống (điểm/feedback do GV chấm cho bài nộp file), cũng tải danh sách file để hiển thị
+        if (!submissionData.content || submissionData.content.trim() === "") {
+          try {
+            const resp = await fetch(`/api/submissions?assignmentId=${assignmentId}`);
+            const j = await resp.json();
+            if (resp.ok && j?.success && j.data) {
+              setFileSubmission(j.data);
+              const imgs = (j.data.files || []).filter((f: any) => f?.mimeType?.startsWith("image/") || isImageByName(f?.fileName) || isImageByName(f?.storagePath));
+              imgs.forEach(async (f: any) => {
+                try {
+                  const r = await fetch(`/api/submissions/signed-url?path=${encodeURIComponent(f.storagePath)}`);
+                  const jj = await r.json();
+                  if (r.ok && jj?.success && jj.data?.url) {
+                    setSignedUrlByPath((prev) => ({ ...prev, [f.storagePath]: jj.data.url }));
+                  }
+                } catch {}
+              });
+            }
+          } catch {}
+        }
         setActiveTab("review");
       } else {
         // Kiểm tra nộp file kiểu mới
         try {
-          const resp = await fetch(`/api/submissions/self?assignmentId=${assignmentId}`);
+          const resp = await fetch(`/api/submissions?assignmentId=${assignmentId}`);
           const j = await resp.json();
-          if (j?.success && j.data) {
-            setFileSubmitted({ submittedAt: j.data.submittedAt });
+          if (resp.ok && j?.success && j.data) {
+            setFileSubmission(j.data);
+            const imgs = (j.data.files || []).filter((f: any) => f?.mimeType?.startsWith("image/") || isImageByName(f?.fileName) || isImageByName(f?.storagePath));
+            // prefetch signed urls
+            imgs.forEach(async (f: any) => {
+              try {
+                const r = await fetch(`/api/submissions/signed-url?path=${encodeURIComponent(f.storagePath)}`);
+                const jj = await r.json();
+                if (r.ok && jj?.success && jj.data?.url) {
+                  setSignedUrlByPath((prev) => ({ ...prev, [f.storagePath]: jj.data.url }));
+                }
+              } catch {}
+            });
+            setActiveTab("review");
           }
         } catch {}
       }
@@ -223,7 +293,7 @@ export default function StudentAssignmentDetailPage() {
     );
   }
 
-  const hasSubmission = submission !== null || !!fileSubmitted;
+  const hasSubmission = submission !== null || !!fileSubmission;
   const canEdit = !!submission && submission.grade === null; // Chỉ edit được nếu chưa chấm
 
   return (
@@ -233,7 +303,7 @@ export default function StudentAssignmentDetailPage() {
         <BackButton href="/dashboard/student/assignments" />
       </div>
 
-      <AssignmentDetailHeader assignment={assignment} submission={(submission ? (submission as any) : (fileSubmitted ? { id: "file", submittedAt: fileSubmitted.submittedAt, grade: null, feedback: null } : undefined))} />
+      <AssignmentDetailHeader assignment={assignment} submission={(submission ? (submission as any) : (fileSubmission ? ({ id: "file", submittedAt: new Date().toISOString(), grade: (submission as any)?.grade ?? null, feedback: (submission as any)?.feedback ?? null } as any) : undefined))} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "work" | "review")}>
@@ -248,18 +318,11 @@ export default function StudentAssignmentDetailPage() {
 
         <TabsContent value="work">
           {assignment.type === "ESSAY" ? (
-            <div className="bg-white rounded-xl p-6 shadow">
-              <p className="text-sm text-gray-700 mb-3">
-                Bài tập tự luận này yêu cầu <span className="font-semibold">nộp file</span> (PDF/DOCX/TXT/...). Hãy nhấn nút bên dưới để tải tệp và nộp bài.
+            <div className="bg-white rounded-xl p-6 shadow space-y-4">
+              <p className="text-sm text-gray-700">
+                Bài tập tự luận này hỗ trợ nộp <span className="font-semibold">nhiều tệp</span> một lần. Bạn có thể lưu nháp và xác nhận nộp khi sẵn sàng.
               </p>
-              <div className="flex items-center gap-3">
-                <Button onClick={() => router.push(`/dashboard/student/assignments/${assignmentId}/submit`)}>
-                  Nộp bài bằng file
-                </Button>
-                {hasSubmission && (
-                  <span className="text-sm text-green-700">Bạn đã nộp bài. Có thể nộp lại để thay thế.</span>
-                )}
-              </div>
+              <FileSubmissionPanel assignmentId={assignmentId} />
             </div>
           ) : (
             <QuizAssignmentForm
@@ -287,11 +350,47 @@ export default function StudentAssignmentDetailPage() {
           )}
         </TabsContent>
 
-        {submission && (
-          <TabsContent value="review">
+        <TabsContent value="review">
+          {fileSubmission ? (
+            <div className="bg-white rounded-xl p-6 shadow">
+              <h3 className="font-semibold mb-3">Tệp đã nộp</h3>
+              {fileSubmission.files?.length ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {fileSubmission.files.map((f, idx) => (
+                    <div key={idx} className="border rounded-lg p-2 bg-gray-50">
+                      <div className="aspect-video bg-white flex items-center justify-center overflow-hidden rounded">
+                        {f.mimeType?.startsWith("image/") ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={signedUrlByPath[f.storagePath] || publicUrlForStored(f.storagePath)} alt={f.fileName} className="object-cover w-full h-full" />
+                        ) : (
+                          <div className="text-xs text-gray-500">{f.fileName}</div>
+                        )}
+                      </div>
+                      <div className="mt-2 text-xs truncate" title={f.fileName}>{f.fileName}</div>
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDownload(f.storagePath, f.fileName)}
+                          className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-xs font-medium shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                            <path d="M12 3a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L11 12.586V4a1 1 0 011-1z" />
+                            <path d="M5 18a2 2 0 002 2h10a2 2 0 002-2v-1a1 1 0 112 0v1a4 4 0 01-4 4H7a4 4 0 01-4-4v-1a1 1 0 112 0v1z" />
+                          </svg>
+                          Tải xuống
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-600">Chưa có tệp nào.</div>
+              )}
+            </div>
+          ) : submission ? (
             <SubmissionReview assignment={assignment} submission={submission} />
-          </TabsContent>
-        )}
+          ) : null}
+        </TabsContent>
       </Tabs>
 
       {/* Assignment Comments - Hiển thị ở cả 2 tabs */}
