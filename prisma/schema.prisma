@@ -13,6 +13,7 @@ datasource db {
 
 // Enum cho vai trò người dùng
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   TEACHER
   STUDENT
@@ -30,6 +31,13 @@ enum QuestionType {
   ESSAY
   SINGLE
   MULTIPLE
+}
+
+// Trạng thái kiểm duyệt
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // Model User - Quản lý thông tin người dùng
@@ -57,10 +65,14 @@ model User {
   questionComments   QuestionComment[] // Bình luận của người dùng ở câu hỏi
 
   // Back-relations bổ sung
-  assignmentFilesUploaded   AssignmentFile[]
-  announcementsAuthored     Announcement[]
-  announcementCommentsAuthored AnnouncementComment[]
+  assignmentFilesUploaded         AssignmentFile[]
+  announcementsAuthored           Announcement[]
+  announcementCommentsAuthored    AnnouncementComment[]
   announcementAttachmentsUploaded AnnouncementAttachment[]
+
+  // Back-relations cho tổ chức và audit
+  organizationMemberships OrganizationMember[]
+  auditLogs               AuditLog[]
 
   @@map("users")
 }
@@ -109,17 +121,22 @@ model Classroom {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Ràng buộc tổ chức
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
   // Quan hệ với giáo viên tạo lớp
   teacherId String
   teacher   User   @relation("TeacherClassrooms", fields: [teacherId], references: [id])
 
   // Quan hệ với học sinh trong lớp, khóa học và bài tập
-  students    ClassroomStudent[]
-  courses     ClassroomCourse[]
-  assignments AssignmentClassroom[] // Các bài tập được thêm vào lớp
+  students      ClassroomStudent[]
+  courses       ClassroomCourse[]
+  assignments   AssignmentClassroom[] // Các bài tập được thêm vào lớp
   announcements Announcement[]
 
   @@index([teacherId]) // Index cho query classrooms của teacher
+  @@index([organizationId, createdAt])
   @@map("classrooms")
 }
 
@@ -141,6 +158,11 @@ model Course {
   lessons     Lesson[] // Các bài học trong khóa
   assignments Assignment[] // Các bài tập trong khóa
 
+  // Ràng buộc tổ chức
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
   @@map("courses")
 }
 
@@ -164,15 +186,15 @@ model Lesson {
 
 // Model Assignment - Quản lý bài tập
 model Assignment {
-  id          String         @id @default(cuid())
-  title       String // Tiêu đề bài tập
-  description String?        @db.Text // Mô tả bài tập
-  dueDate     DateTime? // Hạn nộp bài
+  id               String         @id @default(cuid())
+  title            String // Tiêu đề bài tập
+  description      String?        @db.Text // Mô tả bài tập
+  dueDate          DateTime? // Hạn nộp bài
   // Thời gian mở/khoá và giới hạn thời gian làm bài (phút)
-  openAt      DateTime?
-  lockAt      DateTime?
+  openAt           DateTime?
+  lockAt           DateTime?
   timeLimitMinutes Int?
-  type        AssignmentType @default(ESSAY)
+  type             AssignmentType @default(ESSAY)
 
   // Metadata
   createdAt DateTime @default(now())
@@ -188,9 +210,14 @@ model Assignment {
   classrooms  AssignmentClassroom[] // Các lớp học có bài tập này
   files       AssignmentFile[] // Tài liệu/đính kèm của bài tập
 
+  // Ràng buộc tổ chức (tùy chọn, phục vụ lọc nhanh theo org)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
   @@index([authorId]) // Index cho query assignments của teacher
   @@index([authorId, createdAt]) // Composite index cho teacher queries với sorting
   @@index([dueDate]) // Index cho query assignments theo deadline
+  @@index([organizationId, createdAt])
   @@map("assignments")
 }
 
@@ -315,18 +342,18 @@ model AssignmentClassroom {
 
 // Model AssignmentFile - Lưu metadata file được upload lên Supabase Storage
 model AssignmentFile {
-  id            String   @id @default(cuid())
-  name          String   // Tên file gốc để hiển thị
-  path          String   // Đường dẫn trong bucket
-  size          Int      // Byte
-  mimeType      String   // Mime type lưu để phục vụ header tải xuống
-  createdAt     DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String // Tên file gốc để hiển thị
+  path      String // Đường dẫn trong bucket
+  size      Int // Byte
+  mimeType  String // Mime type lưu để phục vụ header tải xuống
+  createdAt DateTime @default(now())
 
   // Quan hệ
-  assignmentId  String
-  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  uploadedById  String
-  uploadedBy    User       @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User       @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
   @@index([assignmentId])
   @@index([createdAt])
@@ -335,10 +362,16 @@ model AssignmentFile {
 
 // Thông báo (announcement) trong lớp học
 model Announcement {
-  id          String   @id @default(cuid())
-  content     String   @db.Text // Nội dung thông báo
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  content   String   @db.Text // Nội dung thông báo
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Kiểm duyệt nội dung
+  status           ModerationStatus @default(APPROVED)
+  moderatedById    String?
+  moderatedAt      DateTime?
+  moderationReason String?
 
   // Quan hệ
   classroomId String
@@ -349,42 +382,55 @@ model Announcement {
   comments    AnnouncementComment[]
   attachments AnnouncementAttachment[]
 
+  // Ràng buộc tổ chức (denormalized để lọc nhanh)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
   @@index([classroomId, createdAt]) // Query thông báo theo lớp, newest-first
   @@index([authorId])
+  @@index([status, createdAt])
+  @@index([organizationId, createdAt])
   @@map("announcements")
 }
 
 // Bình luận cho thông báo
 model AnnouncementComment {
-  id             String   @id @default(cuid())
-  content        String   @db.Text
-  createdAt      DateTime @default(now())
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  // Kiểm duyệt nội dung
+  status           ModerationStatus @default(APPROVED)
+  moderatedById    String?
+  moderatedAt      DateTime?
+  moderationReason String?
 
   // Quan hệ
   announcementId String
   announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   authorId       String
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
+
   // Hỗ trợ nested comments (reply)
-  parentId       String?
-  parent         AnnouncementComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies        AnnouncementComment[] @relation("CommentReplies")
+  parentId String?
+  parent   AnnouncementComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  AnnouncementComment[] @relation("CommentReplies")
 
   @@index([announcementId, createdAt]) // Phục vụ pagination bình luận
   @@index([authorId])
   @@index([parentId]) // Index cho query replies
+  @@index([status, createdAt])
   @@map("announcement_comments")
 }
 
 // File đính kèm cho thông báo (lưu ở bucket Supabase "lessons")
 model AnnouncementAttachment {
-  id             String   @id @default(cuid())
-  name           String   // Tên file hiển thị
-  path           String   // Đường dẫn trong bucket
-  size           Int
-  mimeType       String
-  createdAt      DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String // Tên file hiển thị
+  path      String // Đường dẫn trong bucket
+  size      Int
+  mimeType  String
+  createdAt DateTime @default(now())
 
   // Quan hệ
   announcementId String
@@ -408,22 +454,103 @@ model Submission {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  files        SubmissionFile[]
+  files SubmissionFile[]
 
   @@index([assignmentId, studentId])
   @@map("submissions")
 }
 
 model SubmissionFile {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   submissionId String
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   fileName     String
   mimeType     String
   sizeBytes    Int
   storagePath  String // submissions/{assignmentId}/{studentId}/{uuid}-{fileName}
-  createdAt    DateTime @default(now())
+  createdAt    DateTime   @default(now())
 
   @@index([submissionId])
   @@map("submission_files")
+}
+
+// =============================================
+// Phân quyền theo tổ chức và nhật ký thao tác
+// =============================================
+
+// Trạng thái của tổ chức
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// Tổ chức/đơn vị quản lý (tùy chọn có thể chỉ dùng 1 bản ghi mặc định)
+model Organization {
+  id        String             @id @default(cuid())
+  name      String
+  slug      String?            @unique
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  // Quan hệ
+  members       OrganizationMember[]
+  classrooms    Classroom[]
+  courses       Course[]
+  assignments   Assignment[]
+  announcements Announcement[]
+  auditLogs     AuditLog[]
+
+  @@map("organizations")
+}
+
+// Thành viên thuộc một Organization (map người dùng vào tổ chức)
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  roleInOrg      String?
+  createdAt      DateTime @default(now())
+
+  // Quan hệ
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId], name: "organizationId_userId")
+  @@index([userId])
+  @@index([organizationId, createdAt])
+  @@map("organization_members")
+}
+
+// Nhật ký thao tác để phục vụ audit và truy vết
+model AuditLog {
+  id             String   @id @default(cuid())
+  actorId        String
+  actorRole      String?
+  action         String
+  entityType     String
+  entityId       String
+  metadata       Json?
+  ip             String?
+  userAgent      String?
+  organizationId String?
+  createdAt      DateTime @default(now())
+
+  // Quan hệ
+  actor        User          @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
+
+// Cài đặt hệ thống dạng key/value (JSON) cho feature flags, maintenance, upload limits...
+model SystemSetting {
+  key       String   @id
+  value     Json?
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
 }

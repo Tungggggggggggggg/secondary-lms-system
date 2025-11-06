@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const roleToDashboard: Record<string, string> = {
+    SUPER_ADMIN: "/dashboard/admin/system",
+    ADMIN: "/dashboard/admin/overview",
     TEACHER: "/dashboard/teacher/dashboard",
     STUDENT: "/dashboard/student/dashboard",
     PARENT: "/dashboard/parent/dashboard",
@@ -43,6 +45,19 @@ export async function middleware(req: Request) {
     if (pathname.startsWith('/dashboard/parent') && role && role !== 'PARENT') {
         const target = roleToDashboard[role] ?? '/';
         return NextResponse.redirect(new URL(target, url));
+    }
+
+    // Chặn truy cập khu vực admin: chỉ ADMIN hoặc SUPER_ADMIN được phép
+    if (pathname.startsWith('/dashboard/admin')) {
+        if (!role || (role !== 'ADMIN' && role !== 'SUPER_ADMIN')) {
+            const target = role ? roleToDashboard[role] ?? '/' : '/auth/login';
+            return NextResponse.redirect(new URL(target, url));
+        }
+        // Chuẩn hóa: '/dashboard/admin' -> role cụ thể
+        if (pathname === '/dashboard/admin') {
+            const target = role === 'SUPER_ADMIN' ? roleToDashboard['SUPER_ADMIN'] : roleToDashboard['ADMIN'];
+            return NextResponse.redirect(new URL(target, url));
+        }
     }
 
     // Nếu chưa đăng nhập mà truy cập vùng dashboard -> chuyển login
