@@ -1,144 +1,321 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import AdminHeader from "@/components/admin/AdminHeader";
+import AnimatedSection from "@/components/admin/AnimatedSection";
+import DataTable from "@/components/admin/data-table/DataTable";
+import UserModal from "@/components/admin/modals/UserModal";
+import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import { Button } from "@/components/ui/button";
+import { AdminUser, TableColumn, TableSort } from "@/types/admin";
+import { useAdminUsers } from "@/hooks/admin/use-admin-users";
+import { useAdminUserMutations } from "@/hooks/admin/use-admin-user-mutations";
+import { formatDate } from "@/lib/admin/format-date";
+import { ROLE_LABELS, ROLE_COLORS } from "@/lib/admin/admin-constants";
+import { Plus, Edit, Trash2, Key, UserRole } from "lucide-react";
+import { UserRole as PrismaUserRole } from "@prisma/client";
 
-type UserRow = { id: string; email: string; fullname: string; role: string; createdAt: string };
-
-const ROLE_OPTIONS = ["SUPER_ADMIN", "ADMIN", "TEACHER", "STUDENT", "PARENT"] as const;
-
+/**
+ * Component AdminUsersPage - Trang quản lý users cho SUPER_ADMIN
+ * Sử dụng DataTable, UserModal, và các hooks
+ */
 export default function AdminUsersPage() {
-  const [items, setItems] = useState<UserRow[]>([]);
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [resetId, setResetId] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role as string | undefined;
 
-  const searchParams = useMemo(() => new URLSearchParams({ take: "20", skip: "0", q: query }), [query]);
+  // Hooks
+  const {
+    users,
+    total,
+    isLoading,
+    search,
+    setSearch,
+    page,
+    setPage,
+    limit,
+    refresh,
+  } = useAdminUsers({ limit: 20 });
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const {
+    loading: mutating,
+    createUser,
+    updateUser,
+    updateUserRole,
+    resetPassword,
+    deleteUser,
+  } = useAdminUserMutations();
+
+  // State
+  const [sort, setSort] = useState<TableSort<AdminUser> | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
+  const [userToResetPassword, setUserToResetPassword] = useState<AdminUser | null>(null);
+
+  // Table columns
+  const columns: TableColumn<AdminUser>[] = [
+    {
+      key: "email",
+      label: "Email",
+      sortable: true,
+    },
+    {
+      key: "fullname",
+      label: "Họ tên",
+      sortable: true,
+    },
+    {
+      key: "role",
+      label: "Vai trò",
+      sortable: true,
+      render: (value) => {
+        const roleValue = value as PrismaUserRole;
+        return (
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              ROLE_COLORS[roleValue] || "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {ROLE_LABELS[roleValue] || roleValue}
+          </span>
+        );
+      },
+    },
+    {
+      key: "createdAt",
+      label: "Ngày tạo",
+      sortable: true,
+      render: (value) => formatDate(value as string, "medium"),
+    },
+  ];
+
+  // Handle create user
+  const handleCreateUser = useCallback(
+    async (data: any) => {
+      try {
+        await createUser(data);
+        setIsCreateModalOpen(false);
+        refresh();
+      } catch (error) {
+        // Error đã được xử lý trong hook
+      }
+    },
+    [createUser, refresh]
+  );
+
+  // Handle update user
+  const handleUpdateUser = useCallback(
+    async (data: any) => {
+      try {
+        await updateUser(data);
+        setIsEditModalOpen(false);
+        setSelectedUser(null);
+        refresh();
+      } catch (error) {
+        // Error đã được xử lý trong hook
+      }
+    },
+    [updateUser, refresh]
+  );
+
+  // Handle delete user
+  const handleDeleteUser = useCallback(async () => {
+    if (!userToDelete) return;
+
     try {
-      const res = await fetch(`/api/admin/system/users?${searchParams.toString()}`);
-      const data = await res.json();
-      setItems(Array.isArray(data?.items) ? data.items : []);
-    } finally {
-      setLoading(false);
+      await deleteUser(userToDelete.id);
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+      refresh();
+    } catch (error) {
+      // Error đã được xử lý trong hook
     }
-  }, [searchParams]);
+  }, [userToDelete, deleteUser, refresh]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Handle reset password
+  const handleResetPassword = useCallback(async () => {
+    if (!userToResetPassword) return;
 
+    const newPassword = prompt("Nhập mật khẩu mới (tối thiểu 6 ký tự):");
+    if (!newPassword || newPassword.length < 6) {
+      alert("Mật khẩu phải có ít nhất 6 ký tự");
+      return;
+    }
+
+    try {
+      await resetPassword(userToResetPassword.id, newPassword);
+      setIsResetPasswordDialogOpen(false);
+      setUserToResetPassword(null);
+    } catch (error) {
+      // Error đã được xử lý trong hook
+    }
+  }, [userToResetPassword, resetPassword]);
+
+  // Handle update role
   const handleUpdateRole = useCallback(
-    async (userId: string, role: string) => {
-      setSavingId(userId);
+    async (userId: string, newRole: string) => {
       try {
-        await fetch(`/api/admin/system/users/${userId}/role`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role }),
-        });
-        await load();
-      } finally {
-        setSavingId(null);
+        await updateUserRole(userId, newRole);
+        refresh();
+      } catch (error) {
+        // Error đã được xử lý trong hook
       }
     },
-    [load]
+    [updateUserRole, refresh]
   );
 
-  const handleResetPassword = useCallback(
-    async (userId: string) => {
-      const nextPassword = prompt("Nhập mật khẩu mới tối thiểu 6 ký tự");
-      if (!nextPassword || nextPassword.length < 6) return;
-
-      setResetId(userId);
-      try {
-        await fetch(`/api/admin/system/users/${userId}/password`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ newPassword: nextPassword }),
-        });
-      } finally {
-        setResetId(null);
-      }
-    },
-    []
-  );
+  // Actions column render
+  const renderActions = (user: AdminUser) => {
+    return (
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="default"
+          onClick={() => {
+            setSelectedUser(user);
+            setIsEditModalOpen(true);
+          }}
+          className="h-8 w-8 p-0"
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="default"
+          onClick={() => {
+            setUserToResetPassword(user);
+            setIsResetPasswordDialogOpen(true);
+          }}
+          className="h-8 w-8 p-0"
+          title="Đặt lại mật khẩu"
+        >
+          <Key className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="default"
+          onClick={() => {
+            setUserToDelete(user);
+            setIsDeleteDialogOpen(true);
+          }}
+          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+          title="Xóa người dùng"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Users</h1>
-        <div className="flex items-center gap-2">
-          <input
-            className="border rounded px-2 py-1"
-            placeholder="Tìm kiếm"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <button className="px-3 py-1 bg-black text-white rounded" onClick={load} disabled={loading}>
-            {loading ? "Đang tải..." : "Tải"}
-          </button>
+    <AnimatedSection className="space-y-6">
+      <AdminHeader userRole={role || ""} title="Quản lý người dùng" />
+
+      {/* Header Actions */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Danh sách người dùng
+          </h2>
+          <p className="text-sm text-gray-500">
+            Quản lý người dùng trong hệ thống
+          </p>
         </div>
+        <Button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Tạo người dùng mới
+        </Button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="text-left border-b">
-              <th className="py-2 pr-4">Email</th>
-              <th className="py-2 pr-4">Họ tên</th>
-              <th className="py-2 pr-4">Role</th>
-              <th className="py-2 pr-4">Tạo lúc</th>
-              <th className="py-2 pr-4 text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 && !loading ? (
-              <tr>
-                <td className="py-4 text-center text-gray-500" colSpan={5}>
-                  Không có dữ liệu
-                </td>
-              </tr>
-            ) : (
-              items.map((user) => (
-                <tr key={user.id} className="border-b">
-                  <td className="py-2 pr-4">{user.email}</td>
-                  <td className="py-2 pr-4">{user.fullname}</td>
-                  <td className="py-2 pr-4">
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="border rounded px-2 py-1"
-                        value={user.role}
-                        onChange={(event) => handleUpdateRole(user.id, event.target.value)}
-                        disabled={savingId === user.id}
-                      >
-                        {ROLE_OPTIONS.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
-                      {savingId === user.id && <span className="text-xs text-gray-500">Đang lưu...</span>}
-                    </div>
-                  </td>
-                  <td className="py-2 pr-4">{new Date(user.createdAt).toLocaleString()}</td>
-                  <td className="py-2 pr-4 text-right">
-                    <button
-                      className="px-2 py-1 text-xs bg-red-600 text-white rounded"
-                      onClick={() => handleResetPassword(user.id)}
-                      disabled={resetId === user.id}
-                    >
-                      {resetId === user.id ? "Đang đặt lại..." : "Reset mật khẩu"}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      {/* Data Table */}
+      <DataTable<AdminUser>
+        data={users}
+        columns={columns}
+        searchable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Tìm kiếm theo email, họ tên..."
+        sort={sort || undefined}
+        onSortChange={setSort}
+        currentPage={page}
+        onPageChange={setPage}
+        pageSize={limit}
+        total={total}
+        loading={isLoading}
+        actions={renderActions}
+        getRowId={(row) => row.id}
+        exportable
+        exportFilename="users-export.csv"
+        exportHeaders={{
+          email: "Email",
+          fullname: "Họ tên",
+          role: "Vai trò",
+          createdAt: "Ngày tạo",
+        }}
+      />
+
+      {/* Create User Modal */}
+      <UserModal
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        onSubmit={handleCreateUser}
+        loading={mutating}
+      />
+
+      {/* Edit User Modal */}
+      {selectedUser && (
+        <UserModal
+          open={isEditModalOpen}
+          onOpenChange={(open) => {
+            setIsEditModalOpen(open);
+            if (!open) setSelectedUser(null);
+          }}
+          onSubmit={handleUpdateUser}
+          initialData={selectedUser}
+          loading={mutating}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteUser}
+        title="Xóa người dùng"
+        description={
+          userToDelete
+            ? `Bạn có chắc chắn muốn xóa người dùng "${userToDelete.fullname}" (${userToDelete.email})? Hành động này không thể hoàn tác.`
+            : ""
+        }
+        variant="danger"
+        confirmText="Xóa"
+        cancelText="Hủy"
+        loading={mutating}
+      />
+
+      {/* Reset Password Dialog */}
+      <ConfirmDialog
+        open={isResetPasswordDialogOpen}
+        onOpenChange={setIsResetPasswordDialogOpen}
+        onConfirm={handleResetPassword}
+        title="Đặt lại mật khẩu"
+        description={
+          userToResetPassword
+            ? `Bạn có chắc chắn muốn đặt lại mật khẩu cho người dùng "${userToResetPassword.fullname}"?`
+            : ""
+        }
+        variant="warning"
+        confirmText="Đặt lại"
+        cancelText="Hủy"
+        loading={mutating}
+      />
+    </AnimatedSection>
   );
 }

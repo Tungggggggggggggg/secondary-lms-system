@@ -1,60 +1,277 @@
 "use client";
-import useSWR from "swr";
-import { useState } from "react";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import AdminHeader from "@/components/admin/AdminHeader";
+import AnimatedSection from "@/components/admin/AnimatedSection";
+import DataTable from "@/components/admin/data-table/DataTable";
+import OrganizationModal from "@/components/admin/modals/OrganizationModal";
+import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import { Button } from "@/components/ui/button";
+import StatsCard from "@/components/admin/stats/StatsCard";
+import { AdminOrganization, TableColumn } from "@/types/admin";
+import { useAdminOrganizations } from "@/hooks/admin/use-admin-organizations";
+import { useAdminOrgMutations } from "@/hooks/admin/use-admin-org-mutations";
+import { formatDate } from "@/lib/admin/format-date";
+import { Building2, Plus, Edit, Trash2, Users } from "lucide-react";
+import Link from "next/link";
 
+/**
+ * Component AdminOrgPage - Trang quản lý organizations
+ */
 export default function AdminOrgPage() {
-  const { data, mutate, isLoading } = useSWR(`/api/admin/org?limit=50`, fetcher);
-  const [name, setName] = useState("");
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role as string | undefined;
 
-  async function createOrg() {
-    if (!name) return;
-    await fetch(`/api/admin/org`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
-    setName("");
-    mutate();
-  }
+  // Hooks
+  const {
+    organizations,
+    total,
+    isLoading,
+    search,
+    setSearch,
+    refresh,
+  } = useAdminOrganizations({ limit: 50 });
 
-  async function renameOrg(id: string, newName: string) {
-    await fetch(`/api/admin/org/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: newName }) });
-    mutate();
-  }
+  const {
+    loading: mutating,
+    createOrganization,
+    updateOrganization,
+    deleteOrganization,
+  } = useAdminOrgMutations();
+
+  // State
+  const [selectedOrg, setSelectedOrg] = useState<AdminOrganization | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState<AdminOrganization | null>(null);
+
+  // Table columns
+  const columns: TableColumn<AdminOrganization>[] = [
+    {
+      key: "name",
+      label: "Tên tổ chức",
+      sortable: true,
+    },
+    {
+      key: "slug",
+      label: "Slug",
+      sortable: true,
+      render: (value) => (
+        <span className="font-mono text-xs text-gray-500">
+          {value || "-"}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Trạng thái",
+      sortable: true,
+      render: (value) => {
+        const status = value as string;
+        return (
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              status === "ACTIVE"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {status === "ACTIVE" ? "Hoạt động" : "Không hoạt động"}
+          </span>
+        );
+      },
+    },
+    {
+      key: "createdAt",
+      label: "Ngày tạo",
+      sortable: true,
+      render: (value) => formatDate(value as string, "medium"),
+    },
+  ];
+
+  // Handle create organization
+  const handleCreateOrg = useCallback(
+    async (data: any) => {
+      try {
+        await createOrganization(data);
+        setIsCreateModalOpen(false);
+        refresh();
+      } catch (error) {
+        // Error handled in hook
+      }
+    },
+    [createOrganization, refresh]
+  );
+
+  // Handle update organization
+  const handleUpdateOrg = useCallback(
+    async (data: any) => {
+      try {
+        await updateOrganization(data);
+        setIsEditModalOpen(false);
+        setSelectedOrg(null);
+        refresh();
+      } catch (error) {
+        // Error handled in hook
+      }
+    },
+    [updateOrganization, refresh]
+  );
+
+  // Handle delete organization
+  const handleDeleteOrg = useCallback(async () => {
+    if (!orgToDelete) return;
+
+    try {
+      await deleteOrganization(orgToDelete.id);
+      setIsDeleteDialogOpen(false);
+      setOrgToDelete(null);
+      refresh();
+    } catch (error) {
+      // Error handled in hook
+    }
+  }, [orgToDelete, deleteOrganization, refresh]);
+
+  // Render actions
+  const renderActions = (org: AdminOrganization) => {
+    return (
+      <div className="flex items-center gap-2">
+        <Link href={`/dashboard/admin/org/members?orgId=${org.id}`}>
+          <Button
+            variant="ghost"
+            size="default"
+            className="h-8 w-8 p-0"
+            title="Xem thành viên"
+          >
+            <Users className="h-4 w-4" />
+          </Button>
+        </Link>
+        <Button
+          variant="ghost"
+          size="default"
+          onClick={() => {
+            setSelectedOrg(org);
+            setIsEditModalOpen(true);
+          }}
+          className="h-8 w-8 p-0"
+          title="Sửa"
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="default"
+          onClick={() => {
+            setOrgToDelete(org);
+            setIsDeleteDialogOpen(true);
+          }}
+          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+          title="Xóa"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-xl font-semibold">Tổ chức</h1>
-      <div className="flex gap-2">
-        <input className="border rounded px-2 py-1" placeholder="Tên tổ chức mới" value={name} onChange={(e) => setName(e.target.value)} />
-        <button onClick={createOrg} className="px-3 py-1 rounded bg-blue-600 text-white">Tạo</button>
+    <AnimatedSection className="space-y-6">
+      <AdminHeader userRole={role || ""} title="Quản lý tổ chức" />
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatsCard
+          title="Tổng số tổ chức"
+          value={total || 0}
+          icon={<Building2 className="h-5 w-5" />}
+          color="primary"
+        />
       </div>
-      <div className="rounded-md border overflow-hidden">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left px-3 py-2">Tên</th>
-              <th className="text-right px-3 py-2">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td className="px-3 py-3" colSpan={2}>Đang tải...</td></tr>}
-            {data?.data?.items?.map((o: any) => (
-              <tr key={o.id} className="border-t">
-                <td className="px-3 py-2">
-                  <input defaultValue={o.name} onBlur={(e) => renameOrg(o.id, e.target.value)} className="border rounded px-2 py-1 w-full" />
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <span className="text-gray-400 text-xs">#{o.id.slice(0, 6)}</span>
-                </td>
-              </tr>
-            ))}
-            {!isLoading && (!data?.data?.items || data.data.items.length === 0) && (
-              <tr><td className="px-3 py-3 text-gray-500" colSpan={2}>Không có dữ liệu</td></tr>
-            )}
-          </tbody>
-        </table>
+
+      {/* Header Actions */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Danh sách tổ chức
+          </h2>
+          <p className="text-sm text-gray-500">
+            Quản lý các tổ chức trong hệ thống
+          </p>
+        </div>
+        <Button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Tạo tổ chức mới
+        </Button>
       </div>
-    </div>
+
+      {/* Data Table */}
+      <DataTable<AdminOrganization>
+        data={organizations}
+        columns={columns}
+        searchable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Tìm kiếm theo tên tổ chức..."
+        currentPage={1}
+        onPageChange={() => {}}
+        pageSize={50}
+        total={total}
+        loading={isLoading}
+        actions={renderActions}
+        getRowId={(row) => row.id}
+        exportable
+        exportFilename="organizations-export.csv"
+        exportHeaders={{
+          name: "Tên tổ chức",
+          slug: "Slug",
+          status: "Trạng thái",
+          createdAt: "Ngày tạo",
+        }}
+      />
+
+      {/* Create Organization Modal */}
+      <OrganizationModal
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        onSubmit={handleCreateOrg}
+        loading={mutating}
+      />
+
+      {/* Edit Organization Modal */}
+      {selectedOrg && (
+        <OrganizationModal
+          open={isEditModalOpen}
+          onOpenChange={(open) => {
+            setIsEditModalOpen(open);
+            if (!open) setSelectedOrg(null);
+          }}
+          onSubmit={handleUpdateOrg}
+          initialData={selectedOrg}
+          loading={mutating}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteOrg}
+        title="Xóa tổ chức"
+        description={
+          orgToDelete
+            ? `Bạn có chắc chắn muốn xóa tổ chức "${orgToDelete.name}"? Hành động này không thể hoàn tác.`
+            : ""
+        }
+        variant="danger"
+        confirmText="Xóa"
+        cancelText="Hủy"
+        loading={mutating}
+      />
+    </AnimatedSection>
   );
 }
-
-

@@ -1,36 +1,60 @@
 import { ReactNode } from "react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import { prisma } from "@/lib/prisma";
 
+/**
+ * Layout component cho Admin Dashboard
+ * Bao gồm sidebar navigation, header, và main content area
+ */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role as string | undefined;
+  
+  // Kiểm tra quyền truy cập
   if (!role || (role !== "ADMIN" && role !== "SUPER_ADMIN")) {
     redirect("/auth/login");
   }
 
-  const isSuperAdmin = role === "SUPER_ADMIN";
+  // Lấy thông tin user đầy đủ từ database
+  let userEmail = session?.user?.email || "";
+  let userFullname = (session?.user as any)?.fullname || session?.user?.name || "";
+
+  if (userEmail) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: userEmail },
+        select: {
+          email: true,
+          fullname: true,
+        },
+      });
+      if (user) {
+        userEmail = user.email;
+        userFullname = user.fullname;
+      }
+    } catch (error) {
+      console.error("[AdminLayout] Error fetching user:", error);
+    }
+  }
 
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-64 border-r bg-white p-4 space-y-2">
-        <div className="font-semibold text-gray-700 mb-2">Admin</div>
-        {isSuperAdmin ? (
-          <nav className="flex flex-col gap-2">
-            <Link className="text-sm hover:underline" href="/dashboard/admin/system">System</Link>
-            <Link className="text-sm hover:underline" href="/dashboard/admin/users">Users</Link>
-            <Link className="text-sm hover:underline" href="/dashboard/admin/audit">Audit</Link>
-          </nav>
-        ) : (
-          <nav className="flex flex-col gap-2">
-            <Link className="text-sm hover:underline" href="/dashboard/admin/overview">Overview</Link>
-            <Link className="text-sm hover:underline" href="/dashboard/admin/org/members">Members</Link>
-          </nav>
-        )}
-      </aside>
-      <main className="flex-1 p-6 bg-gray-50">{children}</main>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-gray-50">
+      {/* Sidebar Navigation */}
+      <AdminSidebar
+        userRole={role}
+        userEmail={userEmail}
+        userFullname={userFullname}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 lg:ml-64 min-h-screen">
+        <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

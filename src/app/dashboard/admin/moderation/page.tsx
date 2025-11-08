@@ -1,255 +1,521 @@
 "use client";
-import useSWR from "swr";
-import { useMemo, useState } from "react";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import AdminHeader from "@/components/admin/AdminHeader";
+import AnimatedSection from "@/components/admin/AnimatedSection";
+import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAdminModeration } from "@/hooks/admin/use-admin-moderation";
+import { formatDate } from "@/lib/admin/format-date";
+import { formatRelativeTime } from "@/lib/admin/format-date";
+import { CheckCircle2, XCircle, MessageSquare, FileText, Filter, CheckSquare, Square } from "lucide-react";
+import { ModerationItem } from "@/types/admin";
+import { MODERATION_STATUS_COLORS } from "@/lib/admin/admin-constants";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
+/**
+ * Component ModerationPage - Trang kiểm duyệt nội dung
+ * Hỗ trợ tabs, preview, approve/reject, bulk actions, organization filter
+ */
 export default function ModerationPage() {
-    const [orgId, setOrgId] = useState("");
-    const [type, setType] = useState<"announcement" | "comment">(
-        "announcement"
-    );
-    const url = useMemo(
-        () =>
-            `/api/admin/moderation/queue?type=${type}${
-                orgId ? `&orgId=${encodeURIComponent(orgId)}` : ""
-            }`,
-        [type, orgId]
-    );
-    const { data, mutate, isLoading } = useSWR(url, fetcher);
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role as string | undefined;
+  const [activeTab, setActiveTab] = useState<"announcement" | "comment">("announcement");
+  const [orgId, setOrgId] = useState("");
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [itemToReject, setItemToReject] = useState<ModerationItem | null>(null);
+  const [previewItem, setPreviewItem] = useState<ModerationItem | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-    async function approve(item: any) {
-        const endpoint =
-            item.type === "announcement"
-                ? `/api/admin/moderation/announcements/${item.id}/approve`
-                : `/api/admin/moderation/comments/${item.id}/approve`;
-        await fetch(endpoint, { method: "POST" });
-        mutate();
-    }
+  // Hook
+  const {
+    items,
+    isLoading,
+    filters,
+    setFilters,
+    approveItem,
+    rejectItem,
+    refresh,
+  } = useAdminModeration({
+    type: activeTab,
+    orgId: orgId || undefined,
+  });
 
-    async function reject(item: any) {
-        const reason = prompt("Lý do từ chối?") || "";
-        const endpoint =
-            item.type === "announcement"
-                ? `/api/admin/moderation/announcements/${item.id}/reject`
-                : `/api/admin/moderation/comments/${item.id}/reject`;
-        await fetch(endpoint, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ reason }),
-        });
-        mutate();
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as "announcement" | "comment");
+    setSelectedItems([]);
+    setFilters({
+      type: value as "announcement" | "comment",
+      orgId: orgId || undefined,
+    });
+  };
+
+  // Handle orgId change
+  const handleOrgIdChange = (value: string) => {
+    setOrgId(value);
+    setFilters({
+      type: activeTab,
+      orgId: value || undefined,
+    });
+  };
+
+  // Handle select item
+  const handleSelectItem = (itemId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedItems([...selectedItems, itemId]);
+    } else {
+      setSelectedItems(selectedItems.filter((id) => id !== itemId));
     }
+  };
+
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedItems(items.map((item) => item.id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  // Handle approve
+  const handleApprove = useCallback(
+    async (item: ModerationItem) => {
+      try {
+        await approveItem(item.id, item.type);
+        setSelectedItems(selectedItems.filter((id) => id !== item.id));
+      } catch (error) {
+        // Error handled in hook
+      }
+    },
+    [approveItem, selectedItems]
+  );
+
+  // Handle reject
+  const handleReject = useCallback(
+    async (item: ModerationItem, reason: string) => {
+      try {
+        await rejectItem(item.id, item.type, reason);
+        setSelectedItems(selectedItems.filter((id) => id !== item.id));
+        setIsRejectDialogOpen(false);
+        setItemToReject(null);
+        setRejectReason("");
+      } catch (error) {
+        // Error handled in hook
+      }
+    },
+    [rejectItem, selectedItems]
+  );
+
+  // Handle bulk approve
+  const handleBulkApprove = useCallback(async () => {
+    if (selectedItems.length === 0) return;
+
+    const promises = selectedItems.map((itemId) => {
+      const item = items.find((i) => i.id === itemId);
+      if (item) {
+        return approveItem(item.id, item.type);
+      }
+    });
+
+    try {
+      await Promise.all(promises);
+      setSelectedItems([]);
+    } catch (error) {
+      // Error handled in hook
+    }
+  }, [selectedItems, items, approveItem]);
+
+  // Handle bulk reject
+  const handleBulkReject = useCallback(() => {
+    if (selectedItems.length === 0) return;
+    // For bulk reject, we'll use a default reason or prompt
+    const reason = prompt("Lý do từ chối (áp dụng cho tất cả các mục đã chọn):");
+    if (!reason) return;
+
+    const promises = selectedItems.map((itemId) => {
+      const item = items.find((i) => i.id === itemId);
+      if (item) {
+        return rejectItem(item.id, item.type, reason);
+      }
+    });
+
+    Promise.all(promises)
+      .then(() => {
+        setSelectedItems([]);
+      })
+      .catch((error) => {
+        // Error handled in hook
+      });
+  }, [selectedItems, items, rejectItem]);
+
+  // Open reject dialog
+  const openRejectDialog = (item: ModerationItem) => {
+    setItemToReject(item);
+    setIsRejectDialogOpen(true);
+  };
+
+  // Render item card
+  const renderItemCard = (item: ModerationItem) => {
+    const isSelected = selectedItems.includes(item.id);
+    const contentPreview = item.content.length > 200
+      ? `${item.content.substring(0, 200)}...`
+      : item.content;
 
     return (
-        <div className="p-4 space-y-4">
-            <h1 className="text-xl font-semibold">Moderation</h1>
-            <div className="flex flex-wrap gap-2 items-center">
-                <select
-                    className="border rounded px-2 py-1"
-                    value={type}
-                    onChange={(e) => setType(e.target.value as any)}
+      <Card
+        key={item.id}
+        className={`transition-all ${
+          isSelected ? "ring-2 ring-violet-500 bg-violet-50" : ""
+        }`}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start gap-4">
+            <div className="mt-1">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={(checked) =>
+                  handleSelectItem(item.id, checked as boolean)
+                }
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        MODERATION_STATUS_COLORS[item.status] || "bg-gray-100"
+                      }`}
+                    >
+                      {item.type === "announcement" ? "Thông báo" : "Bình luận"}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {formatRelativeTime(item.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-900 font-medium">
+                    {item.authorName || "Người dùng"}
+                  </p>
+                </div>
+              </div>
+              <div className="mb-3">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {contentPreview}
+                </p>
+                {item.content.length > 200 && (
+                  <button
+                    onClick={() => {
+                      setPreviewItem(item);
+                      setIsPreviewOpen(true);
+                    }}
+                    className="text-xs text-violet-600 hover:text-violet-700 mt-1"
+                  >
+                    Xem thêm...
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="default"
+                  onClick={() => handleApprove(item)}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                 >
-                    <option value="announcement">Announcements</option>
-                    <option value="comment">Comments</option>
-                </select>
-                <input
-                    value={orgId}
-                    onChange={(e) => setOrgId(e.target.value)}
-                    placeholder="Lọc theo orgId"
-                    className="border rounded px-2 py-1"
+                  <CheckCircle2 className="h-4 w-4" />
+                  Duyệt
+                </Button>
+                <Button
+                  size="default"
+                  variant="outline"
+                  onClick={() => openRejectDialog(item)}
+                  className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Từ chối
+                </Button>
+                <Button
+                  size="default"
+                  variant="ghost"
+                  onClick={() => {
+                    setPreviewItem(item);
+                    setIsPreviewOpen(true);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Xem chi tiết
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <AnimatedSection className="space-y-6">
+      <AdminHeader userRole={role || ""} title="Kiểm duyệt nội dung" />
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bộ lọc</CardTitle>
+          <CardDescription>
+            Lọc nội dung chờ duyệt theo tổ chức
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 max-w-md">
+              <Input
+                type="text"
+                placeholder="Organization ID (tùy chọn)"
+                value={orgId}
+                onChange={(e) => handleOrgIdChange(e.target.value)}
+              />
+            </div>
+            <Button onClick={refresh} variant="outline">
+              Làm mới
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="announcement" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Thông báo ({items.length})
+            </TabsTrigger>
+            <TabsTrigger value="comment" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Bình luận ({items.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Bulk Actions */}
+          {selectedItems.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                Đã chọn: {selectedItems.length}
+              </span>
+              <Button
+                size="default"
+                onClick={handleBulkApprove}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Duyệt ({selectedItems.length})
+              </Button>
+              <Button
+                size="default"
+                variant="outline"
+                onClick={handleBulkReject}
+                className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
+              >
+                <XCircle className="h-4 w-4" />
+                Từ chối ({selectedItems.length})
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <TabsContent value="announcement" className="space-y-4">
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">Đang tải...</div>
+          ) : items.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-gray-500">
+                Không có thông báo chờ duyệt
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Select All */}
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                <Checkbox
+                  checked={
+                    items.length > 0 &&
+                    items.every((item) => selectedItems.includes(item.id))
+                  }
+                  onCheckedChange={handleSelectAll}
                 />
-            </div>
-            <div className="rounded-md border overflow-hidden">
-                <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="text-left px-3 py-2">Thời gian</th>
-                            <th className="text-left px-3 py-2">Loại</th>
-                            <th className="text-left px-3 py-2">Nội dung</th>
-                            <th className="text-right px-3 py-2">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {isLoading && (
-                            <tr>
-                                <td className="px-3 py-3" colSpan={4}>
-                                    Đang tải...
-                                </td>
-                            </tr>
-                        )}
-                        {data?.data?.items?.map((item: any) => (
-                            <tr key={item.id} className="border-t">
-                                <td className="px-3 py-2">
-                                    {new Date(item.createdAt).toLocaleString()}
-                                </td>
-                                <td className="px-3 py-2">{item.type}</td>
-                                <td
-                                    className="px-3 py-2 max-w-[600px] truncate"
-                                    title={item.content}
-                                >
-                                    {item.content}
-                                </td>
-                                <td className="px-3 py-2 text-right space-x-2">
-                                    <button
-                                        onClick={() => approve(item)}
-                                        className="px-3 py-1 rounded bg-green-600 text-white"
-                                    >
-                                        Approve
-                                    </button>
-                                    <button
-                                        onClick={() => reject(item)}
-                                        className="px-3 py-1 rounded bg-red-600 text-white"
-                                    >
-                                        Reject
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {!isLoading &&
-                            (!data?.data?.items ||
-                                data.data.items.length === 0) && (
-                                <tr>
-                                    <td
-                                        className="px-3 py-3 text-gray-500"
-                                        colSpan={4}
-                                    >
-                                        Không có nội dung chờ duyệt
-                                    </td>
-                                </tr>
-                            )}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
+                <span className="text-sm text-gray-600">
+                  Chọn tất cả ({items.length})
+                </span>
+              </div>
 
-("use client");
-import { useEffect, useState } from "react";
+              {/* Items List */}
+              <div className="space-y-4">
+                {items.map((item) => renderItemCard(item))}
+              </div>
+            </>
+          )}
+        </TabsContent>
 
-type Ann = {
-    id: string;
-    content: string;
-    classroomId: string;
-    authorId: string;
-    createdAt: string;
-};
-type Cmt = {
-    id: string;
-    content: string;
-    announcementId: string;
-    authorId: string;
-    createdAt: string;
-};
+        <TabsContent value="comment" className="space-y-4">
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">Đang tải...</div>
+          ) : items.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-gray-500">
+                Không có bình luận chờ duyệt
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Select All */}
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                <Checkbox
+                  checked={
+                    items.length > 0 &&
+                    items.every((item) => selectedItems.includes(item.id))
+                  }
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm text-gray-600">
+                  Chọn tất cả ({items.length})
+                </span>
+              </div>
 
-export default function ModerationPage() {
-    const [anns, setAnns] = useState<Ann[]>([]);
-    const [cmts, setCmts] = useState<Cmt[]>([]);
+              {/* Items List */}
+              <div className="space-y-4">
+                {items.map((item) => renderItemCard(item))}
+              </div>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
-    async function load() {
-        const [ra, rc] = await Promise.all([
-            fetch("/api/admin/org/moderation/announcements").then((r) =>
-                r.json()
-            ),
-            fetch("/api/admin/org/moderation/comments").then((r) => r.json()),
-        ]);
-        setAnns(ra.items ?? []);
-        setCmts(rc.items ?? []);
-    }
-
-    async function act(
-        type: "ann" | "cmt",
-        action: "APPROVE" | "REJECT",
-        ids: string[]
-    ) {
-        const url =
-            type === "ann"
-                ? "/api/admin/org/moderation/announcements"
-                : "/api/admin/org/moderation/comments";
-        await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids, action }),
-        });
-        await load();
-    }
-
-    useEffect(() => {
-        load();
-    }, []);
-
-    return (
-        <div className="space-y-6">
-            <h1 className="text-xl font-semibold">Moderation Queue</h1>
-
-            <section>
-                <h2 className="font-medium mb-2">Announcements pending</h2>
-                <div className="space-y-2">
-                    {anns.map((a) => (
-                        <div key={a.id} className="p-3 bg-white border rounded">
-                            <div className="text-sm text-gray-700 mb-2 line-clamp-3">
-                                {a.content}
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    className="px-3 py-1 bg-green-600 text-white rounded"
-                                    onClick={() =>
-                                        act("ann", "APPROVE", [a.id])
-                                    }
-                                >
-                                    Duyệt
-                                </button>
-                                <button
-                                    className="px-3 py-1 bg-red-600 text-white rounded"
-                                    onClick={() => act("ann", "REJECT", [a.id])}
-                                >
-                                    Từ chối
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                    {anns.length === 0 && (
-                        <div className="text-sm text-gray-500">
-                            Không có mục chờ duyệt.
-                        </div>
-                    )}
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {previewItem?.type === "announcement" ? "Thông báo" : "Bình luận"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {previewItem && (
+              <>
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Người tạo:
+                  </p>
+                  <p className="text-sm text-gray-900">
+                    {previewItem.authorName || "Người dùng"}
+                  </p>
                 </div>
-            </section>
-
-            <section>
-                <h2 className="font-medium mb-2">Comments pending</h2>
-                <div className="space-y-2">
-                    {cmts.map((c) => (
-                        <div key={c.id} className="p-3 bg-white border rounded">
-                            <div className="text-sm text-gray-700 mb-2 line-clamp-3">
-                                {c.content}
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    className="px-3 py-1 bg-green-600 text-white rounded"
-                                    onClick={() =>
-                                        act("cmt", "APPROVE", [c.id])
-                                    }
-                                >
-                                    Duyệt
-                                </button>
-                                <button
-                                    className="px-3 py-1 bg-red-600 text-white rounded"
-                                    onClick={() => act("cmt", "REJECT", [c.id])}
-                                >
-                                    Từ chối
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                    {cmts.length === 0 && (
-                        <div className="text-sm text-gray-500">
-                            Không có mục chờ duyệt.
-                        </div>
-                    )}
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Thời gian:
+                  </p>
+                  <p className="text-sm text-gray-900">
+                    {formatDate(previewItem.createdAt, "full")}
+                  </p>
                 </div>
-            </section>
-        </div>
-    );
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Nội dung:
+                  </p>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                      {previewItem.content}
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsPreviewOpen(false)}
+                  >
+                    Đóng
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (previewItem) {
+                        handleApprove(previewItem);
+                        setIsPreviewOpen(false);
+                      }
+                    }}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Duyệt
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (previewItem) {
+                        openRejectDialog(previewItem);
+                        setIsPreviewOpen(false);
+                      }
+                    }}
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    Từ chối
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Từ chối nội dung</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-700 mb-2">
+                Vui lòng nhập lý do từ chối:
+              </p>
+              <Textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Lý do từ chối..."
+                rows={4}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsRejectDialogOpen(false);
+                  setItemToReject(null);
+                  setRejectReason("");
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={() => {
+                  if (itemToReject && rejectReason) {
+                    handleReject(itemToReject, rejectReason);
+                  }
+                }}
+                disabled={!rejectReason}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Từ chối
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </AnimatedSection>
+  );
 }

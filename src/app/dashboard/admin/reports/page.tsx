@@ -1,102 +1,229 @@
 "use client";
-import useSWR from "swr";
-import { useMemo, useState } from "react";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import AdminHeader from "@/components/admin/AdminHeader";
+import AnimatedSection from "@/components/admin/AnimatedSection";
+import StatsCard from "@/components/admin/stats/StatsCard";
+import LineChart from "@/components/admin/charts/LineChart";
+import BarChart from "@/components/admin/charts/BarChart";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAdminReports } from "@/hooks/admin/use-admin-reports";
+import { Users, MessageSquare, AlertCircle, FileText } from "lucide-react";
+import { formatDate } from "@/lib/admin/format-date";
+import { formatNumber } from "@/lib/admin/format-number";
+import { exportToCSV, generateFilename } from "@/lib/admin/export-csv";
+import { Download } from "lucide-react";
 
+/**
+ * Component ReportsPage - Trang báo cáo cho admin
+ * Hiển thị overview stats, charts, và export reports
+ */
 export default function ReportsPage() {
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role as string | undefined;
   const [orgId, setOrgId] = useState("");
-  const overviewUrl = useMemo(() => `/api/admin/reports/overview${orgId ? `?orgId=${encodeURIComponent(orgId)}` : ""}`, [orgId]);
-  const usageUrl = useMemo(() => `/api/admin/reports/usage${orgId ? `?orgId=${encodeURIComponent(orgId)}` : ""}`, [orgId]);
-  const growthUrl = useMemo(() => `/api/admin/reports/growth${orgId ? `?orgId=${encodeURIComponent(orgId)}` : ""}`, [orgId]);
-  const { data: overview } = useSWR(overviewUrl, fetcher);
-  const { data: usage } = useSWR(usageUrl, fetcher);
-  const { data: growth } = useSWR(growthUrl, fetcher);
+
+  // Fetch reports data
+  const { overview, usage, growth, isLoading, refresh } = useAdminReports({
+    orgId: orgId || undefined,
+  });
+
+  // Prepare chart data
+  const growthChartData = {
+    labels: growth.map((item) => formatDate(item.date, "short")),
+    datasets: [
+      {
+        label: "Người dùng mới",
+        data: growth.map((item) => item.count),
+        borderColor: "#8b5cf6",
+        backgroundColor: "rgba(139, 92, 246, 0.1)",
+      },
+    ],
+  };
+
+  // Handle export
+  const handleExportOverview = () => {
+    if (!overview) return;
+
+    const data = [
+      {
+        "Tổng người dùng": overview.users,
+        "Thông báo": overview.announcements,
+        "Bình luận": overview.comments,
+        "Chờ duyệt": overview.pending,
+      },
+    ];
+
+    exportToCSV(data, generateFilename("reports-overview", "csv"), {
+      users: "Tổng người dùng",
+      announcements: "Thông báo",
+      comments: "Bình luận",
+      pending: "Chờ duyệt",
+    });
+  };
+
+  const handleExportGrowth = () => {
+    if (!growth || growth.length === 0) return;
+
+    const data = growth.map((item) => ({
+      "Ngày": item.date,
+      "Số lượng": item.count,
+    }));
+
+    exportToCSV(data, generateFilename("reports-growth", "csv"));
+  };
 
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-xl font-semibold">Reports</h1>
-      <div className="flex gap-2">
-        <input className="border rounded px-2 py-1" placeholder="orgId (tùy chọn)" value={orgId} onChange={(e) => setOrgId(e.target.value)} />
-      </div>
+    <AnimatedSection className="space-y-6">
+      <AdminHeader userRole={role || ""} title="Báo cáo" />
 
-      <section>
-        <h2 className="font-medium mb-2">Tổng quan</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <MetricCard title="Users" value={overview?.data?.users ?? 0} />
-          <MetricCard title="Announcements" value={overview?.data?.announcements ?? 0} />
-          <MetricCard title="Comments" value={overview?.data?.comments ?? 0} />
-          <MetricCard title="Pending" value={overview?.data?.pending ?? 0} />
-        </div>
-      </section>
-
-      <section>
-        <h2 className="font-medium mb-2">Usage (7d)</h2>
-        <div className="rounded border p-3 text-sm">
-          <div>Announcements groups: {usage?.data?.anns?.length ?? 0}</div>
-          <div>Comments groups: {usage?.data?.cmts?.length ?? 0}</div>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="font-medium mb-2">Growth (30d)</h2>
-        <div className="rounded border p-3 text-sm space-y-1 max-h-60 overflow-auto">
-          {growth?.data?.map((r: any) => (
-            <div key={r.date} className="flex justify-between">
-              <span>{r.date}</span>
-              <span className="font-medium">+{r.count}</span>
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bộ lọc</CardTitle>
+          <CardDescription>
+            Lọc báo cáo theo tổ chức (tùy chọn)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 max-w-md">
+              <Input
+                type="text"
+                placeholder="Organization ID (tùy chọn)"
+                value={orgId}
+                onChange={(e) => setOrgId(e.target.value)}
+              />
             </div>
-          )) || <div className="text-gray-500">No data</div>}
+            <Button onClick={refresh} variant="outline">
+              Làm mới
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Overview Stats */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Tổng quan</h2>
+          <Button
+            variant="outline"
+            onClick={handleExportOverview}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
         </div>
-      </section>
-    </div>
-  );
-}
-
-function MetricCard({ title, value }: { title: string; value: number }) {
-  return (
-    <div className="rounded-md border p-4">
-      <div className="text-gray-500 text-sm">{title}</div>
-      <div className="text-2xl font-semibold mt-1">{value}</div>
-    </div>
-  );
-}
-
-"use client";
-import { useEffect, useState } from "react";
-
-type Stats = { users: number; classrooms: number; courses: number; assignments: number; submissions: number };
-
-export default function ReportsPage() {
-  const [orgId, setOrgId] = useState("");
-  const [stats, setStats] = useState<Stats | null>(null);
-
-  async function load() {
-    const res = await fetch(`/api/admin/org/reports/overview${orgId ? `?orgId=${encodeURIComponent(orgId)}` : ""}`);
-    const data = await res.json();
-    setStats(data.stats ?? null);
-  }
-
-  useEffect(() => { load(); }, []);
-
-  return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Reports</h1>
-      <div className="flex gap-2">
-        <input className="border rounded px-2 py-1" placeholder="Organization ID (tùy chọn)" value={orgId} onChange={(e) => setOrgId(e.target.value)} />
-        <button className="px-3 py-1 bg-black text-white rounded" onClick={load}>Tải</button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Người dùng"
+            value={overview?.users || 0}
+            icon={<Users className="h-5 w-5" />}
+            color="primary"
+          />
+          <StatsCard
+            title="Thông báo"
+            value={overview?.announcements || 0}
+            icon={<MessageSquare className="h-5 w-5" />}
+            color="info"
+          />
+          <StatsCard
+            title="Bình luận"
+            value={overview?.comments || 0}
+            icon={<MessageSquare className="h-5 w-5" />}
+            color="success"
+          />
+          <StatsCard
+            title="Chờ duyệt"
+            value={overview?.pending || 0}
+            icon={<AlertCircle className="h-5 w-5" />}
+            color="warning"
+          />
+        </div>
       </div>
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="p-4 bg-white rounded border"><div className="text-xs text-gray-500">Users</div><div className="text-lg font-semibold">{stats.users}</div></div>
-          <div className="p-4 bg-white rounded border"><div className="text-xs text-gray-500">Classrooms</div><div className="text-lg font-semibold">{stats.classrooms}</div></div>
-          <div className="p-4 bg-white rounded border"><div className="text-xs text-gray-500">Courses</div><div className="text-lg font-semibold">{stats.courses}</div></div>
-          <div className="p-4 bg-white rounded border"><div className="text-xs text-gray-500">Assignments</div><div className="text-lg font-semibold">{stats.assignments}</div></div>
-          <div className="p-4 bg-white rounded border"><div className="text-xs text-gray-500">Submissions</div><div className="text-lg font-semibold">{stats.submissions}</div></div>
+
+      {/* Growth Chart */}
+      {growth && growth.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Tăng trưởng (30 ngày qua)</CardTitle>
+                <CardDescription>
+                  Số lượng người dùng mới theo ngày
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleExportGrowth}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <LineChart data={growthChartData} height={300} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Usage Stats */}
+      {usage && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Hoạt động (7 ngày qua)</CardTitle>
+            <CardDescription>
+              Thống kê thông báo và bình luận
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Thông báo: {usage.anns?.length || 0} nhóm
+                </p>
+                {usage.anns && usage.anns.length > 0 && (
+                  <div className="text-sm text-gray-500">
+                    Tổng: {usage.anns.reduce((acc, item) => acc + (item._count?.createdAt || 0), 0)} thông báo
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Bình luận: {usage.cmts?.length || 0} nhóm
+                </p>
+                {usage.cmts && usage.cmts.length > 0 && (
+                  <div className="text-sm text-gray-500">
+                    Tổng: {usage.cmts.reduce((acc, item) => acc + (item._count?.createdAt || 0), 0)} bình luận
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="text-center py-8 text-gray-500">
+          Đang tải dữ liệu...
         </div>
       )}
-    </div>
+
+      {/* Empty State */}
+      {!isLoading && !overview && (
+        <Card>
+          <CardContent className="py-8 text-center text-gray-500">
+            Không có dữ liệu để hiển thị
+          </CardContent>
+        </Card>
+      )}
+    </AnimatedSection>
   );
 }
-
-
