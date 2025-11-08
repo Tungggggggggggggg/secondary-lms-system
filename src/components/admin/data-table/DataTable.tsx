@@ -205,7 +205,7 @@ export default function DataTable<T extends Record<string, unknown>>({
     if (!exportable) return;
 
     const filename = exportFilename || generateFilename("export", "csv");
-    exportToCSV(sortedData, filename, exportHeaders);
+    exportToCSV(sortedData, filename, exportHeaders as Record<keyof T, string> | undefined);
   };
 
   // Render sort icon
@@ -273,7 +273,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                 <TableHead
                   key={String(col.key)}
                   className={cn(
-                    col.sortable && "cursor-pointer hover:bg-gray-50",
+                    col.sortable ? "cursor-pointer hover:bg-gray-50" : "",
                     "select-none"
                   )}
                   onClick={() => col.sortable && handleSort(col.key)}
@@ -284,7 +284,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                   </div>
                 </TableHead>
               ))}
-              {actions && <TableHead className="w-24">Thao tác</TableHead>}
+              {actions && <TableHead className="w-32 text-center">Thao tác</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -319,7 +319,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                   <TableRow
                     key={rowId}
                     className={cn(
-                      isSelected && "bg-violet-50",
+                      isSelected ? "bg-violet-50" : "",
                       "hover:bg-gray-50"
                     )}
                   >
@@ -343,8 +343,8 @@ export default function DataTable<T extends Record<string, unknown>>({
                       </TableCell>
                     ))}
                     {actions && (
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2">
                           {actions(row)}
                         </div>
                       </TableCell>

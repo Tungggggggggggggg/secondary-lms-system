@@ -265,6 +265,48 @@ export interface StatsCardProps {
 }
 
 // ============================================
+// Parent-Student Types
+// ============================================
+
+export interface ParentStudent extends Record<string, unknown> {
+  id: string;
+  parentId: string;
+  studentId: string;
+  createdAt: string;
+  parent: {
+    id: string;
+    email: string;
+    fullname: string;
+    role: string;
+  };
+  student: {
+    id: string;
+    email: string;
+    fullname: string;
+    role: string;
+  };
+}
+
+export interface CreateParentStudentInput {
+  parentId: string;
+  studentId: string;
+}
+
+export interface UpdateParentStudentInput {
+  id: string;
+  parentId?: string;
+  studentId?: string;
+}
+
+export interface ParentStudentFilter {
+  search?: string;
+  parentId?: string;
+  studentId?: string;
+  limit?: number;
+  page?: number;
+}
+
+// ============================================
 // Chart Types
 // ============================================
 

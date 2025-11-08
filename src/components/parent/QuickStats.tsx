@@ -1,39 +1,56 @@
 // src/components/parent/QuickStats.tsx
+"use client";
+
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function QuickStats() {
-    const stats = [
-      {
-        color: "from-blue-500 to-blue-600",
-        icon: "📚",
-        value: "12",
-        label: "Khóa học",
-        change: "↑ 3",
-        desc: "Khóa mới tháng này",
-      },
-      {
-        color: "from-green-500 to-green-600",
-        icon: "✅",
-        value: "85%",
-        label: "Hoàn thành",
-        change: "↑ 5%",
-        desc: "So với tháng trước",
-      },
-      {
-        color: "from-yellow-500 to-orange-500",
-        icon: "⭐",
-        value: "8.7",
-        label: "Điểm trung bình",
-        change: "↑ 0.5",
-        desc: "Cải thiện tích cực",
-      },
-      {
-        color: "from-pink-500 to-purple-500",
-        icon: "🔥",
-        value: "5",
-        label: "Ngày liên tiếp",
-        change: "+2",
-        desc: "Tuần này",
-      },
-    ];
+  const { data } = useSWR<{
+    success?: boolean;
+    items?: any[];
+    total?: number;
+  }>("/api/parent/children", fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
+
+  const childrenCount = (data?.success && data?.total) ? data.total : 0;
+
+  const stats = [
+    {
+      color: "from-blue-500 to-blue-600",
+      icon: "👨‍👩‍👧",
+      value: childrenCount.toString(),
+      label: "Con được liên kết",
+      change: childrenCount > 0 ? "✓" : "—",
+      desc: childrenCount > 0 ? "Đã liên kết" : "Chưa có",
+    },
+    {
+      color: "from-green-500 to-green-600",
+      icon: "✅",
+      value: "—",
+      label: "Hoàn thành",
+      change: "—",
+      desc: "Tính năng sắp ra mắt",
+    },
+    {
+      color: "from-yellow-500 to-orange-500",
+      icon: "⭐",
+      value: "—",
+      label: "Điểm trung bình",
+      change: "—",
+      desc: "Tính năng sắp ra mắt",
+    },
+    {
+      color: "from-pink-500 to-purple-500",
+      icon: "📊",
+      value: "—",
+      label: "Thống kê",
+      change: "—",
+      desc: "Tính năng sắp ra mắt",
+    },
+  ];
   
     return (
       <div className="grid md:grid-cols-4 gap-6 mb-8">

@@ -74,6 +74,10 @@ model User {
   organizationMemberships OrganizationMember[]
   auditLogs               AuditLog[]
 
+  // Quan hệ phụ huynh-học sinh
+  parentRelations ParentStudent[] @relation("ParentRelations")
+  studentRelations ParentStudent[] @relation("StudentRelations")
+
   @@map("users")
 }
 
@@ -544,6 +548,27 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([organizationId, createdAt])
   @@map("audit_logs")
+}
+
+// Model ParentStudent - Quan hệ nhiều-nhiều giữa Parent và Student
+// Cho phép phụ huynh theo dõi tình hình học tập của con mình
+model ParentStudent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Quan hệ
+  parentId String
+  parent   User @relation("ParentRelations", fields: [parentId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   User @relation("StudentRelations", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId], name: "parentId_studentId")
+  @@index([parentId])
+  @@index([studentId])
+  @@index([parentId, createdAt])
+  @@index([studentId, createdAt])
+  @@map("parent_students")
 }
 
 // Cài đặt hệ thống dạng key/value (JSON) cho feature flags, maintenance, upload limits...

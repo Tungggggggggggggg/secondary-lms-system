@@ -70,6 +70,13 @@ export const SUPER_ADMIN_NAV_ITEMS: AdminNavItem[] = [
     roles: ["SUPER_ADMIN"],
   },
   {
+    id: "parent-students",
+    label: "Liên kết Phụ huynh-Học sinh",
+    href: "/dashboard/admin/parent-students",
+    icon: "UserCog",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
     id: "audit",
     label: "Audit Logs",
     href: "/dashboard/admin/audit",
@@ -180,6 +187,9 @@ export const AUDIT_ACTIONS = {
   SETTINGS_UPDATE: "SETTINGS_UPDATE",
   MODERATION_APPROVE: "MODERATION_APPROVE",
   MODERATION_REJECT: "MODERATION_REJECT",
+  PARENT_STUDENT_CREATE: "PARENT_STUDENT_CREATE",
+  PARENT_STUDENT_UPDATE: "PARENT_STUDENT_UPDATE",
+  PARENT_STUDENT_DELETE: "PARENT_STUDENT_DELETE",
 } as const;
 
 // ============================================

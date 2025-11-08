@@ -14,10 +14,10 @@ export default function SidebarParent() {
   const { expanded, toggle } = useSidebarState("sidebar:parent");
   const menu = [
     { icon: "📊", label: "Dashboard", href: "/dashboard/parent/dashboard" },
-    { icon: "👨‍👩‍👧", label: "Con của tôi", href: "/parent/children" },
-    { icon: "📈", label: "Tiến độ học tập", href: "/parent/progress" },
-    { icon: "📅", label: "Lịch học", href: "/parent/schedule" },
-    { icon: "💬", label: "Liên hệ GV", href: "/parent/contact" },
+    { icon: "👨‍👩‍👧", label: "Con của tôi", href: "/dashboard/parent/children" },
+    { icon: "📈", label: "Tiến độ học tập", href: "/dashboard/parent/progress" },
+    { icon: "📅", label: "Lịch học", href: "/dashboard/parent/schedule" },
+    { icon: "💬", label: "Liên hệ GV", href: "/dashboard/parent/contact" },
     { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/parent/profile" },
   ];
 
