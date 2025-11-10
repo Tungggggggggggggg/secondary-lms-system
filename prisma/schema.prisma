@@ -75,8 +75,14 @@ model User {
   auditLogs               AuditLog[]
 
   // Quan hệ phụ huynh-học sinh
-  parentRelations ParentStudent[] @relation("ParentRelations")
+  parentRelations  ParentStudent[] @relation("ParentRelations")
   studentRelations ParentStudent[] @relation("StudentRelations")
+
+  // Self-service linking relations
+  studentInvitations     ParentStudentInvitation[] @relation("StudentInvitations")
+  parentInvitations      ParentStudentInvitation[] @relation("ParentInvitations")
+  parentLinkRequests     ParentStudentLinkRequest[] @relation("ParentLinkRequests")
+  studentLinkRequests    ParentStudentLinkRequest[] @relation("StudentLinkRequests")
 
   @@map("users")
 }
@@ -550,6 +556,22 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// Enum cho trạng thái liên kết phụ huynh-học sinh
+enum LinkStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  EXPIRED
+}
+
+// Enum cho trạng thái yêu cầu liên kết
+enum LinkRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
 // Model ParentStudent - Quan hệ nhiều-nhiều giữa Parent và Student
 // Cho phép phụ huynh theo dõi tình hình học tập của con mình
 model ParentStudent {
@@ -563,12 +585,66 @@ model ParentStudent {
   studentId String
   student   User @relation("StudentRelations", fields: [studentId], references: [id], onDelete: Cascade)
 
+  // Self-service linking fields
+  status              LinkStatus @default(ACTIVE)
+  parentConfirmedAt   DateTime?
+  studentConfirmedAt  DateTime?
+  initiatedBy         String?    // User ID của người khởi tạo liên kết
+  metadata            Json?      // Thông tin bổ sung (source, notes, etc.)
+
   @@unique([parentId, studentId], name: "parentId_studentId")
   @@index([parentId])
   @@index([studentId])
-  @@index([parentId, createdAt])
-  @@index([studentId, createdAt])
+  @@index([status])
+  @@index([status, createdAt])
   @@map("parent_students")
+}
+
+// Model cho invitation codes từ học sinh
+model ParentStudentInvitation {
+  id        String            @id @default(cuid())
+  code      String            @unique // Mã mời 8 ký tự
+  status    LinkRequestStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  expiresAt DateTime // Hết hạn sau 7 ngày
+  usedAt    DateTime? // Thời điểm được sử dụng
+
+  // Quan hệ
+  studentId String
+  student   User   @relation("StudentInvitations", fields: [studentId], references: [id], onDelete: Cascade)
+
+  parentId String? // Null cho đến khi được accept
+  parent   User?   @relation("ParentInvitations", fields: [parentId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([code])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("parent_student_invitations")
+}
+
+// Model cho link requests từ phụ huynh
+model ParentStudentLinkRequest {
+  id          String            @id @default(cuid())
+  status      LinkRequestStatus @default(PENDING)
+  message     String? // Lời nhắn từ phụ huynh
+  createdAt   DateTime          @default(now())
+  respondedAt DateTime? // Thời điểm học sinh phản hồi
+  expiresAt   DateTime // Hết hạn sau 30 ngày
+
+  // Quan hệ
+  parentId String
+  parent   User   @relation("ParentLinkRequests", fields: [parentId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   User   @relation("StudentLinkRequests", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId]) // Một phụ huynh chỉ có thể gửi 1 request đến 1 học sinh
+  @@index([parentId])
+  @@index([studentId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("parent_student_link_requests")
 }
 
 // Cài đặt hệ thống dạng key/value (JSON) cho feature flags, maintenance, upload limits...

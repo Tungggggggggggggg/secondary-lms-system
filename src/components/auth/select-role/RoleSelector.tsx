@@ -95,7 +95,9 @@ export default function RoleSelector() {
 
     try {
       setIsLoading(true);
+      console.log('[RoleSelector] Starting role update process', { selectedRole });
 
+      // Bước 1: Gọi API để cập nhật role trong database
       const res = await fetch('/api/users/role', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -114,11 +116,37 @@ export default function RoleSelector() {
         return;
       }
 
-      try {
-        await update?.();
-      } catch (err) {
-        console.error('[RoleSelector] session update failed:', err);
+      console.log('[RoleSelector] Role updated in database successfully', { newRole: selectedRole });
+
+      // Bước 2: Cập nhật session để fetch role mới từ database
+      // Điều này sẽ trigger JWT callback với trigger='update'
+      if (!update) {
+        console.error('[RoleSelector] session.update function not available');
+        toast({
+          title: '❌ Lỗi hệ thống',
+          description: 'Không thể cập nhật phiên làm việc. Vui lòng đăng xuất và đăng nhập lại.',
+          variant: 'destructive',
+        });
+        return;
       }
+
+      console.log('[RoleSelector] Triggering session update...');
+      try {
+        await update();
+        console.log('[RoleSelector] Session update completed');
+      } catch (err) {
+        console.error('[RoleSelector] Session update failed:', err);
+        toast({
+          title: '⚠️ Cảnh báo',
+          description: 'Phiên làm việc chưa được cập nhật. Bạn có thể cần đăng nhập lại.',
+          variant: 'destructive',
+        });
+      }
+
+      // Bước 3: Đợi một chút để đảm bảo session được cập nhật hoàn toàn
+      // Tránh race condition với middleware
+      console.log('[RoleSelector] Waiting for session to propagate...');
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const roleMessages: Record<RoleType, string> = {
         teacher: '👨‍🏫 Chào mừng Giáo viên! Đang chuyển đến trang quản lý...',
@@ -128,6 +156,8 @@ export default function RoleSelector() {
 
       toast({ title: roleMessages[selectedRole], variant: 'success' });
 
+      // Bước 4: Chuyển hướng đến dashboard tương ứng
+      console.log('[RoleSelector] Redirecting to dashboard', { role: selectedRole });
       router.push(`/dashboard/${selectedRole}`);
     } catch (error) {
       console.error('[RoleSelector] Error updating role:', error);

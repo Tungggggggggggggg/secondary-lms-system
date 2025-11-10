@@ -2,11 +2,14 @@ import { prisma } from "@/lib/prisma";
 
 export type Paginated<T> = {
   items: T[];
-  nextCursor?: string | null;
-  total?: number;
+  total: number;
 };
 
-// Repository cho ParentStudent phục vụ trang Admin
+/**
+ * Repository cho ParentStudent
+ * Quản lý các liên kết đã được thiết lập giữa phụ huynh và học sinh
+ * Note: Để tạo liên kết mới, sử dụng invitation-repo hoặc link-request-repo
+ */
 export const parentStudentRepo = {
   async list(params?: {
     search?: string | null;

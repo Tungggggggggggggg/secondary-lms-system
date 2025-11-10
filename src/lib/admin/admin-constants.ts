@@ -70,13 +70,6 @@ export const SUPER_ADMIN_NAV_ITEMS: AdminNavItem[] = [
     roles: ["SUPER_ADMIN"],
   },
   {
-    id: "parent-students",
-    label: "Liên kết Phụ huynh-Học sinh",
-    href: "/dashboard/admin/parent-students",
-    icon: "UserCog",
-    roles: ["SUPER_ADMIN"],
-  },
-  {
     id: "audit",
     label: "Audit Logs",
     href: "/dashboard/admin/audit",
