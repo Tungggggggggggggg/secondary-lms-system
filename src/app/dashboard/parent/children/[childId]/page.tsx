@@ -180,11 +180,17 @@ export default function ParentChildDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>Điểm số</CardTitle>
-            <CardDescription>Bảng điểm (Sắp ra mắt)</CardDescription>
+            <CardDescription>Xem bảng điểm và kết quả học tập</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <p className="text-sm">Tính năng đang được phát triển</p>
+            <div className="text-center py-8">
+              <Award className="h-12 w-12 mx-auto mb-3 text-indigo-500" />
+              <p className="text-sm text-gray-600 mb-4">Xem tất cả điểm số và kết quả học tập của con</p>
+              <Link href={`/dashboard/parent/children/${childId}/grades`}>
+                <Button className="w-full">
+                  Xem điểm số
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
