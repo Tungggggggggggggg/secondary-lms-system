@@ -35,10 +35,14 @@ const isImageByName = (name?: string) => {
 /**
  * Trang chi tiết assignment cho student
  */
-export default function StudentAssignmentDetailPage() {
-  const params = useParams();
+export default function StudentAssignmentDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const assignmentId = params.id as string;
+
   const router = useRouter();
-  const assignmentId = params.assignmentId as string;
 
   const {
     fetchAssignmentDetail,

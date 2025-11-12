@@ -97,7 +97,8 @@ export const createAssignmentSchema = z.object({
           .optional(),
       })
     )
-    .optional(),
+    .optional()
+    .nullable(),
 });
 
 export const paginationSchema = z.object({

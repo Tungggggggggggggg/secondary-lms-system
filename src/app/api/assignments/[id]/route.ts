@@ -2,30 +2,75 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
+import { getCachedUser } from '@/lib/user-cache'
 import { Prisma, UserRole, AssignmentType, QuestionType } from '@prisma/client'
 
 // Lấy chi tiết bài tập (chỉ giáo viên chủ sở hữu)
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+  const startTime = Date.now()
   try {
+    console.log(`[ASSIGNMENT GET] Starting fetch for ID: ${params.id}`)
+    
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
-    const me = await prisma.user.findUnique({ where: { id: session.user.id } })
+    
+    console.log(`[ASSIGNMENT GET] Session check: ${Date.now() - startTime}ms`)
+    
+    const me = await getCachedUser(session.user.id, session.user.email || undefined)
     if (!me || me.role !== UserRole.TEACHER) {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
     }
+    
+    console.log(`[ASSIGNMENT GET] User check: ${Date.now() - startTime}ms`)
 
+    // Tối ưu query - chỉ include cần thiết cho edit page
     const assignment = await prisma.assignment.findFirst({
       where: { id: params.id, authorId: me.id },
-      include: { questions: { include: { options: true, comments: true } }, _count: { select: { submissions: true } } },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        type: true,
+        dueDate: true,
+        openAt: true,
+        lockAt: true,
+        timeLimitMinutes: true,
+        createdAt: true,
+        updatedAt: true,
+        questions: {
+          select: {
+            id: true,
+            content: true,
+            type: true,
+            order: true,
+            options: {
+              select: {
+                id: true,
+                label: true,
+                content: true,
+                isCorrect: true,
+                order: true
+              },
+              orderBy: { order: 'asc' }
+            }
+          },
+          orderBy: { order: 'asc' }
+        }
+      },
     })
+    
+    console.log(`[ASSIGNMENT GET] Database query: ${Date.now() - startTime}ms`)
+    
     if (!assignment) {
-      return NextResponse.json({ success: false, message: 'Not found' }, { status: 404 })
+      return NextResponse.json({ success: false, message: 'Assignment not found or access denied' }, { status: 404 })
     }
+    
+    console.log(`[ASSIGNMENT GET] Total time: ${Date.now() - startTime}ms`)
     return NextResponse.json({ success: true, data: assignment }, { status: 200 })
   } catch (error) {
-    console.error('[ASSIGNMENT GET] Error:', error)
+    console.error(`[ASSIGNMENT GET] Error after ${Date.now() - startTime}ms:`, error)
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 })
   }
 }

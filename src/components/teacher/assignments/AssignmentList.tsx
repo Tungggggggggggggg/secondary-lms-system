@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAssignments } from "@/hooks/use-assignments";
 import { useToast } from "@/hooks/use-toast";
+import ClassroomBadges from "./ClassroomBadges";
 
 export default function AssignmentList() {
     const router = useRouter();
@@ -126,6 +127,11 @@ export default function AssignmentList() {
                                 Đang diễn ra
                             </span>
                         </div>
+                    </div>
+
+                    {/* Classroom badges */}
+                    <div className="mt-3">
+                        <ClassroomBadges assignmentId={assignment.id} maxVisible={3} />
                     </div>
 
                     <div className="mt-4 flex items-center justify-between text-sm">

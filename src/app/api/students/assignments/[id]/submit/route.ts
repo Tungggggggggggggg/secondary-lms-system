@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+import { autoGradeQuiz, validateQuizSubmission } from "@/lib/auto-grade";
 
 /**
  * POST /api/students/assignments/[id]/submit
@@ -132,40 +133,68 @@ export async function POST(
       );
     }
 
-    // Tính điểm tự động cho quiz
+    // Tính điểm tự động cho quiz bằng auto-grade utility
     let calculatedGrade: number | null = null;
+    let autoFeedback: string | null = null;
     let submissionContent = "";
 
     if (assignment.type === "QUIZ" && answers) {
-      // Tính điểm cho quiz
-      let totalScore = 0;
-      let totalQuestions = assignment.questions.length;
+      try {
+        // Validate quiz submission format
+        const quizSubmission = validateQuizSubmission({
+          assignmentId,
+          studentId: user.id,
+          answers: answers.map(answer => ({
+            questionId: answer.questionId,
+            selectedOptions: answer.optionIds
+          }))
+        });
 
-      for (const question of assignment.questions) {
-        const answer = answers.find((a) => a.questionId === question.id);
-        if (!answer) continue;
+        // Auto-grade quiz
+        const gradeResult = await autoGradeQuiz(quizSubmission, true);
+        
+        calculatedGrade = gradeResult.grade;
+        autoFeedback = gradeResult.feedback;
 
-        const correctOptionIds = question.options
-          .filter((opt) => opt.isCorrect)
-          .map((opt) => opt.id)
-          .sort();
+        // Lưu answers dưới dạng JSON string
+        submissionContent = JSON.stringify(answers);
 
-        const selectedOptionIds = [...answer.optionIds].sort();
+        console.log(`[AUTO_GRADE] Quiz auto-graded: ${gradeResult.correctCount}/${gradeResult.totalQuestions} correct, grade: ${calculatedGrade}`);
 
-        // So sánh arrays
-        if (
-          correctOptionIds.length === selectedOptionIds.length &&
-          correctOptionIds.every((id, idx) => id === selectedOptionIds[idx])
-        ) {
-          totalScore += 1;
+      } catch (autoGradeError) {
+        console.error('[AUTO_GRADE] Error auto-grading quiz:', autoGradeError);
+        
+        // Fallback to simple calculation if auto-grade fails
+        let totalScore = 0;
+        let totalQuestions = assignment.questions.length;
+
+        for (const question of assignment.questions) {
+          const answer = answers.find((a) => a.questionId === question.id);
+          if (!answer) continue;
+
+          const correctOptionIds = question.options
+            .filter((opt) => opt.isCorrect)
+            .map((opt) => opt.id)
+            .sort();
+
+          const selectedOptionIds = [...answer.optionIds].sort();
+
+          // So sánh arrays
+          if (
+            correctOptionIds.length === selectedOptionIds.length &&
+            correctOptionIds.every((id, idx) => id === selectedOptionIds[idx])
+          ) {
+            totalScore += 1;
+          }
         }
+
+        // Tính điểm trên thang 10
+        calculatedGrade = (totalScore / totalQuestions) * 10;
+        autoFeedback = `Tự động chấm: ${totalScore}/${totalQuestions} câu đúng (${Math.round((totalScore/totalQuestions)*100)}%)`;
+
+        // Lưu answers dưới dạng JSON string
+        submissionContent = JSON.stringify(answers);
       }
-
-      // Tính điểm trên thang 10
-      calculatedGrade = (totalScore / totalQuestions) * 10;
-
-      // Lưu answers dưới dạng JSON string
-      submissionContent = JSON.stringify(answers);
     } else if (assignment.type === "ESSAY" && content) {
       submissionContent = content.trim();
     }
@@ -177,6 +206,7 @@ export async function POST(
         studentId: user.id,
         content: submissionContent,
         grade: calculatedGrade, // Auto-grade cho quiz
+        feedback: autoFeedback, // Auto-feedback cho quiz
         attempt: (latestSubmission?.attempt ?? 0) + 1,
       },
       include: {
@@ -200,11 +230,13 @@ export async function POST(
         success: true,
         message:
           assignment.type === "QUIZ" && calculatedGrade !== null
-            ? `Assignment submitted successfully. Your score: ${calculatedGrade.toFixed(2)}/10`
-            : "Assignment submitted successfully",
+            ? `Bài quiz đã được nộp và chấm điểm tự động! Điểm của bạn: ${calculatedGrade.toFixed(1)}/10`
+            : "Bài tập đã được nộp thành công",
         data: {
           ...submission,
           grade: calculatedGrade, // Include grade in response for quiz
+          feedback: autoFeedback, // Include feedback in response for quiz
+          autoGraded: assignment.type === "QUIZ" && calculatedGrade !== null, // Flag để frontend biết đã auto-grade
         },
       },
       { status: 201 }

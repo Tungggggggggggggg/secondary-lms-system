@@ -1,68 +1,93 @@
 import { useAssignments } from "@/hooks/use-assignments";
-
-// Helper tính toán stats từ assignment data
-function calcStats(assignments: ReturnType<typeof useAssignments>["assignments"]) {
-  // Tổng số
-  const total = assignments.length;
-
-  // Tổng số bài cần chấm điểm: tạm lấy số assignment có submissions > 0
-  let needGrade = 0;
-  let totalSubmissions = 0, totalPossible = 0, sumGrades = 0, gradedCount = 0;
-  assignments.forEach(a => {
-    const submissions = a._count?.submissions ?? 0;
-    if (submissions > 0) needGrade++;
-    totalSubmissions += submissions;
-    // Tổng submissions và điểm số (nâng cấp sau nếu API trả chi tiết hơn)
-  });
-  // Tỷ lệ nộp: (do chưa đủ data, tạm chỉ lấy tổng nộp/ tổng số assignment)
-  const submitRate = total > 0 ? Math.round((totalSubmissions / (total*35)) *100) : 0;
-  // Điểm trung bình - giả lập
-  const avgScore = (sumGrades && gradedCount) ? (sumGrades/gradedCount).toFixed(1) : 'NA';
-  return {
-    total,
-    needGrade,
-    submitRate,
-    avgScore
-  };
-}
+import { useEffect, useState } from "react";
 
 export default function AssignmentStats() {
   const { assignments, loading, error, refresh } = useAssignments();
-  if (loading) return <div className="py-10 text-gray-500 text-center">Đang tải thống kê...</div>;
-  if (error) {
-    console.error('[AssignmentStats] Lỗi:', error);
-    return <div className="py-10 text-center text-red-500">Không lấy được thống kê! <button className='underline' onClick={refresh}>Thử lại</button></div>;
+  const [stats, setStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  // Fetch stats từ API
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setStatsLoading(true);
+        setStatsError(null);
+
+        const response = await fetch('/api/teachers/assignments/stats');
+        if (!response.ok) {
+          throw new Error('Failed to fetch stats');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.data);
+        } else {
+          throw new Error(data.message || 'Unknown error');
+        }
+      } catch (error) {
+        console.error('[AssignmentStats] Error fetching stats:', error);
+        setStatsError(error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [assignments]); // Re-fetch when assignments change
+
+  if (loading || statsLoading) {
+    return <div className="py-10 text-gray-500 text-center">Đang tải thống kê...</div>;
+  }
+  
+  if (error || statsError) {
+    console.error('[AssignmentStats] Lỗi:', error || statsError);
+    return (
+      <div className="py-10 text-center text-red-500">
+        Không lấy được thống kê! 
+        <button className='underline ml-2' onClick={refresh}>
+          Thử lại
+        </button>
+      </div>
+    );
   }
 
-  const stats = calcStats(assignments);
+  if (!stats) {
+    return <div className="py-10 text-gray-500 text-center">Không có dữ liệu thống kê</div>;
+  }
+
   const statsView = [
     {
       title: "Tổng số bài tập",
-      value: stats.total,
+      value: stats.totalAssignments || 0,
       change: "",
       icon: "📝",
-      color: "from-blue-500 to-blue-600"
+      color: "from-blue-500 to-blue-600",
+      subtitle: `${stats.assignmentsInClassrooms || 0} đã giao cho lớp`
     },
     {
       title: "Cần chấm điểm",
-      value: stats.needGrade,
+      value: stats.needGrading || 0,
       change: "",
       icon: "✍️",
-      color: "from-red-500 to-red-600"
+      color: "from-red-500 to-red-600",
+      subtitle: `${stats.totalSubmissions || 0} bài đã nộp`
     },
     {
       title: "Tỷ lệ nộp bài",
-      value: `${stats.submitRate}%`,
+      value: `${stats.submitRate || 0}%`,
       change: "",
       icon: "📊",
-      color: "from-green-500 to-green-600"
+      color: "from-green-500 to-green-600",
+      subtitle: `${stats.totalStudents || 0} học sinh tổng`
     },
     {
       title: "Điểm trung bình",
-      value: stats.avgScore,
+      value: stats.averageGrade ? stats.averageGrade.toFixed(1) : 'Chưa có',
       change: "",
       icon: "🎯",
-      color: "from-yellow-500 to-yellow-600"
+      color: "from-yellow-500 to-yellow-600",
+      subtitle: `${stats.gradedSubmissions || 0} bài đã chấm`
     },
   ];
 
@@ -80,8 +105,7 @@ export default function AssignmentStats() {
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            {stat.change && <span className="bg-white/20 px-2 py-1 rounded-full">{stat.change}</span>}
-            <span className="text-white/80">so với tuần trước</span>
+            <span className="text-white/80">{stat.subtitle}</span>
           </div>
         </div>
       ))}

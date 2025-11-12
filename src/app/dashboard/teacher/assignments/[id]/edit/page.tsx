@@ -37,8 +37,8 @@ interface AssignmentDetail {
  */
 export default function AssignmentEditPage() {
     const { toast } = useToast(); // Đặt trong thân hàm function!
-    const params = useParams() as { assignmentId: string };
-    const { assignmentId } = params;
+    const params = useParams() as { id: string };
+    const { id: assignmentId } = params;
     const router = useRouter();
 
     const [detail, setDetail] = useState<AssignmentDetail | null>(null);
@@ -363,10 +363,33 @@ export default function AssignmentEditPage() {
     // Lấy dữ liệu chi tiết assignment
     useEffect(() => {
         async function fetchDetail() {
+            const startTime = Date.now();
             try {
                 setLoading(true);
                 setError(null);
-                const res = await fetch(`/api/assignments/${assignmentId}`);
+                console.log(`[EditAssignment] Params:`, params);
+                console.log(`[EditAssignment] Assignment ID:`, assignmentId);
+                console.log(`[EditAssignment] Starting fetch for ID: ${assignmentId}`);
+                
+                if (!assignmentId) {
+                    setError("Không tìm thấy ID bài tập");
+                    return;
+                }
+                
+                // Thêm timeout để tránh loading vô hạn
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+                
+                const apiUrl = `/api/assignments/${assignmentId}`;
+                console.log(`[EditAssignment] Calling API:`, apiUrl);
+                
+                const res = await fetch(apiUrl, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
+                console.log(`[EditAssignment] API response time: ${Date.now() - startTime}ms`);
+                
                 const result = await res.json();
                 if (!result.success) {
                     setError(
@@ -381,15 +404,21 @@ export default function AssignmentEditPage() {
                 }
                 setDetail(result.data as AssignmentDetail);
                 console.log(
-                    "[EditAssignment] Lấy chi tiết bài tập thành công:",
+                    `[EditAssignment] Lấy chi tiết bài tập thành công sau ${Date.now() - startTime}ms:`,
                     result.data
                 );
             } catch (err: unknown) {
                 let msg = "Lỗi không xác định";
-                if (err instanceof Error) msg = err.message;
+                if (err instanceof Error) {
+                    if (err.name === 'AbortError') {
+                        msg = "Tải dữ liệu quá lâu, vui lòng thử lại";
+                    } else {
+                        msg = err.message;
+                    }
+                }
                 setError(msg);
                 setDetail(null);
-                console.error("[EditAssignment] Lỗi khi fetch:", err);
+                console.error(`[EditAssignment] Lỗi khi fetch sau ${Date.now() - startTime}ms:`, err);
             } finally {
                 setLoading(false);
             }
@@ -399,8 +428,14 @@ export default function AssignmentEditPage() {
 
     if (loading)
         return (
-            <div className="py-12 text-center text-gray-500 animate-pulse">
-                Đang tải dữ liệu...
+            <div className="max-w-3xl mx-auto py-10 px-4 md:px-0">
+                <div className="bg-white p-7 rounded-2xl shadow">
+                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                        <div className="text-gray-600 font-medium">Đang tải dữ liệu bài tập...</div>
+                        <div className="text-sm text-gray-400">Vui lòng chờ trong giây lát</div>
+                    </div>
+                </div>
             </div>
         );
     if (error)
