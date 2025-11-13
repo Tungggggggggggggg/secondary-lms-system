@@ -15,6 +15,7 @@ export interface AdminUser {
   role: UserRole;
   createdAt: string;
   updatedAt?: string;
+  [key: string]: unknown;
 }
 
 export interface AdminUserListItem extends AdminUser {

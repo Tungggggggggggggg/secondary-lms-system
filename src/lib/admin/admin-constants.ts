@@ -56,6 +56,20 @@ export const SUPER_ADMIN_NAV_ITEMS: AdminNavItem[] = [
     roles: ["SUPER_ADMIN"],
   },
   {
+    id: "bulk-operations",
+    label: "Tạo hàng loạt",
+    href: "/dashboard/admin/bulk",
+    icon: "Zap",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    id: "classrooms",
+    label: "Quản lý lớp học",
+    href: "/dashboard/admin/classrooms",
+    icon: "BookOpen",
+    roles: ["SUPER_ADMIN"],
+  },
+  {
     id: "system",
     label: "Hệ thống",
     href: "/dashboard/admin/system",
@@ -91,6 +105,20 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     label: "Tổng quan",
     href: "/dashboard/admin/overview",
     icon: "LayoutDashboard",
+    roles: ["ADMIN"],
+  },
+  {
+    id: "bulk-operations",
+    label: "Tạo hàng loạt",
+    href: "/dashboard/admin/bulk",
+    icon: "Zap",
+    roles: ["ADMIN"],
+  },
+  {
+    id: "classrooms",
+    label: "Quản lý lớp học",
+    href: "/dashboard/admin/classrooms",
+    icon: "BookOpen",
     roles: ["ADMIN"],
   },
   {

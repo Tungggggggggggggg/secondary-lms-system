@@ -6,28 +6,50 @@ import { writeAudit } from "@/lib/logging/audit";
 import { parsePagination } from "@/lib/http/pagination";
 
 // GET /api/admin/system/users
-// Chỉ cho phép SUPER_ADMIN
+// Cho phép ADMIN và SUPER_ADMIN
 export const GET = withApiLogging(async (req: NextRequest) => {
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) {
     return errorResponse(401, "Unauthorized");
   }
-  if (authUser.role !== "SUPER_ADMIN") {
-    return errorResponse(403, "Forbidden: SUPER_ADMIN only");
+  if (authUser.role !== "SUPER_ADMIN" && authUser.role !== "ADMIN") {
+    return errorResponse(403, "Forbidden: ADMIN or SUPER_ADMIN only");
   }
 
   const { searchParams } = new URL(req.url);
   const { skip, take } = parsePagination(searchParams, { defaultTake: 20, maxTake: 50 });
   const q = searchParams.get("q")?.trim();
+  const roleParam = searchParams.get("role")?.trim();
+  
+  // Validate role parameter
+  const validRoles = ["SUPER_ADMIN", "ADMIN", "TEACHER", "STUDENT", "PARENT"];
+  const role = roleParam && validRoles.includes(roleParam) ? roleParam : null;
 
-  const where = q
-    ? {
+  // Build where clause with search and role filters
+  const where: any = {};
+  
+  // Combine search and role filters properly
+  if (q && role) {
+    // Both search query and role filter
+    where.AND = [
+      {
         OR: [
           { email: { contains: q, mode: "insensitive" } },
           { fullname: { contains: q, mode: "insensitive" } },
-        ],
-      }
-    : {};
+        ]
+      },
+      { role: role }
+    ];
+  } else if (q) {
+    // Only search query
+    where.OR = [
+      { email: { contains: q, mode: "insensitive" } },
+      { fullname: { contains: q, mode: "insensitive" } },
+    ];
+  } else if (role) {
+    // Only role filter
+    where.role = role;
+  }
 
   const [items, total] = await Promise.all([
     prisma.user.findMany({
@@ -35,7 +57,13 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       orderBy: { createdAt: "desc" },
       skip,
       take,
-      select: { id: true, email: true, fullname: true, role: true, createdAt: true },
+      select: { 
+        id: true, 
+        email: true, 
+        fullname: true, 
+        role: true, 
+        createdAt: true
+      },
     }),
     prisma.user.count({ where }),
   ]);

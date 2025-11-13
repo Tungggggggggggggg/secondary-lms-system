@@ -13,7 +13,7 @@ import { useAdminUsers } from "@/hooks/admin/use-admin-users";
 import { useAdminUserMutations } from "@/hooks/admin/use-admin-user-mutations";
 import { formatDate } from "@/lib/admin/format-date";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/admin/admin-constants";
-import { Plus, Edit, Trash2, Key, UserRole } from "lucide-react";
+import { Plus, Edit, Trash2, Key } from "lucide-react";
 import { UserRole as PrismaUserRole } from "@prisma/client";
 
 /**
@@ -171,41 +171,39 @@ export default function AdminUsersPage() {
   // Actions column render
   const renderActions = (user: AdminUser) => {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Button
-          variant="ghost"
-          size="default"
+          variant="outline"
           onClick={() => {
             setSelectedUser(user);
             setIsEditModalOpen(true);
           }}
-          className="h-8 w-8 p-0"
+          className="px-2 py-1 text-xs"
+          title="Chỉnh sửa"
         >
-          <Edit className="h-4 w-4" />
+          Sửa
         </Button>
         <Button
-          variant="ghost"
-          size="default"
+          variant="outline"
           onClick={() => {
             setUserToResetPassword(user);
             setIsResetPasswordDialogOpen(true);
           }}
-          className="h-8 w-8 p-0"
+          className="px-2 py-1 text-xs"
           title="Đặt lại mật khẩu"
         >
-          <Key className="h-4 w-4" />
+          Reset
         </Button>
         <Button
-          variant="ghost"
-          size="default"
+          variant="outline"
           onClick={() => {
             setUserToDelete(user);
             setIsDeleteDialogOpen(true);
           }}
-          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+          className="px-2 py-1 text-xs text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
           title="Xóa người dùng"
         >
-          <Trash2 className="h-4 w-4" />
+          Xóa
         </Button>
       </div>
     );
