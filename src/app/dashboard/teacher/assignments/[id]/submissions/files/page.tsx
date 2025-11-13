@@ -12,8 +12,8 @@ interface FileSubmissionItem {
 }
 
 export default function FileSubmissionsPage() {
-    const params = useParams() as { assignmentId: string };
-    const { assignmentId } = params;
+    const params = useParams() as { id: string };
+    const assignmentId = params.id;
     const [items, setItems] = useState<FileSubmissionItem[]>([]);
     const [loading, setLoading] = useState(false);
 

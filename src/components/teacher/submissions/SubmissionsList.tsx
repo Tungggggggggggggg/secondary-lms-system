@@ -47,6 +47,15 @@ export default function SubmissionsList({
 
   // Fetch submissions khi filter thay đổi
   useEffect(() => {
+    // Validation assignmentId trước khi fetch
+    if (!assignmentId || assignmentId === "undefined" || assignmentId === "null") {
+      console.error(`[SubmissionsList] AssignmentId không hợp lệ: "${assignmentId}"`);
+      return;
+    }
+
+    console.log(`[SubmissionsList] Fetching submissions cho assignment: ${assignmentId}`);
+    console.log(`[SubmissionsList] Filters:`, { statusFilter, searchQuery });
+    
     fetchSubmissions(assignmentId, {
       status: statusFilter,
       search: searchQuery || undefined,

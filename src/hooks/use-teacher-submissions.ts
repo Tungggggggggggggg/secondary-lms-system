@@ -93,6 +93,13 @@ export function useTeacherSubmissions() {
       }
     ): Promise<void> => {
       try {
+        // Validation assignmentId
+        if (!assignmentId || assignmentId === "undefined" || assignmentId === "null") {
+          const errorMsg = `[fetchSubmissions] AssignmentId không hợp lệ: "${assignmentId}"`;
+          console.error(errorMsg);
+          throw new Error("ID bài tập không hợp lệ");
+        }
+
         setIsLoading(true);
         setError(null);
 
@@ -114,18 +121,29 @@ export function useTeacherSubmissions() {
           params.toString() ? `?${params.toString()}` : ""
         }`;
 
-        console.log(`[fetchSubmissions] Fetching: ${url}`);
+        console.log(`[fetchSubmissions] Bắt đầu lấy danh sách bài nộp cho assignment: ${assignmentId}`);
+        console.log(`[fetchSubmissions] URL: ${url}`);
+        console.log(`[fetchSubmissions] Options:`, options);
 
         const response = await fetch(url);
         const result = await response.json();
 
+        console.log(`[fetchSubmissions] Response status: ${response.status}`);
+        console.log(`[fetchSubmissions] Response data:`, result);
+
         if (!response.ok) {
           console.error(
             "[fetchSubmissions] Lỗi response:",
-            result?.message || response.statusText
+            {
+              status: response.status,
+              statusText: response.statusText,
+              message: result?.message,
+              assignmentId,
+              url
+            }
           );
           throw new Error(
-            result?.message || "Có lỗi xảy ra khi lấy danh sách bài nộp"
+            result?.message || `Lỗi ${response.status}: ${response.statusText}`
           );
         }
 

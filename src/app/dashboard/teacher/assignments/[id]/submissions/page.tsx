@@ -10,9 +10,9 @@ import SubmissionsList from "@/components/teacher/submissions/SubmissionsList";
  * Trang chấm bài assignment submissions
  */
 export default function AssignmentSubmissionsPage() {
-  const params = useParams() as { assignmentId: string };
+  const params = useParams() as { id: string };
   const router = useRouter();
-  const { assignmentId } = params;
+  const assignmentId = params.id;
 
   const [assignmentType, setAssignmentType] = useState<"ESSAY" | "QUIZ">("ESSAY");
 

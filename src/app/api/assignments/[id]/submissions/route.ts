@@ -12,10 +12,16 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const requestId = Math.random().toString(36).substring(7);
   try {
+    console.log(`[${requestId}] [GET] /api/assignments/[id]/submissions - Bắt đầu xử lý request`);
+    console.log(`[${requestId}] Params:`, params);
+    console.log(`[${requestId}] URL:`, req.url);
+
     // Sử dụng getAuthenticatedUser với caching
     const user = await getAuthenticatedUser(req, UserRole.TEACHER);
     if (!user) {
+      console.log(`[${requestId}] Unauthorized - No user found`);
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -23,10 +29,24 @@ export async function GET(
     }
 
     const assignmentId = params.id;
+    console.log(`[${requestId}] AssignmentId: "${assignmentId}", UserId: "${user.id}"`);
+
+    // Validation assignmentId
+    if (!assignmentId || assignmentId === "undefined" || assignmentId === "null") {
+      console.error(`[${requestId}] Invalid assignmentId: "${assignmentId}"`);
+      return NextResponse.json(
+        { success: false, message: "Invalid assignment ID" },
+        { status: 400 }
+      );
+    }
 
     // Kiểm tra teacher có sở hữu assignment không
+    console.log(`[${requestId}] Checking if teacher owns assignment...`);
     const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
+    console.log(`[${requestId}] Teacher owns assignment: ${isOwner}`);
+    
     if (!isOwner) {
+      console.log(`[${requestId}] Forbidden - Teacher ${user.id} does not own assignment ${assignmentId}`);
       return NextResponse.json(
         { success: false, message: "Forbidden - Not your assignment" },
         { status: 403 }
