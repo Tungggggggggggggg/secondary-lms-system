@@ -8,70 +8,131 @@ import { Prisma, UserRole, AssignmentType, QuestionType } from '@prisma/client'
 // Lấy chi tiết bài tập (chỉ giáo viên chủ sở hữu)
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   const startTime = Date.now()
+  const requestId = Math.random().toString(36).substr(2, 9)
+  
   try {
-    console.log(`[ASSIGNMENT GET] Starting fetch for ID: ${params.id}`)
+    // Validate params
+    if (!params.id || typeof params.id !== 'string') {
+      console.error(`[ASSIGNMENT GET ${requestId}] Invalid ID parameter:`, params.id)
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Invalid assignment ID' 
+      }, { status: 400 })
+    }
     
+    // Check session
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Authentication required' 
+      }, { status: 401 })
     }
     
-    console.log(`[ASSIGNMENT GET] Session check: ${Date.now() - startTime}ms`)
-    
+    // Get user with caching
     const me = await getCachedUser(session.user.id, session.user.email || undefined)
-    if (!me || me.role !== UserRole.TEACHER) {
-      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
+    if (!me) {
+      console.error(`[ASSIGNMENT GET ${requestId}] User not found: ${session.user.id}`)
+      return NextResponse.json({ 
+        success: false, 
+        message: 'User not found' 
+      }, { status: 404 })
     }
     
-    console.log(`[ASSIGNMENT GET] User check: ${Date.now() - startTime}ms`)
+    if (me.role !== UserRole.TEACHER) {
+      console.error(`[ASSIGNMENT GET ${requestId}] Access denied - User role: ${me.role}`)
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Teacher access required' 
+      }, { status: 403 })
+    }
 
-    // Tối ưu query - chỉ include cần thiết cho edit page
-    const assignment = await prisma.assignment.findFirst({
-      where: { id: params.id, authorId: me.id },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        type: true,
-        dueDate: true,
-        openAt: true,
-        lockAt: true,
-        timeLimitMinutes: true,
-        createdAt: true,
-        updatedAt: true,
-        questions: {
-          select: {
-            id: true,
-            content: true,
-            type: true,
-            order: true,
-            options: {
-              select: {
-                id: true,
-                label: true,
-                content: true,
-                isCorrect: true,
-                order: true
-              },
-              orderBy: { order: 'asc' }
-            }
-          },
-          orderBy: { order: 'asc' }
-        }
-      },
-    })
-    
-    console.log(`[ASSIGNMENT GET] Database query: ${Date.now() - startTime}ms`)
+    // Database query với error handling
+    let assignment
+    try {
+      assignment = await prisma.assignment.findFirst({
+        where: { 
+          id: params.id, 
+          authorId: me.id 
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          dueDate: true,
+          openAt: true,
+          lockAt: true,
+          timeLimitMinutes: true,
+          createdAt: true,
+          updatedAt: true,
+          questions: {
+            select: {
+              id: true,
+              content: true,
+              type: true,
+              order: true,
+              options: {
+                select: {
+                  id: true,
+                  label: true,
+                  content: true,
+                  isCorrect: true,
+                  order: true
+                },
+                orderBy: { order: 'asc' }
+              }
+            },
+            orderBy: { order: 'asc' }
+          }
+        },
+      })
+    } catch (dbError) {
+      console.error(`[ASSIGNMENT GET ${requestId}] Database error:`, dbError)
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Database query failed' 
+      }, { status: 500 })
+    }
     
     if (!assignment) {
-      return NextResponse.json({ success: false, message: 'Assignment not found or access denied' }, { status: 404 })
+      console.log(`[ASSIGNMENT GET ${requestId}] Assignment not found or access denied - ID: ${params.id}, Author: ${me.id}`)
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Assignment not found or you do not have permission to access it' 
+      }, { status: 404 })
     }
     
-    console.log(`[ASSIGNMENT GET] Total time: ${Date.now() - startTime}ms`)
-    return NextResponse.json({ success: true, data: assignment }, { status: 200 })
+    const totalTime = Date.now() - startTime
+    // Chỉ log nếu response chậm (> 2s)
+    if (totalTime > 2000) {
+      console.log(`[ASSIGNMENT GET ${requestId}] Slow response - Total time: ${totalTime}ms`)
+    }
+    
+    return NextResponse.json({ 
+      success: true, 
+      data: assignment,
+      meta: {
+        requestId,
+        responseTime: `${totalTime}ms`
+      }
+    }, { status: 200 })
+    
   } catch (error) {
-    console.error(`[ASSIGNMENT GET] Error after ${Date.now() - startTime}ms:`, error)
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 })
+    console.error(`[ASSIGNMENT GET ${requestId}] Unexpected error after ${Date.now() - startTime}ms:`, error)
+    
+    // Detailed error logging
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error(`[ASSIGNMENT GET ${requestId}] Prisma known error:`, error.code, error.message)
+    } else if (error instanceof Prisma.PrismaClientValidationError) {
+      console.error(`[ASSIGNMENT GET ${requestId}] Prisma validation error:`, error.message)
+    }
+    
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+    }, { status: 500 })
   }
 }
 

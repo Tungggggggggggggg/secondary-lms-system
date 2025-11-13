@@ -25,10 +25,10 @@ const prismaClientSingleton = () => {
   // Log slow queries để debug performance issues (chỉ trong development)
   if (isDevelopment) {
     client.$on('query', (e: { query: string; duration: number; params: string }) => {
-      // Chỉ log queries chậm (> 100ms) để tránh spam logs
-      if (e.duration > 100) {
+      // Chỉ log queries rất chậm (> 1000ms) để tránh spam logs
+      if (e.duration > 1000) {
         console.log(`[SLOW QUERY] Duration: ${e.duration}ms`)
-        console.log(`[SLOW QUERY] Query: ${e.query}`)
+        console.log(`[SLOW QUERY] Query: ${e.query.substring(0, 150)}...`)
       }
     })
   }
@@ -55,10 +55,7 @@ const globalForPrisma = globalThis as unknown as {
 let _prisma: ReturnType<typeof prismaClientSingleton>
 
 if (!globalForPrisma.prisma) {
-  // Chỉ log trong development để tránh spam logs trong production
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[PRISMA] Creating new Prisma Client instance...')
-  }
+  // Tạo instance mới mà không log để giảm noise
   _prisma = prismaClientSingleton()
   globalForPrisma.prisma = _prisma
 } else {

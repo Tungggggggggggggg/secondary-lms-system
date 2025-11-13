@@ -67,7 +67,6 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger }) {
       // Khi user đăng nhập lần đầu, lưu thông tin vào token
       if (user) {
-        console.log('[JWT Callback] User login - Setting initial token', { userId: user.id, role: user.role });
         token.id = user.id;
         token.email = user.email;
         token.name = (user as any).fullname || user.name || null;
@@ -78,7 +77,6 @@ export const authOptions: NextAuthOptions = {
       // Khi session.update() được gọi, fetch lại role mới từ database
       // Điều này xảy ra khi user chọn role trong RoleSelector
       if (trigger === 'update' && token.id) {
-        console.log('[JWT Callback] Session update triggered - Fetching fresh user data', { userId: token.id });
         try {
           const freshUser = await prisma.user.findUnique({
             where: { id: token.id as string },
@@ -86,16 +84,9 @@ export const authOptions: NextAuthOptions = {
           });
           
           if (freshUser) {
-            console.log('[JWT Callback] Fresh user data fetched', { 
-              userId: freshUser.id, 
-              oldRole: token.role, 
-              newRole: freshUser.role 
-            });
             token.role = freshUser.role;
             token.fullname = freshUser.fullname;
             token.name = freshUser.fullname;
-          } else {
-            console.warn('[JWT Callback] User not found in database', { userId: token.id });
           }
         } catch (error) {
           console.error('[JWT Callback] Error fetching fresh user data:', error);
@@ -111,11 +102,6 @@ export const authOptions: NextAuthOptions = {
         session.user.name = (token.name as string) || '';
         session.user.fullname = (token as any).fullname || '';
         session.user.role = token.role;
-        
-        console.log('[Session Callback] Session created/updated', { 
-          userId: session.user.id, 
-          role: session.user.role 
-        });
       }
       return session;
     },

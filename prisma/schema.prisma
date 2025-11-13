@@ -122,32 +122,37 @@ model Lesson {
 }
 
 model Assignment {
-  id               String                 @id @default(cuid())
-  title            String
-  description      String?
-  dueDate          DateTime?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-  courseId         String?
-  authorId         String
-  type             AssignmentType         @default(ESSAY)
-  lockAt           DateTime?
-  openAt           DateTime?
-  timeLimitMinutes Int?
-  organizationId   String?
-  classrooms       AssignmentClassroom[]
-  files            AssignmentFile[]
-  submissions      AssignmentSubmission[]
-  author           User                   @relation(fields: [authorId], references: [id])
-  course           Course?                @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  organization     Organization?          @relation(fields: [organizationId], references: [id])
-  questions        Question[]
+  id                String                 @id @default(cuid())
+  title             String
+  description       String?
+  dueDate           DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  courseId          String?
+  authorId          String
+  type              AssignmentType         @default(ESSAY)
+  lockAt            DateTime?
+  openAt            DateTime?
+  timeLimitMinutes  Int?
+  organizationId    String?
+  subject           String?                @db.VarChar(100)
+  submission_format String?                @default("BOTH") @db.VarChar(20)
+  max_attempts      Int?                   @default(1)
+  anti_cheat_config Json?
+  classrooms        AssignmentClassroom[]
+  files             AssignmentFile[]
+  submissions       AssignmentSubmission[]
+  author            User                   @relation(fields: [authorId], references: [id])
+  course            Course?                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  organization      Organization?          @relation(fields: [organizationId], references: [id])
+  questions         Question[]
 
   @@index([authorId])
   @@index([authorId, createdAt])
   @@index([authorId, type, createdAt])
   @@index([dueDate])
   @@index([organizationId, createdAt])
+  @@index([subject], map: "idx_assignments_subject")
   @@map("assignments")
 }
 
@@ -260,11 +265,13 @@ model AssignmentFile {
   createdAt    DateTime   @default(now())
   assignmentId String
   uploadedById String
+  file_type    String?    @default("SUBMISSION") @db.VarChar(20)
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   uploadedBy   User       @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
   @@index([assignmentId])
   @@index([createdAt])
+  @@index([file_type], map: "idx_assignment_files_file_type")
   @@map("assignment_files")
 }
 
@@ -499,6 +506,8 @@ enum QuestionType {
   SINGLE
   MULTIPLE
   ESSAY
+  TRUE_FALSE
+  FILL_BLANK
 }
 
 enum ModerationStatus {

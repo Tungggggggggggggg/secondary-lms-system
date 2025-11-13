@@ -160,7 +160,7 @@ export default function AntiCheatSettings({
                       <div className="mt-3 pt-3 border-t">
                         <Badge 
                           variant={
-                            key === 'BASIC' ? 'secondary' :
+                            key === 'BASIC' ? 'outline' :
                             key === 'MEDIUM' ? 'default' :
                             key === 'ADVANCED' ? 'destructive' : 'outline'
                           }
@@ -188,7 +188,7 @@ export default function AntiCheatSettings({
                     <Badge 
                       variant={
                         securityLevel === 'high' ? 'destructive' :
-                        securityLevel === 'medium' ? 'default' : 'secondary'
+                        securityLevel === 'medium' ? 'default' : 'outline'
                       }
                     >
                       {securityLevel === 'high' && 'Cao'}
@@ -221,7 +221,7 @@ export default function AntiCheatSettings({
                     <Switch
                       id="shuffle-questions"
                       checked={config.shuffleQuestions}
-                      onCheckedChange={(checked) => updateConfig('shuffleQuestions', checked)}
+                      onCheckedChange={(checked: boolean) => updateConfig('shuffleQuestions', checked)}
                     />
                   </div>
 
@@ -237,7 +237,7 @@ export default function AntiCheatSettings({
                     <Switch
                       id="shuffle-options"
                       checked={config.shuffleOptions}
-                      onCheckedChange={(checked) => updateConfig('shuffleOptions', checked)}
+                      onCheckedChange={(checked: boolean) => updateConfig('shuffleOptions', checked)}
                     />
                   </div>
                 </CardContent>
@@ -262,7 +262,7 @@ export default function AntiCheatSettings({
                     <Switch
                       id="single-question"
                       checked={config.singleQuestionMode}
-                      onCheckedChange={(checked) => updateConfig('singleQuestionMode', checked)}
+                      onCheckedChange={(checked: boolean) => updateConfig('singleQuestionMode', checked)}
                     />
                   </div>
 
@@ -305,7 +305,7 @@ export default function AntiCheatSettings({
                     <Switch
                       id="fullscreen"
                       checked={config.requireFullscreen}
-                      onCheckedChange={(checked) => updateConfig('requireFullscreen', checked)}
+                      onCheckedChange={(checked: boolean) => updateConfig('requireFullscreen', checked)}
                     />
                   </div>
 
@@ -321,7 +321,7 @@ export default function AntiCheatSettings({
                     <Switch
                       id="tab-switch"
                       checked={config.detectTabSwitch}
-                      onCheckedChange={(checked) => updateConfig('detectTabSwitch', checked)}
+                      onCheckedChange={(checked: boolean) => updateConfig('detectTabSwitch', checked)}
                     />
                   </div>
 
@@ -337,7 +337,7 @@ export default function AntiCheatSettings({
                     <Switch
                       id="copy-paste"
                       checked={config.disableCopyPaste}
-                      onCheckedChange={(checked) => updateConfig('disableCopyPaste', checked)}
+                      onCheckedChange={(checked: boolean) => updateConfig('disableCopyPaste', checked)}
                     />
                   </div>
                 </CardContent>
@@ -390,7 +390,7 @@ export default function AntiCheatSettings({
                           <Badge 
                             variant={
                               securityLevel === 'high' ? 'destructive' :
-                              securityLevel === 'medium' ? 'default' : 'secondary'
+                              securityLevel === 'medium' ? 'default' : 'outline'
                             }
                             className="ml-2"
                           >

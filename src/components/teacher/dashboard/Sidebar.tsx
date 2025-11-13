@@ -24,6 +24,11 @@ export default function Sidebar() {
             label: "Bài tập",
             href: "/dashboard/teacher/assignments",
         },
+        { 
+            icon: "🖥️", 
+            label: "Giám sát thi", 
+            href: "/dashboard/teacher/exams/monitor" 
+        },
         { icon: "👥", label: "Học sinh", href: "/dashboard/teacher/students" },
         { icon: "📈", label: "Điểm số", href: "/dashboard/teacher/grades" },
         { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/teacher/profile" },

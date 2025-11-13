@@ -13,9 +13,14 @@ import {
 // ===== CORE TYPES =====
 
 /**
- * Loại bài tập (mở rộng để support exam system)
+ * Loại bài tập (simplified workflow)
  */
-export type AssignmentType = 'QUIZ' | 'ESSAY' | 'MIXED'
+export type AssignmentType = 'QUIZ' | 'ESSAY'
+
+/**
+ * Format nộp bài cho Essay
+ */
+export type SubmissionFormat = 'TEXT' | 'FILE' | 'BOTH'
 
 /**
  * Loại câu hỏi trắc nghiệm (mở rộng)
@@ -145,25 +150,32 @@ export interface TimeValidationResult {
 // ===== ASSIGNMENT BUILDER TYPES =====
 
 export interface AssignmentData {
-  title: string
-  description: string
+  // Step 1: Type Selection
   type: AssignmentType
-  timeSettings: TimeSettings
-  quizQuestions?: QuizQuestion[]
-  essayQuestion?: EssayQuestion
   
-  /** Cấu hình chống gian lận */
-  antiCheatConfig?: AntiCheatConfig
+  // Step 2: Basic Info
+  title: string
+  description?: string
+  subject?: string
+  classrooms?: string[]
   
-  /** Cấu hình fallback */
-  fallbackConfig?: FallbackConfig
+  // Step 3A: Essay Content
+  essayContent?: {
+    question: string
+    attachments?: File[]
+    submissionFormat: SubmissionFormat
+    openAt?: Date
+    dueDate?: Date
+  }
   
-  /** Metadata bổ sung */
-  metadata?: {
-    estimatedDuration?: number // phút
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD'
-    tags?: string[]
-    instructions?: string
+  // Step 3B: Quiz Content  
+  quizContent?: {
+    questions: QuizQuestion[]
+    timeLimitMinutes: number
+    openAt?: Date
+    lockAt?: Date
+    maxAttempts: number
+    antiCheatConfig?: AntiCheatConfig
   }
 }
 
