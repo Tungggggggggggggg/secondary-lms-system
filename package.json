@@ -29,7 +29,8 @@
     "react-dom": "^18",
     "sonner": "^2.0.7",
     "swr": "^2.3.6",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "jsonwebtoken": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -42,6 +43,7 @@
     "prisma": "^6.19.0",
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@types/jsonwebtoken": "^9.0.0"
   }
 }

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { AssignmentT } from "./use-assignments";
+import type { AntiCheatConfig } from "@/types/exam-system";
 
 /**
  * Interface cho Assignment với submission của student
@@ -361,8 +362,16 @@ export interface StudentAssignmentDetail {
   description: string | null;
   dueDate: string | null;
   type: "ESSAY" | "QUIZ";
+  openAt?: string | null;
+  lockAt?: string | null;
+  timeLimitMinutes?: number | null;
   createdAt: string;
   updatedAt: string;
+  submissionFormat?: "TEXT" | "FILE" | "BOTH" | null;
+  maxAttempts?: number | null;
+  antiCheatConfig?: AntiCheatConfig | null;
+  latestAttempt?: number;
+  allowNewAttempt?: boolean;
   author: {
     id: string;
     fullname: string;

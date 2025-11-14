@@ -1,7 +1,7 @@
 "use client"
 
-import SmartAssignmentBuilder from '@/components/teacher/assignments/SmartAssignmentBuilder'
+import NewAssignmentBuilder from '@/components/teacher/assignments/NewAssignmentBuilder'
 
 export default function NewAssignmentPage() {
-  return <SmartAssignmentBuilder />
+  return <NewAssignmentBuilder />
 }

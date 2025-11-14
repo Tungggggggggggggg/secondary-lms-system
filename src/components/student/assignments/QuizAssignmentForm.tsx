@@ -38,6 +38,54 @@ export default function QuizAssignmentForm({
   const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const autoSubmittedRef = useRef(false);
+  const anti = ((assignment as any).antiCheatConfig || {}) as {
+    requireFullscreen?: boolean;
+    detectTabSwitch?: boolean;
+    disableCopyPaste?: boolean;
+    shuffleQuestions?: boolean;
+    shuffleOptions?: boolean;
+    singleQuestionMode?: boolean;
+  };
+  const requireFullscreen = !!anti.requireFullscreen;
+  const detectTabSwitch = !!anti.detectTabSwitch;
+  const disableCopyPaste = !!anti.disableCopyPaste;
+  const shuffleQuestionsFlag = !!anti.shuffleQuestions;
+  const shuffleOptionsFlag = !!anti.shuffleOptions;
+  const singleQuestionMode = !!anti.singleQuestionMode;
+  const maxAttempts = (assignment as any).maxAttempts ?? null;
+  const latestAttempt = (assignment as any).latestAttempt ?? 0;
+  const allowNewAttempt = (assignment as any).allowNewAttempt ?? false;
+  const [gateOpen, setGateOpen] = useState<boolean>(Boolean((allowNewAttempt && isSubmitted) || requireFullscreen || detectTabSwitch || disableCopyPaste || shuffleQuestionsFlag || shuffleOptionsFlag || singleQuestionMode));
+  const [isNewAttempt, setIsNewAttempt] = useState<boolean>(false);
+  const [questionOrder, setQuestionOrder] = useState<string[] | null>(null);
+  const [optionOrders, setOptionOrders] = useState<Record<string, string[]> | null>(null);
+  const [currentIdx, setCurrentIdx] = useState<number>(0);
+  const cleanupRef = useRef<(() => void)[]>([]);
+  const attemptsLeft = maxAttempts != null ? Math.max(0, (maxAttempts as number) - (latestAttempt as number)) : null;
+  const disabledMode = isSubmitted && !isNewAttempt;
+
+  const questionsById = useMemo(() => {
+    const obj: Record<string, typeof assignment.questions[number]> = {};
+    assignment.questions.forEach((q) => (obj[q.id] = q));
+    return obj;
+  }, [assignment.questions]);
+  const orderedQuestionIds = useMemo(() => {
+    return questionOrder || assignment.questions.map((q) => q.id);
+  }, [questionOrder, assignment.questions]);
+  const visibleQuestionIds = useMemo(() => {
+    if (singleQuestionMode) {
+      const id = orderedQuestionIds[currentIdx];
+      return typeof id === "string" ? [id] : [];
+    }
+    return orderedQuestionIds;
+  }, [orderedQuestionIds, singleQuestionMode, currentIdx]);
+  const orderedQuestions = useMemo(() => visibleQuestionIds.map((id) => questionsById[id]).filter(Boolean), [visibleQuestionIds, questionsById]);
+  const getOrderedOptions = (q: typeof assignment.questions[number]) => {
+    const ids = optionOrders?.[q.id] || q.options.map((o) => o.id);
+    const byId: Record<string, typeof q.options[number]> = {};
+    q.options.forEach((o) => (byId[o.id] = o));
+    return ids.map((oid) => byId[oid]);
+  };
 
   // Tạo map từ initialAnswers để dễ dàng lookup
   const initialAnswersMap = useMemo(() => {
@@ -53,7 +101,7 @@ export default function QuizAssignmentForm({
 
   // Load draft answers from localStorage when mount (if not submitted)
   useEffect(() => {
-    if (isSubmitted) return;
+    if (disabledMode) return;
     try {
       const raw = typeof window !== "undefined" ? window.localStorage.getItem(draftKey) : null;
       if (raw) {
@@ -66,11 +114,11 @@ export default function QuizAssignmentForm({
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignment.id, isSubmitted]);
+  }, [assignment.id, disabledMode]);
 
   // Persist draft on answers change (debounced)
   useEffect(() => {
-    if (isSubmitted) return;
+    if (disabledMode) return;
     const id = window.setTimeout(() => {
       try {
         const arr = Array.from(answers.entries()).map(([questionId, set]) => ({ questionId, optionIds: Array.from(set) }));
@@ -78,11 +126,11 @@ export default function QuizAssignmentForm({
       } catch {}
     }, 300);
     return () => window.clearTimeout(id);
-  }, [answers, draftKey, isSubmitted]);
+  }, [answers, draftKey, disabledMode]);
 
   // Initialize startedAt from storage or now when interactive
   useEffect(() => {
-    if (isSubmitted) return; // no timer for submitted
+    if (disabledMode) return;
     const now = new Date();
     const stored = typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
     if (stored) {
@@ -92,11 +140,11 @@ export default function QuizAssignmentForm({
       setStartedAt(now);
       try { window.localStorage.setItem(storageKey, now.toISOString()); } catch {}
     }
-  }, [isSubmitted, storageKey]);
+  }, [disabledMode, storageKey]);
 
   // Compute effective deadline and drive countdown
   useEffect(() => {
-    if (isSubmitted) return;
+    if (disabledMode) return;
     if (!startedAt) return;
     let effectiveDeadline: Date | null = lockAt ? new Date(lockAt) : null;
     if (timeLimitMinutes && timeLimitMinutes > 0) {
@@ -127,7 +175,102 @@ export default function QuizAssignmentForm({
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [answers, lockAt, isSubmitted, onSubmit, startedAt, timeLimitMinutes]);
+  }, [answers, lockAt, disabledMode, onSubmit, startedAt, timeLimitMinutes]);
+
+  const startAttempt = async () => {
+    try {
+      if (requireFullscreen) {
+        try {
+          await document.documentElement.requestFullscreen();
+        } catch {
+          toast({ title: "Không thể bật fullscreen", description: "Vui lòng cho phép fullscreen để bắt đầu làm bài", variant: "destructive" });
+          return;
+        }
+      }
+      if (detectTabSwitch) {
+        const onHidden = () => {
+          if (document.hidden) {
+            toast({ title: "Cảnh báo", description: "Bạn đã chuyển tab khỏi bài làm", variant: "destructive" });
+          }
+        };
+        const onBlur = () => {
+          toast({ title: "Cảnh báo", description: "Cửa sổ không còn ở trạng thái hoạt động", variant: "destructive" });
+        };
+        document.addEventListener("visibilitychange", onHidden);
+        window.addEventListener("blur", onBlur);
+        cleanupRef.current.push(() => {
+          document.removeEventListener("visibilitychange", onHidden);
+          window.removeEventListener("blur", onBlur);
+        });
+      }
+      if (disableCopyPaste) {
+        const prevent = (e: Event) => {
+          e.preventDefault();
+        };
+        const onKey = (e: KeyboardEvent) => {
+          if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "a"].includes(e.key.toLowerCase())) {
+            e.preventDefault();
+          }
+        };
+        document.addEventListener("copy", prevent);
+        document.addEventListener("cut", prevent);
+        document.addEventListener("paste", prevent);
+        document.addEventListener("contextmenu", prevent);
+        document.addEventListener("keydown", onKey as any, true);
+        cleanupRef.current.push(() => {
+          document.removeEventListener("copy", prevent);
+          document.removeEventListener("cut", prevent);
+          document.removeEventListener("paste", prevent);
+          document.removeEventListener("contextmenu", prevent);
+          document.removeEventListener("keydown", onKey as any, true);
+        });
+      }
+      const seedKey = `quiz_seed_${assignment.id}_${(latestAttempt as number) + 1}`;
+      let seed = 0;
+      try {
+        const raw = window.localStorage.getItem(seedKey);
+        seed = raw ? parseInt(raw) : 0;
+      } catch {}
+      if (!seed) {
+        seed = Math.floor(Date.now() % 2147483647);
+        try { window.localStorage.setItem(seedKey, String(seed)); } catch {}
+      }
+      const srand = (s: number) => {
+        let x = s || 123456789;
+        return () => (x = (1103515245 * x + 12345) % 2147483647) / 2147483647;
+      };
+      const rnd = srand(seed);
+      const qIds = assignment.questions.map((q) => q.id);
+      const qOrder = shuffleQuestionsFlag ? [...qIds].sort(() => rnd() - 0.5) : qIds;
+      const optOrders: Record<string, string[]> = {};
+      assignment.questions.forEach((q) => {
+        const ids = q.options.map((o) => o.id);
+        optOrders[q.id] = shuffleOptionsFlag ? [...ids].sort(() => rnd() - 0.5) : ids;
+      });
+      setQuestionOrder(qOrder);
+      setOptionOrders(optOrders);
+      setCurrentIdx(0);
+      setIsNewAttempt(true);
+      setGateOpen(false);
+      try {
+        window.localStorage.removeItem(draftKey);
+        window.localStorage.removeItem(storageKey);
+      } catch {}
+      setAnswers(new Map());
+      const now = new Date();
+      setStartedAt(now);
+      try { window.localStorage.setItem(storageKey, now.toISOString()); } catch {}
+    } catch {}
+  };
+
+  useEffect(() => {
+    return () => {
+      cleanupRef.current.forEach((fn) => {
+        try { fn(); } catch {}
+      });
+      cleanupRef.current = [];
+    };
+  }, []);
 
   // Toggle option selection
   const toggleOption = (questionId: string, optionId: string, questionType: string) => {
@@ -204,6 +347,43 @@ export default function QuizAssignmentForm({
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }, [remainingSec]);
 
+  if (gateOpen) {
+    return (
+      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-gray-800">Bắt đầu làm bài</h3>
+          <p className="text-sm text-gray-600 mt-2">Vui lòng xác nhận cài đặt trước khi bắt đầu.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4 text-sm">
+          <div className="p-3 rounded-lg border bg-gray-50">
+            <div className="font-semibold text-gray-800">Cấu hình bảo mật</div>
+            <ul className="mt-2 space-y-1 text-gray-700">
+              <li>{requireFullscreen ? "Yêu cầu fullscreen" : "Không yêu cầu fullscreen"}</li>
+              <li>{detectTabSwitch ? "Phát hiện chuyển tab" : "Không phát hiện chuyển tab"}</li>
+              <li>{disableCopyPaste ? "Vô hiệu hóa copy/paste" : "Cho phép copy/paste"}</li>
+            </ul>
+          </div>
+          <div className="p-3 rounded-lg border bg-gray-50">
+            <div className="font-semibold text-gray-800">Cấu hình hiển thị</div>
+            <ul className="mt-2 space-y-1 text-gray-700">
+              <li>{shuffleQuestionsFlag ? "Xáo thứ tự câu hỏi" : "Giữ nguyên thứ tự câu hỏi"}</li>
+              <li>{shuffleOptionsFlag ? "Xáo thứ tự đáp án" : "Giữ nguyên thứ tự đáp án"}</li>
+              <li>{singleQuestionMode ? "Chế độ từng câu một" : "Hiển thị tất cả câu"}</li>
+            </ul>
+          </div>
+        </div>
+        <div className="mt-4 text-sm text-gray-700">
+          {maxAttempts != null && (
+            <div> Lần làm: {(latestAttempt as number)}/{(maxAttempts as number)}{attemptsLeft != null ? ` • Còn lại: ${attemptsLeft}` : ""}</div>
+          )}
+        </div>
+        <div className="mt-6 flex justify-end">
+          <Button onClick={startAttempt}>Bắt đầu làm</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -219,6 +399,29 @@ export default function QuizAssignmentForm({
             {Math.round((answeredCount / totalQuestions) * 100)}%
           </span>
         </div>
+
+      {singleQuestionMode && (
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm text-gray-600">Câu {currentIdx + 1}/{assignment.questions.length}</div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled
+            >
+              Quay lại
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => setCurrentIdx((i) => Math.min(i + 1, assignment.questions.length - 1))}
+              disabled={currentIdx >= assignment.questions.length - 1}
+            >
+              Câu tiếp theo
+            </Button>
+          </div>
+        </div>
+      )}
         <div className="w-full bg-blue-200 rounded-full h-2">
           <div
             className="bg-blue-600 h-2 rounded-full transition-all"
@@ -234,7 +437,7 @@ export default function QuizAssignmentForm({
 
       {/* Questions list */}
       <div className="space-y-6 mb-6">
-        {assignment.questions.map((question, index) => {
+        {orderedQuestions.map((question, index) => {
           const selectedOptions = answers.get(question.id) || new Set<string>();
 
           return (
@@ -256,7 +459,7 @@ export default function QuizAssignmentForm({
 
                   {/* Options */}
                   <div className="space-y-2 mt-4">
-                    {question.options.map((option) => {
+                    {getOrderedOptions(question).map((option) => {
                       const isSelected = selectedOptions.has(option.id);
 
                       return (
@@ -266,13 +469,13 @@ export default function QuizAssignmentForm({
                             isSelected
                               ? "bg-indigo-50 border-indigo-500"
                               : "bg-white border-gray-200 hover:border-indigo-300"
-                          } ${isOverdue || isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+                          } ${isOverdue || isLoading || disabledMode ? "opacity-60 cursor-not-allowed" : ""}`}
                         >
                           <input
                             type={question.type === "SINGLE" ? "radio" : "checkbox"}
                             checked={isSelected}
                             onChange={() => toggleOption(question.id, option.id, question.type)}
-                            disabled={isLoading || isOverdue}
+                            disabled={isLoading || isOverdue || disabledMode}
                             className="mt-1"
                             name={question.type === "SINGLE" ? `question-${question.id}` : undefined}
                           />

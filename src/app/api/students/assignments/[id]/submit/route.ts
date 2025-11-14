@@ -40,6 +40,7 @@ export async function POST(
           title: true,
           type: true,
           dueDate: true,
+          max_attempts: true,
           questions: {
             select: {
               id: true,
@@ -121,6 +122,20 @@ export async function POST(
       orderBy: { attempt: "desc" },
       select: { id: true, attempt: true, grade: true },
     });
+
+    const nextAttempt = (latestSubmission?.attempt ?? 0) + 1;
+    if (assignment.type === "QUIZ") {
+      const maxAttempts = assignment.max_attempts ?? 1;
+      if (nextAttempt > maxAttempts) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Bạn đã vượt quá số lần làm tối đa (${maxAttempts}). Không thể nộp thêm lần mới.`,
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     // Kiểm tra deadline (nếu có)
     if (assignment.dueDate && new Date(assignment.dueDate) < new Date()) {
@@ -207,7 +222,7 @@ export async function POST(
         content: submissionContent,
         grade: calculatedGrade, // Auto-grade cho quiz
         feedback: autoFeedback, // Auto-feedback cho quiz
-        attempt: (latestSubmission?.attempt ?? 0) + 1,
+        attempt: nextAttempt,
       },
       include: {
         assignment: {

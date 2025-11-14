@@ -134,6 +134,37 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ success: false, message: "Submission not found" }, { status: 404 });
         }
 
+        // Enforce max_attempts (ưu tiên áp dụng cho QUIZ, nhưng với file-based ta chặn nếu đã submitted khi max_attempts=1)
+        const assignment = await prisma.assignment.findUnique({
+            where: { id: assignmentId },
+            select: { id: true, type: true, max_attempts: true },
+        });
+        const maxAttempts = assignment?.max_attempts ?? 1;
+
+        if (maxAttempts <= 1) {
+            // Nếu chỉ cho 1 lần nộp, mà đã submitted rồi -> chặn
+            if (submission.status === "submitted") {
+                return NextResponse.json(
+                    { success: false, message: "Bạn đã nộp bài. Không thể nộp thêm lần nữa." },
+                    { status: 403 }
+                );
+            }
+        } else {
+            // Nếu cho nhiều lần, dùng số lượng assignment_submissions đã có để ước lượng attempts đã dùng
+            const usedAttempts = await prisma.assignmentSubmission.count({
+                where: { assignmentId, studentId: user.id },
+            });
+            if (usedAttempts >= maxAttempts) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: `Bạn đã sử dụng hết số lần nộp (${maxAttempts}). Không thể nộp thêm lần nữa.`,
+                    },
+                    { status: 403 }
+                );
+            }
+        }
+
         await prisma.submission.update({ where: { id: submission.id }, data: { status: "submitted" } });
         return NextResponse.json({ success: true });
     } catch (error) {
@@ -141,5 +172,3 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
     }
 }
-
-

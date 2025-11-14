@@ -49,6 +49,9 @@ export async function GET(
           openAt: true,
           lockAt: true,
           timeLimitMinutes: true,
+          submission_format: true,
+          max_attempts: true,
+          anti_cheat_config: true,
           type: true,
           createdAt: true,
           updatedAt: true,
@@ -88,12 +91,14 @@ export async function GET(
           assignmentId,
           studentId: user.id,
         },
+        orderBy: { attempt: "desc" },
         select: {
           id: true,
           content: true,
           grade: true,
           feedback: true,
           submittedAt: true,
+          attempt: true,
         },
       }),
       // Lấy classroom info
@@ -136,6 +141,9 @@ export async function GET(
       openAt: a.openAt ?? null,
       lockAt: a.lockAt ?? assignmentData.dueDate,
       timeLimitMinutes: a.timeLimitMinutes ?? null,
+      submissionFormat: a.submission_format ?? null,
+      maxAttempts: a.type === "QUIZ" ? (a.max_attempts ?? 1) : null,
+      antiCheatConfig: a.anti_cheat_config ?? null,
       createdAt: assignmentData.createdAt,
       updatedAt: assignmentData.updatedAt,
       author: (assignmentData as any).author,
@@ -155,6 +163,11 @@ export async function GET(
         _count: q._count,
       })),
       _count: (assignmentData as any)._count,
+      latestAttempt: (submission as any)?.attempt ?? 0,
+      allowNewAttempt:
+        (a as any).type === "QUIZ"
+          ? (((submission as any)?.attempt ?? 0) < ((a as any).max_attempts ?? 1))
+          : false,
       // Include submission trong response (COMBINED)
       submission: submission
         ? {
@@ -163,7 +176,7 @@ export async function GET(
             grade: submission.grade,
             feedback: submission.feedback,
             submittedAt: submission.submittedAt.toISOString(),
-            attempt: (submission as any).attempt ?? 1,
+            attempt: (submission as any).attempt,
           }
         : null,
     };

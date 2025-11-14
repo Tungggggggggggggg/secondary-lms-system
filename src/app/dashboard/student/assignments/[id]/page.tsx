@@ -59,6 +59,7 @@ export default function StudentAssignmentDetailPage({
   const [submission, setSubmission] = useState<SubmissionResponse | null>(null);
   const [fileSubmission, setFileSubmission] = useState<{ id: string; status: string; files: Array<{ id?: string; fileName: string; mimeType: string; sizeBytes: number; storagePath: string }> } | null>(null);
   const [signedUrlByPath, setSignedUrlByPath] = useState<Record<string, string>>({});
+  const [attachments, setAttachments] = useState<Array<{ id: string; name: string; url: string | null; mimeType: string }>>([]);
 
   const handleDownload = async (path: string, filename: string) => {
     try {
@@ -94,6 +95,14 @@ export default function StudentAssignmentDetailPage({
       if (assignmentData) {
         setAssignment(assignmentData);
       }
+
+      try {
+        const r = await fetch(`/api/assignments/${assignmentId}/files`);
+        const j = await r.json();
+        if (r.ok && j?.success && Array.isArray(j.data)) {
+          setAttachments(j.data.map((f: any) => ({ id: f.id, name: f.name, url: f.url, mimeType: f.mimeType })));
+        }
+      } catch {}
 
       // Load submission (essay/quiz legacy)
       const submissionData = await fetchSubmission(assignmentId);
@@ -299,6 +308,14 @@ export default function StudentAssignmentDetailPage({
 
   const hasSubmission = submission !== null || !!fileSubmission;
   const canEdit = !!submission && submission.grade === null; // Chỉ edit được nếu chưa chấm
+  const now = new Date();
+  const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
+  const lockAt = (assignment as any).lockAt ? new Date((assignment as any).lockAt) : (assignment.dueDate ? new Date(assignment.dueDate) : null);
+  const notOpened = openAt ? now < openAt : false;
+  const locked = lockAt ? now > lockAt : false;
+  const workDisabled = (notOpened || locked) && !canEdit;
+
+  
 
   return (
     <div className="p-6">
@@ -309,10 +326,24 @@ export default function StudentAssignmentDetailPage({
 
       <AssignmentDetailHeader assignment={assignment} submission={(submission ? (submission as any) : (fileSubmission ? ({ id: "file", submittedAt: new Date().toISOString(), grade: (submission as any)?.grade ?? null, feedback: (submission as any)?.feedback ?? null } as any) : undefined))} />
 
+      {attachments.length > 0 && (
+        <div className="bg-white rounded-xl p-4 shadow border mb-6">
+          <h3 className="font-semibold mb-3">Tài liệu đính kèm từ giáo viên</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {attachments.map((f) => (
+              <a key={f.id} href={f.url || '#'} target="_blank" rel="noreferrer" className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition text-sm truncate">
+                <div className="font-medium truncate" title={f.name}>{f.name}</div>
+                <div className="text-xs text-gray-500 truncate">{f.mimeType}</div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "work" | "review")}>
         <TabsList className="mb-6">
-          <TabsTrigger value="work" disabled={!hasSubmission && false}>
+          <TabsTrigger value="work" disabled={workDisabled}>
             {hasSubmission && canEdit ? "Chỉnh sửa bài làm" : "Làm bài"}
           </TabsTrigger>
           {hasSubmission && (
@@ -321,13 +352,63 @@ export default function StudentAssignmentDetailPage({
         </TabsList>
 
         <TabsContent value="work">
-          {assignment.type === "ESSAY" ? (
-            <div className="bg-white rounded-xl p-6 shadow space-y-4">
-              <p className="text-sm text-gray-700">
-                Bài tập tự luận này hỗ trợ nộp <span className="font-semibold">nhiều tệp</span> một lần. Bạn có thể lưu nháp và xác nhận nộp khi sẵn sàng.
-              </p>
-              <FileSubmissionPanel assignmentId={assignmentId} />
+          {workDisabled ? (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-6">
+              <div className="font-semibold mb-1">Hiện chưa thể làm bài</div>
+              <div className="text-sm">{(openAt && new Date() < openAt) ? `Bài sẽ mở lúc ${openAt.toLocaleString("vi-VN")}` : (lockAt ? `Bài đã khoá lúc ${lockAt.toLocaleString("vi-VN")}` : "Không khả dụng")}</div>
             </div>
+          ) : assignment.type === "ESSAY" ? (
+            (() => {
+              const format = ((assignment as any).submissionFormat as string) || "BOTH";
+              if (format === "TEXT") {
+                return (
+                  <EssayAssignmentForm
+                    assignmentId={assignmentId}
+                    onSubmit={canEdit ? (c) => handleUpdateSubmission(c) : handleEssaySubmit}
+                    initialContent={submission?.content || ""}
+                    isLoading={isLoading}
+                    dueDate={assignment.dueDate}
+                    isSubmitted={!!submission && canEdit}
+                    openAt={(assignment as any).openAt || null}
+                    lockAt={(assignment as any).lockAt || null}
+                    timeLimitMinutes={(assignment as any).timeLimitMinutes || null}
+                  />
+                );
+              }
+              if (format === "FILE") {
+                return (
+                  <div className="bg-white rounded-xl p-6 shadow space-y-4">
+                    <p className="text-sm text-gray-700">Bạn cần nộp tệp theo yêu cầu của giáo viên.</p>
+                    <FileSubmissionPanel assignmentId={assignmentId} />
+                  </div>
+                );
+              }
+              return (
+                <div className="bg-white rounded-xl p-6 shadow space-y-6">
+                  <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">Bạn có thể chọn nộp văn bản hoặc nộp tệp. Chỉ cần chọn một hình thức phù hợp.</div>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <h4 className="font-semibold">Nộp văn bản</h4>
+                      <EssayAssignmentForm
+                        assignmentId={assignmentId}
+                        onSubmit={canEdit ? (c) => handleUpdateSubmission(c) : handleEssaySubmit}
+                        initialContent={submission?.content || ""}
+                        isLoading={isLoading}
+                        dueDate={assignment.dueDate}
+                        isSubmitted={!!submission && canEdit}
+                        openAt={(assignment as any).openAt || null}
+                        lockAt={(assignment as any).lockAt || null}
+                        timeLimitMinutes={(assignment as any).timeLimitMinutes || null}
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <h4 className="font-semibold">Nộp tệp</h4>
+                      <FileSubmissionPanel assignmentId={assignmentId} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             <QuizAssignmentForm
               assignment={assignment}
