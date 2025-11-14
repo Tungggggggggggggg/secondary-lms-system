@@ -5,7 +5,10 @@ import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-const BUCKET = process.env.SUPABASE_BUCKET || "assignments";
+const BUCKET =
+  process.env.SUPABASE_ASSIGNMENTS_BUCKET ||
+  process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ||
+  "lms-submissions";
 
 const MIME_WHITELIST = new Set([
 	"application/pdf",
@@ -40,6 +43,13 @@ export async function POST(
 ) {
 	const requestId = crypto.randomUUID();
 	try {
+		const admin = supabaseAdmin;
+		if (!admin) {
+			return NextResponse.json(
+				{ success: false, message: "Storage client not initialized", requestId },
+				{ status: 500 }
+			);
+		}
 		const user = await getAuthenticatedUser(req, UserRole.TEACHER);
 		if (!user) {
 			return NextResponse.json(
@@ -93,7 +103,7 @@ export async function POST(
 		const key = `assignment/${assignmentId}/${crypto.randomUUID()}-${safeName}`;
 
 		const arrayBuffer = await file.arrayBuffer();
-		const { data, error } = await supabaseAdmin.storage
+		const { data, error } = await admin.storage
 			.from(BUCKET)
 			.upload(key, Buffer.from(arrayBuffer), {
 				contentType,
@@ -121,6 +131,7 @@ export async function POST(
 					size: file.size,
 					mimeType: contentType,
 					uploadedById: user.id,
+					file_type: 'ATTACHMENT',
 				},
 				select: { id: true },
 			});

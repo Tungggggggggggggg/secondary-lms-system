@@ -214,12 +214,14 @@ export default function NewAssignmentBuilder() {
 
   // Track changes
   useEffect(() => {
-    const hasContent = assignmentData.title.trim() || 
-                      assignmentData.description?.trim() ||
-                      assignmentData.subject?.trim() ||
-                      (assignmentData.essayContent?.question.trim()) ||
-                      (assignmentData.quizContent?.questions.length ?? 0) > 0 ||
-                      (assignmentData.classrooms || []).length > 0;
+    const hasContent = !!(
+      assignmentData.title.trim() ||
+      assignmentData.description?.trim() ||
+      assignmentData.subject?.trim() ||
+      assignmentData.essayContent?.question.trim() ||
+      ((assignmentData.quizContent?.questions.length ?? 0) > 0) ||
+      ((assignmentData.classrooms || []).length > 0)
+    );
     setHasUnsavedChanges(hasContent);
   }, [assignmentData]);
 
@@ -272,6 +274,40 @@ export default function NewAssignmentBuilder() {
           title: "Tạo bài tập thành công!",
           description: `Bài tập "${assignmentData.title}" đã được tạo thành công.`
         });
+
+        // Phase B: Upload attachments nếu là ESSAY
+        try {
+          if (
+            assignmentData.type === 'ESSAY' &&
+            assignmentData.essayContent?.attachments &&
+            assignmentData.essayContent.attachments.length > 0
+          ) {
+            const assignmentId = result?.data?.id as string | undefined;
+            if (assignmentId) {
+              const files = assignmentData.essayContent.attachments;
+              console.log(`[AssignmentUpload] Bắt đầu upload ${files.length} file cho assignment ${assignmentId}`);
+              for (const file of files) {
+                try {
+                  const form = new FormData();
+                  form.append('file', file);
+                  const resp = await fetch(`/api/assignments/${assignmentId}/upload`, {
+                    method: 'POST',
+                    body: form,
+                  });
+                  const j = await resp.json().catch(() => ({}));
+                  if (!resp.ok || !j?.success) {
+                    console.error('[AssignmentUpload] Upload thất bại:', j);
+                  }
+                } catch (e) {
+                  console.error('[AssignmentUpload] Lỗi upload 1 file:', e);
+                }
+              }
+              console.log('[AssignmentUpload] Hoàn tất upload file');
+            }
+          }
+        } catch (e) {
+          console.error('[AssignmentUpload] Lỗi tổng khi upload attachments:', e);
+        }
 
         // Clear draft
         autoSave.clearDraft();

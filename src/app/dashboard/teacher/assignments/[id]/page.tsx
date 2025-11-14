@@ -44,6 +44,17 @@ export default function AssignmentDetailPage() {
     const [detail, setDetail] = useState<AssignmentDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [attachments, setAttachments] = useState<Array<{ id: string; name: string; path: string; size: number; mimeType: string; createdAt: string; url?: string | null }>>([]);
+    const [loadingFiles, setLoadingFiles] = useState(false);
+
+    const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const publicUrlForStored = (path: string) => {
+        const clean = path.replace(/^\//, "");
+        return SUPABASE_URL
+            ? `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${clean}`
+            : `/storage/v1/object/public/${BUCKET}/${clean}`;
+    };
 
     useEffect(() => {
         async function fetchDetail() {
@@ -129,6 +140,31 @@ export default function AssignmentDetailPage() {
         }
         if (assignmentId) fetchDetail();
     }, [assignmentId, toast]);
+
+    // Fetch attachments
+    useEffect(() => {
+        if (!assignmentId) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                setLoadingFiles(true);
+                const r = await fetch(`/api/assignments/${assignmentId}/files`);
+                const j = await r.json().catch(() => ({}));
+                if (!cancelled && r.ok && j?.success && Array.isArray(j.data)) {
+                    setAttachments(j.data);
+                } else if (!cancelled) {
+                    setAttachments([]);
+                }
+            } catch (e) {
+                if (!cancelled) {
+                    console.error('[AssignmentDetail] Lỗi tải files:', e);
+                }
+            } finally {
+                if (!cancelled) setLoadingFiles(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [assignmentId]);
 
     if (loading)
         return (
@@ -254,6 +290,37 @@ export default function AssignmentDetailPage() {
                             <h2 className="text-lg font-bold mb-4 text-indigo-700 flex items-center gap-2">
                                 <span>📄</span> Danh sách câu hỏi
                             </h2>
+
+                            {/* File đính kèm */}
+                            {loadingFiles ? (
+                                <div className="text-sm text-gray-500 mb-4">Đang tải file đính kèm...</div>
+                            ) : attachments.length > 0 ? (
+                                <div className="mb-6">
+                                    <h3 className="text-md font-semibold mb-3 text-gray-700 flex items-center gap-2">
+                                        <span>📎</span> File đính kèm
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {attachments.map((file) => {
+                                            const href = file.url || publicUrlForStored(file.path);
+                                            const isImg = file.mimeType?.startsWith('image/');
+                                            const isVid = file.mimeType?.startsWith('video/');
+                                            return (
+                                                <div key={file.id} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-2xl">{isImg ? '🖼️' : isVid ? '🎥' : '📄'}</span>
+                                                        <div>
+                                                            <p className="font-medium text-sm">{file.name}</p>
+                                                            <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB • {file.mimeType}</p>
+                                                        </div>
+                                                    </div>
+                                                    <a href={href} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">Tải xuống</a>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <hr className="my-6 border-gray-200" />
+                                </div>
+                            ) : null}
                             {(!detail.questions || detail.questions.length === 0) && (
                                 <div className="text-gray-400 italic py-4">
                                     Bài tập này chưa có câu hỏi nào.

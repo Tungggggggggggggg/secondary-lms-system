@@ -4,12 +4,24 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser, isTeacherOfAssignment, getRequestId } from "@/lib/api-utils";
 import { UserRole } from "@prisma/client";
 
+const BUCKET =
+  process.env.SUPABASE_ASSIGNMENTS_BUCKET ||
+  process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ||
+  "lms-submissions";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const requestId = getRequestId(req);
   try {
+    const admin = supabaseAdmin;
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, message: "Storage client not initialized", requestId },
+        { status: 500 }
+      );
+    }
     const user = await getAuthenticatedUser(req);
     if (!user) {
       return NextResponse.json(
@@ -47,7 +59,7 @@ export async function GET(
     }
 
     const files = await prisma.assignmentFile.findMany({
-      where: { assignmentId },
+      where: { assignmentId, file_type: 'ATTACHMENT' },
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true, path: true, size: true, mimeType: true, createdAt: true },
     });
@@ -55,12 +67,13 @@ export async function GET(
     // Tạo signed URLs TTL 15 phút
     const entries = await Promise.all(
       files.map(async (f) => {
-        const { data } = await supabaseAdmin.storage
-          .from(process.env.SUPABASE_BUCKET || "assignments")
+        const { data } = await admin.storage
+          .from(BUCKET)
           .createSignedUrl(f.path, 900, { download: true, transform: undefined });
         return {
           id: f.id,
           name: f.name,
+          path: f.path,
           size: f.size,
           mimeType: f.mimeType,
           createdAt: f.createdAt,
