@@ -21,7 +21,6 @@ import {
   AlertTriangle,
   CheckCircle,
   User,
-  Timer,
   FileText,
   Shield
 } from 'lucide-react'
@@ -430,7 +429,8 @@ export default function TeacherOverrideControls({
                 Hủy
               </Button>
               <Button 
-                variant="destructive"
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50"
                 onClick={handleResetSession}
                 disabled={!resetReason.trim() || isResetting}
               >
@@ -470,7 +470,8 @@ export default function TeacherOverrideControls({
                 Hủy
               </Button>
               <Button 
-                variant="destructive"
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50"
                 onClick={handleTerminateSession}
                 disabled={!terminateReason.trim() || isTerminating}
               >

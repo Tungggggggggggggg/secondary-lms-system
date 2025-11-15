@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export type Paginated<T> = {
   items: T[];
@@ -19,7 +20,7 @@ export const parentStudentRepo = {
     studentId?: string | null;
   }) {
     const { search, limit = 20, skip = 0, parentId, studentId } = params || {};
-    const where: any = {};
+    const where: Prisma.ParentStudentWhereInput = {};
 
     if (parentId) {
       where.parentId = parentId;

@@ -60,7 +60,7 @@ export default function AdminOrgPage() {
       sortable: true,
       render: (value) => (
         <span className="font-mono text-xs text-gray-500">
-          {value || "-"}
+          {String(value ?? "-")}
         </span>
       ),
     },
@@ -251,7 +251,12 @@ export default function AdminOrgPage() {
             if (!open) setSelectedOrg(null);
           }}
           onSubmit={handleUpdateOrg}
-          initialData={selectedOrg}
+          initialData={{
+            id: selectedOrg.id,
+            name: selectedOrg.name,
+            slug: selectedOrg.slug ?? undefined,
+            status: selectedOrg.status,
+          }}
           loading={mutating}
         />
       )}

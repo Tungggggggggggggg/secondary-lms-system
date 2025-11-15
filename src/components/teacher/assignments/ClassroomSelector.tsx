@@ -48,7 +48,13 @@ export function ClassroomSelector({
           const classroomList = data.data || [];
           console.log('📚 Parsed classrooms:', classroomList);
           // Map API response to component format
-          const mappedClassrooms = classroomList.map((classroom: any) => ({
+          type ApiClassroom = {
+            id: string;
+            name: string;
+            description?: string;
+            _count?: { students?: number };
+          };
+          const mappedClassrooms = (classroomList as ApiClassroom[]).map((classroom) => ({
             id: classroom.id,
             name: classroom.name,
             studentCount: classroom._count?.students || 0,

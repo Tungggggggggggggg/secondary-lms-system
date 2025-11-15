@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,8 +22,27 @@ import { setToastInstance } from "@/lib/toast";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+interface InvitationItem {
+  id: string;
+  code: string;
+  status: string;
+  expiresAt: string;
+}
+
+interface RequestItem {
+  id: string;
+  parent: { fullname: string; email: string };
+  message?: string;
+  createdAt: string;
+}
+
+interface LinkedParentItem {
+  id: string;
+  parent: { fullname: string; email: string };
+  createdAt: string;
+}
+
 export default function StudentFamilyPage() {
-  const { data: session } = useSession();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const toastHook = useToast();
@@ -49,9 +67,9 @@ export default function StudentFamilyPage() {
   // Fetch linked parents - FIX: Dùng API đúng cho student
   const { data: parentsData } = useSWR("/api/student/parents", fetcher);
 
-  const invitations = invitationsData?.items || [];
-  const requests = requestsData?.items || [];
-  const linkedParents = parentsData?.items || [];
+  const invitations: InvitationItem[] = (invitationsData?.items || []) as InvitationItem[];
+  const requests: RequestItem[] = (requestsData?.items || []) as RequestItem[];
+  const linkedParents: LinkedParentItem[] = (parentsData?.items || []) as LinkedParentItem[];
 
   // Create invitation
   const handleCreateInvitation = async () => {
@@ -71,6 +89,7 @@ export default function StudentFamilyPage() {
         toastHook.toast({ title: error.message || "Có lỗi xảy ra", variant: "destructive" });
       }
     } catch (error) {
+      console.error("[StudentFamilyPage] handleCreateInvitation error:", error);
       toastHook.toast({ title: "Không thể tạo mã mời", variant: "destructive" });
     } finally {
       setIsCreating(false);
@@ -97,6 +116,7 @@ export default function StudentFamilyPage() {
         mutateInvitations();
       }
     } catch (error) {
+      console.error("[StudentFamilyPage] handleCancelInvitation error:", error);
       toastHook.toast({ title: "Không thể hủy mã mời", variant: "destructive" });
     }
   };
@@ -113,6 +133,7 @@ export default function StudentFamilyPage() {
         mutateRequests();
       }
     } catch (error) {
+      console.error("[StudentFamilyPage] handleApproveRequest error:", error);
       toastHook.toast({ title: "Không thể chấp nhận yêu cầu", variant: "destructive" });
     }
   };
@@ -129,6 +150,7 @@ export default function StudentFamilyPage() {
         mutateRequests();
       }
     } catch (error) {
+      console.error("[StudentFamilyPage] handleRejectRequest error:", error);
       toastHook.toast({ title: "Không thể từ chối yêu cầu", variant: "destructive" });
     }
   };
@@ -160,15 +182,15 @@ export default function StudentFamilyPage() {
       </Card>
 
       {/* Pending Invitations */}
-      {invitations.filter((inv: any) => inv.status === "PENDING").length > 0 && (
+      {invitations.filter((inv) => inv.status === "PENDING").length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Mã mời đang chờ ({invitations.filter((inv: any) => inv.status === "PENDING").length})</CardTitle>
+            <CardTitle>Mã mời đang chờ ({invitations.filter((inv) => inv.status === "PENDING").length})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {invitations
-              .filter((inv: any) => inv.status === "PENDING")
-              .map((invitation: any) => (
+              .filter((inv) => inv.status === "PENDING")
+              .map((invitation) => (
                 <div
                   key={invitation.id}
                   className="flex items-center justify-between p-4 border rounded-lg"
@@ -180,7 +202,7 @@ export default function StudentFamilyPage() {
                       </code>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="default"
                         onClick={() => handleCopyCode(invitation.code)}
                       >
                         {copiedCode === invitation.code ? (
@@ -197,7 +219,7 @@ export default function StudentFamilyPage() {
                   </div>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     onClick={() => handleCancelInvitation(invitation.id)}
                   >
                     Hủy
@@ -218,7 +240,7 @@ export default function StudentFamilyPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {requests.map((request: any) => (
+            {requests.map((request) => (
               <div
                 key={request.id}
                 className="flex items-center justify-between p-4 border rounded-lg"
@@ -231,7 +253,7 @@ export default function StudentFamilyPage() {
                   </div>
                   {request.message && (
                     <div className="mt-2 text-sm text-gray-700 italic">
-                      "{request.message}"
+                      &quot;{request.message}&quot;
                     </div>
                   )}
                   <div className="mt-1 text-xs text-gray-500">
@@ -241,7 +263,7 @@ export default function StudentFamilyPage() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    size="sm"
+                    size="default"
                     onClick={() => handleApproveRequest(request.id)}
                   >
                     <UserCheck className="h-4 w-4 mr-1" />
@@ -249,7 +271,7 @@ export default function StudentFamilyPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
                     onClick={() => handleRejectRequest(request.id)}
                   >
                     <UserX className="h-4 w-4 mr-1" />
@@ -276,7 +298,7 @@ export default function StudentFamilyPage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
-              {linkedParents.map((link: any) => (
+              {linkedParents.map((link) => (
                 <div
                   key={link.id}
                   className="p-4 border rounded-lg hover:shadow-md transition-shadow"

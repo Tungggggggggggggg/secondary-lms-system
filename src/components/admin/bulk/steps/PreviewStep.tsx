@@ -42,8 +42,8 @@ export default function PreviewStep({
   isProcessing
 }: PreviewStepProps) {
 
-  const studentsWithParents = data.students.filter(s => s.parentEmail).length;
-  const studentsWithStudentId = data.students.filter(s => s.studentId).length;
+  const studentsWithParents = data.students.filter(s => s.metadata?.parentEmail).length;
+  const studentsWithStudentId = data.students.filter(s => s.metadata?.studentId).length;
 
   return (
     <div className="space-y-6">
@@ -204,17 +204,17 @@ export default function PreviewStep({
                   <div>
                     <p className="font-medium">{student.fullname}</p>
                     <p className="text-sm text-gray-500">{student.email}</p>
-                    {student.parentEmail && (
+                    {student.metadata?.parentEmail && (
                       <p className="text-xs text-gray-400">
                         <Mail className="h-3 w-3 inline mr-1" />
-                        PH: {student.parentEmail}
+                        PH: {student.metadata.parentEmail}
                       </p>
                     )}
                   </div>
                   <div className="text-right">
-                    {student.studentId && (
+                    {student.metadata?.studentId && (
                       <Badge variant="outline" className="text-xs">
-                        {student.studentId}
+                        {student.metadata.studentId}
                       </Badge>
                     )}
                   </div>

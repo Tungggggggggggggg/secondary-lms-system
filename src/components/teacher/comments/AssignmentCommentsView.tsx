@@ -118,7 +118,7 @@ export default function AssignmentCommentsView({
           <div className="flex flex-wrap gap-2">
             <Button
               variant={filter === "all" ? "default" : "outline"}
-              size="sm"
+              size="default"
               onClick={() => {
                 setFilter("all");
                 setSelectedQuestionId(null);
@@ -133,7 +133,7 @@ export default function AssignmentCommentsView({
                 variant={
                   selectedQuestionId === question.id ? "default" : "outline"
                 }
-                size="sm"
+                size="default"
                 onClick={() => {
                   setFilter("byQuestion");
                   setSelectedQuestionId(

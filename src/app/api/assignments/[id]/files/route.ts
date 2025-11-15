@@ -98,4 +98,89 @@ export async function GET(
   }
 }
 
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const requestId = getRequestId(req);
+  try {
+    const admin = supabaseAdmin;
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, message: "Storage client not initialized", requestId },
+        { status: 500 }
+      );
+    }
+
+    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized", requestId },
+        { status: 401 }
+      );
+    }
+
+    const assignmentId = params.id;
+    const url = new URL(req.url);
+    const fileId = url.searchParams.get('fileId');
+
+    if (!assignmentId || !fileId) {
+      return NextResponse.json(
+        { success: false, message: "assignmentId and fileId are required", requestId },
+        { status: 400 }
+      );
+    }
+
+    const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
+    if (!isOwner) {
+      return NextResponse.json(
+        { success: false, message: "Forbidden", requestId },
+        { status: 403 }
+      );
+    }
+
+    const file = await prisma.assignmentFile.findFirst({
+      where: { id: fileId, assignmentId, file_type: 'ATTACHMENT' },
+      select: { id: true, path: true }
+    });
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, message: "File not found", requestId },
+        { status: 404 }
+      );
+    }
+
+    // Xóa khỏi storage trước
+    const { error: storageErr } = await admin.storage
+      .from(BUCKET)
+      .remove([file.path]);
+
+    if (storageErr) {
+      console.error(`[ERROR] [DELETE] /api/assignments/${assignmentId}/files - Storage remove failed {requestId:${requestId}}`, storageErr);
+      return NextResponse.json(
+        { success: false, message: "Failed to delete file from storage", requestId },
+        { status: 500 }
+      );
+    }
+
+    // Xóa metadata DB
+    await prisma.assignmentFile.delete({ where: { id: file.id } });
+
+    return NextResponse.json(
+      { success: true, message: "File deleted", requestId },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error(
+      `[ERROR] [DELETE] /api/assignments/${params.id}/files {requestId:${requestId}}`,
+      error
+    );
+    return NextResponse.json(
+      { success: false, message: "Internal server error", requestId },
+      { status: 500 }
+    );
+  }
+}
+
 

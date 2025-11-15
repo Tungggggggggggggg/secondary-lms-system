@@ -23,9 +23,9 @@ export async function GET(req: Request) {
         const userId = session.user.id as string;
 
         const q = url.searchParams.get("q") ?? undefined;
-        const subject = url.searchParams.get("subject") ?? undefined;
+        // const subject = url.searchParams.get("subject") ?? undefined; // Classroom không có trường subject
         const teacher = url.searchParams.get("teacher") ?? undefined;
-        const grade = url.searchParams.get("grade") ?? undefined;
+        // const grade = url.searchParams.get("grade") ?? undefined; // Classroom không có trường grade
         const visibility = url.searchParams.get("visibility") as
             | "PUBLIC"
             | "JOINABLE"
@@ -45,22 +45,12 @@ export async function GET(req: Request) {
             where.OR = [
                 { name: { contains: q, mode: "insensitive" } },
                 { code: { contains: q, mode: "insensitive" } },
-                { subject: { contains: q, mode: "insensitive" } },
-                { teacher: { name: { contains: q, mode: "insensitive" } } },
+                { description: { contains: q, mode: "insensitive" } },
+                { teacher: { fullname: { contains: q, mode: "insensitive" } } },
             ];
         }
-        if (subject) {
-            where.subject = { contains: subject, mode: "insensitive" };
-        }
         if (teacher) {
-            where.teacher = { name: { contains: teacher, mode: "insensitive" } };
-        }
-        if (grade) {
-            // Assuming classroom has grade or gradeLevel as string/enum; adjust field name if needed
-            where.grade = { equals: grade };
-        }
-        if (visibility === "JOINABLE") {
-            where.isJoinable = true;
+            where.teacher = { fullname: { contains: teacher, mode: "insensitive" } };
         }
 
         // Order
@@ -70,20 +60,15 @@ export async function GET(req: Request) {
                 : [{ createdAt: "desc" as const }, { id: "desc" as const }];
 
         // Pagination with cursor on id
-        const queryArgs: any = {
+        const classes = await prisma.classroom.findMany({
             where,
             orderBy,
             take: limit + 1,
             include: {
-                teacher: { select: { name: true } },
+                teacher: { select: { fullname: true } },
             },
-        };
-        if (cursor) {
-            queryArgs.cursor = { id: cursor };
-            queryArgs.skip = 1;
-        }
-
-        const classes = await prisma.classroom.findMany(queryArgs);
+            ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        });
 
         let nextCursor: string | undefined = undefined;
         if (classes.length > limit) {
@@ -95,8 +80,7 @@ export async function GET(req: Request) {
             id: c.id,
             name: c.name,
             code: c.code,
-            subject: c.subject ?? undefined,
-            teacherName: c.teacher?.name ?? "",
+            teacherName: (c as any).teacher?.fullname ?? "",
             createdAt: c.createdAt.toISOString?.() ?? String(c.createdAt),
             joined: false,
         }));

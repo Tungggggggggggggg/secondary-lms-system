@@ -30,6 +30,16 @@ interface PostCardProps {
     post: PostItem;
     commentsTotal?: number; // Tổng số top-level comments
     detailUrl?: string; // URL để điều hướng đến trang chi tiết
+    // Các props dưới đây là tùy chọn để tương thích với NewsFeedList
+    recentComments?: CommentItem[];
+    recentCommentsLoading?: boolean;
+    comments?: CommentItem[];
+    commentsLoading?: boolean;
+    commentsPagination?: unknown;
+    onFetchRecentComments?: (announcementId: string) => void;
+    onFetchComments?: (announcementId: string, pageNum?: number) => void;
+    onAddComment?: (announcementId: string, content: string, parentId?: string | null) => Promise<boolean>;
+    showComments?: boolean;
 }
 
 /**

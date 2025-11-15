@@ -18,7 +18,7 @@ export function formatDate(
 
   if (isNaN(d.getTime())) return "-";
 
-  const options: Intl.DateTimeFormatOptions = {
+  const options: Record<"short" | "medium" | "long" | "full", Intl.DateTimeFormatOptions> = {
     short: {
       day: "2-digit",
       month: "2-digit",

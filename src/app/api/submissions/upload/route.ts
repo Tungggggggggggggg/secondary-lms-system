@@ -53,12 +53,16 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, message: "Unsupported file type", requestId }, { status: 415 });
         }
 
-        const originalName = typeof (file as any).name === "string" ? (file as any).name : "file";
+        const originalName = typeof (file as File).name === "string" ? (file as File).name : "file";
         const safeName = slugifyFileName(originalName);
         const key = `submissions/${assignmentId}/${user.id}/${crypto.randomUUID()}-${safeName}`;
 
         const arrayBuffer = await file.arrayBuffer();
-        const { data, error } = await supabaseAdmin.storage
+        if (!supabaseAdmin) {
+            return NextResponse.json({ success: false, message: "Supabase admin client is not available", requestId }, { status: 500 });
+        }
+        const admin = supabaseAdmin;
+        const { data, error } = await admin.storage
             .from(BUCKET)
             .upload(key, Buffer.from(arrayBuffer), { contentType, upsert: false });
 

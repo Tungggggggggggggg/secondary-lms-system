@@ -307,7 +307,7 @@ export default function ParentProgressPage() {
                           {statistics.totalSubmissions}
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="default">
                         {isExpanded ? (
                           <ChevronUp className="h-5 w-5" />
                         ) : (
@@ -324,13 +324,13 @@ export default function ParentProgressPage() {
                       {/* Quick Actions */}
                       <div className="flex gap-2">
                         <Link href={`/dashboard/parent/children/${student.id}/grades`}>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="default">
                             Xem chi tiết điểm số
                             <ArrowRight className="h-4 w-4 ml-2" />
                           </Button>
                         </Link>
                         <Link href={`/dashboard/parent/children/${student.id}`}>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="default">
                             Xem thông tin
                           </Button>
                         </Link>

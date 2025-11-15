@@ -16,7 +16,6 @@ import {
   Clock, 
   ChevronLeft, 
   ChevronRight, 
-  Flag, 
   AlertTriangle,
   CheckCircle,
   Eye,
@@ -24,9 +23,9 @@ import {
   Wifi,
   WifiOff,
   Save,
-  RotateCcw
+  Info
 } from 'lucide-react'
-import { ExamSession, AntiCheatConfig } from '@/types/exam-system'
+import { ExamSession, AntiCheatConfig, EXAM_CONSTANTS } from '@/types/exam-system'
 import { ShuffledQuestion } from '@/lib/exam-session/question-shuffle'
 import { personalTimerManager, formatTime } from '@/lib/exam-session/personal-timer'
 import { autoSaveManager } from '@/lib/exam-session/auto-save'
@@ -61,11 +60,37 @@ export default function ExamInterface({
 
   // Refs
   const examContainerRef = useRef<HTMLDivElement>(null)
-  const autoSaveIntervalRef = useRef<NodeJS.Timeout>()
 
   // Current question
   const currentQuestion = questions[currentQuestionIndex]
-  const antiCheatConfig: AntiCheatConfig = JSON.parse(session.antiCheatConfig as string)
+  const antiCheatConfig: AntiCheatConfig = (() => {
+    const raw: unknown = session.antiCheatConfig as unknown
+    if (typeof raw === 'string') {
+      try {
+        return JSON.parse(raw) as AntiCheatConfig
+      } catch {
+        return EXAM_CONSTANTS.DEFAULT_ANTI_CHEAT_CONFIG
+      }
+    }
+    if (raw && typeof raw === 'object') {
+      return raw as AntiCheatConfig
+    }
+    return EXAM_CONSTANTS.DEFAULT_ANTI_CHEAT_CONFIG
+  })()
+
+  // Helper functions
+  const showTimeWarning = (message: string) => {
+    setWarningMessage(message)
+    setShowWarningDialog(true)
+    setTimeout(() => setShowWarningDialog(false), 3000)
+  }
+
+  const handleTimeExpired = useCallback(() => {
+    showTimeWarning('Hết thời gian! Bài thi sẽ được nộp tự động.')
+    setTimeout(() => {
+      onSubmit()
+    }, 2000)
+  }, [onSubmit])
 
   // Progress calculation
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100
@@ -102,7 +127,7 @@ export default function ExamInterface({
     return () => {
       personalTimerManager.removeTimer(session.id)
     }
-  }, [session.id, session.studentId, timeRemaining])
+  }, [session.id, session.studentId, timeRemaining, handleTimeExpired])
 
   // Auto-save setup
   useEffect(() => {
@@ -122,7 +147,7 @@ export default function ExamInterface({
     return () => {
       autoSaveManager.stopAutoSave(session.id)
     }
-  }, [session.id, currentQuestionIndex, timeRemaining])
+  }, [session, currentQuestionIndex, timeRemaining])
 
   // Online/offline detection
   useEffect(() => {
@@ -219,19 +244,7 @@ export default function ExamInterface({
     }
   }, [antiCheatConfig.disableCopyPaste])
 
-  // Helper functions
-  const showTimeWarning = (message: string) => {
-    setWarningMessage(message)
-    setShowWarningDialog(true)
-    setTimeout(() => setShowWarningDialog(false), 3000)
-  }
-
-  const handleTimeExpired = () => {
-    showTimeWarning('Hết thời gian! Bài thi sẽ được nộp tự động.')
-    setTimeout(() => {
-      onSubmit()
-    }, 2000)
-  }
+  
 
   const handleAnswerSelect = (answer: string) => {
     if (!currentQuestion) return
@@ -350,7 +363,7 @@ export default function ExamInterface({
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                size="sm"
+                size="default"
                 onClick={handleManualSave}
                 className="flex items-center gap-1"
               >
@@ -361,7 +374,7 @@ export default function ExamInterface({
               <Button
                 onClick={() => setShowSubmitDialog(true)}
                 className="bg-blue-600 hover:bg-blue-700"
-                size="sm"
+                size="default"
               >
                 Nộp bài
               </Button>
@@ -401,7 +414,7 @@ export default function ExamInterface({
                 )}
                 
                 {antiCheatConfig.timePerQuestion && (
-                  <Badge variant="secondary">
+                  <Badge variant="outline">
                     <Clock className="w-3 h-3 mr-1" />
                     {antiCheatConfig.timePerQuestion}s
                   </Badge>
@@ -421,7 +434,7 @@ export default function ExamInterface({
 
             {/* Options */}
             <div className="space-y-3">
-              {currentQuestion.shuffledOptions.map((option, index) => {
+              {currentQuestion.shuffledOptions.map((option) => {
                 const isSelected = currentQuestion.type === 'MULTIPLE'
                   ? ((session.answers[currentQuestion.id] as string[]) || []).includes(option.shuffledLabel)
                   : session.answers[currentQuestion.id] === option.shuffledLabel
@@ -497,7 +510,7 @@ export default function ExamInterface({
                 <Button
                   key={index}
                   variant={index === currentQuestionIndex ? "default" : "outline"}
-                  size="sm"
+                  size="default"
                   onClick={() => navigateToQuestion(index)}
                   className={`min-w-[40px] h-8 ${
                     isQuestionAnswered(questions[index].id) 

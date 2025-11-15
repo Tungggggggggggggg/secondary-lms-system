@@ -15,14 +15,14 @@ export interface BulkUserInput {
   role: UserRole;
   password?: string; // Tự động generate nếu không có
   existingUserId?: string; // ID của user có sẵn (không tạo mới)
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface BulkUserValidationError {
   row: number;
   field: string;
   message: string;
-  value?: any;
+  value?: unknown;
 }
 
 export interface BulkUserResult {
@@ -145,8 +145,8 @@ export interface CSVImportColumn {
   label: string;
   required: boolean;
   type: 'string' | 'email' | 'number';
-  validator?: (value: any) => boolean;
-  transformer?: (value: any) => any;
+  validator?: (value: unknown) => boolean;
+  transformer?: (value: unknown) => unknown;
 }
 
 export interface CSVImportResult {
@@ -198,7 +198,7 @@ export interface BulkOperationSettings {
 // API Response Types
 // ============================================
 
-export interface BulkOperationApiResponse<T = any> {
+export interface BulkOperationApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

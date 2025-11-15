@@ -52,6 +52,7 @@ export interface AdminOrganization {
   createdAt: string;
   updatedAt: string;
   membersCount?: number;
+  [key: string]: unknown;
 }
 
 export interface OrganizationMember {
@@ -61,6 +62,7 @@ export interface OrganizationMember {
   roleInOrg: string | null;
   createdAt: string;
   user: AdminUser;
+  [key: string]: unknown;
 }
 
 export interface CreateOrganizationInput {
@@ -91,6 +93,7 @@ export interface AuditLog {
   userAgent: string | null;
   organizationId: string | null;
   createdAt: string;
+  [key: string]: unknown;
 }
 
 export interface AuditLogFilter {

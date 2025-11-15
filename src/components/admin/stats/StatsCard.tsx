@@ -119,9 +119,9 @@ export default function StatsCard({
       <div
         className={cn(
           "flex items-center gap-1 text-xs font-medium",
-          isPositive && "text-green-600",
-          !isPositive && !isNeutral && "text-red-600",
-          isNeutral && "text-gray-600"
+          isPositive ? "text-green-600" : undefined,
+          !isPositive && !isNeutral ? "text-red-600" : undefined,
+          isNeutral ? "text-gray-600" : undefined
         )}
       >
         {isPositive && <TrendingUp className="h-4 w-4" />}

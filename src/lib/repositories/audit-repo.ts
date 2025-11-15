@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 type AuditAction = string;
 
 export const auditRepo = {
-  async write(params: { actorId: string; actorRole?: string | null; action: AuditAction; entityType: string; entityId?: string | null; organizationId?: string | null; metadata?: Record<string, any> | null; ip?: string | null; userAgent?: string | null }) {
+  async write(params: { actorId: string; actorRole?: string | null; action: AuditAction; entityType: string; entityId?: string | null; organizationId?: string | null; metadata?: Prisma.InputJsonValue | null; ip?: string | null; userAgent?: string | null }) {
     const { actorId, actorRole, action, entityType, entityId, organizationId, metadata, ip, userAgent } = params;
     return prisma.auditLog.create({
       data: {
@@ -13,7 +14,7 @@ export const auditRepo = {
         entityType,
         entityId: entityId || "",
         organizationId: organizationId || null,
-        metadata: metadata ? sanitizeMetadata(metadata) : null,
+        metadata: metadata ? sanitizeMetadata(metadata) : undefined,
         ip: ip || null,
         userAgent: userAgent || null,
       },
@@ -47,14 +48,17 @@ export const auditRepo = {
 };
 
 // Mask PII/nhạy cảm trong metadata
-function sanitizeMetadata(meta: Record<string, any>) {
-  const clone = { ...meta };
-  for (const key of Object.keys(clone)) {
-    if (/password|token|secret/i.test(key)) {
-      clone[key] = "[REDACTED]";
+function sanitizeMetadata(meta: Prisma.InputJsonValue): Prisma.InputJsonValue {
+  if (meta && typeof meta === "object" && !Array.isArray(meta)) {
+    const clone: Record<string, unknown> = { ...(meta as Record<string, unknown>) };
+    for (const key of Object.keys(clone)) {
+      if (/password|token|secret/i.test(key)) {
+        clone[key] = "[REDACTED]";
+      }
     }
+    return clone as Prisma.InputJsonValue;
   }
-  return clone;
+  return meta;
 }
 
 

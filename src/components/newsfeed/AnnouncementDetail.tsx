@@ -200,7 +200,7 @@ export default function AnnouncementDetail({
                                     />
                                     <div className="flex items-center gap-2">
                                         <Button
-                                            size="sm"
+                                            size="default"
                                             onClick={() => handleAddComment(comment.id)}
                                             disabled={
                                                 !replyDraft[comment.id]?.trim() ||
@@ -212,7 +212,7 @@ export default function AnnouncementDetail({
                                         </Button>
                                         <Button
                                             variant="ghost"
-                                            size="sm"
+                                            size="default"
                                             onClick={() => {
                                                 setReplyingTo(null);
                                                 setReplyDraft((prev) => {
@@ -242,7 +242,7 @@ export default function AnnouncementDetail({
                             {hasMoreReplies && !shouldShowAllReplies && (
                                 <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="default"
                                     onClick={() =>
                                         setExpandedReplies((prev) => ({
                                             ...prev,

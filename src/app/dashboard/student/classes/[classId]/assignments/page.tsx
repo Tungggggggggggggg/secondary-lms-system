@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+
 import { useStudentAssignments, StudentAssignment } from "@/hooks/use-student-assignments";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import Badge from "@/components/ui/badge";
 
 /**
  * Component hiển thị assignment card cho student
@@ -17,15 +17,15 @@ function AssignmentCard({
   assignment: StudentAssignment;
   onSubmit: () => void;
 }) {
-  const router = useRouter();
-  const now = new Date();
-  const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
-  const isOverdue = dueDate && dueDate < now && !assignment.submission;
-  const isUpcoming = dueDate && dueDate > now;
+  const now = useMemo(() => new Date(), []);
+
+  const dueDate = useMemo(() => (assignment.dueDate ? new Date(assignment.dueDate) : null), [assignment.dueDate]);
+  const isUpcoming = useMemo(() => !!(dueDate && dueDate > now), [dueDate, now]);
+  const isOverdue = !!(dueDate && dueDate < now && !assignment.submission);
 
   // Tính toán countdown
   const [timeRemaining, setTimeRemaining] = useState<string>("");
-  
+
   useEffect(() => {
     if (!dueDate || !isUpcoming) {
       setTimeRemaining("");
@@ -78,7 +78,7 @@ function AssignmentCard({
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer"
-      onClick={() => router.push(`/dashboard/student/assignments/${assignment.id}`)}
+      onClick={() => onSubmit()}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -165,7 +165,7 @@ function AssignmentCard({
             <Button
               onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/dashboard/student/assignments/${assignment.id}`);
+                // router.push(`/dashboard/student/assignments/${assignment.id}`);
               }}
               variant="outline"
             >
@@ -194,7 +194,6 @@ function AssignmentCard({
 export default function StudentClassroomAssignmentsPage() {
   const params = useParams();
   const classId = params.classId as string;
-  const router = useRouter();
 
   const {
     assignments,
@@ -218,12 +217,12 @@ export default function StudentClassroomAssignmentsPage() {
 
   // Filter và sort assignments
   const filteredAssignments = useMemo(() => {
-    let filtered = [...assignments];
+    const filtered = [...assignments];
 
-    // Sort: Mới thêm nhất trước
+    // Sort: Mới cập nhật/ tạo gần nhất trước
     filtered.sort((a, b) => {
-      const dateA = new Date(a.addedAt || a.createdAt || 0).getTime();
-      const dateB = new Date(b.addedAt || b.createdAt || 0).getTime();
+      const dateA = new Date(a.updatedAt || a.createdAt).getTime();
+      const dateB = new Date(b.updatedAt || b.createdAt).getTime();
       return dateB - dateA;
     });
 

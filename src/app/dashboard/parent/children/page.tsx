@@ -294,18 +294,18 @@ export default function ParentChildrenPage() {
                         </div>
                         <div>
                           {student.isLinked ? (
-                            <Button size="sm" variant="outline" disabled>
+                            <Button size="default" variant="outline" disabled>
                               <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
                               Đã liên kết
                             </Button>
                           ) : student.hasExistingRequest ? (
-                            <Button size="sm" variant="outline" disabled>
+                            <Button size="default" variant="outline" disabled>
                               <Clock className="h-4 w-4 mr-1 text-orange-600" />
                               Đang chờ
                             </Button>
                           ) : (
                             <Button
-                              size="sm"
+                              size="default"
                               onClick={() => handleSendRequest(student.id)}
                             >
                               Gửi yêu cầu
@@ -344,7 +344,7 @@ export default function ParentChildrenPage() {
                   </div>
                 </div>
                 <Button
-                  size="sm"
+                  size="default"
                   variant="outline"
                   onClick={() => handleCancelRequest(request.id)}
                 >

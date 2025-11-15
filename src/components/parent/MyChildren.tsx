@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,6 @@ interface ParentStudentRelationship {
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function MyChildren() {
-  const { data: session } = useSession();
   const { data, error, isLoading } = useSWR<{
     success?: boolean;
     items?: ParentStudentRelationship[];
@@ -87,7 +85,7 @@ export default function MyChildren() {
               Hãy liên hệ với quản trị viên để được liên kết với tài khoản học sinh của con bạn.
             </p>
             <Link href="/dashboard/parent/children">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="default">
                 Xem thêm
               </Button>
             </Link>
@@ -119,14 +117,14 @@ export default function MyChildren() {
             })}
             {children.length > 3 && (
               <Link href="/dashboard/parent/children">
-                <Button variant="outline" className="w-full" size="sm">
+                <Button variant="outline" className="w-full" size="default">
                   Xem tất cả ({total})
                 </Button>
               </Link>
             )}
             {children.length <= 3 && (
               <Link href="/dashboard/parent/children">
-                <Button variant="outline" className="w-full" size="sm">
+                <Button variant="outline" className="w-full" size="default">
                   Xem chi tiết
                 </Button>
               </Link>

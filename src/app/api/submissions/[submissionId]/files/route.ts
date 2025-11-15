@@ -33,9 +33,13 @@ export async function GET(req: NextRequest, { params }: { params: { submissionId
         }
 
         // Create short-lived signed URLs
+        if (!supabaseAdmin) {
+            return NextResponse.json({ success: false, message: "Supabase admin client is not available" }, { status: 500 });
+        }
+        const admin = supabaseAdmin;
         const files = await Promise.all(
             submission.files.map(async (f) => {
-                const { data, error } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(f.storagePath, 60 * 10); // 10 minutes
+                const { data, error } = await admin.storage.from(BUCKET).createSignedUrl(f.storagePath, 60 * 10); // 10 minutes
                 if (error) {
                     return { id: f.id, fileName: f.fileName, sizeBytes: f.sizeBytes, mimeType: f.mimeType, url: null };
                 }

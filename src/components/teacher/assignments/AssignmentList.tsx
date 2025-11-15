@@ -2,13 +2,32 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAssignments } from "@/hooks/use-assignments";
+import { useAssignments, type AssignmentT } from "@/hooks/use-assignments";
 import { useToast } from "@/hooks/use-toast";
 import ClassroomBadges from "./ClassroomBadges";
 
-export default function AssignmentList() {
+export default function AssignmentList({
+    items,
+    loading: loadingProp,
+    error: errorProp,
+    onRefresh,
+}: {
+    items?: AssignmentT[];
+    loading?: boolean;
+    error?: string | null;
+    onRefresh?: () => void;
+}) {
     const router = useRouter();
-    const { assignments, loading, error, refresh } = useAssignments();
+    const {
+        assignments: hookAssignments,
+        loading: hookLoading,
+        error: hookError,
+        refresh,
+    } = useAssignments();
+    const assignments = items ?? hookAssignments;
+    const loading = loadingProp ?? hookLoading;
+    const error = errorProp ?? hookError;
+    const doRefresh = onRefresh ?? refresh;
     const { toast } = useToast(); // Hook toast
     const [confirmAssignmentId, setConfirmAssignmentId] = useState<string | null>(null);
 
@@ -79,7 +98,7 @@ export default function AssignmentList() {
                 Đã xảy ra lỗi khi lấy danh sách bài tập: {error}
                 <button
                     className="mt-4 px-4 py-2 bg-gray-200 rounded-lg"
-                    onClick={refresh}
+                    onClick={doRefresh}
                 >
                     Thử lại
                 </button>
@@ -237,7 +256,7 @@ export default function AssignmentList() {
                                         }
                                         toast({ title: "Đã xoá bài tập", variant: "success" });
                                         setConfirmAssignmentId(null);
-                                        refresh();
+                                        doRefresh();
                                     } catch (err) {
                                         console.error("[DELETE ASSIGNMENT]", err);
                                         toast({ title: "Có lỗi xảy ra", variant: "destructive" });

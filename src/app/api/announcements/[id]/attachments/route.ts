@@ -104,12 +104,21 @@ export async function POST(
       );
     }
 
-    const originalName = typeof (file as any).name === "string" ? (file as any).name : "file";
+    const originalName = typeof (file as File).name === "string" ? (file as File).name : "file";
     const safeName = slugifyFileName(originalName);
     const key = `announcement/${announcementId}/${crypto.randomUUID()}-${safeName}`;
 
     const arrayBuffer = await file.arrayBuffer();
-    const { data, error } = await supabaseAdmin.storage
+    // Guard: đảm bảo supabaseAdmin có sẵn trong môi trường server
+    if (!supabaseAdmin) {
+      console.error(`[ERROR] [POST] /api/announcements/${announcementId}/attachments - Supabase admin client is not available {requestId:${requestId}}`);
+      return NextResponse.json(
+        { success: false, message: "Supabase admin client is not available", requestId },
+        { status: 500 }
+      );
+    }
+    const client = supabaseAdmin;
+    const { data, error } = await client.storage
       .from(BUCKET)
       .upload(key, Buffer.from(arrayBuffer), {
         contentType,

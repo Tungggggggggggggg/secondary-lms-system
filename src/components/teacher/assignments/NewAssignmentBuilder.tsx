@@ -15,22 +15,19 @@ import {
   ArrowRight, 
   ArrowLeft,
   CheckCircle,
-  Clock,
   Users,
   FileText,
-  Shield,
   Eye,
   AlertCircle,
-  Save,
   Home,
   ChevronRight
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 // Import Types
 import { 
   AssignmentData,
-  AssignmentType,
-  SubmissionFormat
+  AssignmentType
 } from '@/types/assignment-builder';
 
 // Import Content Builders
@@ -47,7 +44,7 @@ type Step = 'type' | 'basic' | 'content' | 'classrooms' | 'preview';
 interface StepInfo {
   key: Step;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
   description: string;
 }
 
@@ -105,7 +102,7 @@ export default function NewAssignmentBuilder() {
         autoSave.clearDraft();
       }
     }
-  }, []);
+  }, [autoSave]);
 
   // Navigation helpers
   const currentStepIndex = steps.findIndex(step => step.key === currentStep);
@@ -148,14 +145,14 @@ export default function NewAssignmentBuilder() {
     }));
   }, []);
 
-  const updateEssayContent = useCallback((essayContent: any) => {
+  const updateEssayContent = useCallback((essayContent: NonNullable<AssignmentData['essayContent']>) => {
     setAssignmentData(prev => ({
       ...prev,
       essayContent
     }));
   }, []);
 
-  const updateQuizContent = useCallback((quizContent: any) => {
+  const updateQuizContent = useCallback((quizContent: NonNullable<AssignmentData['quizContent']>) => {
     setAssignmentData(prev => ({
       ...prev,
       quizContent

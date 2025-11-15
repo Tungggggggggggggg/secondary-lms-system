@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export type AuditEntityType =
   | "USER"
@@ -16,7 +17,7 @@ export async function writeAudit(
     action: string;
     entityType: AuditEntityType;
     entityId: string;
-    metadata?: Record<string, unknown>;
+    metadata?: Prisma.InputJsonValue;
     ip?: string | null;
     userAgent?: string | null;
   }

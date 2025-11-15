@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +12,9 @@ import { Switch } from '@/components/ui/switch';
 import { 
   Plus, 
   Trash2, 
-  Clock, 
   Calendar,
   Shield,
   AlertCircle,
-  CheckCircle,
   Brain,
   Timer,
   Copy,
@@ -24,7 +22,7 @@ import {
 } from 'lucide-react';
 
 // Import Types
-import { QuizQuestion } from '@/types/assignment-builder';
+import { QuizQuestion, QuizOption } from '@/types/assignment-builder';
 import { AntiCheatConfig } from '@/types/exam-system';
 
 // Import Components
@@ -60,24 +58,25 @@ const TIME_PRESETS = [
 export default function QuizContentBuilder({ content, onContentChange }: QuizContentBuilderProps) {
   const [customTime, setCustomTime] = useState(false);
 
-  // Initialize default content
-  const currentContent: QuizContent = content || {
-    questions: [],
-    timeLimitMinutes: 30,
-    openAt: new Date(),
-    lockAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // +1 day
-    maxAttempts: 1,
-    antiCheatConfig: {
-      preset: 'BASIC' as const,
-      shuffleQuestions: false,
-      shuffleOptions: false,
-      singleQuestionMode: false,
-      timePerQuestion: undefined,
-      requireFullscreen: false,
-      detectTabSwitch: false,
-      disableCopyPaste: false
+  const currentContent: QuizContent = useMemo(() => (
+    content ?? {
+      questions: [],
+      timeLimitMinutes: 30,
+      openAt: new Date(),
+      lockAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // +1 day
+      maxAttempts: 1,
+      antiCheatConfig: {
+        preset: 'BASIC' as const,
+        shuffleQuestions: false,
+        shuffleOptions: false,
+        singleQuestionMode: false,
+        timePerQuestion: undefined,
+        requireFullscreen: false,
+        detectTabSwitch: false,
+        disableCopyPaste: false
+      }
     }
-  };
+  ), [content]);
 
   // Update handlers
   const updateTimeLimit = useCallback((minutes: number) => {
@@ -101,7 +100,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
     });
   }, [currentContent, onContentChange]);
 
-  const updateAntiCheat = useCallback((field: keyof AntiCheatConfig, value: any) => {
+  const updateAntiCheat: <K extends keyof AntiCheatConfig>(field: K, value: AntiCheatConfig[K]) => void = useCallback((field, value) => {
     const updatedConfig: AntiCheatConfig = {
       preset: currentContent.antiCheatConfig?.preset || 'BASIC',
       shuffleQuestions: currentContent.antiCheatConfig?.shuffleQuestions || false,
@@ -162,7 +161,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
     });
   }, [currentContent, onContentChange]);
 
-  const updateQuestion = useCallback((index: number, field: string, value: any) => {
+  const updateQuestion: <K extends keyof QuizQuestion>(index: number, field: K, value: QuizQuestion[K]) => void = useCallback((index, field, value) => {
     const updatedQuestions = currentContent.questions.map((q, i) => 
       i === index ? { ...q, [field]: value } : q
     );
@@ -173,7 +172,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
     });
   }, [currentContent, onContentChange]);
 
-  const updateOption = useCallback((questionIndex: number, optionIndex: number, field: string, value: any) => {
+  const updateOption: <K extends keyof QuizOption>(questionIndex: number, optionIndex: number, field: K, value: QuizOption[K]) => void = useCallback((questionIndex, optionIndex, field, value) => {
     const updatedQuestions = currentContent.questions.map((q, i) => {
       if (i === questionIndex) {
         const updatedOptions = q.options.map((opt, j) => 
@@ -480,7 +479,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
           {currentContent.questions.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Brain className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>Chưa có câu hỏi nào. Nhấn "Thêm câu hỏi" để bắt đầu.</p>
+              <p>Chưa có câu hỏi nào. Nhấn &quot;Thêm câu hỏi&quot; để bắt đầu.</p>
             </div>
           ) : (
             <div className="space-y-6">

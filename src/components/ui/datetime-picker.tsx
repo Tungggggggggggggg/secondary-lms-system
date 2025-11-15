@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useId } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, AlertCircle, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,9 @@ export function DateTimePicker({
 
   // Validation - không cho chọn thời gian quá khứ
   const now = new Date();
-  const isInPast = selectedDate && selectedDate < now;
+  const isInPast = !!(selectedDate && selectedDate < now);
+  const isBeforeMin = !!(minDate && selectedDate && selectedDate < minDate);
+  const isAfterMax = !!(maxDate && selectedDate && selectedDate > maxDate);
 
   useEffect(() => {
     if (value) {
@@ -74,11 +76,9 @@ export function DateTimePicker({
   };
 
   const handleConfirm = () => {
-    // Kiểm tra nếu thời gian là quá khứ
-    if (tempDate < now) {
+    if (getTempValidationMessage()) {
       return; // Không cho phép
     }
-    
     setSelectedDate(tempDate);
     onChange(tempDate);
     setIsOpen(false);
@@ -87,10 +87,12 @@ export function DateTimePicker({
   const getValidationMessage = () => {
     if (error) return error;
     if (isInPast) return "Không thể chọn thời gian trong quá khứ";
+    if (isBeforeMin) return `Không thể trước ${minDate?.toLocaleString('vi-VN')}`;
+    if (isAfterMax) return `Không thể sau ${maxDate?.toLocaleString('vi-VN')}`;
     return null;
   };
 
-  const hasError = !!(error || isInPast);
+  const hasError = !!(error || isInPast || isBeforeMin || isAfterMax);
 
   // Generate options
   const currentYear = new Date().getFullYear();
@@ -102,8 +104,13 @@ export function DateTimePicker({
   ];
   const daysInMonth = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-  const minutes = Array.from({ length: 60 }, (_, i) => i);
+
+  const getTempValidationMessage = () => {
+    if (tempDate < now) return "Không thể chọn thời gian trong quá khứ";
+    if (minDate && tempDate < minDate) return `Không thể trước ${minDate.toLocaleString('vi-VN')}`;
+    if (maxDate && tempDate > maxDate) return `Không thể sau ${maxDate.toLocaleString('vi-VN')}`;
+    return null;
+  };
 
   return (
     <div className={cn("space-y-2 relative", className)}>
@@ -132,7 +139,7 @@ export function DateTimePicker({
       >
         <span className={cn(
           "flex-1",
-          { "text-gray-500": !selectedDate, "text-gray-800 font-semibold": selectedDate }
+          { "text-gray-500": !selectedDate, "text-gray-800 font-semibold": !!selectedDate }
         )}>
           {formatDisplayValue()}
         </span>
@@ -261,10 +268,10 @@ export function DateTimePicker({
 
 
             {/* Validation Warning */}
-            {tempDate < now && (
+            {getTempValidationMessage() && (
               <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 animate-pulse">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span className="text-sm font-medium">⚠️ Không thể chọn thời gian trong quá khứ</span>
+                <span className="text-sm font-medium">⚠️ {getTempValidationMessage()}</span>
               </div>
             )}
 
@@ -279,11 +286,11 @@ export function DateTimePicker({
               </Button>
               <Button
                 onClick={handleConfirm}
-                disabled={tempDate < now}
+                disabled={!!getTempValidationMessage()}
                 className={cn(
                   "flex-1",
-                  tempDate < now 
-                    ? "bg-gray-400 cursor-not-allowed" 
+                  getTempValidationMessage()
+                    ? "bg-gray-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
                 )}
               >

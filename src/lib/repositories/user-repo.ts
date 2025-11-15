@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma, UserRole } from "@prisma/client";
 
 export type Paginated<T> = {
   items: T[];
@@ -10,7 +11,7 @@ export type Paginated<T> = {
 export const userRepo = {
   async listByOrganization(params: { organizationId: string; limit?: number; cursor?: string | null; search?: string | null; includeRole?: boolean }) {
     const { organizationId, limit = 20, cursor, search } = params;
-    const where: any = {
+    const where: Prisma.UserWhereInput = {
       organizationMemberships: { some: { organizationId } },
     };
     if (search) {
@@ -60,10 +61,10 @@ export const userRepo = {
 
   async updateUser(params: { id: string; fullname?: string; email?: string; globalRole?: "SUPER_ADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"; disable?: boolean }) {
     const { id, fullname, email, globalRole } = params;
-    const data: any = {};
+    const data: Prisma.UserUpdateInput = {};
     if (fullname !== undefined) data.fullname = fullname;
     if (email !== undefined) data.email = email;
-    if (globalRole !== undefined) data.role = globalRole;
+    if (globalRole !== undefined) data.role = globalRole as UserRole;
     return prisma.user.update({ where: { id }, data, select: { id: true, email: true, fullname: true, role: true } });
   },
 

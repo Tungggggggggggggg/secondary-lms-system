@@ -92,7 +92,7 @@ export default function ParentChildDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link href="/dashboard/parent/children">
-            <Button variant="ghost" size="sm" className="mb-4">
+            <Button variant="ghost" size="default" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Quay lại
             </Button>

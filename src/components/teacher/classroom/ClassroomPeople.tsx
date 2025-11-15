@@ -41,6 +41,10 @@ export default function ClassroomPeople() {
         return () => clearTimeout(t);
     }, [searchInput]);
 
+    const handleSearch = () => {
+        setSearchQuery(searchInput.trim());
+    };
+
     return (
         <div ref={rootRef} className="space-y-6">
             {/* Statistics */}

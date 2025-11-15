@@ -64,8 +64,17 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
           openAt: true,
           lockAt: true,
           timeLimitMinutes: true,
+          subject: true,
+          submission_format: true,
+          max_attempts: true,
+          anti_cheat_config: true,
           createdAt: true,
           updatedAt: true,
+          classrooms: {
+            select: {
+              classroomId: true
+            }
+          },
           questions: {
             select: {
               id: true,
@@ -193,13 +202,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       console.error('[ASSIGNMENT PUT] Body parse error:', error);
       return NextResponse.json({ success: false, message: 'Invalid JSON body' }, { status: 400 });
     }
-    const { title, description, dueDate, type, questions, openAt, lockAt, timeLimitMinutes } = body || {};
+    const { title, description, dueDate, type, questions, openAt, lockAt, timeLimitMinutes, subject, maxAttempts, antiCheatConfig, submissionFormat, classrooms } = body || {};
     if (!title || !type) {
       return NextResponse.json({ success: false, message: 'Thiếu trường bắt buộc title/type' }, { status: 400 });
     }
     // type cần về đúng enum
     const normalizedType = (typeof type === 'string' ? type.toUpperCase() : '') as AssignmentType;
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       title,
       description: description ?? null,
       dueDate: dueDate ? new Date(dueDate) : null,
@@ -208,7 +217,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       openAt: openAt ? new Date(openAt) : null,
       lockAt: lockAt ? new Date(lockAt) : null,
       timeLimitMinutes: typeof timeLimitMinutes === 'number' ? timeLimitMinutes : null,
+      subject: typeof subject === 'string' ? subject : null,
     };
+    // Các trường đặc thù theo loại bài tập
+    if (normalizedType === 'ESSAY') {
+      if (typeof submissionFormat === 'string') {
+        updateData.submission_format = submissionFormat;
+      }
+    }
+    if (normalizedType === 'QUIZ') {
+      if (typeof maxAttempts === 'number') {
+        updateData.max_attempts = maxAttempts;
+      }
+      if (antiCheatConfig !== undefined) {
+        updateData.anti_cheat_config = antiCheatConfig;
+      }
+    }
     // Nếu truyền questions: cập nhật lại toàn bộ câu hỏi và đáp án (xoá hết cũ, insert mới)
     let updatedAssignment;
     try {
@@ -216,7 +240,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         // Cập nhật assignment metadata
         await tx.assignment.update({
           where: { id: params.id },
-          data: updateData,
+          data: updateData as Prisma.AssignmentUpdateInput,
         });
         if (questions && Array.isArray(questions)) {
           // Xoá hết câu hỏi cũ
@@ -225,20 +249,20 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           for (const [qIndex, q] of questions.entries()) {
             const { content, type: questionType, order, options } = q;
             // Cho phép ESSAY|SINGLE|MULTIPLE
-            const qTypeUpper = (typeof questionType === 'string' ? questionType.toUpperCase() : '') as string;
-            if (!Object.values(QuestionType).includes(qTypeUpper as any)) {
+            const qTypeUpperStr = (typeof questionType === 'string' ? questionType.toUpperCase() : '');
+            if (!Object.values(QuestionType).includes(qTypeUpperStr as QuestionType)) {
               throw new Error(`Invalid question type at index ${qIndex}`);
             }
             const newQuestion = await tx.question.create({
               data: {
                 assignmentId: params.id,
                 content,
-                type: qTypeUpper as any,
+                type: qTypeUpperStr as QuestionType,
                 order: order ?? qIndex + 1,
               }
             });
             // Nếu có options (trắc nghiệm): thêm đáp án
-            if (qTypeUpper !== 'ESSAY' && options && Array.isArray(options) && options.length > 0) {
+            if (qTypeUpperStr !== 'ESSAY' && options && Array.isArray(options) && options.length > 0) {
               for (const [oIdx, opt] of options.entries()) {
                 await tx.option.create({
                   data: {
@@ -253,10 +277,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             }
           }
         }
+        // Nếu có classrooms: cập nhật lại bảng AssignmentClassroom
+        if (Array.isArray(classrooms)) {
+          await tx.assignmentClassroom.deleteMany({ where: { assignmentId: params.id } });
+          if (classrooms.length > 0) {
+            await tx.assignmentClassroom.createMany({
+              data: classrooms.map((classroomId: string) => ({
+                assignmentId: params.id,
+                classroomId,
+              }))
+            });
+          }
+        }
         // Trả lại chi tiết assignment mới sau cập nhật
         return tx.assignment.findFirst({
           where: { id: params.id },
-          include: { questions: { include: { options: true } }, _count: { select: { submissions: true } } },
+          include: { questions: { include: { options: true } }, _count: { select: { submissions: true } }, classrooms: true },
         });
       });
     } catch (err) {

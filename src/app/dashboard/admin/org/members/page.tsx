@@ -172,7 +172,7 @@ export default function OrgMembersPage() {
       key: "roleInOrg",
       label: "Vai trò trong tổ chức",
       sortable: true,
-      render: (value) => value || "-",
+      render: (value) => <span>{String(value ?? "-")}</span>,
     },
   ];
 

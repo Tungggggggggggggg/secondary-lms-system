@@ -25,7 +25,11 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
         }
 
-        const { data, error } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(path, 60 * 10);
+        if (!supabaseAdmin) {
+            return NextResponse.json({ success: false, message: "Supabase admin client is not available" }, { status: 500 });
+        }
+        const admin = supabaseAdmin;
+        const { data, error } = await admin.storage.from(BUCKET).createSignedUrl(path, 60 * 10);
         if (error || !data?.signedUrl) {
             return NextResponse.json({ success: false, message: "Failed to create signed url" }, { status: 500 });
         }

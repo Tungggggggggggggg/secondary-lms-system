@@ -58,13 +58,7 @@ export const POST = withApiLogging(async (req: NextRequest) => {
 
     const invitation = await parentStudentInvitationRepo.create({
       studentId: authUser.id,
-      parentEmail,
-      parentPhone,
       expiresInDays: expiresInDays || 7,
-      metadata: {
-        createdByIp: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip"),
-        userAgent: req.headers.get("user-agent"),
-      },
     });
 
     return NextResponse.json({

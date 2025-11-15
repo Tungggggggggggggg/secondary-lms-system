@@ -1,5 +1,3 @@
-import { UserRole } from "@prisma/client";
-
 // Các helper RBAC cơ bản cho vai trò hệ thống
 
 export function isSuperAdmin(role?: string | null): boolean {
@@ -24,6 +22,8 @@ export function assertRole<T extends string>(role: string | undefined | null, ..
 // Khi triển khai Organization, hàm này sẽ kiểm tra user có thuộc orgId hay không.
 export async function assertOrgScope(userId: string, orgId: string): Promise<void> {
   // TODO: triển khai ở bước API-org khi đã có repositories cho Organization
+  void userId;
+  void orgId;
   return;
 }
 

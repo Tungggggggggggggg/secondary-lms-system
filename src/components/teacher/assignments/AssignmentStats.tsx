@@ -3,7 +3,18 @@ import { useEffect, useState } from "react";
 
 export default function AssignmentStats() {
   const { assignments, loading, error, refresh } = useAssignments();
-  const [stats, setStats] = useState<any>(null);
+  interface Stats {
+    totalAssignments?: number;
+    assignmentsInClassrooms?: number;
+    needGrading?: number;
+    totalSubmissions?: number;
+    submitRate?: number;
+    totalStudents?: number;
+    averageGrade?: number | null;
+    gradedSubmissions?: number;
+    [key: string]: unknown;
+  }
+  const [stats, setStats] = useState<Stats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
 

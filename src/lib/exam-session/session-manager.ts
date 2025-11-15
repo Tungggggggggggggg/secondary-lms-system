@@ -6,7 +6,6 @@
 import { 
   ExamSession, 
   ExamSessionStatus, 
-  AutoSaveData,
   ExamEventLog,
   ExamEventType,
   AntiCheatConfig,
@@ -70,8 +69,8 @@ export function generateQuestionOrder(
 } {
   const seed = generateStudentSeed(studentId, assignment.title) // Tạm dùng title làm ID
   
-  // Lấy danh sách câu hỏi
-  const questions = assignment.quizQuestions || []
+  // Lấy danh sách câu hỏi từ quizContent
+  const questions = assignment.quizContent?.questions || []
   let questionOrder = questions.map(q => q.id)
   
   // Xáo thứ tự câu hỏi nếu được bật
@@ -145,15 +144,32 @@ export async function createExamSession(
     antiCheatConfig
   )
   
-  // Tính toán thời gian - tạm thời dùng từ timeSettings
-  const timerType = 'PERSONAL' // TODO: Lấy từ assignment khi có field này
-  const durationMinutes = assignment.timeSettings.timeLimitMinutes ? 
-    parseInt(assignment.timeSettings.timeLimitMinutes) : undefined
+  // Tính toán thời gian từ quizContent/essayContent
+  let timerType: 'PERSONAL' | 'FIXED_DEADLINE' | 'UNLIMITED' = 'UNLIMITED'
+  let durationMinutes: number | undefined = undefined
+  let dueDateStr: string | undefined = undefined
+
+  if (assignment.type === 'QUIZ' && assignment.quizContent) {
+    if (typeof assignment.quizContent.timeLimitMinutes === 'number') {
+      timerType = 'PERSONAL'
+      durationMinutes = assignment.quizContent.timeLimitMinutes
+    }
+    // Nếu có lockAt thì coi như hạn
+    if (assignment.quizContent.lockAt instanceof Date) {
+      dueDateStr = assignment.quizContent.lockAt.toISOString()
+    }
+  } else if (assignment.type === 'ESSAY' && assignment.essayContent) {
+    if (assignment.essayContent.dueDate instanceof Date) {
+      timerType = 'FIXED_DEADLINE'
+      dueDateStr = assignment.essayContent.dueDate.toISOString()
+    }
+  }
+
   const expectedEndTime = calculateExpectedEndTime(
     now,
-    timerType as any,
+    timerType,
     durationMinutes,
-    assignment.timeSettings.dueDate
+    dueDateStr
   )
   
   // Tính thời gian còn lại
@@ -417,7 +433,7 @@ export async function updateTimeRemaining(
 export async function logExamEvent(
   sessionId: string,
   eventType: ExamEventType,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   severity: 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL' = 'INFO',
   notes?: string
 ): Promise<void> {

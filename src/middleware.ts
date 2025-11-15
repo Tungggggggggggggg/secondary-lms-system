@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const roleToDashboard: Record<string, string> = {
@@ -9,12 +9,12 @@ const roleToDashboard: Record<string, string> = {
     PARENT: "/dashboard/parent/dashboard",
 };
 
-export async function middleware(req: Request) {
+export async function middleware(req: NextRequest) {
     const url = new URL(req.url);
     const pathname = url.pathname;
 
     // Lấy token nếu có để biết vai trò người dùng
-    const token = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET });
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     const role = (token?.role as string | undefined) ?? undefined;
     
     // Logging để debug

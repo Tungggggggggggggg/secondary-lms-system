@@ -6,14 +6,12 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import AnimatedSection from "@/components/admin/AnimatedSection";
 import StatsCard from "@/components/admin/stats/StatsCard";
 import LineChart from "@/components/admin/charts/LineChart";
-import BarChart from "@/components/admin/charts/BarChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdminReports } from "@/hooks/admin/use-admin-reports";
-import { Users, MessageSquare, AlertCircle, FileText } from "lucide-react";
+import { Users, MessageSquare, AlertCircle } from "lucide-react";
 import { formatDate } from "@/lib/admin/format-date";
-import { formatNumber } from "@/lib/admin/format-number";
 import { exportToCSV, generateFilename } from "@/lib/admin/export-csv";
 import { Download } from "lucide-react";
 
@@ -23,7 +21,7 @@ import { Download } from "lucide-react";
  */
 export default function ReportsPage() {
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = (session?.user as { role?: string })?.role;
   const [orgId, setOrgId] = useState("");
 
   // Fetch reports data
@@ -50,10 +48,10 @@ export default function ReportsPage() {
 
     const data = [
       {
-        "Tổng người dùng": overview.users,
-        "Thông báo": overview.announcements,
-        "Bình luận": overview.comments,
-        "Chờ duyệt": overview.pending,
+        users: overview.users,
+        announcements: overview.announcements,
+        comments: overview.comments,
+        pending: overview.pending,
       },
     ];
 

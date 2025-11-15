@@ -64,10 +64,6 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       parentId: authUser.id,
       studentId,
       message,
-      metadata: {
-        createdByIp: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip"),
-        userAgent: req.headers.get("user-agent"),
-      },
     });
 
     return NextResponse.json({

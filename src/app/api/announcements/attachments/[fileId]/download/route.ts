@@ -46,7 +46,11 @@ export async function GET(
     }
 
     const bucket = process.env.SUPABASE_LESSONS_BUCKET || "lessons";
-    const { data, error } = await supabaseAdmin.storage
+    if (!supabaseAdmin) {
+      return NextResponse.json({ success: false, message: "Supabase admin client is not available", requestId }, { status: 500 });
+    }
+    const admin = supabaseAdmin;
+    const { data, error } = await admin.storage
       .from(bucket)
       .createSignedUrl(file.path, 60 * 5); // 5 phút
 
