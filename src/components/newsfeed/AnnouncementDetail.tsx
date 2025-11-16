@@ -24,34 +24,22 @@ export default function AnnouncementDetail({
     classroomId,
     role,
 }: AnnouncementDetailProps) {
-    const teacherHook = role === "teacher" ? useTeacherAnnouncements() : null;
-    const studentHook = role === "student" ? useStudentAnnouncements() : null;
+    // Gọi hooks cố định để tuân thủ rules-of-hooks, sau đó chọn hook theo role
+    const teacherHook = useTeacherAnnouncements();
+    const studentHook = useStudentAnnouncements();
 
-    // Lấy data từ hook
-    const announcements = role === "teacher"
-        ? teacherHook?.announcements || []
-        : studentHook?.announcements || [];
-    const comments = role === "teacher"
-        ? teacherHook?.comments || {}
-        : studentHook?.comments || {};
-    const commentsTotal = role === "teacher"
-        ? teacherHook?.commentsTotal || {}
-        : studentHook?.commentsTotal || {};
-    const commentsLoading = role === "teacher"
-        ? teacherHook?.commentsLoading || {}
-        : studentHook?.commentsLoading || {};
-    const commentsPagination = role === "teacher"
-        ? teacherHook?.commentsPagination || {}
-        : studentHook?.commentsPagination || {};
-    const fetchAnnouncements = role === "teacher"
-        ? teacherHook?.fetchAnnouncements
-        : studentHook?.fetchAnnouncements;
-    const fetchComments = role === "teacher"
-        ? teacherHook?.fetchComments
-        : studentHook?.fetchComments;
-    const addComment = role === "teacher"
-        ? teacherHook?.addComment
-        : studentHook?.addComment;
+    const isTeacher = role === "teacher";
+    const activeHook = isTeacher ? teacherHook : studentHook;
+
+    // Lấy data từ hook đang active theo role
+    const announcements = activeHook.announcements || [];
+    const comments = activeHook.comments || {};
+    const commentsTotal = activeHook.commentsTotal || {};
+    const commentsLoading = activeHook.commentsLoading || {};
+    const commentsPagination = activeHook.commentsPagination || {};
+    const fetchAnnouncements = activeHook.fetchAnnouncements;
+    const fetchComments = activeHook.fetchComments;
+    const addComment = activeHook.addComment;
 
     // Tìm announcement trong danh sách
     const announcement = announcements.find((a) => a.id === announcementId);
@@ -93,7 +81,7 @@ export default function AnnouncementDetail({
         const content = parentId
             ? (replyDraft[parentId] || "").trim()
             : commentDraft.trim();
-        if (!addComment || !content) return;
+        if (!content) return;
 
         try {
             setIsSubmitting(true);
@@ -182,9 +170,8 @@ export default function AnnouncementDetail({
                     <div className="text-base text-gray-800 dark:text-gray-200 whitespace-pre-line mb-3 leading-relaxed">
                         {comment.content}
                     </div>
-                    {addComment && (
-                        <div className="mb-3">
-                            {replyingTo === comment.id ? (
+                    <div className="mb-3">
+                        {replyingTo === comment.id ? (
                                 <div className="mt-3 space-y-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                                     <Textarea
                                         value={replyDraft[comment.id] || ""}
@@ -235,7 +222,6 @@ export default function AnnouncementDetail({
                                 </button>
                             )}
                         </div>
-                    )}
                     {displayReplies.length > 0 && (
                         <div className="mt-4 space-y-4">
                             {displayReplies.map((reply) => renderComment(reply, true))}
@@ -366,8 +352,7 @@ export default function AnnouncementDetail({
                 )}
 
                 {/* Add Comment Form */}
-                {addComment && (
-                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
                         <div className="flex items-start gap-4">
                             <Avatar
                                 fullname={announcement.author?.fullname}
@@ -402,7 +387,6 @@ export default function AnnouncementDetail({
                             </div>
                         </div>
                     </div>
-                )}
             </div>
         </div>
     );

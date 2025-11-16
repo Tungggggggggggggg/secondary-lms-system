@@ -24,7 +24,7 @@ export async function POST(
 
     const assignmentId = params.id;
     const body = await req.json();
-    const { content, answers, newAttempt } = body as {
+    const { content, answers } = body as {
       content?: string;
       answers?: Array<{ questionId: string; optionIds: string[] }>;
       newAttempt?: boolean;
@@ -256,13 +256,14 @@ export async function POST(
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [POST] /api/students/assignments/[id]/submit - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }
@@ -403,13 +404,14 @@ export async function PUT(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [PUT] /api/students/assignments/[id]/submit - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

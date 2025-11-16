@@ -58,7 +58,9 @@ export async function GET(
       select: { assignmentId: true },
     });
 
-    const assignmentIdList = assignmentIds.map((ac) => ac.assignmentId);
+    const assignmentIdList = Array.from(
+      new Set(assignmentIds.map((ac) => ac.assignmentId))
+    );
 
     if (assignmentIdList.length === 0) {
       return NextResponse.json(
@@ -93,8 +95,8 @@ export async function GET(
       orderBy: { submittedAt: "desc" },
     });
 
-    // Transform data - Bao gồm cả chưa chấm
-    const grades = submissions.map((sub) => ({
+    // Transform data cho các bài đã nộp (bao gồm cả chưa chấm)
+    const submissionGrades = submissions.map((sub) => ({
       id: sub.id,
       assignmentId: sub.assignment.id,
       assignmentTitle: sub.assignment.title,
@@ -105,6 +107,51 @@ export async function GET(
       submittedAt: sub.submittedAt.toISOString(),
       status: sub.grade !== null ? "graded" : sub.submittedAt ? "submitted" : "pending",
     }));
+
+    // Tìm các assignments chưa có submission nào từ student
+    const submittedAssignmentIds = new Set(
+      submissions.map((sub) => sub.assignmentId)
+    );
+
+    const missingAssignments = await prisma.assignment.findMany({
+      where: {
+        id: {
+          in: assignmentIdList.filter(
+            (id) => !submittedAssignmentIds.has(id)
+          ),
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        dueDate: true,
+      },
+    });
+
+    const now = new Date();
+
+    // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
+    const missingGrades = missingAssignments.map((assignment) => {
+      const isPastDue =
+        assignment.dueDate !== null && assignment.dueDate < now;
+
+      return {
+        id: `virtual-${assignment.id}`,
+        assignmentId: assignment.id,
+        assignmentTitle: assignment.title,
+        assignmentType: assignment.type,
+        dueDate: assignment.dueDate
+          ? assignment.dueDate.toISOString()
+          : null,
+        grade: 0,
+        feedback: null,
+        submittedAt: null as string | null,
+        status: isPastDue ? "graded" : "pending",
+      };
+    });
+
+    const grades = [...submissionGrades, ...missingGrades];
 
     // Tính điểm trung bình (chỉ tính các bài đã chấm)
     const gradedSubmissions = submissions.filter((sub) => sub.grade !== null);
@@ -131,13 +178,14 @@ export async function GET(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/students/classrooms/[id]/grades - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

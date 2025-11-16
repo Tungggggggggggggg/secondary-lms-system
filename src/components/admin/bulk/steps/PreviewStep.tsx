@@ -196,30 +196,37 @@ export default function PreviewStep({
           <div className="space-y-2">
             <p className="font-medium">Danh sách học sinh (hiển thị 5 đầu tiên):</p>
             <div className="max-h-60 overflow-y-auto space-y-2">
-              {data.students.slice(0, 5).map((student, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
-                >
-                  <div>
-                    <p className="font-medium">{student.fullname}</p>
-                    <p className="text-sm text-gray-500">{student.email}</p>
-                    {student.metadata?.parentEmail && (
-                      <p className="text-xs text-gray-400">
-                        <Mail className="h-3 w-3 inline mr-1" />
-                        PH: {student.metadata.parentEmail}
-                      </p>
-                    )}
+              {data.students.slice(0, 5).map((student, index) => {
+                const parentEmail = student.metadata?.parentEmail;
+                const studentId = student.metadata?.studentId;
+                const parentEmailStr = typeof parentEmail === 'string' ? parentEmail : null;
+                const studentIdStr = typeof studentId === 'string' ? studentId : null;
+                
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
+                  >
+                    <div>
+                      <p className="font-medium">{student.fullname}</p>
+                      <p className="text-sm text-gray-500">{student.email}</p>
+                      {parentEmailStr && (
+                        <p className="text-xs text-gray-400">
+                          <Mail className="h-3 w-3 inline mr-1" />
+                          PH: {parentEmailStr}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      {studentIdStr && (
+                        <Badge variant="outline" className="text-xs">
+                          {studentIdStr}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    {student.metadata?.studentId && (
-                      <Badge variant="outline" className="text-xs">
-                        {student.metadata.studentId}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               
               {data.students.length > 5 && (
                 <div className="text-center p-3 text-gray-500 text-sm">

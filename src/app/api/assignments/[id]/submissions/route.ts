@@ -200,13 +200,14 @@ export async function GET(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/assignments/[id]/submissions - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

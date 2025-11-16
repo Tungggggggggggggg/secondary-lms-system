@@ -95,16 +95,17 @@ export async function GET(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/students/questions/[id]/comments - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
-    }
+  }
 }
 
 /**
@@ -202,13 +203,14 @@ export async function POST(
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [POST] /api/students/questions/[id]/comments - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

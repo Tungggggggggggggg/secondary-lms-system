@@ -155,13 +155,14 @@ export async function POST(
 			},
 			{ status: 201 }
 		);
-	} catch (error) {
+	} catch (error: unknown) {
 		console.error(
 			`[ERROR] [POST] /api/assignments/${params.id}/upload - Error {requestId:${requestId}}`,
 			error
 		);
+		const errorMessage = error instanceof Error ? error.message : "Internal server error";
 		return NextResponse.json(
-			{ success: false, message: "Internal server error", requestId },
+			{ success: false, message: errorMessage, requestId },
 			{ status: 500 }
 		);
 	}

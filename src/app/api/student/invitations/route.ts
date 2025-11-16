@@ -33,9 +33,10 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       items: result.items,
       total: result.total,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GET /api/student/invitations] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "STUDENT_INVITATIONS_LIST");
 
@@ -54,7 +55,7 @@ export const POST = withApiLogging(async (req: NextRequest) => {
     }
 
     const body = await req.json();
-    const { parentEmail, parentPhone, expiresInDays } = body;
+    const { expiresInDays } = body;
 
     const invitation = await parentStudentInvitationRepo.create({
       studentId: authUser.id,
@@ -66,8 +67,9 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       data: invitation,
       message: "Invitation created successfully",
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[POST /api/student/invitations] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "STUDENT_INVITATION_CREATE");

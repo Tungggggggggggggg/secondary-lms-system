@@ -10,7 +10,7 @@ export interface GradeEntry {
   assignmentType: string;
   grade: number | null;
   feedback: string | null;
-  submittedAt: string;
+  submittedAt: string | null;
   dueDate?: string | null;
   status: "pending" | "submitted" | "graded";
   classroom?: {

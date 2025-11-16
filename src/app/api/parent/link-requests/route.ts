@@ -33,9 +33,10 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       items: result.items,
       total: result.total,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GET /api/parent/link-requests] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "PARENT_LINK_REQUESTS_LIST");
 
@@ -71,8 +72,9 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       data: linkRequest,
       message: "Link request sent successfully. Waiting for student approval.",
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[POST /api/parent/link-requests] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "PARENT_LINK_REQUEST_CREATE");

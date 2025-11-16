@@ -241,14 +241,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const responseTime = Date.now() - startTime;
     console.error(`[CreateAssignment] Error after ${responseTime}ms:`, error);
+    const errorMessage = error instanceof Error ? error.message : 'Lỗi server khi tạo bài tập';
 
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Lỗi server khi tạo bài tập',
+        message: errorMessage,
         error: process.env.NODE_ENV === 'development' ? String(error) : undefined
       },
       { status: 500 }

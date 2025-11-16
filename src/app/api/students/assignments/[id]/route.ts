@@ -41,7 +41,7 @@ export async function GET(
       // Lấy assignment detail
       prisma.assignment.findUnique({
         where: { id: assignmentId },
-        select: ({
+        select: {
           id: true,
           title: true,
           description: true,
@@ -83,7 +83,7 @@ export async function GET(
           _count: {
             select: { submissions: true, questions: true },
           },
-        } as any),
+        },
       }),
       // Lấy submission của student (nếu có)
       prisma.assignmentSubmission.findFirst({
@@ -131,22 +131,21 @@ export async function GET(
     }
 
     // Transform data để trả về (kèm submission)
-    const a: any = assignmentData as any;
     const assignmentDetail = {
       id: assignmentData.id,
       title: assignmentData.title,
       description: assignmentData.description,
       dueDate: assignmentData.dueDate,
       type: assignmentData.type,
-      openAt: a.openAt ?? null,
-      lockAt: a.lockAt ?? assignmentData.dueDate,
-      timeLimitMinutes: a.timeLimitMinutes ?? null,
-      submissionFormat: a.submission_format ?? null,
-      maxAttempts: a.type === "QUIZ" ? (a.max_attempts ?? 1) : null,
-      antiCheatConfig: a.anti_cheat_config ?? null,
+      openAt: assignmentData.openAt ?? null,
+      lockAt: assignmentData.lockAt ?? assignmentData.dueDate,
+      timeLimitMinutes: assignmentData.timeLimitMinutes ?? null,
+      submissionFormat: assignmentData.submission_format ?? null,
+      maxAttempts: assignmentData.type === "QUIZ" ? (assignmentData.max_attempts ?? 1) : null,
+      antiCheatConfig: assignmentData.anti_cheat_config ?? null,
       createdAt: assignmentData.createdAt,
       updatedAt: assignmentData.updatedAt,
-      author: (assignmentData as any).author,
+      author: assignmentData.author,
       classroom: {
         id: classroom.id,
         name: classroom.name,
@@ -154,7 +153,7 @@ export async function GET(
         icon: classroom.icon,
         teacher: classroom.teacher,
       },
-      questions: (assignmentData as any).questions.map((q: any) => ({
+      questions: assignmentData.questions.map((q) => ({
         id: q.id,
         content: q.content,
         type: q.type,
@@ -162,11 +161,11 @@ export async function GET(
         options: q.options, // Options KHÔNG có isCorrect
         _count: q._count,
       })),
-      _count: (assignmentData as any)._count,
-      latestAttempt: (submission as any)?.attempt ?? 0,
+      _count: assignmentData._count,
+      latestAttempt: submission?.attempt ?? 0,
       allowNewAttempt:
-        (a as any).type === "QUIZ"
-          ? (((submission as any)?.attempt ?? 0) < ((a as any).max_attempts ?? 1))
+        assignmentData.type === "QUIZ"
+          ? ((submission?.attempt ?? 0) < (assignmentData.max_attempts ?? 1))
           : false,
       // Include submission trong response (COMBINED)
       submission: submission
@@ -176,7 +175,7 @@ export async function GET(
             grade: submission.grade,
             feedback: submission.feedback,
             submittedAt: submission.submittedAt.toISOString(),
-            attempt: (submission as any).attempt,
+            attempt: submission.attempt,
           }
         : null,
     };
@@ -189,13 +188,14 @@ export async function GET(
       { success: true, data: assignmentDetail },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/students/assignments/[id] - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

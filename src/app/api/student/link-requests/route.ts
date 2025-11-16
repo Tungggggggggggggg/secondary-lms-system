@@ -33,8 +33,9 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       items: result.items,
       total: result.total,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GET /api/student/link-requests] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "STUDENT_LINK_REQUESTS_LIST");

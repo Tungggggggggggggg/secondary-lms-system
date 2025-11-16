@@ -30,8 +30,9 @@ export const DELETE = withApiLogging(async (
       success: true,
       message: "Invitation cancelled successfully",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[DELETE /api/student/invitations/[id]] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "STUDENT_INVITATION_CANCEL");

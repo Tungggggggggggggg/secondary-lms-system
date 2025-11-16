@@ -134,13 +134,14 @@ export async function PUT(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [PUT] /api/assignments/[id]/submissions/[submissionId] - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }
@@ -237,7 +238,7 @@ export async function GET(
     if (submission.assignment.type === "QUIZ") {
       try {
         parsedAnswers = JSON.parse(submission.content);
-      } catch (e) {
+      } catch {
         // Nếu không parse được, giữ nguyên content
         parsedAnswers = null;
       }
@@ -254,13 +255,14 @@ export async function GET(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/assignments/[id]/submissions/[submissionId] - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

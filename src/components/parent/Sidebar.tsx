@@ -16,8 +16,7 @@ export default function SidebarParent() {
     { icon: "📊", label: "Dashboard", href: "/dashboard/parent/dashboard" },
     { icon: "👨‍👩‍👧", label: "Con của tôi", href: "/dashboard/parent/children" },
     { icon: "📈", label: "Tiến độ học tập", href: "/dashboard/parent/progress" },
-    { icon: "📅", label: "Lịch học", href: "/dashboard/parent/schedule" },
-    { icon: "💬", label: "Liên hệ GV", href: "/dashboard/parent/contact" },
+    { icon: "💬", label: "Liên hệ Giáo viên", href: "/dashboard/parent/teachers" },
     { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/parent/profile" },
   ];
 

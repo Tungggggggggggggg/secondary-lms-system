@@ -89,10 +89,13 @@ function AssignmentCard({ assignment }: { assignment: StudentAssignment }) {
           </div>
         )}
 
-        {isOverdue && (
+        {isOverdue && !assignment.submission && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3">
             <p className="text-sm font-semibold text-red-800">
               ⚠️ Đã quá hạn nộp bài
+            </p>
+            <p className="text-sm text-red-700 mt-1">
+              Điểm: <span className="font-bold">0</span>
             </p>
           </div>
         )}

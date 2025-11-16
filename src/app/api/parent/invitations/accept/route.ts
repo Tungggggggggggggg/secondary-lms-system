@@ -33,8 +33,9 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       data: result,
       message: "Invitation accepted successfully. You are now linked with the student.",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[POST /api/parent/invitations/accept] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "PARENT_INVITATION_ACCEPT");

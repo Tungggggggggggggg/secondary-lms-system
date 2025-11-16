@@ -31,11 +31,15 @@ export default function StudentClassroomGradesPage() {
 
     switch (sortBy) {
       case "oldest":
-        sorted.sort(
-          (a, b) =>
-            new Date(a.submittedAt).getTime() -
-            new Date(b.submittedAt).getTime()
-        );
+        sorted.sort((a, b) => {
+          const timeA = a.submittedAt
+            ? new Date(a.submittedAt).getTime()
+            : 0;
+          const timeB = b.submittedAt
+            ? new Date(b.submittedAt).getTime()
+            : 0;
+          return timeA - timeB;
+        });
         break;
       case "grade":
         sorted.sort((a, b) => {
@@ -46,11 +50,15 @@ export default function StudentClassroomGradesPage() {
         break;
       case "newest":
       default:
-        sorted.sort(
-          (a, b) =>
-            new Date(b.submittedAt).getTime() -
-            new Date(a.submittedAt).getTime()
-        );
+        sorted.sort((a, b) => {
+          const timeA = a.submittedAt
+            ? new Date(a.submittedAt).getTime()
+            : 0;
+          const timeB = b.submittedAt
+            ? new Date(b.submittedAt).getTime()
+            : 0;
+          return timeB - timeA;
+        });
         break;
     }
 
@@ -173,11 +181,13 @@ export default function StudentClassroomGradesPage() {
                       : "—"}
                   </TableCell>
                   <TableCell className="text-sm text-gray-600">
-                    {new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
+                    {grade.submittedAt
+                      ? new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })
+                      : "Chưa nộp"}
                   </TableCell>
                   <TableCell>
                     {grade.grade !== null ? (

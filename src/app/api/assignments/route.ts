@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({ success: true, data: created }, { status: 201 })
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       console.error('[ASSIGNMENTS POST] Prisma known error:', error.code, error.message, error.meta)
     } else if (error instanceof Prisma.PrismaClientValidationError) {
@@ -184,7 +184,8 @@ export async function POST(req: NextRequest) {
     } else {
       console.error('[ASSIGNMENTS POST] Unknown error:', error)
     }
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 })
   }
 }
 

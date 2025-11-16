@@ -30,8 +30,9 @@ export const DELETE = withApiLogging(async (
       success: true,
       message: "Link request cancelled successfully.",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[DELETE /api/parent/link-requests/[id]] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "PARENT_LINK_REQUEST_CANCEL");

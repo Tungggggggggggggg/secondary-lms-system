@@ -1,144 +1,95 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { teacherClassroomGradesPath } from "@/utils/routing";
+import { useClassroom } from "@/hooks/use-classroom";
 
 export default function GradesList() {
   const router = useRouter();
+  const { classrooms, isLoading, error, fetchClassrooms } = useClassroom();
 
-  const grades = [
-    {
-      class: "8A1",
-      subject: "Lịch sử",
-      totalStudents: 32,
-      averageScore: 8.2,
-      distribution: {
-        excellent: 12,
-        good: 15,
-        average: 4,
-        poor: 1
-      },
-      recentTest: "Kiểm tra giữa kỳ",
-      lastUpdate: "2 ngày trước"
-    },
-    {
-      class: "9B2",
-      subject: "Địa lý",
-      totalStudents: 28,
-      averageScore: 7.8,
-      distribution: {
-        excellent: 8,
-        good: 12,
-        average: 6,
-        poor: 2
-      },
-      recentTest: "Bài kiểm tra 15 phút",
-      lastUpdate: "1 ngày trước"
-    },
-    {
-      class: "7C",
-      subject: "Tiếng Anh",
-      totalStudents: 35,
-      averageScore: 8.5,
-      distribution: {
-        excellent: 15,
-        good: 14,
-        average: 5,
-        poor: 1
-      },
-      recentTest: "Bài kiểm tra cuối kỳ",
-      lastUpdate: "3 giờ trước"
-    }
-  ];
+  useEffect(() => {
+    fetchClassrooms();
+  }, [fetchClassrooms]);
 
-  const getGradeColor = (score: number) => {
-    if (score >= 8.0) return "text-green-600";
-    if (score >= 6.5) return "text-yellow-600";
-    return "text-red-600";
-  };
+  const items = useMemo(
+    () =>
+      (classrooms ?? []).map((c) => ({
+        classroomId: c.id,
+        name: c.name,
+        code: c.code,
+        icon: c.icon,
+        studentCount: c._count?.students ?? 0,
+        createdAt: c.createdAt,
+      })),
+    [classrooms]
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="bg-white rounded-2xl p-6 shadow-md animate-pulse"
+          >
+            <div className="h-5 w-1/3 bg-gray-200 rounded mb-3" />
+            <div className="h-4 w-1/2 bg-gray-100 rounded mb-2" />
+            <div className="h-3 w-2/3 bg-gray-100 rounded" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-600 bg-red-50 border border-red-200 rounded-xl p-4 text-sm">
+        Đã xảy ra lỗi khi tải danh sách lớp: {error}
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="bg-white rounded-2xl p-8 border border-gray-200 text-center text-gray-600">
+        Chưa có lớp học nào để hiển thị điểm số.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {grades.map((grade, idx) => (
+      {items.map((cls) => (
         <div
-          key={idx}
+          key={cls.classroomId}
           className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer"
-          onClick={() => router.push(`/dashboard/teacher/grades/${grade.class}`)}
+          onClick={() => router.push(teacherClassroomGradesPath(cls.classroomId))}
         >
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="text-xl font-bold text-gray-800 mb-1">
-                {grade.subject} - Lớp {grade.class}
+                {cls.icon} {cls.name}
               </h3>
               <div className="text-sm text-gray-600">
-                {grade.totalStudents} học sinh • Cập nhật {grade.lastUpdate}
+                Mã lớp: <span className="font-semibold">{cls.code}</span> • {cls.studentCount} học sinh
               </div>
             </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                // Handle export grades
+                router.push(teacherClassroomGradesPath(cls.classroomId));
               }}
-              className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
+              className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-all text-sm font-semibold border border-purple-100"
             >
-              📊 Xuất điểm
+              Xem bảng điểm
             </button>
           </div>
 
-          {/* Grade Distribution */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Left column */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <span className="text-gray-600">Điểm trung bình</span>
-                <span className={`text-lg font-bold ${getGradeColor(grade.averageScore)}`}>
-                  {grade.averageScore}
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <span className="text-gray-600">Bài kiểm tra gần đây</span>
-                <span className="text-gray-800 font-medium">{grade.recentTest}</span>
-              </div>
-            </div>
-
-            {/* Right column - Grade distribution */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-green-600">Giỏi ({grade.distribution.excellent})</span>
-                <div className="w-2/3 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-green-500 rounded-full"
-                    style={{ width: `${(grade.distribution.excellent / grade.totalStudents) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-blue-600">Khá ({grade.distribution.good})</span>
-                <div className="w-2/3 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{ width: `${(grade.distribution.good / grade.totalStudents) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-yellow-600">TB ({grade.distribution.average})</span>
-                <div className="w-2/3 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-yellow-500 rounded-full"
-                    style={{ width: `${(grade.distribution.average / grade.totalStudents) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-red-600">Yếu ({grade.distribution.poor})</span>
-                <div className="w-2/3 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-red-500 rounded-full"
-                    style={{ width: `${(grade.distribution.poor / grade.totalStudents) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
+          <div className="mt-2 text-sm text-gray-500">
+            {/* Có thể bổ sung thống kê điểm thật ở đây nếu cần thêm API tổng hợp */}
+            Nhấn để xem chi tiết điểm số của lớp.
           </div>
         </div>
       ))}

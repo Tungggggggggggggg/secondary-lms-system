@@ -57,10 +57,63 @@ export const GET = withApiLogging(async (
       return errorResponse(404, "Student not found");
     }
 
-    // Lấy tất cả submissions của student (bao gồm cả chưa chấm)
+    // Lấy danh sách classroom mà học sinh (con) đang tham gia
+    const classroomLinks = await prisma.classroomStudent.findMany({
+      where: { studentId: childId },
+      select: { classroomId: true },
+    });
+
+    const classroomIds = classroomLinks.map((cs) => cs.classroomId);
+
+    if (classroomIds.length === 0) {
+      return NextResponse.json(
+        {
+          success: true,
+          data: [],
+          statistics: {
+            totalSubmissions: 0,
+            totalGraded: 0,
+            totalPending: 0,
+            averageGrade: 0,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
+    // Lấy tất cả assignments của các classroom này
+    const assignmentLinks = await prisma.assignmentClassroom.findMany({
+      where: {
+        classroomId: { in: classroomIds },
+      },
+      select: { assignmentId: true },
+    });
+
+    const assignmentIdList = Array.from(
+      new Set(assignmentLinks.map((al) => al.assignmentId))
+    );
+
+    if (assignmentIdList.length === 0) {
+      return NextResponse.json(
+        {
+          success: true,
+          data: [],
+          statistics: {
+            totalSubmissions: 0,
+            totalGraded: 0,
+            totalPending: 0,
+            averageGrade: 0,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
+    // Lấy tất cả submissions của student (bao gồm cả chưa chấm) cho các assignments này
     const submissions = await prisma.assignmentSubmission.findMany({
       where: {
         studentId: childId,
+        assignmentId: { in: assignmentIdList },
       },
       include: {
         assignment: {
@@ -82,8 +135,8 @@ export const GET = withApiLogging(async (
       orderBy: { submittedAt: "desc" },
     });
 
-    // Transform data
-    const grades = submissions.map((sub) => {
+    // Transform data cho các bài đã nộp
+    const submissionGrades = submissions.map((sub) => {
       const classroom = sub.assignment.classrooms[0]?.classroom; // Lấy classroom đầu tiên
 
       return {
@@ -108,7 +161,69 @@ export const GET = withApiLogging(async (
       };
     });
 
-    // Tính thống kê
+    // Tìm các assignments chưa có submission nào từ student
+    const submittedAssignmentIds = new Set(
+      submissions.map((sub) => sub.assignmentId)
+    );
+
+    const missingAssignments = await prisma.assignment.findMany({
+      where: {
+        id: {
+          in: assignmentIdList.filter(
+            (id) => !submittedAssignmentIds.has(id)
+          ),
+        },
+      },
+      include: {
+        classrooms: {
+          include: {
+            classroom: {
+              include: {
+                teacher: {
+                  select: { id: true, fullname: true, email: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const now = new Date();
+
+    // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
+    const missingGrades = missingAssignments.map((assignment) => {
+      const classroom = assignment.classrooms[0]?.classroom;
+      const isPastDue =
+        assignment.dueDate !== null && assignment.dueDate < now;
+
+      return {
+        id: `virtual-${assignment.id}`,
+        assignmentId: assignment.id,
+        assignmentTitle: assignment.title,
+        assignmentType: assignment.type,
+        dueDate: assignment.dueDate
+          ? assignment.dueDate.toISOString()
+          : null,
+        grade: 0,
+        feedback: null,
+        submittedAt: null as string | null,
+        status: isPastDue ? "graded" : "pending",
+        classroom: classroom
+          ? {
+              id: classroom.id,
+              name: classroom.name,
+              code: classroom.code,
+              icon: classroom.icon,
+              teacher: classroom.teacher,
+            }
+          : null,
+      };
+    });
+
+    const grades = [...submissionGrades, ...missingGrades];
+
+    // Tính thống kê dựa trên submissions thật
     const totalSubmissions = submissions.length;
     const gradedSubmissions = submissions.filter((sub) => sub.grade !== null);
     const totalGraded = gradedSubmissions.length;
@@ -120,7 +235,7 @@ export const GET = withApiLogging(async (
         : 0;
 
     console.log(
-      `[INFO] [GET] /api/parent/children/${childId}/grades - Found ${grades.length} submissions for student: ${childId}`
+      `[INFO] [GET] /api/parent/children/${childId}/grades - Found ${grades.length} grade entries for student: ${childId}`
     );
 
     return NextResponse.json(
@@ -136,9 +251,10 @@ export const GET = withApiLogging(async (
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[ERROR] [GET] /api/parent/children/[childId]/grades - Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "PARENT_CHILD_GRADES");
 

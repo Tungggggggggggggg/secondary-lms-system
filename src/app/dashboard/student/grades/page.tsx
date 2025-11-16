@@ -38,9 +38,15 @@ export default function GradesPage() {
     // Sort
     switch (sortBy) {
       case "oldest":
-        filtered.sort((a, b) => 
-          new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()
-        );
+        filtered.sort((a, b) => {
+          const timeA = a.submittedAt
+            ? new Date(a.submittedAt).getTime()
+            : 0;
+          const timeB = b.submittedAt
+            ? new Date(b.submittedAt).getTime()
+            : 0;
+          return timeA - timeB;
+        });
         break;
       case "grade":
         filtered.sort((a, b) => {
@@ -58,9 +64,15 @@ export default function GradesPage() {
         break;
       case "newest":
       default:
-        filtered.sort((a, b) => 
-          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-        );
+        filtered.sort((a, b) => {
+          const timeA = a.submittedAt
+            ? new Date(a.submittedAt).getTime()
+            : 0;
+          const timeB = b.submittedAt
+            ? new Date(b.submittedAt).getTime()
+            : 0;
+          return timeB - timeA;
+        });
         break;
     }
 
@@ -92,7 +104,7 @@ export default function GradesPage() {
         g.assignmentType,
         g.grade !== null && g.grade !== undefined ? g.grade.toFixed(1) : "",
         g.feedback || "",
-        new Date(g.submittedAt).toISOString(),
+        g.submittedAt ? new Date(g.submittedAt).toISOString() : "",
       ].map(toCsvValue).join(","));
     }
 
@@ -250,11 +262,13 @@ export default function GradesPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-gray-600">
-                    {new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
+                    {grade.submittedAt
+                      ? new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })
+                      : "Chưa nộp"}
                   </TableCell>
                 </TableRow>
               ))}

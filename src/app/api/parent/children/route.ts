@@ -21,9 +21,10 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       items: relationships || [],
       total: relationships?.length || 0,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GET /api/parent/children] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "PARENT_CHILDREN_LIST");
 

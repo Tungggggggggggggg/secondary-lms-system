@@ -1,7 +1,7 @@
 "use client";
 
 import ProfileForm from "@/components/teacher/profile/ProfileForm";
-import ProfileStats from "@/components/teacher/profile/ProfileStats";
+
 
 export default function ProfilePage() {
   return (
@@ -17,8 +17,7 @@ export default function ProfilePage() {
         <ProfileForm />
       </div>
 
-      {/* Statistics & Achievements */}
-      <ProfileStats />
+   
 
       
     </div>

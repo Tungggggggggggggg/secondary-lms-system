@@ -36,11 +36,11 @@ export async function GET(req: NextRequest) {
     }
 
     // OPTIMIZE: Query trực tiếp với classroomId IN thay vì nested some() - sử dụng index
-    const allAssignments = (await prisma.assignmentClassroom.findMany({
+    const allAssignments = await prisma.assignmentClassroom.findMany({
       where: {
         classroomId: { in: classroomIds },
       },
-      select: ({
+      select: {
         addedAt: true,
         assignment: {
           select: {
@@ -68,9 +68,9 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-      } as any),
+      },
       orderBy: { addedAt: "desc" },
-    })) as any;
+    });
 
     if (allAssignments.length === 0) {
       return NextResponse.json(
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const assignmentIds = (allAssignments as any[]).map((ac: any) => ac.assignment.id);
+    const assignmentIds = allAssignments.map((ac) => ac.assignment.id);
 
     // OPTIMIZE: Fetch submissions song song với counts (nếu cần) cho tất cả assignments
     const [studentSubmissions] = await Promise.all([
@@ -106,8 +106,8 @@ export async function GET(req: NextRequest) {
     );
 
     // Transform data để trả về (optimize: sử dụng classroom từ join)
-    const assignments = (allAssignments as any[]).map((ac: any) => {
-      const assignment = ac.assignment as any;
+    const assignments = allAssignments.map((ac) => {
+      const assignment = ac.assignment;
       const submission = submissionMap.get(assignment.id);
       const classroom = ac.classroom;
 
@@ -159,13 +159,14 @@ export async function GET(req: NextRequest) {
       { success: true, data: assignments },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/students/assignments - Error:",
       error
     );
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: errorMessage },
       { status: 500 }
     );
   }

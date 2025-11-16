@@ -14,7 +14,7 @@ type Row = {
   assignment: { id: string; title: string; type: string; dueDate: string | null };
   grade: number | null;
   feedback: string | null;
-  submittedAt: string;
+  submittedAt: string | null;
   status: "submitted" | "graded";
 };
 
@@ -65,7 +65,19 @@ export default function ClassroomGrades() {
 
   const sorted = useMemo(() => {
     const copy = [...rows];
-    copy.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    copy.sort((a, b) => {
+      const aTime = a.submittedAt
+        ? new Date(a.submittedAt).getTime()
+        : a.assignment.dueDate
+        ? new Date(a.assignment.dueDate).getTime()
+        : 0;
+      const bTime = b.submittedAt
+        ? new Date(b.submittedAt).getTime()
+        : b.assignment.dueDate
+        ? new Date(b.assignment.dueDate).getTime()
+        : 0;
+      return bTime - aTime;
+    });
     return copy;
   }, [rows]);
 
@@ -122,7 +134,11 @@ export default function ClassroomGrades() {
                   <TableCell>{r.assignment.title}</TableCell>
                   <TableCell>{r.assignment.type}</TableCell>
                   <TableCell>{r.assignment.dueDate ? new Date(r.assignment.dueDate).toLocaleString() : "—"}</TableCell>
-                  <TableCell>{new Date(r.submittedAt).toLocaleString()}</TableCell>
+                  <TableCell>
+                    {r.submittedAt
+                      ? new Date(r.submittedAt).toLocaleString()
+                      : "Chưa nộp"}
+                  </TableCell>
                   <TableCell>{r.grade ?? "—"}</TableCell>
                   <TableCell>{r.status === "graded" ? "Đã chấm" : "Chưa chấm"}</TableCell>
                 </TableRow>

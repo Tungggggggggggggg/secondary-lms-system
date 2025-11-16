@@ -33,8 +33,9 @@ export const POST = withApiLogging(async (
       success: true,
       message: "Link request rejected successfully.",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[POST /api/student/link-requests/[id]/reject] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "STUDENT_LINK_REQUEST_REJECT");

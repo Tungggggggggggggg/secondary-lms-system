@@ -30,9 +30,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             filesCount: s.files.length,
         }));
         return NextResponse.json({ success: true, data }, { status: 200 });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error("[ERROR] [GET] /api/assignments/[id]/file-submissions", error);
-        return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : "Internal server error";
+        return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
     }
 }
 

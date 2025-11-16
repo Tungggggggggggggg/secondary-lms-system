@@ -45,7 +45,11 @@ export default function Sidebar({ role = "student" }: SidebarProps) {
                       label: "Gia đình",
                       href: "/dashboard/student/family",
                   },
-                  
+                  {
+                      icon: "💬",
+                      label: "Liên hệ Giáo viên",
+                      href: "/dashboard/student/teachers",
+                  },
                   {
                       icon: "⚙️",
                       label: "Hồ sơ",

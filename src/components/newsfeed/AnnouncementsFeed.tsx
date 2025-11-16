@@ -43,33 +43,24 @@ export default function AnnouncementsFeed({
     const [page, setPage] = useState(1);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    // Sử dụng hook tương ứng với role
-    const teacherHook = role === "teacher" ? useTeacherAnnouncements() : null;
-    const studentHook = role === "student" ? useStudentAnnouncements() : null;
+    // Gọi hooks cố định để tuân thủ rules-of-hooks, sau đó chọn hook theo role
+    const teacherHook = useTeacherAnnouncements();
+    const studentHook = useStudentAnnouncements();
+
+    const isTeacher = role === "teacher";
+    const activeHook = isTeacher ? teacherHook : studentHook;
 
     // Lấy data từ hook tương ứng
-    const announcements = role === "teacher" 
-        ? teacherHook?.announcements || []
-        : studentHook?.announcements || [];
-    const isLoading = role === "teacher"
-        ? teacherHook?.isLoading || false
-        : studentHook?.isLoading || false;
-    const error = role === "teacher"
-        ? teacherHook?.error || null
-        : studentHook?.error || null;
-    const pagination = role === "teacher"
-        ? teacherHook?.pagination || null
-        : studentHook?.pagination || null;
+    const announcements = activeHook.announcements || [];
+    const isLoading = activeHook.isLoading || false;
+    const error = activeHook.error || null;
+    const pagination = activeHook.pagination || null;
     
     // Comments total để hiển thị số lượng
-    const commentsTotal = role === "teacher"
-        ? teacherHook?.commentsTotal || {}
-        : studentHook?.commentsTotal || {};
+    const commentsTotal = activeHook.commentsTotal || {};
 
     // Fetch functions
-    const fetchAnnouncements = role === "teacher"
-        ? teacherHook?.fetchAnnouncements
-        : studentHook?.fetchAnnouncements;
+    const fetchAnnouncements = activeHook.fetchAnnouncements;
 
     // Map announcements sang PostItem format
     const posts: PostItem[] = useMemo(() => {

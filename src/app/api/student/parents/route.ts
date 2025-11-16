@@ -47,8 +47,9 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       items: parentLinks,
       total: parentLinks.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GET /api/student/parents] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "STUDENT_PARENTS_LIST");

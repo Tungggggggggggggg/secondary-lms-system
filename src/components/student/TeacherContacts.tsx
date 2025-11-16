@@ -15,10 +15,6 @@ interface Teacher {
     name: string;
     code: string;
     icon: string;
-    students?: Array<{
-      id: string;
-      fullname: string;
-    }>;
   }>;
 }
 
@@ -29,7 +25,7 @@ export default function TeacherContacts() {
   const { data, error, isLoading } = useSWR<{
     success?: boolean;
     data?: Teacher[];
-  }>("/api/parent/teachers", fetcher, {
+  }>("/api/students/teachers", fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
   });
@@ -42,7 +38,7 @@ export default function TeacherContacts() {
   };
 
   const handleSendEmail = (email: string) => {
-    window.location.href = `mailto:${email}?subject=Liên hệ từ phụ huynh`;
+    window.location.href = `mailto:${email}?subject=Liên hệ từ học sinh`;
   };
 
   const handleCloseModal = () => {
@@ -98,7 +94,7 @@ export default function TeacherContacts() {
         </h2>
         <div className="text-center py-8 text-gray-500">
           <p>Chưa có giáo viên nào để liên hệ</p>
-          <p className="text-sm mt-2">Con bạn cần tham gia lớp học trước</p>
+          <p className="text-sm mt-2">Bạn cần tham gia lớp học trước</p>
         </div>
       </div>
     );
@@ -126,10 +122,7 @@ export default function TeacherContacts() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{teacher.fullname}</h3>
                   <p className="text-xs text-gray-500">
-                    {teacher.classrooms.length} lớp học
-                    {teacher.classrooms[0]?.students && teacher.classrooms[0].students.length > 0 && (
-                      <> • {teacher.classrooms[0].students.map((s) => s.fullname).join(", ")}</>
-                    )}
+                    {teacher.classrooms.length} lớp học: {teacher.classrooms.map((c) => c.name).join(", ")}
                   </p>
                 </div>
               </div>
@@ -201,4 +194,4 @@ export default function TeacherContacts() {
     </>
   );
 }
-  
+

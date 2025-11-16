@@ -127,7 +127,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       }
     }, { status: 200 })
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`[ASSIGNMENT GET ${requestId}] Unexpected error after ${Date.now() - startTime}ms:`, error)
     
     // Detailed error logging
@@ -137,9 +137,10 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       console.error(`[ASSIGNMENT GET ${requestId}] Prisma validation error:`, error.message)
     }
     
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ 
       success: false, 
-      message: 'Internal server error',
+      message: errorMessage,
       error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
     }, { status: 500 })
   }
@@ -164,7 +165,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
 
     await prisma.assignment.delete({ where: { id: params.id } })
     return NextResponse.json({ success: true }, { status: 200 })
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       console.error('[ASSIGNMENT DELETE] Prisma known error:', error.code, error.message, error.meta)
     } else if (error instanceof Prisma.PrismaClientValidationError) {
@@ -174,7 +175,8 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     } else {
       console.error('[ASSIGNMENT DELETE] Unknown error:', error)
     }
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 })
   }
 }
 
@@ -198,9 +200,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     let body;
     try {
       body = await req.json();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[ASSIGNMENT PUT] Body parse error:', error);
-      return NextResponse.json({ success: false, message: 'Invalid JSON body' }, { status: 400 });
+      const errorMessage = error instanceof Error ? error.message : 'Invalid JSON body';
+      return NextResponse.json({ success: false, message: errorMessage }, { status: 400 });
     }
     const { title, description, dueDate, type, questions, openAt, lockAt, timeLimitMinutes, subject, maxAttempts, antiCheatConfig, submissionFormat, classrooms } = body || {};
     if (!title || !type) {
@@ -300,7 +303,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ success: false, message: 'Lỗi hệ thống khi cập nhật bài tập' }, { status: 500 });
     }
     return NextResponse.json({ success: true, message: 'Cập nhật bài tập thành công', data: updatedAssignment }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       console.error('[ASSIGNMENT PUT] Prisma known error:', error.code, error.message, error.meta);
     } else if (error instanceof Prisma.PrismaClientValidationError) {
@@ -310,7 +313,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     } else {
       console.error('[ASSIGNMENT PUT] Unknown error:', error);
     }
-    return NextResponse.json({ success: false, message: 'Lỗi hệ thống khi cập nhật bài tập' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Lỗi hệ thống khi cập nhật bài tập';
+    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
   }
 }
 

@@ -22,11 +22,11 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     const skip = parseInt(searchParams.get("skip") || "0");
 
     // Build search conditions
-    const where: any = {
-      role: "STUDENT",
+    const where = {
+      role: "STUDENT" as const,
       OR: [
-        { fullname: { contains: query, mode: "insensitive" } },
-        { email: { contains: query, mode: "insensitive" } },
+        { fullname: { contains: query, mode: "insensitive" as const } },
+        { email: { contains: query, mode: "insensitive" as const } },
       ],
     };
 
@@ -40,6 +40,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
           id: true,
           email: true,
           fullname: true,
+          role: true,
           // Lấy thông tin lớp học
           studentClassrooms: {
             take: 3,
@@ -59,7 +60,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     ]);
 
     // Kiểm tra xem đã có link hoặc request chưa
-    const studentIds = students.map((s: any) => s.id);
+    const studentIds = students.map((s) => s.id);
     
     const [existingLinks, existingRequests] = await Promise.all([
       prisma.parentStudent.findMany({
@@ -79,16 +80,16 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       }),
     ]);
 
-    const linkedStudentIds = new Set(existingLinks.map((l: any) => l.studentId));
-    const requestedStudentIds = new Set(existingRequests.map((r: any) => r.studentId));
+    const linkedStudentIds = new Set(existingLinks.map((l) => l.studentId));
+    const requestedStudentIds = new Set(existingRequests.map((r) => r.studentId));
 
     // Format kết quả
-    const results = students.map((student: any) => ({
+    const results = students.map((student) => ({
       id: student.id,
       email: student.email,
       fullname: student.fullname,
       role: student.role,
-      classrooms: student.studentClassrooms.map((sc: any) => sc.classroom),
+      classrooms: student.studentClassrooms.map((sc) => sc.classroom),
       isLinked: linkedStudentIds.has(student.id),
       hasExistingRequest: requestedStudentIds.has(student.id),
     }));
@@ -98,8 +99,9 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       items: results,
       total,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GET /api/parent/link-requests/search-students] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "PARENT_SEARCH_STUDENTS");

@@ -31,8 +31,9 @@ export const POST = withApiLogging(async (
       data: result,
       message: "Link request approved successfully. You are now linked with the parent.",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[POST /api/student/link-requests/[id]/approve] Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "STUDENT_LINK_REQUEST_APPROVE");

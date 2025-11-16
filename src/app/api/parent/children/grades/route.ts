@@ -220,9 +220,10 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[ERROR] [GET] /api/parent/children/grades - Error:", error);
-    return errorResponse(500, error.message || "Internal server error");
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return errorResponse(500, errorMessage);
   }
 }, "PARENT_ALL_CHILDREN_GRADES");
 
