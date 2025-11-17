@@ -73,7 +73,9 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
         timePerQuestion: undefined,
         requireFullscreen: false,
         detectTabSwitch: false,
-        disableCopyPaste: false
+        disableCopyPaste: false,
+        enableFuzzyFillBlank: false,
+        fuzzyThreshold: 0.2
       }
     }
   ), [content]);
@@ -162,9 +164,34 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
   }, [currentContent, onContentChange]);
 
   const updateQuestion: <K extends keyof QuizQuestion>(index: number, field: K, value: QuizQuestion[K]) => void = useCallback((index, field, value) => {
-    const updatedQuestions = currentContent.questions.map((q, i) => 
-      i === index ? { ...q, [field]: value } : q
-    );
+    const updatedQuestions = currentContent.questions.map((q, i) => {
+      if (i !== index) return q;
+      if (field === 'type') {
+        const newType = value as QuizQuestion['type'];
+        if (newType === 'TRUE_FALSE') {
+          return {
+            ...q,
+            type: newType,
+            options: [
+              { label: 'A', content: 'Đúng', isCorrect: true },
+              { label: 'B', content: 'Sai', isCorrect: false },
+            ],
+          };
+        }
+        if (newType === 'SINGLE') {
+          const firstTrue = (q.options || []).findIndex(o => o.isCorrect);
+          const idx = firstTrue >= 0 ? firstTrue : 0;
+          const normalized = (q.options || []).map((o, j) => ({ ...o, isCorrect: j === idx }));
+          return { ...q, type: newType, options: normalized };
+        }
+        if (newType === 'FILL_BLANK') {
+          const normalized = (q.options || [{ label: 'A', content: '', isCorrect: true }]).map(o => ({ ...o, isCorrect: true }));
+          return { ...q, type: newType, options: normalized };
+        }
+        return { ...q, [field]: value };
+      }
+      return { ...q, [field]: value };
+    });
 
     onContentChange({
       ...currentContent,
@@ -174,19 +201,47 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
 
   const updateOption: <K extends keyof QuizOption>(questionIndex: number, optionIndex: number, field: K, value: QuizOption[K]) => void = useCallback((questionIndex, optionIndex, field, value) => {
     const updatedQuestions = currentContent.questions.map((q, i) => {
-      if (i === questionIndex) {
-        const updatedOptions = q.options.map((opt, j) => 
-          j === optionIndex ? { ...opt, [field]: value } : opt
-        );
-        return { ...q, options: updatedOptions };
+      if (i !== questionIndex) return q;
+      // Base update
+      let updatedOptions = q.options.map((opt, j) => (j === optionIndex ? { ...opt, [field]: value } : opt));
+      // Enforce constraints on correctness flags
+      if (field === 'isCorrect') {
+        if (q.type === 'MULTIPLE') {
+          // allow independent toggles
+        } else if (q.type === 'FILL_BLANK') {
+          // all treated as acceptable answers
+          updatedOptions = updatedOptions.map((o) => ({ ...o, isCorrect: true }));
+        } else {
+          // SINGLE or TRUE_FALSE -> only one correct
+          const checked = Boolean(value);
+          updatedOptions = updatedOptions.map((o, j) => ({ ...o, isCorrect: checked ? j === optionIndex : false }));
+        }
       }
-      return q;
+      return { ...q, options: updatedOptions };
     });
 
     onContentChange({
       ...currentContent,
       questions: updatedQuestions
     });
+  }, [currentContent, onContentChange]);
+
+  const toggleCorrect = useCallback((questionIndex: number, optionIndex: number, checked: boolean) => {
+    const updatedQuestions = currentContent.questions.map((q, i) => {
+      if (i !== questionIndex) return q;
+      if (q.type === 'MULTIPLE') {
+        const opts = q.options.map((opt, j) => (j === optionIndex ? { ...opt, isCorrect: checked } : opt));
+        return { ...q, options: opts };
+      }
+      if (q.type === 'FILL_BLANK') {
+        const opts = q.options.map((opt) => ({ ...opt, isCorrect: true }));
+        return { ...q, options: opts };
+      }
+      // SINGLE | TRUE_FALSE: luôn đảm bảo đúng 1 đáp án
+      const opts = q.options.map((opt, j) => ({ ...opt, isCorrect: j === optionIndex }));
+      return { ...q, options: opts };
+    });
+    onContentChange({ ...currentContent, questions: updatedQuestions });
   }, [currentContent, onContentChange]);
 
   const removeQuestion = useCallback((index: number) => {
@@ -456,6 +511,34 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                   onCheckedChange={(checked) => updateAntiCheat('disableCopyPaste', checked)}
                 />
               </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-medium">Fuzzy match cho FILL_BLANK</Label>
+                    <p className="text-sm text-gray-600">Chấp nhận câu trả lời gần đúng theo ngưỡng</p>
+                  </div>
+                  <Switch
+                    checked={currentContent.antiCheatConfig?.enableFuzzyFillBlank || false}
+                    onCheckedChange={(checked) => updateAntiCheat('enableFuzzyFillBlank', checked)}
+                  />
+                </div>
+                {(currentContent.antiCheatConfig?.enableFuzzyFillBlank) && (
+                  <div>
+                    <Label htmlFor="fuzzy-threshold" className="text-sm">Ngưỡng sai lệch (0 → 0.5)</Label>
+                    <Input
+                      id="fuzzy-threshold"
+                      type="number"
+                      min={0}
+                      max={0.5}
+                      step={0.05}
+                      value={typeof currentContent.antiCheatConfig?.fuzzyThreshold === 'number' ? currentContent.antiCheatConfig?.fuzzyThreshold : 0.2}
+                      onChange={(e) => updateAntiCheat('fuzzyThreshold', Math.max(0, Math.min(0.5, parseFloat(e.target.value) || 0)) as any)}
+                      className="mt-2 max-w-[160px]"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -532,7 +615,13 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                     </div>
 
                     <div className="space-y-3">
-                      <Label>Đáp án</Label>
+                      <Label>
+                        Đáp án {
+                          question.type === 'FILL_BLANK'
+                            ? '(danh sách đáp án chấp nhận)'
+                            : (question.type === 'MULTIPLE' ? '(có thể nhiều đáp án đúng)' : '(chỉ 1 đáp án đúng)')
+                        }
+                      </Label>
                       {question.options.map((option, oIndex) => (
                         <div key={oIndex} className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-medium text-blue-700">
@@ -544,13 +633,26 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                             placeholder={`Đáp án ${option.label}...`}
                             className="flex-1"
                           />
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={option.isCorrect}
-                              onCheckedChange={(checked) => updateOption(qIndex, oIndex, 'isCorrect', checked)}
-                            />
-                            <Label className="text-sm">Đúng</Label>
-                          </div>
+                          {question.type === 'SINGLE' || question.type === 'TRUE_FALSE' ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`correct-${question.id}`}
+                                checked={option.isCorrect}
+                                onChange={() => toggleCorrect(qIndex, oIndex, true)}
+                                className="h-4 w-4 text-violet-600 focus:ring-violet-500"
+                              />
+                              <Label className="text-sm">Đúng</Label>
+                            </div>
+                          ) : question.type === 'MULTIPLE' ? (
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={option.isCorrect}
+                                onCheckedChange={(checked) => toggleCorrect(qIndex, oIndex, checked)}
+                              />
+                              <Label className="text-sm">Đúng</Label>
+                            </div>
+                          ) : null}
                         </div>
                       ))}
                     </div>

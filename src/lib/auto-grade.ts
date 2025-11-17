@@ -44,7 +44,7 @@ interface QuestionResult {
   studentAnswer: string[]
   correctAnswer: string[]
   isCorrect: boolean
-  questionType: 'SINGLE' | 'MULTIPLE'
+  questionType: 'SINGLE' | 'MULTIPLE' | 'TRUE_FALSE' | 'FILL_BLANK'
 }
 
 /**
@@ -106,7 +106,9 @@ export async function autoGradeQuiz(
       const studentOptions = studentAnswer?.selectedOptions?.sort() || []
 
       // So sánh đáp án
-      const isCorrect = arraysEqual(correctOptions, studentOptions)
+      const isCorrect = (question.type === 'FILL_BLANK')
+        ? (studentOptions.length > 0 && studentOptions.some(id => correctOptions.includes(id)))
+        : arraysEqual(correctOptions, studentOptions)
       
       if (isCorrect) {
         correctCount++
@@ -120,7 +122,7 @@ export async function autoGradeQuiz(
           studentAnswer: studentOptions,
           correctAnswer: correctOptions,
           isCorrect,
-          questionType: question.type as 'SINGLE' | 'MULTIPLE'
+          questionType: question.type as 'SINGLE' | 'MULTIPLE' | 'TRUE_FALSE' | 'FILL_BLANK'
         })
       }
     }

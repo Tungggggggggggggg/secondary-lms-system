@@ -8,6 +8,11 @@ export interface ClassroomStudent {
   fullname: string;
   email: string;
   joinedAt: string;
+  parents?: Array<{
+    id: string;
+    fullname: string;
+    email: string;
+  }>;
   stats: {
     totalAssignments: number;
     submittedCount: number;

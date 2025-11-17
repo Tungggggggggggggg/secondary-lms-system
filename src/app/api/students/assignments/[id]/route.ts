@@ -37,7 +37,7 @@ export async function GET(
     }
 
     // Parallel queries: Assignment detail + Submission + Classroom info trong cùng lúc
-    const [assignmentData, submission, classroom] = await Promise.all([
+    const [assignmentData, submission, latestAttemptRow, classroom] = await Promise.all([
       // Lấy assignment detail
       prisma.assignment.findUnique({
         where: { id: assignmentId },
@@ -101,6 +101,11 @@ export async function GET(
           attempt: true,
         },
       }),
+      prisma.assignmentAttempt.findFirst({
+        where: { assignmentId, studentId: user.id },
+        orderBy: { attemptNumber: 'desc' },
+        select: { attemptNumber: true },
+      }),
       // Lấy classroom info
       prisma.classroom.findUnique({
         where: { id: classroomId },
@@ -131,6 +136,7 @@ export async function GET(
     }
 
     // Transform data để trả về (kèm submission)
+    const computedLatestAttempt = Math.max(submission?.attempt ?? 0, latestAttemptRow?.attemptNumber ?? 0);
     const assignmentDetail = {
       id: assignmentData.id,
       title: assignmentData.title,
@@ -162,10 +168,10 @@ export async function GET(
         _count: q._count,
       })),
       _count: assignmentData._count,
-      latestAttempt: submission?.attempt ?? 0,
+      latestAttempt: computedLatestAttempt,
       allowNewAttempt:
         assignmentData.type === "QUIZ"
-          ? ((submission?.attempt ?? 0) < (assignmentData.max_attempts ?? 1))
+          ? (computedLatestAttempt < (assignmentData.max_attempts ?? 1))
           : false,
       // Include submission trong response (COMBINED)
       submission: submission

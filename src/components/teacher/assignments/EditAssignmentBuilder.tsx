@@ -177,7 +177,26 @@ export default function EditAssignmentBuilder({ assignmentId }: EditAssignmentBu
     }
     if (editData.type === "QUIZ") {
       const qs = editData.quizContent?.questions || [];
-      return qs.length > 0 && !!editData.quizContent?.lockAt;
+      if (!(qs.length > 0 && !!editData.quizContent?.lockAt)) return false;
+      for (let i = 0; i < qs.length; i++) {
+        const q = qs[i];
+        if (q.type === "SINGLE" || q.type === "TRUE_FALSE") {
+          const count = (q.options || []).filter((o) => o.isCorrect).length;
+          if (count !== 1) return false;
+        }
+        if (q.type === "FILL_BLANK") {
+          const opts = (q.options || []).map(o => (o.content || '').trim()).filter(Boolean);
+          if (opts.length < 1) return false;
+          const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+          const set = new Set<string>();
+          for (const c of opts) {
+            const key = normalize(c);
+            if (set.has(key)) return false;
+            set.add(key);
+          }
+        }
+      }
+      return true;
     }
     return true;
   }, [editData]);
@@ -201,6 +220,41 @@ export default function EditAssignmentBuilder({ assignmentId }: EditAssignmentBu
   const handleSave = useCallback(async () => {
     try {
       setSaving(true);
+
+      if (editData.type === "QUIZ") {
+        const qs = editData.quizContent?.questions || [];
+        if (!qs.length) {
+          toast({ title: "Lỗi validation", description: "Quiz cần có ít nhất 1 câu hỏi", variant: "destructive" });
+          return;
+        }
+        for (let i = 0; i < qs.length; i++) {
+          const q = qs[i];
+          if (q.type === "SINGLE" || q.type === "TRUE_FALSE") {
+            const count = (q.options || []).filter((o) => o.isCorrect).length;
+            if (count !== 1) {
+              toast({ title: "Lỗi đáp án đúng", description: `Câu ${i + 1} (${q.type}) phải có đúng 1 đáp án đúng`, variant: "destructive" });
+              return;
+            }
+          }
+          if (q.type === "FILL_BLANK") {
+            const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+            const contents = (q.options || []).map(o => (o.content || '').trim()).filter(Boolean);
+            if (contents.length < 1) {
+              toast({ title: "Thiếu đáp án chấp nhận", description: `Câu ${i + 1} (FILL_BLANK) cần ít nhất 1 đáp án chấp nhận`, variant: "destructive" });
+              return;
+            }
+            const set = new Set<string>();
+            for (const c of contents) {
+              const key = normalize(c);
+              if (set.has(key)) {
+                toast({ title: "Trùng đáp án chấp nhận", description: `Câu ${i + 1} (FILL_BLANK) có đáp án trùng nhau (sau khi bỏ dấu): "${c}"`, variant: "destructive" });
+                return;
+              }
+              set.add(key);
+            }
+          }
+        }
+      }
 
       const basePayload: Record<string, unknown> = {
         title: editData.title,

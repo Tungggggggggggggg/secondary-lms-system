@@ -51,6 +51,12 @@ export interface AntiCheatConfig {
   
   /** Preset cấu hình */
   preset: 'BASIC' | 'MEDIUM' | 'ADVANCED' | 'CUSTOM'
+  
+  /** Bật so khớp gần đúng cho FILL_BLANK */
+  enableFuzzyFillBlank?: boolean
+  
+  /** Ngưỡng fuzzy (0..0.5): khoảng cách/độ dài tối đa được chấp nhận */
+  fuzzyThreshold?: number
 }
 
 /**

@@ -35,6 +35,12 @@ model User {
   studentRelations                ParentStudent[]            @relation("StudentRelations")
   questionComments                QuestionComment[]
   sessions                        Session[]
+  conversationsCreated            Conversation[]             @relation("UserConversationsCreated")
+  conversationsAsContextStudent   Conversation[]             @relation("ConversationContextStudent")
+  conversationParticipants        ConversationParticipant[]
+  messagesSent                    Message[]
+  examEvents                      ExamEvent[]
+  assignmentAttempts              AssignmentAttempt[]
 
   @@index([email])
   @@index([role, createdAt])
@@ -79,6 +85,7 @@ model Classroom {
   assignments    AssignmentClassroom[]
   courses        ClassroomCourse[]
   students       ClassroomStudent[]
+  conversations  Conversation[]        @relation("ClassroomConversations")
   organization   Organization?         @relation(fields: [organizationId], references: [id])
   teacher        User                  @relation("TeacherClassrooms", fields: [teacherId], references: [id])
 
@@ -122,38 +129,75 @@ model Lesson {
 }
 
 model Assignment {
-  id                String                 @id @default(cuid())
-  title             String
-  description       String?
-  dueDate           DateTime?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  courseId          String?
-  authorId          String
-  type              AssignmentType         @default(ESSAY)
-  lockAt            DateTime?
-  openAt            DateTime?
-  timeLimitMinutes  Int?
-  organizationId    String?
-  subject           String?                @db.VarChar(100)
-  submission_format String?                @default("BOTH") @db.VarChar(20)
-  max_attempts      Int?                   @default(1)
+  id               String                 @id @default(cuid())
+  title            String
+  description      String?
+  dueDate          DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  courseId         String?
+  authorId         String
+  type             AssignmentType         @default(ESSAY)
+  lockAt           DateTime?
+  openAt           DateTime?
+  timeLimitMinutes Int?
+  subject          String?
+  submission_format String?               @db.VarChar(20)
+  max_attempts     Int?
   anti_cheat_config Json?
-  classrooms        AssignmentClassroom[]
-  files             AssignmentFile[]
-  submissions       AssignmentSubmission[]
-  author            User                   @relation(fields: [authorId], references: [id])
-  course            Course?                @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  organization      Organization?          @relation(fields: [organizationId], references: [id])
-  questions         Question[]
+  organizationId   String?
+  classrooms       AssignmentClassroom[]
+  files            AssignmentFile[]
+  submissions      AssignmentSubmission[]
+  author           User                   @relation(fields: [authorId], references: [id])
+  course           Course?                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  organization     Organization?          @relation(fields: [organizationId], references: [id])
+  questions        Question[]
+  examEvents       ExamEvent[]
+  attempts         AssignmentAttempt[]
 
   @@index([authorId])
   @@index([authorId, createdAt])
   @@index([authorId, type, createdAt])
   @@index([dueDate])
   @@index([organizationId, createdAt])
-  @@index([subject], map: "idx_assignments_subject")
   @@map("assignments")
+}
+
+model ExamEvent {
+  id           String     @id @default(cuid())
+  assignmentId String
+  studentId    String
+  attempt      Int?
+  eventType    String     @db.VarChar(32)
+  createdAt    DateTime   @default(now())
+  metadata     Json?
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId, createdAt])
+  @@index([studentId, createdAt])
+  @@map("exam_events")
+}
+
+model AssignmentAttempt {
+  id                String     @id @default(cuid())
+  assignmentId      String
+  studentId         String
+  attemptNumber     Int
+  shuffleSeed       Int
+  antiCheatConfig   Json?
+  timeLimitMinutes  Int?
+  startedAt         DateTime  @default(now())
+  endedAt           DateTime?
+  status            String?    @db.VarChar(20)
+  assignment        Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student           User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId, attemptNumber])
+  @@index([assignmentId, startedAt])
+  @@index([studentId, startedAt])
+  @@map("assignment_attempts")
 }
 
 model Question {
@@ -487,6 +531,79 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+// ==========================
+// Messaging models
+// ==========================
+model Conversation {
+  id               String                    @id @default(cuid())
+  type             ConversationType          @default(DM)
+  createdAt        DateTime                  @default(now())
+  createdById      String
+  classId          String?
+  contextStudentId String?
+  participants     ConversationParticipant[]
+  messages         Message[]
+
+  createdBy      User       @relation("UserConversationsCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  class          Classroom? @relation("ClassroomConversations", fields: [classId], references: [id])
+  contextStudent User?      @relation("ConversationContextStudent", fields: [contextStudentId], references: [id])
+
+  @@index([createdAt])
+  @@index([classId])
+  @@index([contextStudentId])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  roleInConv     String?
+  lastReadAt     DateTime?
+  joinedAt       DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String           @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  createdAt      DateTime         @default(now())
+  attachments    ChatAttachment[]
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User             @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model ChatAttachment {
+  id          String   @id @default(cuid())
+  messageId   String
+  name        String
+  mimeType    String
+  sizeBytes   Int
+  storagePath String
+  createdAt   DateTime @default(now())
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("chat_attachments")
+}
+
+enum ConversationType {
+  DM
+  TRIAD
+  GROUP
 }
 
 enum UserRole {

@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { useStudentAssignments, StudentAssignment } from "@/hooks/use-student-assignments";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -12,10 +11,10 @@ import { Button } from "@/components/ui/button";
  */
 function AssignmentCard({
   assignment,
-  onSubmit,
+  onOpen,
 }: {
   assignment: StudentAssignment;
-  onSubmit: () => void;
+  onOpen: () => void;
 }) {
   const now = useMemo(() => new Date(), []);
 
@@ -78,7 +77,7 @@ function AssignmentCard({
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer"
-      onClick={() => onSubmit()}
+      onClick={() => onOpen()}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -164,27 +163,16 @@ function AssignmentCard({
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-          {assignment.submission ? (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                // router.push(`/dashboard/student/assignments/${assignment.id}`);
-              }}
-              variant="outline"
-            >
-              Xem bài nộp
-            </Button>
-          ) : (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSubmit();
-              }}
-              disabled={isOverdue}
-            >
-              {isOverdue ? "Đã quá hạn" : "Làm bài tập"}
-            </Button>
-          )}
+          <Button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+            variant={assignment.submission ? "outline" : "default"}
+          >
+            {assignment.submission ? "Xem bài nộp" : (isOverdue ? "Xem chi tiết" : "Làm bài tập")}
+          </Button>
         </div>
       </div>
     </div>
@@ -197,19 +185,14 @@ function AssignmentCard({
 export default function StudentClassroomAssignmentsPage() {
   const params = useParams();
   const classId = params.classId as string;
+  const router = useRouter();
 
   const {
     assignments,
     isLoading,
     error,
     fetchClassroomAssignments,
-    submitAssignment,
   } = useStudentAssignments();
-
-  const { toast } = useToast();
-  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
-  const [submissionContent, setSubmissionContent] = useState("");
-  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
   // Load assignments khi component mount
   useEffect(() => {
@@ -232,46 +215,9 @@ export default function StudentClassroomAssignmentsPage() {
     return filtered;
   }, [assignments]);
 
-  // Xử lý mở dialog submit
-  const handleOpenSubmitDialog = (assignmentId: string) => {
-    setSelectedAssignment(assignmentId);
-    setSubmissionContent("");
-    setShowSubmitDialog(true);
-  };
-
-  // Xử lý submit assignment
-  const handleSubmitAssignment = async () => {
-    if (!selectedAssignment || !submissionContent.trim()) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng nhập nội dung bài làm",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const result = await submitAssignment(selectedAssignment, {
-      content: submissionContent.trim(),
-    });
-
-    if (result) {
-      toast({
-        title: "Nộp bài thành công",
-        description: "Bài tập của bạn đã được nộp",
-        variant: "success",
-      });
-      setShowSubmitDialog(false);
-      setSelectedAssignment(null);
-      setSubmissionContent("");
-      // Refresh assignments
-      fetchClassroomAssignments(classId);
-    } else {
-      toast({
-        title: "Nộp bài thất bại",
-        description: "Không thể nộp bài tập. Vui lòng thử lại.",
-        variant: "destructive",
-      });
-    }
+  // Điều hướng sang trang chi tiết bài tập
+  const handleOpenAssignment = (assignmentId: string) => {
+    router.push(`/dashboard/student/assignments/${assignmentId}`);
   };
 
   if (error) {
@@ -318,64 +264,9 @@ export default function StudentClassroomAssignmentsPage() {
             <AssignmentCard
               key={assignment.id}
               assignment={assignment}
-              onSubmit={() => handleOpenSubmitDialog(assignment.id)}
+              onOpen={() => handleOpenAssignment(assignment.id)}
             />
           ))}
-        </div>
-      )}
-
-      {/* Submit Dialog */}
-      {showSubmitDialog && selectedAssignment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-800">Nộp bài tập</h2>
-              <button
-                onClick={() => {
-                  setShowSubmitDialog(false);
-                  setSelectedAssignment(null);
-                  setSubmissionContent("");
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nội dung bài làm <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={submissionContent}
-                  onChange={(e) => setSubmissionContent(e.target.value)}
-                  placeholder="Nhập nội dung bài làm của bạn..."
-                  rows={10}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-all resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowSubmitDialog(false);
-                  setSelectedAssignment(null);
-                  setSubmissionContent("");
-                }}
-              >
-                Hủy
-              </Button>
-              <Button
-                onClick={handleSubmitAssignment}
-                disabled={!submissionContent.trim() || isLoading}
-              >
-                {isLoading ? "Đang nộp..." : "Nộp bài"}
-              </Button>
-            </div>
-          </div>
         </div>
       )}
     </div>

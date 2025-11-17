@@ -236,6 +236,22 @@ export async function POST(
       },
     });
 
+    // Đánh dấu AssignmentAttempt đã kết thúc cho attempt hiện tại nếu tồn tại
+    try {
+      await prisma.assignmentAttempt.updateMany({
+        where: {
+          assignmentId,
+          studentId: user.id,
+          attemptNumber: nextAttempt,
+          endedAt: null,
+        },
+        data: {
+          endedAt: new Date(),
+          status: 'SUBMITTED',
+        },
+      });
+    } catch {}
+
     console.log(
       `[INFO] [POST] /api/students/assignments/${assignmentId}/submit - Student ${user.id} submitted attempt ${(latestSubmission?.attempt ?? 0) + 1} (${assignment.type})${calculatedGrade !== null ? ` with auto-grade: ${calculatedGrade.toFixed(2)}` : ""}`
     );

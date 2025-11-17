@@ -236,6 +236,53 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         updateData.anti_cheat_config = antiCheatConfig;
       }
     }
+    // Validation server-side cho QUIZ questions nếu có
+    let normalizedQuestions: Array<{ content: string; type: string; order?: number; options?: Array<{ label: string; content: string; isCorrect: boolean; order?: number }> }> | null = null;
+    if (normalizedType === 'QUIZ' && questions && Array.isArray(questions)) {
+      const normalize = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+      normalizedQuestions = questions.map((q: any) => ({
+        ...q,
+        content: (q?.content || '').trim(),
+        type: (typeof q?.type === 'string' ? q.type.toUpperCase() : ''),
+        options: (q?.options || []).map((o: any) => ({
+          label: o?.label || '',
+          content: (o?.content || '').trim(),
+          isCorrect: !!o?.isCorrect,
+          order: typeof o?.order === 'number' ? o.order : undefined,
+        })),
+      }));
+      for (let i = 0; i < normalizedQuestions.length; i++) {
+        const q = normalizedQuestions[i];
+        if (q.type === 'SINGLE' || q.type === 'TRUE_FALSE') {
+          const correct = (q.options || []).filter((o) => !!o.isCorrect);
+          if (correct.length !== 1) {
+            return NextResponse.json({ success: false, message: `Câu ${i + 1} (${q.type}) phải có đúng 1 đáp án đúng` }, { status: 400 });
+          }
+          if ((q.options || []).some((o) => !(o.content && o.content.trim()))) {
+            return NextResponse.json({ success: false, message: `Câu ${i + 1} có đáp án rỗng` }, { status: 400 });
+          }
+        } else if (q.type === 'FILL_BLANK') {
+          const contents = (q.options || []).map((o) => (o.content || '').trim()).filter(Boolean);
+          if (contents.length < 1) {
+            return NextResponse.json({ success: false, message: `Câu ${i + 1} (FILL_BLANK) cần ít nhất 1 đáp án chấp nhận` }, { status: 400 });
+          }
+          const set = new Set<string>();
+          for (const c of contents) {
+            const key = normalize(c);
+            if (set.has(key)) {
+              return NextResponse.json({ success: false, message: `Câu ${i + 1} (FILL_BLANK) có đáp án trùng nhau (sau chuẩn hoá): "${c}"` }, { status: 400 });
+            }
+            set.add(key);
+          }
+          if (q.options) q.options = q.options.map((o) => ({ ...o, isCorrect: true }));
+        } else {
+          if ((q.options || []).some((o) => !(o.content && o.content.trim()))) {
+            return NextResponse.json({ success: false, message: `Câu ${i + 1} có đáp án rỗng` }, { status: 400 });
+          }
+        }
+      }
+    }
+
     // Nếu truyền questions: cập nhật lại toàn bộ câu hỏi và đáp án (xoá hết cũ, insert mới)
     let updatedAssignment;
     try {
@@ -249,9 +296,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           // Xoá hết câu hỏi cũ
           await tx.question.deleteMany({ where: { assignmentId: params.id } });
           // Thêm lại câu hỏi mới
-          for (const [qIndex, q] of questions.entries()) {
-            const { content, type: questionType, order, options } = q;
-            // Cho phép ESSAY|SINGLE|MULTIPLE
+          const qs = normalizedQuestions ?? questions;
+          for (const [qIndex, q] of qs.entries()) {
+            const { content, type: questionType, order, options } = q as any;
             const qTypeUpperStr = (typeof questionType === 'string' ? questionType.toUpperCase() : '');
             if (!Object.values(QuestionType).includes(qTypeUpperStr as QuestionType)) {
               throw new Error(`Invalid question type at index ${qIndex}`);
@@ -270,10 +317,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
                 await tx.option.create({
                   data: {
                     questionId: newQuestion.id,
-                    label: opt.label || '',
-                    content: opt.content || '',
-                    isCorrect: !!opt.isCorrect,
-                    order: typeof opt.order === 'number' ? opt.order : oIdx + 1, // Đảm bảo luôn có thứ tự rõ ràng cho đáp án
+                    label: (opt as any).label || '',
+                    content: (opt as any).content || '',
+                    isCorrect: !!(opt as any).isCorrect,
+                    order: typeof (opt as any).order === 'number' ? (opt as any).order : oIdx + 1, // Đảm bảo luôn có thứ tự rõ ràng cho đáp án
                   },
                 });
               }

@@ -13,7 +13,7 @@ CREATE INDEX IF NOT EXISTS "users_email_idx" ON "users"("email");
 CREATE INDEX IF NOT EXISTS "announcements_classroomId_createdAt_idx" ON "announcements"("classroomId", "createdAt" DESC);
 
 -- 5. Optimize assignment submissions by student + created date
-CREATE INDEX IF NOT EXISTS "assignment_submissions_studentId_createdAt_idx" ON "assignment_submissions"("studentId", "createdAt" DESC);
+CREATE INDEX IF NOT EXISTS "assignment_submissions_studentId_submittedAt_idx" ON "assignment_submissions"("studentId", "submittedAt" DESC);
 
 -- 6. Composite index cho complex dashboard queries
 CREATE INDEX IF NOT EXISTS "assignments_authorId_type_createdAt_idx" ON "assignments"("authorId", "type", "createdAt" DESC);

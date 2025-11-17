@@ -32,15 +32,6 @@ export default function StudentClassroomTabs({ classId }: Props) {
                 <li>
                     <Link
                         prefetch
-                        className={tabClass(pathname?.startsWith(`${base}/courses`) ?? false)}
-                        href={`${base}/courses`}
-                    >
-                        Bài học
-                    </Link>
-                </li>
-                <li>
-                    <Link
-                        prefetch
                         className={tabClass(pathname?.startsWith(`${base}/assignments`) ?? false)}
                         href={`${base}/assignments`}
                     >
@@ -54,15 +45,6 @@ export default function StudentClassroomTabs({ classId }: Props) {
                         href={`${base}/grades`}
                     >
                         Điểm số
-                    </Link>
-                </li>
-                <li>
-                    <Link
-                        prefetch
-                        className={tabClass(pathname?.startsWith(`${base}/discussions`) ?? false)}
-                        href={`${base}/discussions`}
-                    >
-                        Thảo luận
                     </Link>
                 </li>
             </ul>

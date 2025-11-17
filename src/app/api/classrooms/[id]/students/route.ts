@@ -62,7 +62,7 @@ export async function GET(
     // Lấy submissions của tất cả học sinh cho các assignments trong lớp
     const studentIds = classroomStudents.map((cs) => cs.student.id);
     
-    const [submissions, assignments] = await Promise.all([
+    const [submissions, assignments, parentLinks] = await Promise.all([
       // Lấy tất cả submissions của học sinh trong lớp
       assignmentIdList.length > 0 && studentIds.length > 0
         ? prisma.assignmentSubmission.findMany({
@@ -84,6 +84,16 @@ export async function GET(
         ? prisma.assignment.findMany({
             where: { id: { in: assignmentIdList } },
             select: { id: true },
+          })
+        : [],
+      // Lấy danh sách phụ huynh của các học sinh trong lớp (1 query)
+      studentIds.length > 0
+        ? prisma.parentStudent.findMany({
+            where: { studentId: { in: studentIds }, status: "ACTIVE" },
+            select: {
+              studentId: true,
+              parent: { select: { id: true, fullname: true, email: true } },
+            },
           })
         : [],
     ]);
@@ -130,6 +140,14 @@ export async function GET(
       }
     });
 
+    // Map danh sách phụ huynh theo studentId
+    const parentsByStudent = new Map<string, { id: string; fullname: string; email: string }[]>();
+    (parentLinks as Array<{ studentId: string; parent: { id: string; fullname: string; email: string } }>).forEach((pl) => {
+      const arr = parentsByStudent.get(pl.studentId) || [];
+      arr.push({ id: pl.parent.id, fullname: pl.parent.fullname, email: pl.parent.email });
+      parentsByStudent.set(pl.studentId, arr);
+    });
+
     // Transform data để trả về
     const students = classroomStudents.map((cs) => {
       const stats = studentStats.get(cs.student.id) || {
@@ -145,6 +163,7 @@ export async function GET(
         fullname: cs.student.fullname,
         email: cs.student.email,
         joinedAt: cs.joinedAt.toISOString(),
+        parents: parentsByStudent.get(cs.student.id) || [],
         stats: {
           totalAssignments: stats.totalAssignments,
           submittedCount: stats.submittedCount,

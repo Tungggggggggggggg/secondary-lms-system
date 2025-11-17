@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { useSidebarState } from "../../../hooks/useSidebarState";
 import { isActivePath } from "../../../utils/routing";
 import SidebarToggleButton from "../../shared/SidebarToggleButton";
+import { useUnreadTotal } from "../../../hooks/use-chat";
 
 export default function Sidebar() {
     const { data: session } = useSession();
     const pathname = usePathname();
     const { expanded, toggle } = useSidebarState("sidebar:teacher");
+    const unreadTotal = useUnreadTotal();
 
     const menuItems = [
         {
@@ -19,6 +21,7 @@ export default function Sidebar() {
             href: "/dashboard/teacher/dashboard",
         },
         { icon: "🏫", label: "Lớp học", href: "/dashboard/teacher/classrooms" },
+        { icon: "💬", label: "Tin nhắn", href: "/dashboard/teacher/messages" },
         {
             icon: "✍️",
             label: "Bài tập",
@@ -83,6 +86,11 @@ export default function Sidebar() {
                         >
                             <span className="text-xl">{item.icon}</span>
                             {expanded && <span>{item.label}</span>}
+                            {item.href === "/dashboard/teacher/messages" && unreadTotal > 0 && (
+                                <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
+                                    {unreadTotal}
+                                </span>
+                            )}
                         </Link>
                     ))}
                 </nav>

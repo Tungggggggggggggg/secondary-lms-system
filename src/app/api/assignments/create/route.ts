@@ -131,19 +131,54 @@ export async function POST(request: NextRequest) {
 
     // Create questions for Quiz
     if (assignmentData.type === 'QUIZ' && assignmentData.quizContent?.questions) {
-      const questionsData = assignmentData.quizContent.questions.map((q, index) => ({
+      const normalize = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+      const normalizedQuestions = assignmentData.quizContent.questions.map((q) => ({
+        ...q,
+        content: (q.content || '').trim(),
+        options: (q.options || []).map((opt) => ({
+          ...opt,
+          label: opt.label,
+          content: (opt.content || '').trim(),
+          isCorrect: !!opt.isCorrect,
+        })),
+      }));
+
+      for (let i = 0; i < normalizedQuestions.length; i++) {
+        const q = normalizedQuestions[i];
+        if (q.type === 'SINGLE' || q.type === 'TRUE_FALSE') {
+          const correct = q.options.filter((o: any) => !!o.isCorrect);
+          if (correct.length !== 1) {
+            return NextResponse.json({ success: false, message: `Câu ${i + 1} (${q.type}) phải có đúng 1 đáp án đúng` }, { status: 400 });
+          }
+          if (q.options.some((o: any) => !(o.content && o.content.trim()))) {
+            return NextResponse.json({ success: false, message: `Câu ${i + 1} có đáp án rỗng` }, { status: 400 });
+          }
+        } else if (q.type === 'FILL_BLANK') {
+          const contents = q.options.map((o: any) => (o.content || '').trim()).filter(Boolean);
+          if (contents.length < 1) {
+            return NextResponse.json({ success: false, message: `Câu ${i + 1} (FILL_BLANK) cần ít nhất 1 đáp án chấp nhận` }, { status: 400 });
+          }
+          const set = new Set<string>();
+          for (const c of contents) {
+            const key = normalize(c);
+            if (set.has(key)) {
+              return NextResponse.json({ success: false, message: `Câu ${i + 1} (FILL_BLANK) có đáp án trùng nhau (sau chuẩn hoá): "${c}"` }, { status: 400 });
+            }
+            set.add(key);
+          }
+          q.options = q.options.map((o: any) => ({ ...o, isCorrect: true }));
+        } else {
+          if (q.options.some((o: any) => !(o.content && o.content.trim()))) {
+            return NextResponse.json({ success: false, message: `Câu ${i + 1} có đáp án rỗng` }, { status: 400 });
+          }
+        }
+      }
+
+      const questionsData = normalizedQuestions.map((q, index) => ({
         content: q.content,
         type: q.type,
         order: index + 1,
         assignmentId: assignment.id,
-        options: {
-          create: q.options.map((opt, optIndex) => ({
-            label: opt.label,
-            content: opt.content,
-            isCorrect: opt.isCorrect,
-            order: optIndex + 1
-          }))
-        }
       }));
 
       await prisma.question.createMany({
@@ -166,10 +201,10 @@ export async function POST(request: NextRequest) {
 
         if (question) {
           await prisma.option.createMany({
-            data: assignmentData.quizContent.questions[i].options.map((opt, optIndex) => ({
+            data: normalizedQuestions[i].options.map((opt: any, optIndex: number) => ({
               label: opt.label,
               content: opt.content,
-              isCorrect: opt.isCorrect,
+              isCorrect: !!opt.isCorrect,
               order: optIndex + 1,
               questionId: question.id
             }))

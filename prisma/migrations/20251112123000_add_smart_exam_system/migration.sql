@@ -74,25 +74,25 @@ CREATE TABLE "TeacherIntervention" (
 
 -- ===== CẬP NHẬT ASSIGNMENT TABLE =====
 -- Thêm các cột mới cho Assignment để support exam system
-ALTER TABLE "Assignment" ADD COLUMN "timerType" TEXT DEFAULT 'FIXED_DEADLINE';
-ALTER TABLE "Assignment" ADD COLUMN "durationMinutes" INTEGER;
-ALTER TABLE "Assignment" ADD COLUMN "antiCheatConfig" TEXT DEFAULT '{}';
-ALTER TABLE "Assignment" ADD COLUMN "fallbackConfig" TEXT DEFAULT '{}';
-ALTER TABLE "Assignment" ADD COLUMN "warningMinutes" TEXT DEFAULT '[5,1]'; -- JSON array
-ALTER TABLE "Assignment" ADD COLUMN "autoSubmit" BOOLEAN DEFAULT true;
-ALTER TABLE "Assignment" ADD COLUMN "estimatedDuration" INTEGER;
-ALTER TABLE "Assignment" ADD COLUMN "difficulty" TEXT DEFAULT 'MEDIUM';
-ALTER TABLE "Assignment" ADD COLUMN "tags" TEXT DEFAULT '[]'; -- JSON array
-ALTER TABLE "Assignment" ADD COLUMN "instructions" TEXT;
+ALTER TABLE "assignments" ADD COLUMN "timerType" TEXT DEFAULT 'FIXED_DEADLINE';
+ALTER TABLE "assignments" ADD COLUMN "durationMinutes" INTEGER;
+ALTER TABLE "assignments" ADD COLUMN "antiCheatConfig" TEXT DEFAULT '{}';
+ALTER TABLE "assignments" ADD COLUMN "fallbackConfig" TEXT DEFAULT '{}';
+ALTER TABLE "assignments" ADD COLUMN "warningMinutes" TEXT DEFAULT '[5,1]'; -- JSON array
+ALTER TABLE "assignments" ADD COLUMN "autoSubmit" BOOLEAN DEFAULT true;
+ALTER TABLE "assignments" ADD COLUMN "estimatedDuration" INTEGER;
+ALTER TABLE "assignments" ADD COLUMN "difficulty" TEXT DEFAULT 'MEDIUM';
+ALTER TABLE "assignments" ADD COLUMN "tags" TEXT DEFAULT '[]'; -- JSON array
+ALTER TABLE "assignments" ADD COLUMN "instructions" TEXT;
 
 -- ===== CẬP NHẬT QUESTION TABLE =====
 -- Thêm metadata cho câu hỏi
-ALTER TABLE "Question" ADD COLUMN "points" INTEGER DEFAULT 1;
-ALTER TABLE "Question" ADD COLUMN "timeLimit" INTEGER; -- giây
-ALTER TABLE "Question" ADD COLUMN "difficulty" INTEGER DEFAULT 3; -- 1-5
-ALTER TABLE "Question" ADD COLUMN "tags" TEXT DEFAULT '[]'; -- JSON array
-ALTER TABLE "Question" ADD COLUMN "explanation" TEXT;
-ALTER TABLE "Question" ADD COLUMN "attachments" TEXT DEFAULT '[]'; -- JSON array
+ALTER TABLE "questions" ADD COLUMN "points" INTEGER DEFAULT 1;
+ALTER TABLE "questions" ADD COLUMN "timeLimit" INTEGER; -- giây
+ALTER TABLE "questions" ADD COLUMN "difficulty" INTEGER DEFAULT 3; -- 1-5
+ALTER TABLE "questions" ADD COLUMN "tags" TEXT DEFAULT '[]'; -- JSON array
+ALTER TABLE "questions" ADD COLUMN "explanation" TEXT;
+ALTER TABLE "questions" ADD COLUMN "attachments" TEXT DEFAULT '[]'; -- JSON array
 
 -- ===== INDEXES FOR PERFORMANCE =====
 -- Indexes cho ExamSession
@@ -118,17 +118,17 @@ CREATE INDEX "TeacherIntervention_teacherId_idx" ON "TeacherIntervention"("teach
 CREATE INDEX "TeacherIntervention_timestamp_idx" ON "TeacherIntervention"("timestamp");
 
 -- Indexes mới cho Assignment
-CREATE INDEX "Assignment_timerType_idx" ON "Assignment"("timerType");
-CREATE INDEX "Assignment_difficulty_idx" ON "Assignment"("difficulty");
+CREATE INDEX "assignments_timerType_idx" ON "assignments"("timerType");
+CREATE INDEX "assignments_difficulty_idx" ON "assignments"("difficulty");
 
 -- Indexes mới cho Question
-CREATE INDEX "Question_difficulty_idx" ON "Question"("difficulty");
-CREATE INDEX "Question_points_idx" ON "Question"("points");
+CREATE INDEX "questions_difficulty_idx" ON "questions"("difficulty");
+CREATE INDEX "questions_points_idx" ON "questions"("points");
 
 -- ===== FOREIGN KEY CONSTRAINTS =====
 -- ExamSession references
-ALTER TABLE "ExamSession" ADD CONSTRAINT "ExamSession_assignmentId_fkey" FOREIGN KEY ("assignmentId") REFERENCES "Assignment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "ExamSession" ADD CONSTRAINT "ExamSession_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ExamSession" ADD CONSTRAINT "ExamSession_assignmentId_fkey" FOREIGN KEY ("assignmentId") REFERENCES "assignments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ExamSession" ADD CONSTRAINT "ExamSession_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AutoSaveData references
 ALTER TABLE "AutoSaveData" ADD CONSTRAINT "AutoSaveData_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ExamSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -138,7 +138,7 @@ ALTER TABLE "ExamEventLog" ADD CONSTRAINT "ExamEventLog_sessionId_fkey" FOREIGN 
 
 -- TeacherIntervention references
 ALTER TABLE "TeacherIntervention" ADD CONSTRAINT "TeacherIntervention_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ExamSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "TeacherIntervention" ADD CONSTRAINT "TeacherIntervention_teacherId_fkey" FOREIGN KEY ("teacherId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TeacherIntervention" ADD CONSTRAINT "TeacherIntervention_teacherId_fkey" FOREIGN KEY ("teacherId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- ===== CHECK CONSTRAINTS =====
 -- Validate ExamSession status
@@ -146,11 +146,11 @@ ALTER TABLE "ExamSession" ADD CONSTRAINT "ExamSession_status_check"
 CHECK ("status" IN ('NOT_STARTED', 'IN_PROGRESS', 'PAUSED', 'COMPLETED', 'EXPIRED', 'TERMINATED'));
 
 -- Validate Assignment timerType
-ALTER TABLE "Assignment" ADD CONSTRAINT "Assignment_timerType_check" 
+ALTER TABLE "assignments" ADD CONSTRAINT "Assignment_timerType_check" 
 CHECK ("timerType" IN ('PERSONAL', 'FIXED_DEADLINE', 'UNLIMITED'));
 
 -- Validate Assignment difficulty
-ALTER TABLE "Assignment" ADD CONSTRAINT "Assignment_difficulty_check" 
+ALTER TABLE "assignments" ADD CONSTRAINT "Assignment_difficulty_check" 
 CHECK ("difficulty" IN ('EASY', 'MEDIUM', 'HARD'));
 
 -- Validate ExamEventLog severity
@@ -158,13 +158,13 @@ ALTER TABLE "ExamEventLog" ADD CONSTRAINT "ExamEventLog_severity_check"
 CHECK ("severity" IN ('INFO', 'WARNING', 'ERROR', 'CRITICAL'));
 
 -- Validate Question difficulty range
-ALTER TABLE "Question" ADD CONSTRAINT "Question_difficulty_check" 
+ALTER TABLE "questions" ADD CONSTRAINT "Question_difficulty_check" 
 CHECK ("difficulty" >= 1 AND "difficulty" <= 5);
 
 -- Validate positive values
 ALTER TABLE "ExamSession" ADD CONSTRAINT "ExamSession_timeRemaining_check" CHECK ("timeRemaining" >= 0);
 ALTER TABLE "ExamSession" ADD CONSTRAINT "ExamSession_disconnectCount_check" CHECK ("disconnectCount" >= 0);
 ALTER TABLE "ExamSession" ADD CONSTRAINT "ExamSession_totalGraceTime_check" CHECK ("totalGraceTime" >= 0);
-ALTER TABLE "Assignment" ADD CONSTRAINT "Assignment_durationMinutes_check" CHECK ("durationMinutes" > 0 OR "durationMinutes" IS NULL);
-ALTER TABLE "Question" ADD CONSTRAINT "Question_points_check" CHECK ("points" > 0);
-ALTER TABLE "Question" ADD CONSTRAINT "Question_timeLimit_check" CHECK ("timeLimit" > 0 OR "timeLimit" IS NULL);
+ALTER TABLE "assignments" ADD CONSTRAINT "Assignment_durationMinutes_check" CHECK ("durationMinutes" > 0 OR "durationMinutes" IS NULL);
+ALTER TABLE "questions" ADD CONSTRAINT "Question_points_check" CHECK ("points" > 0);
+ALTER TABLE "questions" ADD CONSTRAINT "Question_timeLimit_check" CHECK ("timeLimit" > 0 OR "timeLimit" IS NULL);

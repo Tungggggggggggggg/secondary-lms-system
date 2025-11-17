@@ -72,9 +72,7 @@ export default function QuestionComments({
   }, [comments.length, isExpanded]);
 
   // Xử lý submit comment
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmitComment = async () => {
     if (!commentContent.trim()) {
       return;
     }
@@ -101,6 +99,7 @@ export default function QuestionComments({
         </button>
         {isExpanded && (
           <Button
+            type="button"
             onClick={() => setShowCommentForm(!showCommentForm)}
             variant="ghost"
             size="default"
@@ -113,7 +112,7 @@ export default function QuestionComments({
 
       {/* Comment form */}
       {isExpanded && showCommentForm && (
-        <form onSubmit={handleSubmitComment} className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+        <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
           <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Nội dung bình luận <span className="text-red-500">*</span>
@@ -138,13 +137,14 @@ export default function QuestionComments({
               Hủy
             </Button>
             <Button
-              type="submit"
+              type="button"
               disabled={!commentContent.trim() || isLoading}
+              onClick={handleSubmitComment}
             >
               {isLoading ? "Đang gửi..." : "Gửi bình luận"}
             </Button>
           </div>
-        </form>
+        </div>
       )}
 
       {/* Comments list - chỉ hiển thị khi expanded */}
@@ -204,6 +204,7 @@ export default function QuestionComments({
               {hasMore && (
                 <div className="mt-3 text-center">
                   <Button
+                    type="button"
                     onClick={() => loadMore(undefined, questionId)}
                     variant="ghost"
                     size="default"

@@ -177,7 +177,20 @@ export default function NewAssignmentBuilder() {
         if (assignmentData.type === 'ESSAY') {
           return !!assignmentData.essayContent?.question.trim();
         } else {
-          return !!assignmentData.quizContent?.questions.length;
+          const qs = assignmentData.quizContent?.questions || [];
+          if (!qs.length) return false;
+          for (let i = 0; i < qs.length; i++) {
+            const q = qs[i];
+            if (q.type === 'SINGLE' || q.type === 'TRUE_FALSE') {
+              const count = (q.options || []).filter(o => o.isCorrect).length;
+              if (count !== 1) return false;
+            }
+            if (q.type === 'FILL_BLANK') {
+              const opts = (q.options || []).filter(o => (o.content || '').trim() !== '');
+              if (opts.length < 1) return false;
+            }
+          }
+          return true;
         }
       case 'classrooms':
         return true; // Classroom selection is optional
@@ -225,11 +238,41 @@ export default function NewAssignmentBuilder() {
   // Handle create assignment
   const handleCreateAssignment = useCallback(async () => {
     if (!canProceed()) {
-      toast({
-        title: "Lỗi validation",
-        description: "Vui lòng kiểm tra lại thông tin bài tập",
-        variant: "destructive"
-      });
+      if (assignmentData.type === 'QUIZ') {
+        const qs = assignmentData.quizContent?.questions || [];
+        if (!qs.length) {
+          toast({ title: "Lỗi validation", description: "Quiz cần có ít nhất 1 câu hỏi", variant: "destructive" });
+          return;
+        }
+        for (let i = 0; i < qs.length; i++) {
+          const q = qs[i];
+          if (q.type === 'SINGLE' || q.type === 'TRUE_FALSE') {
+            const count = (q.options || []).filter(o => o.isCorrect).length;
+            if (count !== 1) {
+              toast({ title: "Lỗi đáp án đúng", description: `Câu ${i + 1} (${q.type}) phải có đúng 1 đáp án đúng`, variant: "destructive" });
+              return;
+            }
+          }
+          if (q.type === 'FILL_BLANK') {
+            const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+            const contents = (q.options || []).map(o => (o.content || '').trim()).filter(Boolean);
+            if (contents.length < 1) {
+              toast({ title: "Thiếu đáp án chấp nhận", description: `Câu ${i + 1} (FILL_BLANK) cần ít nhất 1 đáp án chấp nhận`, variant: "destructive" });
+              return;
+            }
+            const set = new Set<string>();
+            for (const c of contents) {
+              const key = normalize(c);
+              if (set.has(key)) {
+                toast({ title: "Trùng đáp án chấp nhận", description: `Câu ${i + 1} (FILL_BLANK) có đáp án trùng nhau (sau khi bỏ dấu): "${c}"`, variant: "destructive" });
+                return;
+              }
+              set.add(key);
+            }
+          }
+        }
+      }
+      toast({ title: "Lỗi validation", description: "Vui lòng kiểm tra lại thông tin bài tập", variant: "destructive" });
       return;
     }
 
@@ -875,29 +918,34 @@ export default function NewAssignmentBuilder() {
         </Card>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center mt-8">
-          <Button
-            variant="outline"
-            onClick={goBack}
-            disabled={isFirstStep}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Quay lại
-          </Button>
+        <div
+          className="sticky bottom-0 left-0 right-0 mt-8 bg-white/95 backdrop-blur-md border-t shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <Button
+              variant="outline"
+              onClick={goBack}
+              disabled={isFirstStep}
+              className="flex items-center gap-2 min-h-[44px]"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Quay lại
+            </Button>
 
-          <div className="text-sm text-gray-500">
-            Bước {currentStepIndex + 1} / {steps.length}
+            <div className="text-sm text-gray-600">
+              Bước {currentStepIndex + 1} / {steps.length}
+            </div>
+
+            <Button
+              onClick={goNext}
+              disabled={!canProceed() || isLastStep}
+              className="flex items-center gap-2 min-h-[44px]"
+            >
+              {isLastStep ? 'Tạo bài tập' : 'Tiếp theo'}
+              <ArrowRight className="w-4 h-4" />
+            </Button>
           </div>
-
-          <Button
-            onClick={goNext}
-            disabled={!canProceed() || isLastStep}
-            className="flex items-center gap-2"
-          >
-            {isLastStep ? 'Tạo bài tập' : 'Tiếp theo'}
-            <ArrowRight className="w-4 h-4" />
-          </Button>
         </div>
       </div>
     </div>

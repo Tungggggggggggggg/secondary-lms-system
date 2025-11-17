@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +75,14 @@ const mockStudentSessions = [
 export default function ExamMonitorPage() {
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
+  const [assignmentIdInput, setAssignmentIdInput] = useState("");
+  const [studentIdInput, setStudentIdInput] = useState("");
+  const [attemptInput, setAttemptInput] = useState<string>("");
+  const [events, setEvents] = useState<Array<{ id: string; assignmentId: string; studentId: string; attempt: number | null; eventType: string; createdAt: string; metadata: any; student?: { id: string; fullname: string; email: string } }>>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [fromInput, setFromInput] = useState("");
+  const [toInput, setToInput] = useState("");
+  const [limitInput, setLimitInput] = useState("200");
 
   // Stats tính từ mock data
   const activeCount = mockStudentSessions.filter(s => s.status === 'IN_PROGRESS').length;
@@ -90,6 +98,58 @@ export default function ExamMonitorPage() {
     }, 5000);
     return () => clearInterval(interval);
   }, [isAutoRefresh]);
+
+  const fetchEvents = async () => {
+    if (!assignmentIdInput.trim()) return;
+    try {
+      setLoadingEvents(true);
+      const params = new URLSearchParams({ assignmentId: assignmentIdInput.trim() });
+      if (studentIdInput.trim()) params.set("studentId", studentIdInput.trim());
+      if (attemptInput.trim()) params.set("attempt", attemptInput.trim());
+      if (fromInput.trim()) params.set("from", new Date(fromInput).toISOString());
+      if (toInput.trim()) params.set("to", new Date(toInput).toISOString());
+      if (limitInput.trim()) params.set("limit", limitInput.trim());
+      const res = await fetch(`/api/exam-events?${params.toString()}`);
+      const j = await res.json();
+      if (!res.ok || !j?.success) throw new Error(j?.message || res.statusText);
+      setEvents((j.data || []).map((e: any) => ({ ...e, createdAt: e.createdAt })));
+    } catch (e) {
+      console.error("[ExamLogs] fetch error", e);
+      setEvents([]);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  const severityOf = (type: string): 'low' | 'medium' | 'high' | 'info' => {
+    if (type === 'SESSION_STARTED') return 'info';
+    if (type === 'FULLSCREEN_EXIT' || type === 'TAB_SWITCH' || type === 'WINDOW_BLUR') return 'high';
+    if (type === 'CLIPBOARD' || type === 'SHORTCUT') return 'medium';
+    return 'low';
+  };
+
+  const summaryByStudentAttempt = useMemo(() => {
+    const map = new Map<string, { studentId: string; fullname: string; attempt: number | null; count: number; high: number; medium: number }>();
+    for (const ev of events) {
+      const key = `${ev.studentId}|${ev.attempt ?? 'null'}`;
+      const cur = map.get(key) || { studentId: ev.studentId, fullname: ev.student?.fullname || ev.studentId, attempt: ev.attempt ?? null, count: 0, high: 0, medium: 0 };
+      cur.count += 1;
+      const sev = severityOf(ev.eventType);
+      if (sev === 'high') cur.high += 1; else if (sev === 'medium') cur.medium += 1;
+      map.set(key, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [events]);
+
+  const summaryByType = useMemo(() => {
+    const map = new Map<string, { type: string; count: number; severity: ReturnType<typeof severityOf> }>();
+    for (const ev of events) {
+      const cur = map.get(ev.eventType) || { type: ev.eventType, count: 0, severity: severityOf(ev.eventType) };
+      cur.count += 1;
+      map.set(ev.eventType, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [events]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -203,10 +263,11 @@ export default function ExamMonitorPage() {
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="monitoring">Giám sát</TabsTrigger>
             <TabsTrigger value="controls">Điều khiển</TabsTrigger>
             <TabsTrigger value="analytics">Phân tích</TabsTrigger>
+            <TabsTrigger value="logs">Logs chống gian lận</TabsTrigger>
           </TabsList>
 
           {/* Monitoring Tab */}
@@ -278,6 +339,147 @@ export default function ExamMonitorPage() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Logs Tab */}
+          <TabsContent value="logs">
+            <Card>
+              <CardHeader>
+                <CardTitle>Logs chống gian lận theo bài</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                  <div className="md:col-span-3">
+                    <Label htmlFor="assignmentId">Assignment ID</Label>
+                    <Input id="assignmentId" placeholder="assignment id" value={assignmentIdInput} onChange={(e) => setAssignmentIdInput(e.target.value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="studentId">Student ID (tuỳ chọn)</Label>
+                    <Input id="studentId" placeholder="student id" value={studentIdInput} onChange={(e) => setStudentIdInput(e.target.value)} />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label htmlFor="attempt">Attempt (tuỳ chọn)</Label>
+                    <Input id="attempt" placeholder="VD: 1" value={attemptInput} onChange={(e) => setAttemptInput(e.target.value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="from">Từ thời điểm (tuỳ chọn)</Label>
+                    <Input id="from" type="datetime-local" value={fromInput} onChange={(e) => setFromInput(e.target.value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="to">Đến thời điểm (tuỳ chọn)</Label>
+                    <Input id="to" type="datetime-local" value={toInput} onChange={(e) => setToInput(e.target.value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="limit">Số dòng tối đa</Label>
+                    <Input id="limit" type="number" min={1} max={500} value={limitInput} onChange={(e) => setLimitInput(e.target.value)} />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={fetchEvents} disabled={!assignmentIdInput.trim() || loadingEvents}>{loadingEvents ? "Đang tải..." : "Tải logs"}</Button>
+                  <Button variant="outline" onClick={() => { setEvents([]); }}>Xoá kết quả</Button>
+                </div>
+
+                {events.length > 0 && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Tổng hợp theo loại sự kiện</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr className="text-left border-b">
+                              <th className="py-2 pr-4">Loại</th>
+                              <th className="py-2 pr-4">Mức độ</th>
+                              <th className="py-2 pr-4">Số sự kiện</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {summaryByType.map((row) => (
+                              <tr key={row.type} className="border-b">
+                                <td className="py-2 pr-4">{row.type}</td>
+                                <td className="py-2 pr-4">
+                                  {row.severity === 'high' ? (
+                                    <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" /> Cao</Badge>
+                                  ) : row.severity === 'medium' ? (
+                                    <Badge variant="warning">Trung bình</Badge>
+                                  ) : row.severity === 'info' ? (
+                                    <Badge>Thông tin</Badge>
+                                  ) : (
+                                    <Badge variant="outline">Thấp</Badge>
+                                  )}
+                                </td>
+                                <td className="py-2 pr-4">{row.count}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Tổng hợp theo học sinh/attempt</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr className="text-left border-b">
+                              <th className="py-2 pr-4">Học sinh</th>
+                              <th className="py-2 pr-4">Attempt</th>
+                              <th className="py-2 pr-4">Số sự kiện</th>
+                              <th className="py-2 pr-4">Cảnh báo</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {summaryByStudentAttempt.map((row) => {
+                              const flagged = row.high >= 3 || (row.high + row.medium) >= 5;
+                              return (
+                                <tr key={`${row.studentId}|${row.attempt}`} className={`border-b ${flagged ? 'bg-red-50' : ''}`}>
+                                  <td className="py-2 pr-4">{row.fullname} <span className="text-gray-500 text-xs">({row.studentId})</span></td>
+                                  <td className="py-2 pr-4">{row.attempt ?? '-'}</td>
+                                  <td className="py-2 pr-4">{row.count}</td>
+                                  <td className="py-2 pr-4">
+                                    {flagged ? (
+                                      <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" /> Nghi ngờ cao</Badge>
+                                    ) : (
+                                      <Badge variant="outline">-</Badge>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium mb-2">Chi tiết sự kiện</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr className="text-left border-b">
+                              <th className="py-2 pr-4">Thời gian</th>
+                              <th className="py-2 pr-4">Học sinh</th>
+                              <th className="py-2 pr-4">Attempt</th>
+                              <th className="py-2 pr-4">Sự kiện</th>
+                              <th className="py-2 pr-4">Metadata</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {events.map((ev) => (
+                              <tr key={ev.id} className="border-b align-top">
+                                <td className="py-2 pr-4 whitespace-nowrap">{new Date(ev.createdAt).toLocaleString()}</td>
+                                <td className="py-2 pr-4">{ev.student?.fullname || ev.studentId} <span className="text-gray-500 text-xs">({ev.studentId})</span></td>
+                                <td className="py-2 pr-4">{ev.attempt ?? '-'}</td>
+                                <td className="py-2 pr-4">{ev.eventType}</td>
+                                <td className="py-2 pr-4 max-w-[360px] whitespace-pre-wrap break-words text-xs">{ev.metadata ? JSON.stringify(ev.metadata) : '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { createConversationFromTeacher } from "@/hooks/use-chat";
 
 export default function ClassroomPeople() {
     const params = useParams();
@@ -136,6 +137,16 @@ export default function ClassroomPeople() {
                                         <p className="text-xs text-gray-500 mt-1">
                                             Tham gia: {new Date(student.joinedAt).toLocaleDateString("vi-VN")}
                                         </p>
+                                        {student.parents && student.parents.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {student.parents.map((p) => (
+                                                    <span key={p.id} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white border border-gray-200 text-xs text-gray-700">
+                                                        <span>👨‍👩‍👧</span>
+                                                        <span className="font-medium">{p.fullname}</span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
@@ -158,12 +169,27 @@ export default function ClassroomPeople() {
                                             </p>
                                         )}
                                     </div>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => router.push(`/dashboard/teacher/classrooms/${classroomId}/people/${student.id}`)}
-                                    >
-                                        Xem chi tiết
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => router.push(`/dashboard/teacher/classrooms/${classroomId}/people/${student.id}`)}
+                                        >
+                                            Xem chi tiết
+                                        </Button>
+                                        <Button
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await createConversationFromTeacher(student.id, true, classroomId);
+                                                    const id = res?.conversationId as string | undefined;
+                                                    if (id) router.push(`/dashboard/teacher/messages?open=${encodeURIComponent(id)}`);
+                                                } catch (e) {
+                                                    console.error("[ClassroomPeople] createConversation error", e);
+                                                }
+                                            }}
+                                        >
+                                            Nhắn tin
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         ))}

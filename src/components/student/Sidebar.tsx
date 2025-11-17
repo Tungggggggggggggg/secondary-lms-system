@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useSidebarState } from "../../hooks/useSidebarState";
 import { isActivePath } from "../../utils/routing";
 import SidebarToggleButton from "../shared/SidebarToggleButton";
+import { useUnreadTotal } from "../../hooks/use-chat";
 
 interface SidebarProps {
     role?: "student" | "teacher" | "parent";
@@ -16,6 +17,7 @@ export default function Sidebar({ role = "student" }: SidebarProps) {
     const { data: session } = useSession();
     const pathname = usePathname();
     const { expanded, toggle } = useSidebarState("sidebar:student");
+    const unreadTotal = useUnreadTotal();
 
     const menu =
         role === "student"
@@ -29,6 +31,11 @@ export default function Sidebar({ role = "student" }: SidebarProps) {
                       icon: "📚",
                       label: "Lớp học",
                       href: "/dashboard/student/classes",
+                  },
+                  {
+                      icon: "💬",
+                      label: "Tin nhắn",
+                      href: "/dashboard/student/messages",
                   },
                   {
                       icon: "✍️",
@@ -129,6 +136,11 @@ export default function Sidebar({ role = "student" }: SidebarProps) {
                             >
                                 <span className="text-xl">{item.icon}</span>
                                 {expanded && <span>{item.label}</span>}
+                                {item.href === "/dashboard/student/messages" && unreadTotal > 0 && (
+                                    <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
+                                        {unreadTotal}
+                                    </span>
+                                )}
                             </Link>
                         );
                     })}
