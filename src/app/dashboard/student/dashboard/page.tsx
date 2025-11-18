@@ -6,7 +6,7 @@ import StatsOverview from "@/components/student/StatsOverview";
 import MyClasses from "@/components/student/MyClasses";
 import UpcomingAssignments from "@/components/student/UpcomingAssignments";
 import RecentActivity from "@/components/student/RecentActivity";
-import TeacherContacts from "@/components/student/TeacherContacts";
+
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
 
 export default function StudentDashboardPage() {
@@ -42,7 +42,7 @@ export default function StudentDashboardPage() {
           {/* <JoinClass /> */}
           <UpcomingAssignments />
           <RecentActivity />
-          <TeacherContacts />
+       
         </div>
       </div>
     </>

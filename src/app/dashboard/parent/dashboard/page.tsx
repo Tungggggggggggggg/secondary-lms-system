@@ -5,7 +5,7 @@ import HeaderParent from "@/components/parent/Header";
 import QuickStats from "@/components/parent/QuickStats";
 import MyChildren from "@/components/parent/MyChildren";
 import AcademicPerformance from "@/components/parent/AcademicPerformance";
-import TeacherContacts from "@/components/parent/TeacherContacts";
+
 
 export default function ParentDashboardPage() {
   const currentDate = new Date();
@@ -32,7 +32,7 @@ export default function ParentDashboardPage() {
           <AcademicPerformance />
         </div>
         <div className="space-y-8">
-          <TeacherContacts />
+         
         </div>
       </div>
     </>
