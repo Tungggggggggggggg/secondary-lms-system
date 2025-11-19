@@ -248,6 +248,8 @@ model AssignmentSubmission {
   assignmentId String
   studentId    String
   attempt      Int        @default(1)
+  presentation Json?
+  contentSnapshot Json?
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 

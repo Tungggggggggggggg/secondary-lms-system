@@ -17,6 +17,8 @@ import StatsCard from "@/components/admin/stats/StatsCard";
 import { UserRole as PrismaUserRole } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
 import useSWR from "swr";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { usePrompt } from "@/components/providers/PromptProvider";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -47,10 +49,17 @@ export default function OrgMembersPage() {
 
   const members = data?.items || [];
   const total = data?.total || 0;
+  const confirm = useConfirm();
+  const prompt = usePrompt();
 
   // Handle add member
   const handleAddMember = useCallback(async () => {
-    const userId = prompt("Nhập User ID để thêm vào tổ chức:");
+    const userId = await prompt({
+      title: "Thêm thành viên",
+      description: "Nhập User ID để thêm vào tổ chức",
+      placeholder: "User ID",
+      validate: (v) => (v && v.trim() ? null : "User ID không được để trống"),
+    });
     if (!userId || !orgId) return;
 
     try {
@@ -91,13 +100,14 @@ export default function OrgMembersPage() {
   // Handle remove member
   const handleRemoveMember = useCallback(
     async (memberId: string, userName: string) => {
-      if (
-        !confirm(
-          `Bạn có chắc chắn muốn xóa "${userName}" khỏi tổ chức?`
-        )
-      ) {
-        return;
-      }
+      const ok = await confirm({
+        title: "Xóa khỏi tổ chức",
+        description: `Bạn có chắc chắn muốn xóa "${userName}" khỏi tổ chức?`,
+        variant: "danger",
+        confirmText: "Xóa",
+        cancelText: "Hủy",
+      });
+      if (!ok) return;
 
       try {
         const response = await fetch(`/api/admin/org/members/${memberId}`, {

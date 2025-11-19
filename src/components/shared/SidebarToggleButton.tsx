@@ -1,62 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Tooltip from "@/components/ui/tooltip";
 
 interface SidebarToggleButtonProps {
   expanded: boolean;
   onToggle: () => void;
   ariaControls: string;
+  variant?: "light" | "dark";
+  size?: "sm" | "md";
 }
 
-// Nút toggle sidebar: hỗ trợ ARIA, bàn phím, và micro-interaction bằng GSAP.
-export default function SidebarToggleButton({ expanded, onToggle, ariaControls }: SidebarToggleButtonProps) {
-  const btnRef = useRef<HTMLButtonElement | null>(null);
-  const [gsap, setGsap] = useState<any>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    // Import động GSAP để tránh SSR issues
-    import("gsap")
-      .then((mod) => {
-        if (mounted) setGsap(mod.gsap || mod);
-      })
-      .catch(() => {
-        // Không có GSAP vẫn hoạt động bình thường (fallback bằng CSS transitions)
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!gsap || !btnRef.current) return;
-    try {
-      gsap.to(btnRef.current, {
-        keyframes: [
-          { scale: 0.94, duration: 0.08 },
-          { scale: 1, duration: 0.18 },
-        ],
-        ease: "power2.out",
-      });
-    } catch (error) {
-      console.error("Sidebar: gsap toggle animation error", error);
-    }
-  }, [expanded, gsap]);
-
+// Nút toggle sidebar: rõ ràng, phản hồi tức thì, có Tooltip & ARIA
+export default function SidebarToggleButton({ expanded, onToggle, ariaControls, variant = "dark", size = "md" }: SidebarToggleButtonProps) {
+  const label = useMemo(() => (expanded ? "Thu gọn sidebar" : "Mở rộng sidebar"), [expanded]);
+  const btnClass = variant === "light"
+    ? "rounded-lg bg-gray-100 hover:bg-gray-200 focus-visible:ring-violet-300"
+    : "rounded-lg bg-white/10 hover:bg-white/20 focus-visible:ring-yellow-300";
+  const iconClass = variant === "light" ? "text-gray-700" : "text-white";
+  const sizeCls = size === "sm" ? "w-8 h-8" : "w-10 h-10";
   return (
-    <button
-      ref={btnRef}
-      type="button"
-      onClick={onToggle}
-      aria-label="Thu gọn/Mở rộng sidebar"
-      aria-expanded={expanded}
-      aria-controls={ariaControls}
-      className="mb-4 inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 transition-colors"
-    >
-      <span className="text-lg" aria-hidden>
-        {expanded ? "«" : "»"}
-      </span>
-    </button>
+    <Tooltip content={label}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={label}
+        aria-expanded={expanded}
+        aria-controls={ariaControls}
+        className={`mb-4 inline-flex items-center justify-center ${sizeCls} cursor-pointer focus:outline-none focus-visible:ring-2 transition-transform ${btnClass}`}
+      >
+        {expanded ? (
+          <ChevronLeft className={`h-5 w-5 ${iconClass}`} aria-hidden />
+        ) : (
+          <ChevronRight className={`h-5 w-5 ${iconClass}`} aria-hidden />
+        )}
+      </button>
+    </Tooltip>
   );
 }
 

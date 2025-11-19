@@ -29,6 +29,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
 
 // ============================================
 // Types
@@ -82,6 +83,7 @@ export default function ClassroomDetailModal({
   onClassroomDeleted
 }: ClassroomDetailModalProps) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [classroom, setClassroom] = useState<ClassroomDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -200,8 +202,13 @@ export default function ClassroomDetailModal({
 
   const handleRemoveStudent = async (studentId: string, studentName: string) => {
     if (!classroom) return;
-    
-    const confirmed = window.confirm(`Bạn có chắc muốn xóa học sinh "${studentName}" khỏi lớp "${classroom.name}"?`);
+    const confirmed = await confirm({
+      title: "Xóa học sinh khỏi lớp",
+      description: `Bạn có chắc muốn xóa học sinh "${studentName}" khỏi lớp "${classroom.name}"?`,
+      variant: "danger",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+    });
     if (!confirmed) return;
 
     try {
@@ -236,10 +243,13 @@ export default function ClassroomDetailModal({
 
   const handleDeleteClassroom = async () => {
     if (!classroom) return;
-    
-    const confirmed = window.confirm(
-      `Bạn có chắc muốn xóa lớp học "${classroom.name}"?\n\nViệc này sẽ xóa lớp học và loại bỏ tất cả học sinh khỏi lớp. Thao tác này không thể hoàn tác.`
-    );
+    const confirmed = await confirm({
+      title: "Xóa lớp học",
+      description: `Bạn có chắc muốn xóa lớp học "${classroom.name}"?\nViệc này sẽ xóa lớp học và loại bỏ tất cả học sinh khỏi lớp. Thao tác này không thể hoàn tác.`,
+      variant: "danger",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+    });
     if (!confirmed) return;
 
     try {

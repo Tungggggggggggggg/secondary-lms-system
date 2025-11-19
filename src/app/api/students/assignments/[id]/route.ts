@@ -92,14 +92,16 @@ export async function GET(
           studentId: user.id,
         },
         orderBy: { attempt: "desc" },
-        select: {
+        select: ({
           id: true,
           content: true,
           grade: true,
           feedback: true,
           submittedAt: true,
           attempt: true,
-        },
+          presentation: true,
+          contentSnapshot: true,
+        } as any),
       }),
       prisma.assignmentAttempt.findFirst({
         where: { assignmentId, studentId: user.id },
@@ -180,8 +182,10 @@ export async function GET(
             content: submission.content,
             grade: submission.grade,
             feedback: submission.feedback,
-            submittedAt: submission.submittedAt.toISOString(),
+            submittedAt: new Date((submission as any).submittedAt).toISOString(),
             attempt: submission.attempt,
+            presentation: (submission as any).presentation ?? null,
+            contentSnapshot: (submission as any).contentSnapshot ?? null,
           }
         : null,
     };

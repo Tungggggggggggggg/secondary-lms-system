@@ -38,6 +38,7 @@ export default function GradeSubmissionDialog({
   const [grade, setGrade] = useState<string>("");
   const [feedback, setFeedback] = useState<string>("");
   const [isGrading, setIsGrading] = useState(false);
+  const [gradeError, setGradeError] = useState<string | null>(null);
 
   // Sync state với submission data
   useEffect(() => {
@@ -89,9 +90,10 @@ export default function GradeSubmissionDialog({
   const handleSubmit = async () => {
     const gradeNum = parseFloat(grade);
     if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > 10) {
-      alert("Điểm phải từ 0 đến 10");
+      setGradeError("Điểm phải từ 0 đến 10");
       return;
     }
+    setGradeError(null);
 
     setIsGrading(true);
     try {
@@ -150,6 +152,9 @@ export default function GradeSubmissionDialog({
                   onChange={(e) => setGrade(e.target.value)}
                   placeholder="Nhập điểm (0-10)"
                 />
+                {gradeError && (
+                  <p className="text-sm text-red-600">{gradeError}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -195,70 +200,110 @@ export default function GradeSubmissionDialog({
                 </pre>
               </div>
             ) : (
-              // Quiz: Hiển thị câu trả lời với kết quả
+              // Quiz: Hiển thị theo snapshot presentation (ưu tiên contentSnapshot nếu có)
               <div className="space-y-4">
-                {quizAnswers && quizAnswers.length > 0 ? (
-                  quizAnswers.map((answer, idx) => {
-                    if (!answer) return null;
-                    return (
-                      <div
-                        key={idx}
-                        className={`border rounded-lg p-4 shadow-sm ${
-                          answer.isCorrect
-                            ? "bg-green-50 border-green-200"
-                            : "bg-red-50 border-red-200"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-semibold text-gray-800">
-                            Câu {answer.question.order}: {answer.question.content}
-                          </h4>
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-semibold ${
-                              answer.isCorrect
-                                ? "bg-green-200 text-green-800"
-                                : "bg-red-200 text-red-800"
-                            }`}
-                          >
-                            {answer.isCorrect ? "✓ Đúng" : "✗ Sai"}
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">
-                              Học sinh chọn:
-                            </p>
-                            <ul className="list-disc list-inside text-sm text-gray-600">
-                              {answer.selectedOptions.map((opt) => (
-                                <li key={opt.id}>
-                                  {opt.label}: {opt.content}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          {!answer.isCorrect && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-700">
-                                Đáp án đúng:
-                              </p>
-                              <ul className="list-disc list-inside text-sm text-green-700">
-                                {answer.correctOptions.map((opt) => (
-                                  <li key={opt.id}>
-                                    {opt.label}: {opt.content}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                {submission && submission.answers && (submission.assignment.questions || (submission as any).contentSnapshot) ? (
+                  (() => {
+                    const snapshot = (submission as any).contentSnapshot as
+                      | { versionHash?: string; questions?: Array<{ id: string; content: string; type: string; options?: Array<{ id: string; label: string; content: string; isCorrect: boolean }> }> }
+                      | null
+                      | undefined;
+                    const baseQuestions = (snapshot?.questions && snapshot.questions.length)
+                      ? (snapshot.questions as any[])
+                      : (submission.assignment.questions || []) as any[];
+                    const questionMap = new Map(
+                      baseQuestions.map((q: any) => [q.id, q])
                     );
-                  })
+                    const answersMap = new Map(
+                      submission.answers.map((a) => [a.questionId, a.optionIds])
+                    );
+                    const presentation = (submission as any).presentation as
+                      | { questionOrder?: string[]; optionOrder?: Record<string, string[]> }
+                      | null
+                      | undefined;
+                    const orderedQids = (presentation?.questionOrder && presentation.questionOrder.length)
+                      ? presentation.questionOrder!
+                      : (baseQuestions || []).map((q: any) => q.id);
+
+                    return orderedQids.map((qid, qIdx) => {
+                      const q = questionMap.get(qid);
+                      if (!q) return null;
+                      const selected = new Set(answersMap.get(qid) || []);
+                      const correctSet = new Set(
+                        ((q.options || []) as any[]).filter((o: any) => o.isCorrect).map((o: any) => o.id)
+                      );
+                      const isCorrect =
+                        selected.size === correctSet.size &&
+                        Array.from(selected).every((id) => correctSet.has(id));
+
+                    const orderedOids = presentation?.optionOrder?.[qid]?.length
+                        ? presentation.optionOrder![qid]!
+                        : ((q.options || []) as any[]).map((o: any) => o.id);
+                      const optionById: Record<string, any> = {};
+                      ((q.options || []) as any[]).forEach((o: any) => (optionById[o.id] = o));
+
+                      return (
+                        <div
+                          key={qid}
+                          className={`border rounded-lg p-4 shadow-sm ${
+                            isCorrect ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-semibold text-gray-800">
+                              Câu {qIdx + 1}: {q.content}
+                            </h4>
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-semibold ${
+                                isCorrect ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800"
+                              }`}
+                            >
+                              {isCorrect ? "✓ Đúng" : "✗ Sai"}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {orderedOids.map((oid, optIdx) => {
+                              const opt = optionById[oid];
+                              if (!opt) return null;
+                              const picked = selected.has(oid);
+                              const isAns = correctSet.has(oid);
+                              return (
+                                <div
+                                  key={oid}
+                                  className={`flex items-start gap-3 p-3 rounded-lg border-2 ${
+                                    picked
+                                      ? "bg-indigo-50 border-indigo-500"
+                                      : isAns
+                                        ? "bg-green-50 border-green-400"
+                                        : "bg-white border-gray-200"
+                                  }`}
+                                >
+                                  <input
+                                    type={q.type === "SINGLE" || q.type === "TRUE_FALSE" ? "radio" : "checkbox"}
+                                    checked={picked}
+                                    disabled
+                                    className="mt-1"
+                                  />
+                                  <div className="flex-1">
+                                    <span className="font-medium text-gray-800 mr-2">
+                                      {String.fromCharCode(65 + optIdx)}:
+                                    </span>
+                                    <span className="text-gray-700">{opt.content}</span>
+                                    {isAns && (
+                                      <span className="ml-2 inline-flex text-[11px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">Đáp án đúng</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()
                 ) : (
                   <div className="bg-white border rounded-lg p-4">
-                    <p className="text-sm text-gray-600">
-                      Không có câu trả lời
-                    </p>
+                    <p className="text-sm text-gray-600">Không có câu trả lời</p>
                   </div>
                 )}
               </div>

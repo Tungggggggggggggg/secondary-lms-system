@@ -142,12 +142,13 @@ export async function GET(req: NextRequest) {
               submittedAt: submission.submittedAt.toISOString(),
             }
           : null,
-        // Trạng thái
-        status: submission
-          ? "submitted"
-          : assignment.dueDate && new Date(assignment.dueDate) < new Date()
-          ? "overdue"
-          : "pending",
+        // Trạng thái dựa trên hạn hiệu lực (QUIZ: lockAt; ESSAY: dueDate)
+        status: (() => {
+          if (submission) return "submitted" as const;
+          const effective = assignment.lockAt ?? assignment.dueDate;
+          if (effective && new Date(effective) < new Date()) return "overdue" as const;
+          return "pending" as const;
+        })(),
       };
     });
 

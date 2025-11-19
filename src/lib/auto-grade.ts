@@ -45,6 +45,7 @@ interface QuestionResult {
   correctAnswer: string[]
   isCorrect: boolean
   questionType: 'SINGLE' | 'MULTIPLE' | 'TRUE_FALSE' | 'FILL_BLANK'
+  score?: number
 }
 
 /**
@@ -90,6 +91,11 @@ export async function autoGradeQuiz(
     const totalQuestions = assignment.questions.length
     const detailedResults: QuestionResult[] = []
 
+    // Penalty factor for MULTIPLE questions when selecting wrong options
+    const penaltyAlpha = 0.5
+
+    let scoreSum = 0 // sum of per-question scores in [0,1]
+
     for (const question of assignment.questions) {
       // Tìm câu trả lời của học sinh cho câu hỏi này
       const studentAnswer = submission.answers.find(
@@ -105,14 +111,38 @@ export async function autoGradeQuiz(
       // Lấy đáp án của học sinh (nếu có)
       const studentOptions = studentAnswer?.selectedOptions?.sort() || []
 
-      // So sánh đáp án
-      const isCorrect = (question.type === 'FILL_BLANK')
-        ? (studentOptions.length > 0 && studentOptions.some(id => correctOptions.includes(id)))
-        : arraysEqual(correctOptions, studentOptions)
-      
-      if (isCorrect) {
-        correctCount++
+      // Tính điểm theo loại câu hỏi
+      let qScore = 0
+      let isCorrect = false
+
+      if (question.type === 'SINGLE' || question.type === 'TRUE_FALSE') {
+        isCorrect = arraysEqual(correctOptions, studentOptions)
+        qScore = isCorrect ? 1 : 0
+      } else if (question.type === 'MULTIPLE') {
+        const correctSet = new Set(correctOptions)
+        const selectedSet = new Set(studentOptions)
+        let TP = 0, FP = 0
+        // Đếm TP/FP
+        selectedSet.forEach(id => {
+          if (correctSet.has(id)) TP++
+          else FP++
+        })
+        const T = correctOptions.length || 1
+        const raw = (TP - penaltyAlpha * FP) / T
+        qScore = Math.max(0, Math.min(1, raw))
+        isCorrect = qScore === 1
+      } else if (question.type === 'FILL_BLANK') {
+        // Đánh đúng nếu có ít nhất một đáp án chấp nhận được
+        isCorrect = (studentOptions.length > 0 && studentOptions.some(id => correctOptions.includes(id)))
+        qScore = isCorrect ? 1 : 0
+      } else {
+        // Fallback an toàn
+        isCorrect = arraysEqual(correctOptions, studentOptions)
+        qScore = isCorrect ? 1 : 0
       }
+
+      scoreSum += qScore
+      if (isCorrect) correctCount++
 
       // Lưu chi tiết kết quả nếu được yêu cầu
       if (includeDetails) {
@@ -122,22 +152,23 @@ export async function autoGradeQuiz(
           studentAnswer: studentOptions,
           correctAnswer: correctOptions,
           isCorrect,
-          questionType: question.type as 'SINGLE' | 'MULTIPLE' | 'TRUE_FALSE' | 'FILL_BLANK'
+          questionType: question.type as 'SINGLE' | 'MULTIPLE' | 'TRUE_FALSE' | 'FILL_BLANK',
+          score: Math.round(qScore * 1000) / 1000
         })
       }
     }
 
-    // 4. Tính điểm tổng (thang điểm 10)
+    // 4. Tính điểm tổng (thang điểm 10) theo tổng điểm từng câu (có thể fractional)
     const grade = totalQuestions > 0 
-      ? Math.round((correctCount / totalQuestions) * 10 * 10) / 10 // Round to 1 decimal
+      ? Math.round(((scoreSum / totalQuestions) * 10) * 10) / 10 // 1 decimal
       : 0
 
     // 5. Tạo feedback tự động
     const percentage = totalQuestions > 0 
-      ? Math.round((correctCount / totalQuestions) * 100) 
+      ? Math.round((scoreSum / totalQuestions) * 100) 
       : 0
 
-    let feedback = `🤖 Tự động chấm: ${correctCount}/${totalQuestions} câu đúng (${percentage}%). `
+    let feedback = `🤖 Tự động chấm: ${Math.round(scoreSum * 100) / 100}/${totalQuestions} điểm câu (${percentage}%). `
     
     if (percentage >= 90) {
       feedback += "Xuất sắc! 🌟 Bạn đã nắm vững kiến thức rất tốt!"

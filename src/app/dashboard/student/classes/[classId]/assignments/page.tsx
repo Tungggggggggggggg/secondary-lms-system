@@ -18,7 +18,8 @@ function AssignmentCard({
 }) {
   const now = useMemo(() => new Date(), []);
 
-  const dueDate = useMemo(() => (assignment.dueDate ? new Date(assignment.dueDate) : null), [assignment.dueDate]);
+  const effectiveDueRaw = assignment.type === "QUIZ" ? (assignment as any).lockAt || assignment.dueDate : assignment.dueDate;
+  const dueDate = useMemo(() => (effectiveDueRaw ? new Date(effectiveDueRaw) : null), [effectiveDueRaw]);
   const isUpcoming = useMemo(() => !!(dueDate && dueDate > now), [dueDate, now]);
   const isOverdue = !!(dueDate && dueDate < now && !assignment.submission);
 

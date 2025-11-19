@@ -43,6 +43,26 @@ export interface SubmissionDetail extends TeacherSubmission {
       }>;
     }>;
   };
+  presentation?: {
+    questionOrder?: string[];
+    optionOrder?: Record<string, string[]>;
+    seed?: number | string;
+    versionHash?: string;
+  } | null;
+  contentSnapshot?: {
+    versionHash?: string;
+    questions?: Array<{
+      id: string;
+      content: string;
+      type: string;
+      options?: Array<{
+        id: string;
+        label: string;
+        content: string;
+        isCorrect: boolean;
+      }>;
+    }>;
+  } | null;
   answers?: Array<{
     questionId: string;
     optionIds: string[];

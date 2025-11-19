@@ -236,6 +236,31 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         updateData.anti_cheat_config = antiCheatConfig;
       }
     }
+
+    if (normalizedType === 'ESSAY') {
+      if (!openAt || !dueDate) {
+        return NextResponse.json({ success: false, message: 'Thời gian mở bài và hạn nộp là bắt buộc' }, { status: 400 });
+      }
+      const _open = new Date(openAt);
+      const _due = new Date(dueDate);
+      if (isNaN(_open.getTime()) || isNaN(_due.getTime()) || _open >= _due) {
+        return NextResponse.json({ success: false, message: 'Thời gian mở bài phải trước hạn nộp bài' }, { status: 400 });
+      }
+      updateData.openAt = _open;
+      updateData.dueDate = _due;
+    }
+    if (normalizedType === 'QUIZ') {
+      if (!openAt || !lockAt) {
+        return NextResponse.json({ success: false, message: 'Thời gian mở bài và đóng bài là bắt buộc' }, { status: 400 });
+      }
+      const _open = new Date(openAt);
+      const _lock = new Date(lockAt);
+      if (isNaN(_open.getTime()) || isNaN(_lock.getTime()) || _open >= _lock) {
+        return NextResponse.json({ success: false, message: 'Thời gian mở bài phải trước thời gian đóng bài' }, { status: 400 });
+      }
+      updateData.openAt = _open;
+      updateData.lockAt = _lock;
+    }
     // Validation server-side cho QUIZ questions nếu có
     let normalizedQuestions: Array<{ content: string; type: string; order?: number; options?: Array<{ label: string; content: string; isCorrect: boolean; order?: number }> }> | null = null;
     if (normalizedType === 'QUIZ' && questions && Array.isArray(questions)) {
@@ -313,17 +338,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             });
             // Nếu có options (trắc nghiệm): thêm đáp án
             if (qTypeUpperStr !== 'ESSAY' && options && Array.isArray(options) && options.length > 0) {
-              for (const [oIdx, opt] of options.entries()) {
-                await tx.option.create({
-                  data: {
-                    questionId: newQuestion.id,
-                    label: (opt as any).label || '',
-                    content: (opt as any).content || '',
-                    isCorrect: !!(opt as any).isCorrect,
-                    order: typeof (opt as any).order === 'number' ? (opt as any).order : oIdx + 1, // Đảm bảo luôn có thứ tự rõ ràng cho đáp án
-                  },
-                });
-              }
+              await tx.option.createMany({
+                data: (options as any[]).map((opt: any, oIdx: number) => ({
+                  questionId: newQuestion.id,
+                  label: opt?.label || '',
+                  content: opt?.content || '',
+                  isCorrect: !!opt?.isCorrect,
+                  order: typeof opt?.order === 'number' ? opt.order : oIdx + 1,
+                })),
+              });
             }
           }
         }
@@ -344,7 +367,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           where: { id: params.id },
           include: { questions: { include: { options: true } }, _count: { select: { submissions: true } }, classrooms: true },
         });
-      });
+      }, { timeout: 30000, maxWait: 5000 });
     } catch (err) {
       console.error('[ASSIGNMENT PUT] Lỗi khi cập nhật assignment:', err);
       return NextResponse.json({ success: false, message: 'Lỗi hệ thống khi cập nhật bài tập' }, { status: 500 });

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
 import { autoGradeQuiz, validateQuizSubmission } from "@/lib/auto-grade";
+import crypto from "crypto";
 
 /**
  * POST /api/students/assignments/[id]/submit
@@ -24,9 +25,10 @@ export async function POST(
 
     const assignmentId = params.id;
     const body = await req.json();
-    const { content, answers } = body as {
+    const { content, answers, presentation } = body as {
       content?: string;
       answers?: Array<{ questionId: string; optionIds: string[] }>;
+      presentation?: { questionOrder: string[]; optionOrder: Record<string, string[]>; seed?: number | string; versionHash?: string };
       newAttempt?: boolean;
     };
 
@@ -41,14 +43,18 @@ export async function POST(
           type: true,
           dueDate: true,
           max_attempts: true,
+          updatedAt: true,
           questions: {
             select: {
               id: true,
+              content: true,
               type: true,
               order: true,
               options: {
                 select: {
                   id: true,
+                  label: true,
+                  content: true,
                   isCorrect: true,
                 },
                 orderBy: { order: "asc" },
@@ -152,6 +158,7 @@ export async function POST(
     let calculatedGrade: number | null = null;
     let autoFeedback: string | null = null;
     let submissionContent = "";
+    let contentSnapshot: any = null;
 
     if (assignment.type === "QUIZ" && answers) {
       try {
@@ -179,9 +186,10 @@ export async function POST(
       } catch (autoGradeError) {
         console.error('[AUTO_GRADE] Error auto-grading quiz:', autoGradeError);
         
-        // Fallback to simple calculation if auto-grade fails
-        let totalScore = 0;
-        let totalQuestions = assignment.questions.length;
+        // Fallback to partial credit (MULTIPLE) with penalty alpha=0.5
+        const penaltyAlpha = 0.5;
+        let scoreSum = 0;
+        const totalQuestions = assignment.questions.length;
 
         for (const question of assignment.questions) {
           const answer = answers.find((a) => a.questionId === question.id);
@@ -189,41 +197,79 @@ export async function POST(
 
           const correctOptionIds = question.options
             .filter((opt) => opt.isCorrect)
-            .map((opt) => opt.id)
-            .sort();
+            .map((opt) => opt.id);
 
-          const selectedOptionIds = [...answer.optionIds].sort();
+          const selectedOptionIds = [...answer.optionIds];
 
-          // So sánh arrays
-          if (
-            correctOptionIds.length === selectedOptionIds.length &&
-            correctOptionIds.every((id, idx) => id === selectedOptionIds[idx])
-          ) {
-            totalScore += 1;
+          let qScore = 0;
+          if (question.type === 'SINGLE' || question.type === 'TRUE_FALSE') {
+            const ok = (correctOptionIds.length === selectedOptionIds.length) && correctOptionIds.every(id => selectedOptionIds.includes(id));
+            qScore = ok ? 1 : 0;
+          } else if (question.type === 'MULTIPLE') {
+            const correctSet = new Set(correctOptionIds);
+            const selectedSet = new Set(selectedOptionIds);
+            let TP = 0, FP = 0;
+            selectedSet.forEach(id => { if (correctSet.has(id)) TP++; else FP++; });
+            const T = correctOptionIds.length || 1;
+            qScore = Math.max(0, Math.min(1, (TP - penaltyAlpha * FP) / T));
+          } else if (question.type === 'FILL_BLANK') {
+            qScore = selectedOptionIds.some(id => correctOptionIds.includes(id)) ? 1 : 0;
           }
+          scoreSum += qScore;
         }
 
-        // Tính điểm trên thang 10
-        calculatedGrade = (totalScore / totalQuestions) * 10;
-        autoFeedback = `Tự động chấm: ${totalScore}/${totalQuestions} câu đúng (${Math.round((totalScore/totalQuestions)*100)}%)`;
+        // Tính điểm trên thang 10 theo tổng điểm fractional
+        calculatedGrade = Math.round(((scoreSum / totalQuestions) * 10) * 10) / 10;
+        autoFeedback = `Tự động chấm (fallback): ${Math.round(scoreSum * 100) / 100}/${totalQuestions} điểm câu (${Math.round((scoreSum/totalQuestions)*100)}%)`;
 
         // Lưu answers dưới dạng JSON string
         submissionContent = JSON.stringify(answers);
+      }
+
+      // Tạo contentSnapshot để freeze nội dung đề tại thời điểm nộp
+      try {
+        const snapshotQuestions = assignment.questions.map((q) => ({
+          id: q.id,
+          content: (q as any).content,
+          type: q.type,
+          options: (q.options || []).map((o) => ({
+            id: o.id,
+            label: (o as any).label,
+            content: (o as any).content,
+            isCorrect: o.isCorrect,
+          })),
+        }));
+        const versionHash = crypto
+          .createHash("sha256")
+          .update(JSON.stringify({ assignmentId: assignment.id, questions: snapshotQuestions }))
+          .digest("hex")
+          .slice(0, 12);
+        contentSnapshot = { versionHash, questions: snapshotQuestions };
+      } catch (e) {
+        console.error("[SUBMIT] Không thể tạo contentSnapshot:", e);
+        contentSnapshot = null;
       }
     } else if (assignment.type === "ESSAY" && content) {
       submissionContent = content.trim();
     }
 
     // Tạo submission (multi-attempts: nếu đã có -> tăng attempt)
+    const dataToCreate: any = {
+      assignmentId,
+      studentId: user.id,
+      content: submissionContent,
+      grade: calculatedGrade, // Auto-grade cho quiz
+      feedback: autoFeedback, // Auto-feedback cho quiz
+      attempt: nextAttempt,
+    };
+    if (presentation) {
+      dataToCreate.presentation = presentation as any;
+    }
+    if (assignment.type === "QUIZ" && contentSnapshot) {
+      dataToCreate.contentSnapshot = contentSnapshot as any;
+    }
     const submission = await prisma.assignmentSubmission.create({
-      data: {
-        assignmentId,
-        studentId: user.id,
-        content: submissionContent,
-        grade: calculatedGrade, // Auto-grade cho quiz
-        feedback: autoFeedback, // Auto-feedback cho quiz
-        attempt: nextAttempt,
-      },
+      data: dataToCreate,
       include: {
         assignment: {
           select: {

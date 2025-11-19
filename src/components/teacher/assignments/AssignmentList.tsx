@@ -156,15 +156,16 @@ export default function AssignmentList({
                     <div className="mt-4 flex items-center justify-between text-sm">
                         <div className="flex items-center gap-4">
                             <span className="flex items-center gap-1">
-                                <span className="text-gray-600">
-                                    📅 Hạn nộp:
-                                </span>
+                                <span className="text-gray-600">📅 Hạn nộp:</span>
                                 <span className="font-medium text-gray-800">
-                                    {assignment.dueDate
-                                        ? new Date(
-                                              assignment.dueDate
-                                          ).toLocaleString()
-                                        : "Không rõ"}
+                                    {(() => {
+                                        const effective = assignment.type === "QUIZ"
+                                            ? (assignment as any).lockAt || assignment.dueDate
+                                            : assignment.dueDate;
+                                        return effective
+                                            ? new Date(effective as any).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                            : "Không rõ";
+                                    })()}
                                 </span>
                             </span>
                             <span className="flex items-center gap-1">

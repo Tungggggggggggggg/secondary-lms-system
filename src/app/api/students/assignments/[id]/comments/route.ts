@@ -164,6 +164,39 @@ export async function POST(
       );
     }
 
+    // POLICY: Không cho bình luận khi đang làm bài QUIZ
+    // Chỉ cho phép sau khi đã nộp (có submission) HOẶC sau khi đến thời điểm lockAt/dueDate
+    const [assignmentMeta, existingSubmission] = await Promise.all([
+      prisma.assignment.findUnique({
+        where: { id: assignmentId },
+        select: { id: true, type: true, lockAt: true, dueDate: true },
+      }),
+      prisma.assignmentSubmission.findFirst({
+        where: { assignmentId, studentId: user.id },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!assignmentMeta) {
+      return NextResponse.json(
+        { success: false, message: "Assignment not found" },
+        { status: 404 }
+      );
+    }
+
+    if (assignmentMeta.type === "QUIZ") {
+      const lockedAt = assignmentMeta.lockAt ?? assignmentMeta.dueDate;
+      const now = new Date();
+      const locked = lockedAt ? now > new Date(lockedAt) : false;
+      const canComment = !!existingSubmission || locked;
+      if (!canComment) {
+        return NextResponse.json(
+          { success: false, message: "Bạn chỉ có thể bình luận sau khi nộp bài hoặc sau khi bài kiểm tra kết thúc." },
+          { status: 403 }
+        );
+      }
+    }
+
     // Cho phép thiếu questionId (đối với bài tự luận không có câu hỏi)
 
     // Optimize: Parallel queries - Kiểm tra classroom membership + question validation

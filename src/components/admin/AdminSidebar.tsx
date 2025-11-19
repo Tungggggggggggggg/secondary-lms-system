@@ -10,6 +10,10 @@ import { ADMIN_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS, ROLE_LABELS } from "@/lib/admin
 import { UserRole } from "@prisma/client";
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { useSidebarState } from "@/hooks/useSidebarState";
+import SidebarToggleButton from "@/components/shared/SidebarToggleButton";
+import Tooltip from "@/components/ui/tooltip";
+import { AccordionItem } from "@/components/ui/accordion";
 
 /**
  * Props cho AdminSidebar component
@@ -34,8 +38,25 @@ export default function AdminSidebar({
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const { expanded, toggle } = useSidebarState("sidebar:admin");
   const isSuperAdmin = userRole === "SUPER_ADMIN";
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : ADMIN_NAV_ITEMS;
+
+  const groups: { title: string; ids: string[] }[] = isSuperAdmin
+    ? [
+        { title: "Tổng quan", ids: ["overview"] },
+        { title: "Tổ chức", ids: ["organizations", "members"] },
+        { title: "Lớp học & Nội dung", ids: ["classrooms", "moderation", "reports"] },
+        { title: "Hệ thống", ids: ["system", "settings", "users", "audit"] },
+        { title: "Tác vụ", ids: ["bulk-operations"] },
+      ]
+    : [
+        { title: "Tổng quan", ids: ["overview"] },
+        { title: "Tổ chức", ids: ["organizations", "members"] },
+        { title: "Lớp học & Nội dung", ids: ["classrooms", "moderation", "reports"] },
+        { title: "Cài đặt", ids: ["settings"] },
+        { title: "Tác vụ", ids: ["bulk-operations"] },
+      ];
 
   // Animation khi sidebar mount
   useEffect(() => {
@@ -113,8 +134,11 @@ export default function AdminSidebar({
       <aside
         ref={sidebarRef}
         className={cn(
-          "fixed lg:sticky top-0 left-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-40",
-          "transform transition-transform duration-300 ease-in-out",
+          "fixed lg:sticky top-0 left-0 h-screen bg-white border-r border-gray-200 flex flex-col z-40 overflow-hidden rounded-r-2xl",
+          "transform transition-all duration-300 ease-in-out",
+          // Mobile width giữ 256px; Desktop phụ thuộc expanded
+          "w-64",
+          expanded ? "lg:w-72" : "lg:w-20",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           className
         )}
@@ -122,47 +146,90 @@ export default function AdminSidebar({
       >
         {/* Logo/Header */}
         <div className="p-6 border-b border-gray-200">
-          <Link href="/dashboard/admin/overview" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center">
-              <Icons.Shield className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg text-gray-900">Admin Panel</h1>
-              <p className="text-xs text-gray-500">
-                {isSuperAdmin ? "Super Admin" : "Admin"}
-              </p>
-            </div>
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link href="/dashboard/admin/overview" className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center">
+                <Icons.Shield className="h-5 w-5 text-white" />
+              </div>
+              {expanded && (
+                <div>
+                  <h1 className="font-bold text-lg text-gray-900">Admin Panel</h1>
+                  <p className="text-xs text-gray-500">
+                    {isSuperAdmin ? "Super Admin" : "Admin"}
+                  </p>
+                </div>
+              )}
+            </Link>
+            <SidebarToggleButton expanded={expanded} onToggle={toggle} ariaControls="admin-sidebar" variant="light" size={expanded ? "md" : "sm"} />
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {navItems.map((item) => {
-            const active = isActive(item.href);
-            const Icon = renderIcon(item.icon);
-
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
-                  "hover:bg-gray-50 hover:text-violet-600",
-                  active
-                    ? "bg-violet-50 text-violet-600 border-l-2 border-violet-600"
-                    : "text-gray-700"
-                )}
-              >
-                {Icon}
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+        <nav id="admin-sidebar" className={cn("flex-1 overflow-y-auto p-4 space-y-2", expanded ? "pr-1" : "pr-0 [scrollbar-width:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0") }>
+          {expanded ? (
+            <>
+              {groups.map((g) => {
+                const items = navItems.filter((n) => g.ids.includes(n.id));
+                if (!items.length) return null;
+                return (
+                  <AccordionItem key={g.title} title={g.title} defaultOpen headerClassName="text-gray-700 hover:bg-gray-50">
+                    {items.map((item) => {
+                      const active = isActive(item.href);
+                      const Icon = renderIcon(item.icon);
+                      return (
+                        <Link
+                          key={item.id}
+                          href={item.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          aria-label={item.label}
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                            "hover:bg-gray-50 hover:text-violet-600",
+                            active
+                              ? "bg-violet-50 text-violet-600 border-l-2 border-violet-600"
+                              : "text-gray-700"
+                          )}
+                        >
+                          {Icon}
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </AccordionItem>
+                );
+              })}
+            </>
+          ) : (
+            navItems.map((item) => {
+              const active = isActive(item.href);
+              const Icon = renderIcon(item.icon);
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  aria-label={item.label}
+                  className={cn(
+                    "flex items-center gap-3 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                    expanded ? "px-4" : "px-2",
+                    "hover:bg-gray-50 hover:text-violet-600",
+                    active
+                      ? "bg-violet-50 text-violet-600 border-l-2 border-violet-600"
+                      : "text-gray-700"
+                  )}
+                >
+                  <Tooltip content={item.label}>
+                    <span className="inline-flex items-center justify-center">{Icon}</span>
+                  </Tooltip>
+                  {false && <span>{item.label}</span>}
+                </Link>
+              );
+            })
+          )}
         </nav>
 
         {/* User Info & Logout */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 mt-auto">
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50">
             <Avatar
               fullname={userFullname}
@@ -170,15 +237,19 @@ export default function AdminSidebar({
               size="md"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {userFullname || "Admin"}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {userEmail || ""}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {ROLE_LABELS[userRole as UserRole] || userRole}
-              </p>
+              {expanded && (
+                <>
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {userFullname || "Admin"}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {userEmail || ""}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {ROLE_LABELS[userRole as UserRole] || userRole}
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -187,7 +258,7 @@ export default function AdminSidebar({
             className="mt-3 w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
           >
             <Icons.LogOut className="h-5 w-5" />
-            <span>Đăng xuất</span>
+            {expanded && <span>Đăng xuất</span>}
           </button>
         </div>
       </aside>

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminMainContainer from "@/components/admin/AdminMainContainer";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -50,11 +51,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       />
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 min-h-screen">
-        <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-          {children}
-        </div>
-      </main>
+      <AdminMainContainer>
+        {children}
+      </AdminMainContainer>
     </div>
   );
 }

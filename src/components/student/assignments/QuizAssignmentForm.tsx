@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAssignmentDetail } from "@/hooks/use-student-assignments";
 import QuestionComments from "./QuestionComments";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
 
 interface QuizAssignmentFormProps {
   assignment: StudentAssignmentDetail;
-  onSubmit: (answers: Array<{ questionId: string; optionIds: string[] }>) => Promise<void>;
+  onSubmit: (
+    answers: Array<{ questionId: string; optionIds: string[] }>,
+    presentation?: { questionOrder: string[]; optionOrder: Record<string, string[]>; seed?: number | string; versionHash?: string }
+  ) => Promise<void>;
   initialAnswers?: Array<{ questionId: string; optionIds: string[] }>;
   isLoading?: boolean;
   dueDate?: string | null;
@@ -29,6 +33,7 @@ export default function QuizAssignmentForm({
   isSubmitted = false,
 }: QuizAssignmentFormProps) {
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   // Timing: derive start/end/timeLimit
   const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
@@ -345,7 +350,12 @@ export default function QuizAssignmentForm({
           optionIds: Array.from(optionIds),
         }));
         if (answersArray.some((a) => a.optionIds.length > 0)) {
-          onSubmit(answersArray).catch(() => {});
+          const qOrder = questionOrder || assignment.questions.map((q) => q.id);
+          const optOrder: Record<string, string[]> = {};
+          assignment.questions.forEach((q) => {
+            optOrder[q.id] = (optionOrders && optionOrders[q.id]) ? optionOrders[q.id] : q.options.map((o) => o.id);
+          });
+          onSubmit(answersArray, { questionOrder: qOrder, optionOrder: optOrder }).catch(() => {});
         } else {
           // Không gửi request rỗng để tránh 400; chỉ khoá UI (isOverdue sẽ true)
           try {
@@ -487,7 +497,7 @@ export default function QuizAssignmentForm({
 
   // Toggle option selection
   const toggleOption = (questionId: string, optionId: string, questionType: string) => {
-    if (isLoading || (dueDate && new Date(dueDate) < new Date())) return;
+    if (isLoading || isOverdue || disabledMode) return;
 
     setAnswers((prev) => {
       const newAnswers = new Map(prev);
@@ -503,7 +513,8 @@ export default function QuizAssignmentForm({
         } else {
           currentOptions.add(optionId);
         }
-        newAnswers.set(questionId, currentOptions);
+        // Clone Set để đảm bảo React nhận diện thay đổi và re-render
+        newAnswers.set(questionId, new Set(currentOptions));
       }
 
       return newAnswers;
@@ -615,7 +626,13 @@ export default function QuizAssignmentForm({
 
     // Xác nhận nộp bài
     const confirmMsg = `Bạn đã trả lời ${answeredCount}/${totalQuestions} câu. Xác nhận nộp bài?`;
-    if (!window.confirm(confirmMsg)) return;
+    const ok = await confirm({
+      title: "Xác nhận nộp bài",
+      description: confirmMsg,
+      confirmText: "Nộp bài",
+      cancelText: "Hủy",
+    });
+    if (!ok) return;
 
     // Transform answers từ Map sang Array
     const answersArray = Array.from(answers.entries()).map(([questionId, optionIds]) => ({
@@ -623,7 +640,14 @@ export default function QuizAssignmentForm({
       optionIds: Array.from(optionIds),
     }));
 
-    await onSubmit(answersArray);
+    // Chuẩn bị snapshot presentation (questionOrder/optionOrder)
+    const qOrder = questionOrder || assignment.questions.map((q) => q.id);
+    const optOrder: Record<string, string[]> = {};
+    assignment.questions.forEach((q) => {
+      optOrder[q.id] = (optionOrders && optionOrders[q.id]) ? optionOrders[q.id] : q.options.map((o) => o.id);
+    });
+
+    await onSubmit(answersArray, { questionOrder: qOrder, optionOrder: optOrder });
     try {
       window.localStorage.removeItem(draftKey);
       window.localStorage.removeItem(fillDraftKey);
@@ -881,14 +905,14 @@ export default function QuizAssignmentForm({
                               onChange={() => toggleOption(question.id, option.id, question.type)}
                               disabled={isLoading || isOverdue || disabledMode}
                               className="mt-1"
-                              aria-label={`Câu ${index + 1} - ${option.label}: ${option.content}`}
+                              aria-label={`Câu ${index + 1} - ${String.fromCharCode(65 + optIdx)}: ${option.content}`}
                               name={(question.type === "SINGLE" || question.type === "TRUE_FALSE") ? `question-${question.id}` : undefined}
                               onKeyDown={(e) => handleOptionKeyDown(e, question.id, option.id, question.type)}
                               tabIndex={tabIndex}
                             />
                             <div className="flex-1">
                               <span className="font-medium text-gray-800 mr-2">
-                                {option.label}:
+                                {String.fromCharCode(65 + optIdx)}:
                               </span>
                               <span className="text-gray-800">{option.content}</span>
                             </div>
@@ -899,12 +923,14 @@ export default function QuizAssignmentForm({
                   )}
 
                   {/* Question Comments - Expand/collapse */}
-                  <QuestionComments
-                    questionId={question.id}
-                    questionContent={question.content}
-                    questionOrder={question.order}
-                    initialCommentsCount={question._count.comments}
-                  />
+                  {disabledMode && (
+                    <QuestionComments
+                      questionId={question.id}
+                      questionContent={question.content}
+                      questionOrder={question.order}
+                      initialCommentsCount={question._count.comments}
+                    />
+                  )}
                 </div>
               </div>
             </div>

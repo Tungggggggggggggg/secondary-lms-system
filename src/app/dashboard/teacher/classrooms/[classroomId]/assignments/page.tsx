@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+
 import { useRouter, useParams } from "next/navigation";
 import { useClassroomAssignments, ClassroomAssignment } from "@/hooks/use-classroom-assignments";
 import { useToast } from "@/hooks/use-toast";
 import AddAssignmentDialog from "@/components/teacher/classroom/AddAssignmentDialog";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
 
 /**
  * Component hiển thị assignment card
@@ -23,10 +25,12 @@ function AssignmentCard({
 }) {
   const router = useRouter();
   const [isRemoving, setIsRemoving] = useState(false);
+  const confirm = useConfirm();
 
   // Tính toán trạng thái và màu sắc
   const now = new Date();
-  const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
+  const effectiveDueRaw = assignment.type === "QUIZ" ? (assignment as any).lockAt || assignment.dueDate : assignment.dueDate;
+  const dueDate = effectiveDueRaw ? new Date(effectiveDueRaw) : null;
   const isOverdue = dueDate && dueDate < now;
   const isUpcoming = dueDate && dueDate > now;
 
@@ -44,11 +48,17 @@ function AssignmentCard({
 
   const handleRemove = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("Bạn có chắc muốn xóa bài tập này khỏi lớp không?")) {
-      setIsRemoving(true);
-      await onRemove();
-      setIsRemoving(false);
-    }
+    const ok = await confirm({
+      title: "Xóa bài tập khỏi lớp",
+      description: "Bạn có chắc muốn xóa bài tập này khỏi lớp không?",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setIsRemoving(true);
+    await onRemove();
+    setIsRemoving(false);
   };
 
   return (
@@ -93,13 +103,9 @@ function AssignmentCard({
               <span>
                 📅 Hạn nộp:{" "}
                 <span className="font-medium text-gray-800">
-                  {dueDate.toLocaleDateString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {dueDate.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  {" "}
+                  {dueDate.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </span>
             )}

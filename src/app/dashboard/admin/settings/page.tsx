@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, Save, AlertCircle, Plus, Trash2 } from "lucide-react";
 import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import { usePrompt } from "@/components/providers/PromptProvider";
 
 /**
  * Component SettingsPage - Trang cài đặt cho ADMIN (org-scoped)
@@ -21,6 +22,7 @@ export default function SettingsPage() {
   const { data: session } = useSession();
   const role = (session?.user as any)?.role as string | undefined;
   const { toast } = useToast();
+  const prompt = usePrompt();
   const [settings, setSettings] = useState<Array<{ key: string; updatedAt: string }>>([]);
   const [selectedKey, setSelectedKey] = useState<string>("");
   const [valueText, setValueText] = useState<string>("{}");
@@ -189,8 +191,15 @@ export default function SettingsPage() {
   };
 
   // Create new setting
-  const handleCreateNew = () => {
-    const key = prompt("Nhập key mới cho cài đặt:");
+  const handleCreateNew = async () => {
+    const key = await prompt({
+      title: "Tạo cài đặt mới",
+      description: "Nhập key mới cho cài đặt",
+      placeholder: "ví dụ: system.feature_flags",
+      validate: (v) => (v && v.trim() ? null : "Key không được để trống"),
+      confirmText: "Tạo",
+      cancelText: "Hủy",
+    });
     if (key && key.trim()) {
       setSelectedKey(key.trim());
       setValueText("{}");

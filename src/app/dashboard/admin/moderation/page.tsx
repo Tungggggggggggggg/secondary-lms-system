@@ -18,6 +18,7 @@ import { ModerationItem } from "@/types/admin";
 import { MODERATION_STATUS_COLORS } from "@/lib/admin/admin-constants";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { usePrompt } from "@/components/providers/PromptProvider";
 
 /**
  * Component ModerationPage - Trang kiểm duyệt nội dung
@@ -34,6 +35,7 @@ export default function ModerationPage() {
   const [itemToReject, setItemToReject] = useState<ModerationItem | null>(null);
   const [previewItem, setPreviewItem] = useState<ModerationItem | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const prompt = usePrompt();
 
   // Hook
   const {
@@ -135,10 +137,17 @@ export default function ModerationPage() {
   }, [selectedItems, items, approveItem]);
 
   // Handle bulk reject
-  const handleBulkReject = useCallback(() => {
+  const handleBulkReject = useCallback(async () => {
     if (selectedItems.length === 0) return;
-    // For bulk reject, we'll use a default reason or prompt
-    const reason = prompt("Lý do từ chối (áp dụng cho tất cả các mục đã chọn):");
+    const reason = await prompt({
+      title: "Từ chối hàng loạt",
+      description: "Nhập lý do từ chối (áp dụng cho tất cả các mục đã chọn)",
+      type: "textarea",
+      placeholder: "Lý do từ chối...",
+      validate: (v) => (v && v.trim() ? null : "Vui lòng nhập lý do"),
+      confirmText: "Từ chối",
+      cancelText: "Hủy",
+    });
     if (!reason) return;
 
     const promises = selectedItems.map((itemId) => {
@@ -148,14 +157,13 @@ export default function ModerationPage() {
       }
     });
 
-    Promise.all(promises)
-      .then(() => {
-        setSelectedItems([]);
-      })
-      .catch((error) => {
-        // Error handled in hook
-      });
-  }, [selectedItems, items, rejectItem]);
+    try {
+      await Promise.all(promises);
+      setSelectedItems([]);
+    } catch (error) {
+      // Error handled in hook
+    }
+  }, [selectedItems, items, rejectItem, prompt]);
 
   // Open reject dialog
   const openRejectDialog = (item: ModerationItem) => {

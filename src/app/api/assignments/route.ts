@@ -69,6 +69,8 @@ export async function GET(req: NextRequest) {
         title: true,
         description: true,
         dueDate: true,
+        openAt: true,
+        lockAt: true,
         type: true,
         createdAt: true,
         updatedAt: true,

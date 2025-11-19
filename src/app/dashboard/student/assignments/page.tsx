@@ -14,8 +14,9 @@ import { useStudentAssignments, StudentAssignment } from "@/hooks/use-student-as
 function AssignmentCard({ assignment }: { assignment: StudentAssignment }) {
   const router = useRouter();
   const now = new Date();
-  const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
   const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
+  const effectiveDueRaw = assignment.type === "QUIZ" ? (assignment as any).lockAt || assignment.dueDate : assignment.dueDate;
+  const dueDate = effectiveDueRaw ? new Date(effectiveDueRaw) : null;
   const lockAt = (assignment as any).lockAt ? new Date((assignment as any).lockAt) : (dueDate || null);
   const isOverdue = dueDate && dueDate < now && !assignment.submission;
   const isUrgent = dueDate && dueDate > now && (dueDate.getTime() - now.getTime()) < 24 * 60 * 60 * 1000; // Còn < 24h
@@ -170,9 +171,11 @@ export default function AssignmentsPage() {
     // Sort: Sắp hết hạn trước, sau đó mới nhất
     filtered.sort((a, b) => {
       const now = new Date();
-      const dueA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
-      const dueB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
-      
+      const dueARaw = a.type === "QUIZ" ? (a as any).lockAt || a.dueDate : a.dueDate;
+      const dueBRaw = b.type === "QUIZ" ? (b as any).lockAt || b.dueDate : b.dueDate;
+      const dueA = dueARaw ? new Date(dueARaw).getTime() : 0;
+      const dueB = dueBRaw ? new Date(dueBRaw).getTime() : 0;
+
       // Ưu tiên: Chưa nộp và sắp hết hạn > Đã nộp > Quá hạn
       if (!a.submission && dueA > 0 && dueA < now.getTime() + 24 * 60 * 60 * 1000) {
         if (b.submission || dueB === 0 || dueB > now.getTime() + 24 * 60 * 60 * 1000) return -1;

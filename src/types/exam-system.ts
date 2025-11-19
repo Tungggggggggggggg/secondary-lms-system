@@ -57,6 +57,9 @@ export interface AntiCheatConfig {
   
   /** Ngưỡng fuzzy (0..0.5): khoảng cách/độ dài tối đa được chấp nhận */
   fuzzyThreshold?: number
+
+  /** Chính sách hiển thị đáp án đúng cho học sinh */
+  showCorrectMode?: 'never' | 'afterSubmit' | 'afterLock'
 }
 
 /**

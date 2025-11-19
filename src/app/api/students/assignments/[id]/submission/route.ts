@@ -43,13 +43,16 @@ export async function GET(
         studentId: user.id,
       },
       orderBy: { attempt: "desc" },
-      select: {
+      select: ({
         id: true,
+        assignmentId: true,
         content: true,
         grade: true,
         feedback: true,
         submittedAt: true,
         attempt: true,
+        presentation: true,
+        contentSnapshot: true,
         assignment: {
           select: {
             id: true,
@@ -58,7 +61,7 @@ export async function GET(
             dueDate: true,
           },
         },
-      },
+      } as any),
     });
 
     if (!submission) {
@@ -71,11 +74,14 @@ export async function GET(
     // Transform data
     const submissionData = {
       id: submission.id,
+      assignmentId: (submission as any).assignmentId,
       content: submission.content,
       grade: submission.grade,
       feedback: submission.feedback,
-      submittedAt: submission.submittedAt.toISOString(),
-      assignment: submission.assignment,
+      submittedAt: new Date((submission as any).submittedAt).toISOString(),
+      presentation: (submission as any).presentation ?? null,
+      contentSnapshot: (submission as any).contentSnapshot ?? null,
+      assignment: (submission as any).assignment,
       attempt: submission.attempt,
     };
 

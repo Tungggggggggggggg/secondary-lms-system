@@ -7,6 +7,7 @@ import AnimatedSection from "@/components/admin/AnimatedSection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -145,15 +146,11 @@ export default function SystemSettingsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <input
+                  <Switch
                     id="premoderation"
-                    type="checkbox"
                     checked={premoderation}
-                    onChange={(e) =>
-                      handleSave(SETTINGS_KEYS.CONTENT_PREMODERATION, e.target.checked)
-                    }
+                    onCheckedChange={(v) => handleSave(SETTINGS_KEYS.CONTENT_PREMODERATION, v)}
                     disabled={saving}
-                    className="h-5 w-5 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                   />
                 </div>
               </div>
@@ -181,15 +178,11 @@ export default function SystemSettingsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <input
+                  <Switch
                     id="maintenance"
-                    type="checkbox"
                     checked={maintenance}
-                    onChange={(e) =>
-                      handleSave(SETTINGS_KEYS.SYSTEM_MAINTENANCE, e.target.checked)
-                    }
+                    onCheckedChange={(v) => handleSave(SETTINGS_KEYS.SYSTEM_MAINTENANCE, v)}
                     disabled={saving}
-                    className="h-5 w-5 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                   />
                 </div>
               </div>

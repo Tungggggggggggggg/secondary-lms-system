@@ -42,6 +42,12 @@ export interface QuizAnswer {
 export interface SubmitAssignmentRequest {
   content?: string; // Cho essay
   answers?: QuizAnswer[]; // Cho quiz
+  presentation?: {
+    questionOrder: string[];
+    optionOrder: Record<string, string[]>;
+    seed?: number | string;
+    versionHash?: string;
+  };
 }
 
 /**
@@ -55,6 +61,12 @@ export interface SubmissionResponse {
   feedback: string | null;
   submittedAt: string;
   attempt?: number;
+  presentation?: {
+    questionOrder: string[];
+    optionOrder: Record<string, string[]>;
+    seed?: number | string;
+    versionHash?: string;
+  } | null;
   assignment: {
     id: string;
     title: string;

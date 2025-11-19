@@ -37,6 +37,7 @@ import ClassroomSelector from './ClassroomSelector';
 
 // Import Hooks
 import { useAutoSave, generateDraftKey } from '@/hooks/useAutoSave';
+import { useConfirm } from '@/components/providers/ConfirmProvider';
 
 // Steps definition
 type Step = 'type' | 'basic' | 'content' | 'classrooms' | 'preview';
@@ -86,23 +87,28 @@ export default function NewAssignmentBuilder() {
     interval: 30000, // 30 seconds
     enabled: true
   });
+  const confirm = useConfirm();
 
   // Load draft on mount
   useEffect(() => {
     const savedDraft = autoSave.loadDraft();
     if (savedDraft) {
-      const shouldLoad = window.confirm(
-        'Tìm thấy bản nháp đã lưu. Bạn có muốn tiếp tục từ bản nháp này không?'
-      );
-      
-      if (shouldLoad) {
-        setAssignmentData(savedDraft);
-        console.log('[NewAssignmentBuilder] Loaded draft data');
-      } else {
-        autoSave.clearDraft();
-      }
+      (async () => {
+        const shouldLoad = await confirm({
+          title: 'Khôi phục bản nháp',
+          description: 'Tìm thấy bản nháp đã lưu. Bạn có muốn tiếp tục từ bản nháp này không?',
+          confirmText: 'Tiếp tục',
+          cancelText: 'Bỏ qua',
+        });
+        if (shouldLoad) {
+          setAssignmentData(savedDraft);
+          console.log('[NewAssignmentBuilder] Loaded draft data');
+        } else {
+          autoSave.clearDraft();
+        }
+      })();
     }
-  }, [autoSave]);
+  }, [autoSave, confirm]);
 
   // Navigation helpers
   const currentStepIndex = steps.findIndex(step => step.key === currentStep);
@@ -175,10 +181,19 @@ export default function NewAssignmentBuilder() {
         return !!assignmentData.title.trim();
       case 'content':
         if (assignmentData.type === 'ESSAY') {
-          return !!assignmentData.essayContent?.question.trim();
+          const qOk = !!assignmentData.essayContent?.question.trim();
+          const open = assignmentData.essayContent?.openAt;
+          const due = assignmentData.essayContent?.dueDate;
+          if (!qOk || !open || !due) return false;
+          if (open >= due) return false;
+          return true;
         } else {
           const qs = assignmentData.quizContent?.questions || [];
           if (!qs.length) return false;
+          const open = assignmentData.quizContent?.openAt;
+          const lock = assignmentData.quizContent?.lockAt;
+          if (!open || !lock) return false;
+          if (open && lock && open >= lock) return false;
           for (let i = 0; i < qs.length; i++) {
             const q = qs[i];
             if (q.type === 'SINGLE' || q.type === 'TRUE_FALSE') {
@@ -195,7 +210,16 @@ export default function NewAssignmentBuilder() {
       case 'classrooms':
         return true; // Classroom selection is optional
       case 'preview':
-        return true;
+        if (assignmentData.type === 'ESSAY') {
+          return !!assignmentData.title.trim() && !!assignmentData.essayContent?.question.trim() && !!assignmentData.essayContent?.openAt && !!assignmentData.essayContent?.dueDate && (assignmentData.essayContent?.openAt < assignmentData.essayContent?.dueDate!);
+        }
+        if (assignmentData.type === 'QUIZ') {
+          const hasQs = (assignmentData.quizContent?.questions?.length || 0) > 0;
+          const open = assignmentData.quizContent?.openAt;
+          const lock = assignmentData.quizContent?.lockAt;
+          return !!assignmentData.title.trim() && hasQs && !!open && !!lock && open < lock;
+        }
+        return false;
       default:
         return false;
     }

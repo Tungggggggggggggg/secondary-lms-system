@@ -8,6 +8,7 @@ import { useSidebarState } from "../../hooks/useSidebarState";
 import { isActivePath } from "../../utils/routing";
 import SidebarToggleButton from "../shared/SidebarToggleButton";
 import { useUnreadTotal } from "../../hooks/use-chat";
+import Tooltip from "@/components/ui/tooltip";
 
 export default function SidebarParent() {
   const { data: session } = useSession();
@@ -23,18 +24,18 @@ export default function SidebarParent() {
   ];
 
   return (
-    <aside className={`fixed left-0 top-0 h-full ${expanded ? "w-72" : "w-20"} bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white shadow-2xl z-50 transition-[width] duration-300 ease-in-out`}>
-      <div className="p-6 relative h-full">
-        <div className="flex items-center justify-between mb-10">
+    <aside className={`fixed left-0 top-0 h-full ${expanded ? "w-72" : "w-20"} bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white shadow-2xl rounded-r-2xl z-50 transition-[width] duration-300 ease-in-out flex flex-col overflow-hidden`}>
+      <div className={`${expanded ? "p-6" : "px-2 py-4"} flex h-full flex-col overflow-hidden`}>
+        <div className={`flex items-center justify-between ${expanded ? "mb-10" : "mb-4"}`}>
           <div className="flex items-center gap-3">
-            <span className="text-4xl">🎓</span>
+            {expanded && <span className="text-4xl">🎓</span>}
             {expanded && (
               <span className="text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">
                 EduVerse
               </span>
             )}
           </div>
-          <SidebarToggleButton expanded={expanded} onToggle={toggle} ariaControls="parent-sidebar" />
+          <SidebarToggleButton expanded={expanded} onToggle={toggle} ariaControls="parent-sidebar" size={expanded ? "md" : "sm"} />
         </div>
 
         <div className="bg-white/10 rounded-2xl p-4 mb-8">
@@ -51,22 +52,27 @@ export default function SidebarParent() {
           </div>
         </div>
 
-        <nav id="parent-sidebar" className="space-y-2">
+        <nav id="parent-sidebar" className={`space-y-2 flex-1 overflow-y-auto ${expanded ? "pr-1" : "pr-0 [scrollbar-width:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"}`}>
           {menu.map((item) => {
             const active = isActivePath(pathname, item.href);
             return (
               <Link
                 key={item.label}
                 href={item.href}
-                title={!expanded ? item.label : undefined}
                 aria-label={!expanded ? item.label : undefined}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
+                className={`flex items-center gap-3 ${expanded ? "px-4" : "px-2"} py-3 rounded-xl font-semibold transition-all ${
                   active
                     ? "bg-white/30 shadow-lg"
                     : "hover:bg-white/20 text-white/90"
                 }`}
               >
-                <span className="text-xl">{item.icon}</span>
+                {expanded ? (
+                  <span className="text-xl">{item.icon}</span>
+                ) : (
+                  <Tooltip content={item.label}>
+                    <span className="text-xl">{item.icon}</span>
+                  </Tooltip>
+                )}
                 {expanded && <span>{item.label}</span>}
                 {item.href === "/dashboard/parent/messages" && unreadTotal > 0 && (
                   <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
@@ -78,7 +84,7 @@ export default function SidebarParent() {
           })}
         </nav>
 
-        <div className="absolute bottom-6 left-6 right-6">
+        <div className="mt-auto pt-4">
           <button
             onClick={() => signOut({ callbackUrl: "/auth/login" })}
             className="w-full flex items-center gap-3 px-4 py-3 bg-red-500/20 rounded-xl font-semibold hover:bg-red-500/30 transition-all"

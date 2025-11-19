@@ -185,11 +185,12 @@ export default function StudentAssignmentDetailPage({
 
   // Xử lý submit quiz
   const handleQuizSubmit = async (
-    answers: Array<{ questionId: string; optionIds: string[] }>
+    answers: Array<{ questionId: string; optionIds: string[] }>,
+    presentation: { questionOrder: string[]; optionOrder: Record<string, string[]>; seed?: number | string; versionHash?: string }
   ) => {
     if (!assignmentId) return;
 
-    const result = await submitAssignment(assignmentId, { answers });
+    const result = await submitAssignment(assignmentId, { answers, presentation });
 
     if (result) {
       const message =
@@ -414,7 +415,9 @@ export default function StudentAssignmentDetailPage({
               assignment={assignment}
               onSubmit={
                 hasSubmission && canEdit
-                  ? (answers) => handleUpdateSubmission(undefined, answers)
+                  ? async (answers) => {
+                      await handleUpdateSubmission(undefined, answers);
+                    }
                   : handleQuizSubmit
               }
               initialAnswers={
@@ -478,10 +481,12 @@ export default function StudentAssignmentDetailPage({
         </TabsContent>
       </Tabs>
 
-      {/* Assignment Comments - Hiển thị ở cả 2 tabs */}
-      <div className="mt-6">
-        <AssignmentComments assignment={assignment} />
-      </div>
+      {/* Assignment Comments - Chỉ hiển thị cho ESSAY */}
+      {assignment.type === "ESSAY" && (
+        <div className="mt-6">
+          <AssignmentComments assignment={assignment} />
+        </div>
+      )}
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { formatDate } from "@/lib/admin/format-date";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/admin/admin-constants";
 import { Plus, Edit, Trash2, Key } from "lucide-react";
 import { UserRole as PrismaUserRole } from "@prisma/client";
+import { usePrompt } from "@/components/providers/PromptProvider";
 
 /**
  * Component AdminUsersPage - Trang quản lý users cho SUPER_ADMIN
@@ -55,6 +56,7 @@ export default function AdminUsersPage() {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
   const [userToResetPassword, setUserToResetPassword] = useState<AdminUser | null>(null);
+  const prompt = usePrompt();
 
   // Table columns
   const columns: TableColumn<AdminUser>[] = [
@@ -139,12 +141,16 @@ export default function AdminUsersPage() {
   // Handle reset password
   const handleResetPassword = useCallback(async () => {
     if (!userToResetPassword) return;
-
-    const newPassword = prompt("Nhập mật khẩu mới (tối thiểu 6 ký tự):");
-    if (!newPassword || newPassword.length < 6) {
-      alert("Mật khẩu phải có ít nhất 6 ký tự");
-      return;
-    }
+    const newPassword = await prompt({
+      title: "Đặt lại mật khẩu",
+      description: `Nhập mật khẩu mới cho ${userToResetPassword.fullname || userToResetPassword.email}`,
+      placeholder: "Mật khẩu mới tối thiểu 6 ký tự",
+      type: "password",
+      validate: (v) => (v && v.length >= 6 ? null : "Mật khẩu phải có ít nhất 6 ký tự"),
+      confirmText: "Xác nhận",
+      cancelText: "Hủy",
+    });
+    if (!newPassword) return;
 
     try {
       await resetPassword(userToResetPassword.id, newPassword);
@@ -153,7 +159,7 @@ export default function AdminUsersPage() {
     } catch (error) {
       // Error đã được xử lý trong hook
     }
-  }, [userToResetPassword, resetPassword]);
+  }, [userToResetPassword, resetPassword, prompt]);
 
   // Handle update role
   const handleUpdateRole = useCallback(

@@ -62,8 +62,8 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
     content ?? {
       questions: [],
       timeLimitMinutes: 30,
-      openAt: new Date(),
-      lockAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // +1 day
+      openAt: undefined,
+      lockAt: undefined,
       maxAttempts: 1,
       antiCheatConfig: {
         preset: 'BASIC' as const,
@@ -75,7 +75,8 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
         detectTabSwitch: false,
         disableCopyPaste: false,
         enableFuzzyFillBlank: false,
-        fuzzyThreshold: 0.2
+        fuzzyThreshold: 0.2,
+        showCorrectMode: 'never'
       }
     }
   ), [content]);
@@ -476,6 +477,24 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                   onCheckedChange={(checked) => updateAntiCheat('singleQuestionMode', checked)}
                 />
               </div>
+
+              {/* Chính sách hiển thị đáp án đúng */}
+              <div>
+                <Label className="text-base font-medium">Hiển thị đáp án đúng cho học sinh</Label>
+                <p className="text-sm text-gray-600">Chọn thời điểm cho phép hiển thị đáp án đúng</p>
+                <div className="mt-2">
+                  <select
+                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    value={currentContent.antiCheatConfig?.showCorrectMode || 'never'}
+                    onChange={(e) => updateAntiCheat('showCorrectMode', e.target.value as any)}
+                  >
+                    <option value="never">Không bao giờ (khuyến nghị)</option>
+                    <option value="afterSubmit">Sau khi học sinh nộp bài</option>
+                    <option value="afterLock">Sau khi bài thi đóng</option>
+                  </select>
+                </div>
+              </div>
+
             </div>
 
             <div className="space-y-4">

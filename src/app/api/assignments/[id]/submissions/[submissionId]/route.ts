@@ -96,12 +96,14 @@ export async function PUT(
         grade: grade !== undefined ? grade : submission.grade,
         feedback: feedback !== undefined ? feedback.trim() : submission.feedback,
       },
-      select: {
+      select: ({
         id: true,
         content: true,
         grade: true,
         feedback: true,
         submittedAt: true,
+        presentation: true,
+        contentSnapshot: true,
         assignment: {
           select: {
             id: true,
@@ -116,7 +118,7 @@ export async function PUT(
             email: true,
           },
         },
-      },
+      } as any),
     });
 
     console.log(
@@ -129,7 +131,7 @@ export async function PUT(
         message: "Submission graded successfully",
         data: {
           ...updatedSubmission,
-          submittedAt: updatedSubmission.submittedAt.toISOString(),
+          submittedAt: new Date((updatedSubmission as any).submittedAt).toISOString(),
         },
       },
       { status: 200 }
@@ -183,12 +185,14 @@ export async function GET(
         id: submissionId,
         assignmentId,
       },
-      select: {
+      select: ({
         id: true,
         content: true,
         grade: true,
         feedback: true,
         submittedAt: true,
+        presentation: true,
+        contentSnapshot: true,
         assignment: {
           select: {
             id: true,
@@ -223,7 +227,7 @@ export async function GET(
             email: true,
           },
         },
-      },
+      } as any),
     });
 
     if (!submission) {
@@ -235,7 +239,7 @@ export async function GET(
 
     // Parse quiz answers nếu là quiz assignment
     let parsedAnswers = null;
-    if (submission.assignment.type === "QUIZ") {
+    if ((submission as any).assignment.type === "QUIZ") {
       try {
         parsedAnswers = JSON.parse(submission.content);
       } catch {
@@ -249,7 +253,9 @@ export async function GET(
         success: true,
         data: {
           ...submission,
-          submittedAt: submission.submittedAt.toISOString(),
+          submittedAt: new Date((submission as any).submittedAt).toISOString(),
+          presentation: (submission as any).presentation ?? null,
+          contentSnapshot: (submission as any).contentSnapshot ?? null,
           answers: parsedAnswers, // Thêm parsed answers cho quiz
         },
       },

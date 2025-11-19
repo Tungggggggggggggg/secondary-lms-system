@@ -116,8 +116,8 @@ export default function EssayContentBuilder({ content, onContentChange, assignme
     question: '',
     attachments: [],
     submissionFormat: 'BOTH',
-    openAt: new Date(),
-    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // +7 days
+    openAt: undefined,
+    dueDate: undefined
   }), []);
 
   const currentContent: EssayContent = content ?? defaultContent;
@@ -449,6 +449,7 @@ export default function EssayContentBuilder({ content, onContentChange, assignme
                 value={currentContent.openAt}
                 onChange={(date) => updateTiming('openAt', date)}
                 placeholder="Chọn thời gian mở bài"
+                required
               />
             </div>
 

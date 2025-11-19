@@ -52,9 +52,17 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (!assignmentData.essayContent?.dueDate) {
+      if (!assignmentData.essayContent?.openAt || !assignmentData.essayContent?.dueDate) {
         return NextResponse.json(
-          { success: false, message: 'Hạn nộp bài là bắt buộc' },
+          { success: false, message: 'Thời gian mở bài và hạn nộp là bắt buộc' },
+          { status: 400 }
+        );
+      }
+      const openAt = new Date(assignmentData.essayContent.openAt as any);
+      const dueDate = new Date(assignmentData.essayContent.dueDate as any);
+      if (!(openAt instanceof Date) || isNaN(openAt.getTime()) || !(dueDate instanceof Date) || isNaN(dueDate.getTime()) || openAt >= dueDate) {
+        return NextResponse.json(
+          { success: false, message: 'Thời gian mở bài phải trước hạn nộp bài' },
           { status: 400 }
         );
       }
@@ -65,9 +73,17 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (!assignmentData.quizContent?.lockAt) {
+      if (!assignmentData.quizContent?.openAt || !assignmentData.quizContent?.lockAt) {
         return NextResponse.json(
-          { success: false, message: 'Thời gian đóng bài là bắt buộc' },
+          { success: false, message: 'Thời gian mở bài và đóng bài là bắt buộc' },
+          { status: 400 }
+        );
+      }
+      const openAt = new Date(assignmentData.quizContent.openAt as any);
+      const lockAt = new Date(assignmentData.quizContent.lockAt as any);
+      if (!(openAt instanceof Date) || isNaN(openAt.getTime()) || !(lockAt instanceof Date) || isNaN(lockAt.getTime()) || openAt >= lockAt) {
+        return NextResponse.json(
+          { success: false, message: 'Thời gian mở bài phải trước thời gian đóng bài' },
           { status: 400 }
         );
       }
@@ -84,15 +100,15 @@ export async function POST(request: NextRequest) {
 
     // Essay-specific fields
     if (assignmentData.type === 'ESSAY' && assignmentData.essayContent) {
-      assignmentCreateData.openAt = assignmentData.essayContent.openAt || new Date();
-      assignmentCreateData.dueDate = assignmentData.essayContent.dueDate;
+      assignmentCreateData.openAt = new Date(assignmentData.essayContent.openAt as any);
+      assignmentCreateData.dueDate = new Date(assignmentData.essayContent.dueDate as any);
       assignmentCreateData.submission_format = assignmentData.essayContent.submissionFormat || 'BOTH'; // Fix: use submission_format
     }
 
     // Quiz-specific fields
     if (assignmentData.type === 'QUIZ' && assignmentData.quizContent) {
-      assignmentCreateData.openAt = assignmentData.quizContent.openAt || new Date();
-      assignmentCreateData.lockAt = assignmentData.quizContent.lockAt;
+      assignmentCreateData.openAt = new Date(assignmentData.quizContent.openAt as any);
+      assignmentCreateData.lockAt = new Date(assignmentData.quizContent.lockAt as any);
       assignmentCreateData.timeLimitMinutes = assignmentData.quizContent.timeLimitMinutes;
       assignmentCreateData.max_attempts = assignmentData.quizContent.maxAttempts || 1; // Fix: use max_attempts
       assignmentCreateData.anti_cheat_config = assignmentData.quizContent.antiCheatConfig || null; // Fix: use anti_cheat_config

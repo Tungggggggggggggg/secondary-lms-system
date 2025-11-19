@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AssignmentCommentsView from "@/components/teacher/comments/AssignmentCommentsView";
 import type { AssignmentDetail } from "@/types/api";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
 
 // Helper hiển thị Chip loại bài tập
 function AssignmentTypeChip({ type }: { type?: string }) {
@@ -40,6 +41,7 @@ export default function AssignmentDetailPage() {
     const { id: assignmentId } = useParams() as { id: string };
     const router = useRouter();
     const { toast } = useToast(); // Sử dụng toast custom
+    const confirm = useConfirm();
 
     const [detail, setDetail] = useState<AssignmentDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -244,18 +246,34 @@ export default function AssignmentDetailPage() {
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
                         <AssignmentTypeChip type={detail.type} />
-                        <span className="text-xs text-gray-500 mt-2">
-                            <span className="font-semibold">Hạn nộp: </span>
-                            {detail.dueDate
-                                ? new Date(detail.dueDate).toLocaleString()
-                                : "Không rõ"}
-                        </span>
+                        <div className="text-xs text-gray-500 mt-2 space-y-1 text-right">
+                            <div>
+                                <span className="font-semibold">Hạn nộp: </span>
+                                {(() => {
+                                    const effective = detail.type === "QUIZ"
+                                        ? ((detail as any).lockAt || detail.dueDate)
+                                        : detail.dueDate;
+                                    return effective
+                                        ? new Date(effective as any).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                        : "Không rõ";
+                                })()}
+                            </div>
+                            {((detail as any).openAt || (detail as any).lockAt) && (
+                                <div className="text-[11px] text-gray-400">
+                                    ⏱️ Lịch: { (detail as any).openAt ? new Date((detail as any).openAt).toLocaleString("vi-VN") : "Hiện tại" } → { (detail as any).lockAt ? new Date((detail as any).lockAt).toLocaleString("vi-VN") : (detail.dueDate ? new Date(detail.dueDate).toLocaleString("vi-VN") : "Không giới hạn") }
+                                </div>
+                            )}
+                        </div>
                         <Button
                             variant="outline"
                             onClick={async () => {
-                                const ok = window.confirm(
-                                    "Bạn muốn xoá bài tập này? Hành động không thể hoàn tác."
-                                );
+                                const ok = await confirm({
+                                    title: "Xoá bài tập",
+                                    description: "Bạn muốn xoá bài tập này? Hành động không thể hoàn tác.",
+                                    variant: "danger",
+                                    confirmText: "Xoá",
+                                    cancelText: "Hủy",
+                                });
                                 if (!ok) return;
                                 try {
                                     const res = await fetch(`/api/assignments/${assignmentId}`, { method: "DELETE" });
@@ -378,7 +396,7 @@ export default function AssignmentDetailPage() {
                                                                 >
                                                                     <span
                                                                         className={cn(
-                                                                            "inline-block w-10 h-10 rounded-xl flex items-center justify-center font-bold border border-gray-200 text-lg",
+                                                                            "w-10 h-10 rounded-xl flex items-center justify-center font-bold border border-gray-200 text-lg",
                                                                             opt.isCorrect
                                                                                 ? "bg-green-50 border-green-400 text-green-700"
                                                                                 : "bg-gray-50 text-gray-500"
