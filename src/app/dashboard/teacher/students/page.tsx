@@ -1,9 +1,166 @@
 "use client";
 
-import StudentList from "@/components/teacher/students/StudentList";
+import { useEffect, useMemo, useState } from "react";
+import StudentList, { StudentListItem } from "@/components/teacher/students/StudentList";
 import StudentStats from "@/components/teacher/students/StudentStats";
+import { useClassroom } from "@/hooks/use-classroom";
+import type { ClassroomStudent } from "@/hooks/use-classroom-students";
 
 export default function StudentsPage() {
+  const { classrooms, fetchClassrooms, isLoading: loadingClassrooms, error: classroomError } =
+    useClassroom();
+
+  const [students, setStudents] = useState<StudentListItem[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [studentError, setStudentError] = useState<string | null>(null);
+
+  const [selectedClassId, setSelectedClassId] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortKey, setSortKey] = useState<string>("name");
+  const [search, setSearch] = useState<string>("");
+
+  useEffect(() => {
+    fetchClassrooms();
+  }, [fetchClassrooms]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!classrooms || classrooms.length === 0) {
+        setStudents([]);
+        return;
+      }
+      try {
+        setLoadingStudents(true);
+        setStudentError(null);
+        const all: StudentListItem[] = [];
+
+        for (const c of classrooms) {
+          const res = await fetch(`/api/classrooms/${c.id}/students`);
+          const json = await res.json();
+          if (!res.ok || json?.success === false) {
+            console.error("[StudentsPage] load students error", json?.message || res.statusText);
+            continue;
+          }
+          const items = (json.data || []) as ClassroomStudent[];
+          items.forEach((s) => {
+            const totalAssignments = s.stats.totalAssignments;
+            const submitted = s.stats.submittedCount;
+            const submissionRate =
+              totalAssignments > 0 ? (submitted / totalAssignments) * 100 : 0;
+            let status: "active" | "warning" | "inactive" = "active";
+            if (submissionRate < 50) status = "inactive";
+            else if (submissionRate < 80) status = "warning";
+
+            all.push({
+              id: s.id,
+              fullname: s.fullname,
+              avatarInitial: s.fullname.charAt(0).toUpperCase(),
+              classroomId: c.id,
+              classroomName: c.name,
+              classroomCode: c.code,
+              averageGrade: s.stats.averageGrade,
+              submissionRate,
+              submittedCount: submitted,
+              totalAssignments,
+              status,
+            });
+          });
+        }
+
+        setStudents(all);
+      } catch (e) {
+        console.error("[StudentsPage] load students error", e);
+        setStudentError(
+          e instanceof Error ? e.message : "Có lỗi xảy ra khi tải danh sách học sinh"
+        );
+        setStudents([]);
+      } finally {
+        setLoadingStudents(false);
+      }
+    };
+
+    load();
+  }, [classrooms]);
+
+  const filteredStudents = useMemo(() => {
+    let list = [...students];
+
+    if (selectedClassId !== "all") {
+      list = list.filter((s) => s.classroomId === selectedClassId);
+    }
+
+    if (statusFilter !== "all") {
+      list = list.filter((s) => s.status === statusFilter);
+    }
+
+    const searchValue = search.trim().toLowerCase();
+    if (searchValue) {
+      list = list.filter((s) => {
+        return (
+          s.fullname.toLowerCase().includes(searchValue) ||
+          s.classroomName.toLowerCase().includes(searchValue) ||
+          s.classroomCode.toLowerCase().includes(searchValue)
+        );
+      });
+    }
+
+    list.sort((a, b) => {
+      if (sortKey === "grade") {
+        const ag = a.averageGrade ?? -1;
+        const bg = b.averageGrade ?? -1;
+        return bg - ag;
+      }
+      if (sortKey === "attendance") {
+        return b.submissionRate - a.submissionRate;
+      }
+      return a.fullname.localeCompare(b.fullname, "vi");
+    });
+
+    return list;
+  }, [students, selectedClassId, statusFilter, search, sortKey]);
+
+  const isLoading = loadingClassrooms || loadingStudents;
+  const error = classroomError || studentError;
+
+  const overview = useMemo(() => {
+    const totalStudents = students.length;
+    if (totalStudents === 0) {
+      return {
+        totalStudents: 0,
+        avgParticipation: 0,
+        needSupportCount: 0,
+        avgGrade: null as number | null,
+      };
+    }
+
+    let totalSubmitted = 0;
+    let totalAssignments = 0;
+    let sumGrades = 0;
+    let gradeCount = 0;
+    let needSupportCount = 0;
+
+    students.forEach((s) => {
+      totalSubmitted += s.submittedCount;
+      totalAssignments += s.totalAssignments;
+      if (s.averageGrade !== null) {
+        sumGrades += s.averageGrade;
+        gradeCount += 1;
+      }
+      if (s.status !== "active") needSupportCount += 1;
+    });
+
+    const avgParticipation =
+      totalAssignments > 0 ? (totalSubmitted / totalAssignments) * 100 : 0;
+    const avgGrade = gradeCount > 0 ? sumGrades / gradeCount : null;
+
+    return {
+      totalStudents,
+      avgParticipation,
+      needSupportCount,
+      avgGrade,
+    };
+  }, [students]);
+
   return (
     <div className="p-8">
       {/* Header */}
@@ -13,53 +170,79 @@ export default function StudentsPage() {
           <p className="text-gray-600">Theo dõi và hỗ trợ học sinh của bạn</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-xl hover:shadow-lg transition-all flex items-center gap-2 border border-gray-200">
-            <span>📊</span>
-            <span>Xuất báo cáo</span>
-          </button>
-          <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all flex items-center gap-2">
-            <span>✉️</span>
-            <span>Gửi thông báo</span>
-          </button>
+         
         </div>
       </div>
 
       {/* Stats Overview */}
-      <StudentStats />
+      <StudentStats
+        totalStudents={overview.totalStudents}
+        avgParticipation={overview.avgParticipation}
+        needSupportCount={overview.needSupportCount}
+        avgGrade={overview.avgGrade}
+      />
 
       {/* Filter & Search */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <select className="px-4 py-2 bg-white rounded-xl border border-gray-200">
+          <select
+            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+            value={selectedClassId}
+            onChange={(e) => setSelectedClassId(e.target.value)}
+          >
             <option value="all">Tất cả lớp</option>
-            <option value="8a1">Lớp 8A1</option>
-            <option value="9b2">Lớp 9B2</option>
-            <option value="7c">Lớp 7C</option>
+            {(classrooms || []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.code})
+              </option>
+            ))}
           </select>
-          <select className="px-4 py-2 bg-white rounded-xl border border-gray-200">
+          <select
+            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
             <option value="all">Tất cả trạng thái</option>
             <option value="active">Hoạt động tốt</option>
             <option value="warning">Cần chú ý</option>
             <option value="inactive">Không hoạt động</option>
           </select>
-          <select className="px-4 py-2 bg-white rounded-xl border border-gray-200">
+          <select
+            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value)}
+          >
             <option value="name">Sắp xếp theo tên</option>
             <option value="grade">Sắp xếp theo điểm</option>
             <option value="attendance">Sắp xếp theo chuyên cần</option>
           </select>
         </div>
         <div className="relative">
-          <input 
+          <input
             type="text"
             placeholder="Tìm kiếm học sinh..."
             className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
           <span className="absolute left-3 top-2.5">🔍</span>
         </div>
       </div>
 
       {/* Student List */}
-      <StudentList />
+      {isLoading ? (
+        <div className="text-sm text-gray-500">Đang tải danh sách học sinh...</div>
+      ) : error ? (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-4">
+          Đã xảy ra lỗi: {error}
+        </div>
+      ) : filteredStudents.length === 0 ? (
+        <div className="text-sm text-gray-500 bg-white border border-gray-200 rounded-xl p-6">
+          Chưa có học sinh nào để hiển thị.
+        </div>
+      ) : (
+        <StudentList students={filteredStudents} />
+      )}
     </div>
   );
 }

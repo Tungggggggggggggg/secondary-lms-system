@@ -24,6 +24,20 @@ export default function MessagesPage({ role = "teacher" }: Props) {
   const selected = useMemo(() => conversations.find((c) => c.id === selectedId) || null, [conversations, selectedId]);
   const { messages, refresh: refreshMessages } = useMessages(selectedId || undefined);
 
+  const contextStudent =
+    selected && selected.contextStudentId
+      ? selected.participants.find((p) => p.userId === selected.contextStudentId) ||
+        selected.participants.find((p) => p.role === "STUDENT") ||
+        null
+      : null;
+
+  const typeLabel =
+    selected?.type === "TRIAD"
+      ? "Nhóm GV - HS - PH"
+      : selected?.type === "GROUP"
+      ? "Nhóm nhiều người"
+      : "Trao đổi riêng";
+
   const handleSelect = async (id: string) => {
     setSelectedId(id);
     try {
@@ -55,12 +69,30 @@ export default function MessagesPage({ role = "teacher" }: Props) {
         </div>
         <div className="col-span-12 lg:col-span-6 bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col">
           <div className="p-3 border-b border-gray-100">
-            <div className="text-lg font-semibold">{selected ? selected.participants.map((p) => p.fullname).join(", ") : "Chọn hội thoại"}</div>
-            {!selected && <p className="text-xs text-gray-500">Hãy chọn hoặc tạo hội thoại để bắt đầu</p>}
+            {selected ? (
+              <>
+                <div className="text-lg font-semibold truncate">
+                  {selected.participants.map((p) => p.fullname).join(", ")}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">{typeLabel}</span>
+                  {contextStudent && (
+                    <span>
+                      Về học sinh: <span className="font-semibold">{contextStudent.fullname}</span>
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-lg font-semibold">Chọn hội thoại</div>
+                <p className="text-xs text-gray-500">Hãy chọn hoặc tạo hội thoại để bắt đầu</p>
+              </>
+            )}
           </div>
           {selected ? (
             <>
-              <ChatThread messages={messages} />
+              <ChatThread messages={messages} participants={selected.participants} />
               <ChatComposer conversationId={selectedId} onSent={onSent} />
             </>
           ) : (

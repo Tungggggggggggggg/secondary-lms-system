@@ -29,6 +29,7 @@ import { ExamSession, AntiCheatConfig, EXAM_CONSTANTS } from '@/types/exam-syste
 import { ShuffledQuestion } from '@/lib/exam-session/question-shuffle'
 import { personalTimerManager, formatTime } from '@/lib/exam-session/personal-timer'
 import { autoSaveManager } from '@/lib/exam-session/auto-save'
+import { logExamEvent } from '@/lib/exam-session/session-manager'
 
 interface ExamInterfaceProps {
   session: ExamSession
@@ -173,6 +174,10 @@ export default function ExamInterface({
       
       if (!isCurrentlyFullscreen && antiCheatConfig.requireFullscreen) {
         showTimeWarning('Vui lòng quay lại chế độ toàn màn hình!')
+        void logExamEvent(session.id, 'FULLSCREEN_EXIT', {
+          reason: 'fullscreen_exit',
+          timestamp: new Date().toISOString(),
+        }, 'WARNING')
       }
     }
 
@@ -196,12 +201,20 @@ export default function ExamInterface({
       if (document.hidden) {
         setTabSwitchCount(prev => prev + 1)
         showTimeWarning('Phát hiện chuyển tab! Vui lòng tập trung vào bài thi.')
+        void logExamEvent(session.id, 'TAB_SWITCH_DETECTED', {
+          source: 'visibilitychange',
+          timestamp: new Date().toISOString(),
+        }, 'WARNING')
       }
     }
 
     const handleBlur = () => {
       if (antiCheatConfig.detectTabSwitch) {
         showTimeWarning('Vui lòng không chuyển sang ứng dụng khác!')
+        void logExamEvent(session.id, 'TAB_SWITCH_DETECTED', {
+          source: 'window_blur',
+          timestamp: new Date().toISOString(),
+        }, 'WARNING')
       }
     }
 
@@ -223,6 +236,11 @@ export default function ExamInterface({
       if (e.ctrlKey && ['c', 'v', 'a', 'x'].includes(e.key.toLowerCase())) {
         e.preventDefault()
         showTimeWarning('Không được phép sao chép/dán trong bài thi!')
+        void logExamEvent(session.id, 'COPY_PASTE_ATTEMPT', {
+          key: e.key,
+          ctrl: e.ctrlKey,
+          timestamp: new Date().toISOString(),
+        }, 'WARNING')
       }
       
       // Disable F12, Ctrl+Shift+I (Developer tools)
@@ -233,6 +251,10 @@ export default function ExamInterface({
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault()
+      void logExamEvent(session.id, 'COPY_PASTE_ATTEMPT', {
+        source: 'contextmenu',
+        timestamp: new Date().toISOString(),
+      }, 'WARNING')
     }
 
     document.addEventListener('keydown', handleKeyDown)

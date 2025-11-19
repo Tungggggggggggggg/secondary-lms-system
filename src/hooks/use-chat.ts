@@ -12,7 +12,21 @@ export type ConversationItem = {
   unreadCount: number;
 };
 
-export type MessageDTO = { id: string; content: string; createdAt: string; senderId: string };
+export type ChatAttachmentDTO = {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  storagePath: string;
+};
+
+export type MessageDTO = {
+  id: string;
+  content: string;
+  createdAt: string;
+  senderId: string;
+  attachments?: ChatAttachmentDTO[];
+};
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -41,11 +55,15 @@ export function useMessages(conversationId?: string) {
   };
 }
 
-export async function sendMessage(conversationId: string, content: string) {
+export async function sendMessage(
+  conversationId: string,
+  content: string,
+  attachments?: { name: string; mimeType: string; sizeBytes: number; storagePath: string }[]
+) {
   const res = await fetch("/api/chat/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ conversationId, content }),
+    body: JSON.stringify({ conversationId, content, attachments: attachments || [] }),
   });
   return res.json();
 }

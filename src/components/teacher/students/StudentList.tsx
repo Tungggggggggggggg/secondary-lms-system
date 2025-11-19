@@ -1,51 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createConversationFromTeacher } from "@/hooks/use-chat";
 
-export default function StudentList() {
+export type StudentListItem = {
+  id: string;
+  fullname: string;
+  avatarInitial: string;
+  classroomId: string;
+  classroomName: string;
+  classroomCode: string;
+  averageGrade: number | null;
+  submissionRate: number;
+  submittedCount: number;
+  totalAssignments: number;
+  status: "active" | "warning" | "inactive";
+};
+
+type Props = {
+  students: StudentListItem[];
+};
+
+export default function StudentList({ students }: Props) {
   const router = useRouter();
-
-  const students = [
-    {
-      id: 1,
-      name: "Nguyễn Văn A",
-      avatar: "A",
-      class: "8A1",
-      averageScore: 8.5,
-      attendance: 95,
-      assignments: {
-        completed: 28,
-        total: 30
-      },
-      status: "active"
-    },
-    {
-      id: 2,
-      name: "Trần Thị B",
-      avatar: "B",
-      class: "9B2",
-      averageScore: 9.0,
-      attendance: 98,
-      assignments: {
-        completed: 25,
-        total: 25
-      },
-      status: "active"
-    },
-    {
-      id: 3,
-      name: "Lê Văn C",
-      avatar: "C",
-      class: "7C",
-      averageScore: 7.5,
-      attendance: 85,
-      assignments: {
-        completed: 18,
-        total: 20
-      },
-      status: "warning"
-    }
-  ];
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -73,7 +52,8 @@ export default function StudentList() {
     }
   };
 
-  const getPerformanceColor = (score: number) => {
+  const getPerformanceColor = (score: number | null) => {
+    if (score === null) return "text-gray-500";
     if (score >= 8.0) return "text-green-600";
     if (score >= 6.5) return "text-yellow-600";
     return "text-red-600";
@@ -85,12 +65,14 @@ export default function StudentList() {
         <div
           key={student.id}
           className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer"
-          onClick={() => router.push(`/dashboard/teacher/students/${student.id}`)}
+          onClick={() =>
+            router.push(`/dashboard/teacher/classrooms/${student.classroomId}/people/${student.id}`)
+          }
         >
           <div className="flex items-center gap-6">
             {/* Avatar */}
             <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center text-2xl text-white font-bold">
-              {student.avatar}
+              {student.avatarInitial}
             </div>
 
             {/* Info */}
@@ -98,23 +80,44 @@ export default function StudentList() {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 mb-1">
-                    {student.name}
+                    {student.fullname}
                   </h3>
                   <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <span>Lớp {student.class}</span>
+                    <span>
+                      Lớp {student.classroomCode} · {student.classroomName}
+                    </span>
                     <span className={`${getStatusColor(student.status)} px-3 py-1 rounded-full`}>
                       {getStatusText(student.status)}
                     </span>
                   </div>
                 </div>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    // Handle message student
+                    if (sendingId) return;
+                    try {
+                      setSendingId(student.id);
+                      const res = await createConversationFromTeacher(
+                        student.id,
+                        true,
+                        student.classroomId
+                      );
+                      const id = res?.conversationId as string | undefined;
+                      if (id) {
+                        router.push(
+                          `/dashboard/teacher/messages?open=${encodeURIComponent(id)}`
+                        );
+                      }
+                    } catch (err) {
+                      console.error("[StudentList] createConversation error", err);
+                    } finally {
+                      setSendingId((current) => (current === student.id ? null : current));
+                    }
                   }}
-                  className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
+                  disabled={sendingId === student.id}
+                  className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-all disabled:opacity-60"
                 >
-                  ✉️ Nhắn tin
+                  ✉️ {sendingId === student.id ? "Đang mở..." : "Nhắn tin"}
                 </button>
               </div>
 
@@ -122,20 +125,20 @@ export default function StudentList() {
               <div className="grid grid-cols-3 gap-4 mt-4">
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <div className="text-sm text-gray-600 mb-1">Điểm trung bình</div>
-                  <div className={`text-lg font-bold ${getPerformanceColor(student.averageScore)}`}>
-                    {student.averageScore}
+                  <div className={`text-lg font-bold ${getPerformanceColor(student.averageGrade)}`}>
+                    {student.averageGrade !== null ? student.averageGrade : "-"}
                   </div>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <div className="text-sm text-gray-600 mb-1">Chuyên cần</div>
                   <div className="text-lg font-bold text-blue-600">
-                    {student.attendance}%
+                    {Math.round(student.submissionRate)}%
                   </div>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <div className="text-sm text-gray-600 mb-1">Hoàn thành bài tập</div>
                   <div className="text-lg font-bold text-purple-600">
-                    {student.assignments.completed}/{student.assignments.total}
+                    {student.submittedCount}/{student.totalAssignments}
                   </div>
                 </div>
               </div>

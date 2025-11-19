@@ -1,37 +1,41 @@
-export default function StudentStats() {
+type Props = {
+  totalStudents: number;
+  avgParticipation: number; // 0 - 100
+  needSupportCount: number;
+  avgGrade: number | null;
+};
+
+export default function StudentStats({
+  totalStudents,
+  avgParticipation,
+  needSupportCount,
+  avgGrade,
+}: Props) {
   const stats = [
     {
       title: "Tổng số học sinh",
-      value: "384",
-      change: "+12",
-      changeType: "increase",
+      value: totalStudents.toString(),
       icon: "👥",
-      color: "from-blue-500 to-blue-600"
+      color: "from-blue-500 to-blue-600",
     },
     {
-      title: "Tỷ lệ tham gia",
-      value: "95%",
-      change: "+2%",
-      changeType: "increase",
+      title: "Tỷ lệ hoàn thành bài",
+      value: `${Math.round(avgParticipation)}%`,
       icon: "📊",
-      color: "from-green-500 to-green-600"
+      color: "from-green-500 to-green-600",
     },
     {
       title: "Cần hỗ trợ",
-      value: "15",
-      change: "-3",
-      changeType: "decrease",
+      value: needSupportCount.toString(),
       icon: "⚠️",
-      color: "from-yellow-500 to-yellow-600"
+      color: "from-yellow-500 to-yellow-600",
     },
     {
       title: "Điểm trung bình",
-      value: "8.2",
-      change: "+0.3",
-      changeType: "increase",
+      value: avgGrade !== null ? avgGrade.toFixed(1) : "-",
       icon: "🎯",
-      color: "from-purple-500 to-purple-600"
-    }
+      color: "from-purple-500 to-purple-600",
+    },
   ];
 
   return (
@@ -52,7 +56,8 @@ export default function StudentStats() {
           </div>
           <div className="flex items-center gap-2 text-sm">
             <span className="bg-white/20 px-2 py-1 rounded-full">
-              {stat.changeType === "increase" ? "↑" : "↓"} {stat.change}
+              {/* Add a default changeType and change value */}
+              {"↑"} {0}
             </span>
             <span className="text-white/80">so với tháng trước</span>
           </div>

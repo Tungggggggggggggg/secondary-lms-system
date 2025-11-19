@@ -188,28 +188,95 @@ export async function ensureTeacherStudentConversation(params: {
   return id;
 }
 
-export async function listMessages(conversationId: string, limit = 50): Promise<Array<{ id: string; content: string; createdAt: string; senderId: string }>> {
+export async function listMessages(
+  conversationId: string,
+  limit = 50
+): Promise<
+  Array<{
+    id: string;
+    content: string;
+    createdAt: string;
+    senderId: string;
+    attachments?: { id: string; name: string; mimeType: string; sizeBytes: number; storagePath: string }[];
+  }>
+> {
   const prismaAny = prisma as any;
   const messages = await prismaAny.message.findMany({
     where: { conversationId },
     orderBy: { createdAt: "asc" },
     take: limit,
-    select: { id: true, content: true, createdAt: true, senderId: true },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      senderId: true,
+      attachments: { select: { id: true, name: true, mimeType: true, sizeBytes: true, storagePath: true } },
+    },
   });
-  return (messages as any[]).map((m: any) => ({ id: m.id, content: m.content, createdAt: m.createdAt.toISOString(), senderId: m.senderId }));
+  return (messages as any[]).map((m: any) => ({
+    id: m.id,
+    content: m.content,
+    createdAt: m.createdAt.toISOString(),
+    senderId: m.senderId,
+    attachments: (m.attachments || []).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      mimeType: a.mimeType,
+      sizeBytes: a.sizeBytes,
+      storagePath: a.storagePath,
+    })),
+  }));
 }
 
-export async function addMessage(conversationId: string, senderId: string, content: string) {
+export async function addMessage(
+  conversationId: string,
+  senderId: string,
+  content: string,
+  attachments?: { name: string; mimeType: string; sizeBytes: number; storagePath: string }[]
+) {
   const prismaAny = prisma as any;
   const msg = await prismaAny.message.create({
-    data: { conversationId, senderId, content },
-    select: { id: true, content: true, createdAt: true, senderId: true },
+    data: {
+      conversationId,
+      senderId,
+      content,
+      attachments:
+        attachments && attachments.length > 0
+          ? {
+              create: attachments.map((a) => ({
+                name: a.name,
+                mimeType: a.mimeType,
+                sizeBytes: a.sizeBytes,
+                storagePath: a.storagePath,
+              })),
+            }
+          : undefined,
+    },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      senderId: true,
+      attachments: { select: { id: true, name: true, mimeType: true, sizeBytes: true, storagePath: true } },
+    },
   });
   await prismaAny.conversationParticipant.updateMany({
     where: { conversationId, userId: senderId },
     data: { lastReadAt: new Date() },
   });
-  return { id: msg.id, content: msg.content, createdAt: (msg.createdAt as Date).toISOString(), senderId: msg.senderId };
+  return {
+    id: msg.id,
+    content: msg.content,
+    createdAt: (msg.createdAt as Date).toISOString(),
+    senderId: msg.senderId,
+    attachments: (msg.attachments || []).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      mimeType: a.mimeType,
+      sizeBytes: a.sizeBytes,
+      storagePath: a.storagePath,
+    })),
+  };
 }
 
 export async function markRead(conversationId: string, userId: string) {

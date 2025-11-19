@@ -18,6 +18,7 @@ export default function SidebarParent() {
   const menu = [
     { icon: "📊", label: "Dashboard", href: "/dashboard/parent/dashboard" },
     { icon: "👨‍👩‍👧", label: "Con của tôi", href: "/dashboard/parent/children" },
+    { icon: "👨‍🏫", label: "Giáo viên", href: "/dashboard/parent/teachers" },
     { icon: "📈", label: "Tiến độ học tập", href: "/dashboard/parent/progress" },
     { icon: "💬", label: "Tin nhắn", href: "/dashboard/parent/messages" },
     { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/parent/profile" },

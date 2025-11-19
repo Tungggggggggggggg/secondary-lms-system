@@ -46,6 +46,7 @@ export default function QuizAssignmentForm({
   const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const autoSubmittedRef = useRef(false);
+  const terminatedByTeacherRef = useRef(false);
   const anti = ((assignment as any).antiCheatConfig || {}) as {
     requireFullscreen?: boolean;
     detectTabSwitch?: boolean;
@@ -72,6 +73,8 @@ export default function QuizAssignmentForm({
   const [currentIdx, setCurrentIdx] = useState<number>(0);
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [attemptNumberState, setAttemptNumberState] = useState<number | null>(null);
+  const [overrideTimeLimitMinutes, setOverrideTimeLimitMinutes] = useState<number | null>(null);
+  const [attemptStatus, setAttemptStatus] = useState<string | null>(null);
   const cleanupRef = useRef<(() => void)[]>([]);
   const attemptsLeft = maxAttempts != null ? Math.max(0, (maxAttempts as number) - (latestAttempt as number)) : null;
   const disabledMode = isSubmitted && !isNewAttempt;
@@ -327,13 +330,45 @@ export default function QuizAssignmentForm({
     }
   }, [disabledMode, storageKey]);
 
+  // Poll trạng thái attempt để đồng bộ với can thiệp của giáo viên (gia hạn, pause, terminate)
+  useEffect(() => {
+    if (disabledMode) return;
+    // Cần có assignmentId và attemptNumber (nếu đã bắt đầu)
+    if (!assignment.id) return;
+
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const query = attemptNumberState != null ? `?attemptNumber=${attemptNumberState}` : "";
+        const res = await fetch(`/api/students/assignments/${assignment.id}/attempts/status${query}`);
+        const j = await res.json().catch(() => null as any);
+        if (!res.ok || !j?.success || cancelled) return;
+        const data = j.data as { timeLimitMinutes: number | null; status: string | null } | null;
+        if (!data) return;
+        if (typeof data.timeLimitMinutes === "number" && data.timeLimitMinutes > 0) {
+          setOverrideTimeLimitMinutes(data.timeLimitMinutes);
+        }
+        setAttemptStatus(data.status ?? null);
+      } catch {}
+    };
+
+    poll();
+    const id = window.setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [assignment.id, attemptNumberState, disabledMode]);
+
   // Compute effective deadline and drive countdown
   useEffect(() => {
     if (disabledMode) return;
     if (!startedAt) return;
     let effectiveDeadline: Date | null = lockAt ? new Date(lockAt) : null;
-    if (timeLimitMinutes && timeLimitMinutes > 0) {
-      const limitEnd = new Date(startedAt.getTime() + timeLimitMinutes * 60 * 1000);
+    const effectiveLimit = (overrideTimeLimitMinutes ?? timeLimitMinutes);
+    if (effectiveLimit && effectiveLimit > 0) {
+      const limitEnd = new Date(startedAt.getTime() + effectiveLimit * 60 * 1000);
       effectiveDeadline = effectiveDeadline ? new Date(Math.min(effectiveDeadline.getTime(), limitEnd.getTime())) : limitEnd;
     }
     if (!effectiveDeadline) return;
@@ -344,32 +379,26 @@ export default function QuizAssignmentForm({
       setRemainingSec(sec);
       if (sec <= 0 && !autoSubmittedRef.current) {
         autoSubmittedRef.current = true;
-        // Auto-submit best-effort: chỉ gửi nếu có ít nhất 1 câu đã chọn
-        const answersArray = Array.from(answers.entries()).map(([questionId, optionIds]) => ({
-          questionId,
-          optionIds: Array.from(optionIds),
-        }));
-        if (answersArray.some((a) => a.optionIds.length > 0)) {
-          const qOrder = questionOrder || assignment.questions.map((q) => q.id);
-          const optOrder: Record<string, string[]> = {};
-          assignment.questions.forEach((q) => {
-            optOrder[q.id] = (optionOrders && optionOrders[q.id]) ? optionOrders[q.id] : q.options.map((o) => o.id);
-          });
-          onSubmit(answersArray, { questionOrder: qOrder, optionOrder: optOrder }).catch(() => {});
-        } else {
-          // Không gửi request rỗng để tránh 400; chỉ khoá UI (isOverdue sẽ true)
-          try {
-            window.localStorage.removeItem(draftKey);
-            window.localStorage.removeItem(fillDraftKey);
-            window.localStorage.removeItem(attemptIdKey);
-          } catch {}
-        }
+        // Auto-submit best-effort: gửi đủ answers cho tất cả câu hỏi
+        const answersArray = assignment.questions.map((q) => {
+          const set = answers.get(q.id) || new Set<string>();
+          return {
+            questionId: q.id,
+            optionIds: Array.from(set),
+          };
+        });
+        const qOrder = questionOrder || assignment.questions.map((q) => q.id);
+        const optOrder: Record<string, string[]> = {};
+        assignment.questions.forEach((q) => {
+          optOrder[q.id] = (optionOrders && optionOrders[q.id]) ? optionOrders[q.id] : q.options.map((o) => o.id);
+        });
+        onSubmit(answersArray, { questionOrder: qOrder, optionOrder: optOrder }).catch(() => {});
       }
     };
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [answers, lockAt, disabledMode, onSubmit, startedAt, timeLimitMinutes]);
+  }, [answers, lockAt, disabledMode, onSubmit, startedAt, timeLimitMinutes, overrideTimeLimitMinutes]);
 
   const startAttempt = async () => {
     try {
@@ -497,7 +526,9 @@ export default function QuizAssignmentForm({
 
   // Toggle option selection
   const toggleOption = (questionId: string, optionId: string, questionType: string) => {
-    if (isLoading || isOverdue || disabledMode) return;
+    const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
+    const terminatedByTeacher = attemptStatus === "TERMINATED_BY_TEACHER";
+    if (isLoading || isOverdue || disabledMode || pausedByTeacher || terminatedByTeacher) return;
 
     setAnswers((prev) => {
       const newAnswers = new Map(prev);
@@ -527,7 +558,9 @@ export default function QuizAssignmentForm({
     optionId: string,
     questionType: string
   ) => {
-    if (isLoading || isOverdue || disabledMode) return;
+    const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
+    const terminatedByTeacher = attemptStatus === "TERMINATED_BY_TEACHER";
+    if (isLoading || isOverdue || disabledMode || pausedByTeacher || terminatedByTeacher) return;
     const key = e.key;
     if (key === 'Enter' || key === ' ') {
       e.preventDefault();
@@ -570,7 +603,9 @@ export default function QuizAssignmentForm({
   const allAnswered = answeredCount === totalQuestions;
 
   const scrollToFirstUnanswered = useCallback(() => {
-    if (singleQuestionMode) return;
+    const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
+    const terminatedByTeacher = attemptStatus === "TERMINATED_BY_TEACHER";
+    if (singleQuestionMode || pausedByTeacher || terminatedByTeacher) return;
     for (const qid of orderedQuestionIds) {
       const q = questionsById[qid];
       if (!q) continue;
@@ -601,6 +636,14 @@ export default function QuizAssignmentForm({
     const submitter = (e as any).nativeEvent?.submitter as HTMLButtonElement | undefined;
     if (!submitter) {
       toast({ title: "Chưa nộp bài", description: "Vui lòng bấm nút 'Nộp bài' để xác nhận.", variant: "default" });
+      return;
+    }
+
+    const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
+    const terminatedByTeacher = attemptStatus === "TERMINATED_BY_TEACHER";
+
+    if (pausedByTeacher || terminatedByTeacher) {
+      toast({ title: "Không thể nộp bài", description: "Giáo viên đang tạm dừng hoặc đã chấm dứt phiên thi.", variant: "destructive" });
       return;
     }
 

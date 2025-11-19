@@ -113,6 +113,20 @@ export async function uploadAssignmentFile(
   }
 }
 
+// Upload file phục vụ chat, dùng bucket riêng "chat-files" với folder "chat"
+export async function uploadChatFile(
+  file: File,
+  conversationId: string,
+  options: FileUploadOptions = {}
+): Promise<UploadResult> {
+  return uploadAssignmentFile(file, conversationId, {
+    bucket: options.bucket ?? "chat-files",
+    folder: options.folder ?? "chat",
+    maxSize: options.maxSize,
+    allowedTypes: options.allowedTypes,
+  });
+}
+
 /**
  * Upload multiple files
  */
@@ -161,6 +175,16 @@ export async function deleteAssignmentFile(
     console.error('[SupabaseUpload] Unexpected delete error:', error);
     return false;
   }
+}
+
+// Lấy public URL cho file chat dựa trên storage path (bucket mặc định: chat-files)
+export function getChatFileUrl(
+  storagePath: string,
+  bucket: string = 'chat-files'
+): string {
+  if (!storagePath) return '#';
+  const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+  return data.publicUrl;
 }
 
 /**

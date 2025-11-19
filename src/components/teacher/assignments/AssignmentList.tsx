@@ -178,6 +178,19 @@ export default function AssignmentList({
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
+                            {assignment.type === "QUIZ" && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.push(
+                                            `/dashboard/teacher/exams/monitor?assignmentId=${assignment.id}`
+                                        );
+                                    }}
+                                    className="px-4 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                                >
+                                    👁 Giám sát thi
+                                </button>
+                            )}
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();

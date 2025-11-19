@@ -448,6 +448,40 @@ export async function logExamEvent(
   
   // TODO: Lưu vào database
   console.log(`[EXAM_EVENT] ${eventType}:`, event)
+
+  // Nếu chạy trên client, cố gắng gửi log lên API /api/exam-events
+  try {
+    if (typeof window !== 'undefined') {
+      const parts = sessionId.split('_')
+      // Định dạng: session_${studentId}_${assignmentId}_${timestamp}
+      const assignmentId = parts.length >= 4 ? parts[2] : undefined
+
+      if (assignmentId) {
+        const payload = {
+          assignmentId,
+          eventType,
+          // attempt hiện chưa được encode trong sessionId, để null
+          attempt: null as number | null,
+          metadata: {
+            ...data,
+            severity,
+            notes,
+            sessionId,
+          },
+        }
+
+        void fetch('/api/exam-events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        })
+      }
+    }
+  } catch (err) {
+    console.error('[EXAM_EVENT] Failed to send event to API', err)
+  }
 }
 
 /**
