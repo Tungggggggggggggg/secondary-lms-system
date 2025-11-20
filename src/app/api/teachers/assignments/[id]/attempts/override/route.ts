@@ -119,7 +119,7 @@ export async function POST(
         break;
       }
       case "TERMINATE": {
-        updateData.status = "TERMINATED_BY_TEACHER";
+        updateData.status = "TERMINATED_TEACHER";
         updateData.endedAt = now;
         break;
       }

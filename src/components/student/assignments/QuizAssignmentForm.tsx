@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import type { KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAssignmentDetail } from "@/hooks/use-student-assignments";
 import QuestionComments from "./QuestionComments";
@@ -78,6 +79,9 @@ export default function QuizAssignmentForm({
   const cleanupRef = useRef<(() => void)[]>([]);
   const attemptsLeft = maxAttempts != null ? Math.max(0, (maxAttempts as number) - (latestAttempt as number)) : null;
   const disabledMode = isSubmitted && !isNewAttempt;
+  const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
+  const terminatedByTeacher = attemptStatus === "TERMINATED_TEACHER";
+  const blockedByTeacher = pausedByTeacher || terminatedByTeacher;
 
   // Cảnh báo khi rời trang trong lúc đang làm bài
   useEffect(() => {
@@ -291,29 +295,23 @@ export default function QuizAssignmentForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignment.id, disabledMode]);
 
-  // Persist draft on answers change (debounced)
+  // Persist draft on answers change (lưu ngay để hạn chế mất dữ liệu khi reload)
   useEffect(() => {
     if (disabledMode) return;
-    const id = window.setTimeout(() => {
-      try {
-        const arr = Array.from(answers.entries()).map(([questionId, set]) => ({ questionId, optionIds: Array.from(set) }));
-        window.localStorage.setItem(draftKey, JSON.stringify(arr));
-      } catch {}
-    }, 300);
-    return () => window.clearTimeout(id);
+    try {
+      const arr = Array.from(answers.entries()).map(([questionId, set]) => ({ questionId, optionIds: Array.from(set) }));
+      window.localStorage.setItem(draftKey, JSON.stringify(arr));
+    } catch {}
   }, [answers, draftKey, disabledMode]);
 
-  // Persist draft FILL_BLANK texts (debounced)
+  // Persist draft FILL_BLANK texts (lưu ngay để hạn chế mất dữ liệu khi reload)
   useEffect(() => {
     if (disabledMode) return;
-    const id = window.setTimeout(() => {
-      try {
-        const obj: Record<string, string> = {};
-        fillTexts.forEach((v, k) => { if (typeof v === "string") obj[k] = v; });
-        window.localStorage.setItem(fillDraftKey, JSON.stringify(obj));
-      } catch {}
-    }, 300);
-    return () => window.clearTimeout(id);
+    try {
+      const obj: Record<string, string> = {};
+      fillTexts.forEach((v, k) => { if (typeof v === "string") obj[k] = v; });
+      window.localStorage.setItem(fillDraftKey, JSON.stringify(obj));
+    } catch {}
   }, [fillTexts, fillDraftKey, disabledMode]);
 
   // Initialize startedAt from storage or now when interactive
@@ -360,6 +358,29 @@ export default function QuizAssignmentForm({
       window.clearInterval(id);
     };
   }, [assignment.id, attemptNumberState, disabledMode]);
+
+  // Auto-submit khi giáo viên chấm dứt phiên thi
+  useEffect(() => {
+    if (disabledMode || isSubmitted) return;
+    if (attemptStatus !== "TERMINATED_TEACHER") return;
+    if (terminatedByTeacherRef.current) return;
+    terminatedByTeacherRef.current = true;
+    autoSubmittedRef.current = true;
+
+    const answersArray = assignment.questions.map((q) => {
+      const set = answers.get(q.id) || new Set<string>();
+      return {
+        questionId: q.id,
+        optionIds: Array.from(set),
+      };
+    });
+    const qOrder = questionOrder || assignment.questions.map((q) => q.id);
+    const optOrder: Record<string, string[]> = {};
+    assignment.questions.forEach((q) => {
+      optOrder[q.id] = (optionOrders && optionOrders[q.id]) ? optionOrders[q.id] : q.options.map((o) => o.id);
+    });
+    onSubmit(answersArray, { questionOrder: qOrder, optionOrder: optOrder }).catch(() => {});
+  }, [attemptStatus, disabledMode, isSubmitted, assignment.questions, answers, questionOrder, optionOrders, onSubmit]);
 
   // Compute effective deadline and drive countdown
   useEffect(() => {
@@ -527,7 +548,7 @@ export default function QuizAssignmentForm({
   // Toggle option selection
   const toggleOption = (questionId: string, optionId: string, questionType: string) => {
     const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
-    const terminatedByTeacher = attemptStatus === "TERMINATED_BY_TEACHER";
+    const terminatedByTeacher = attemptStatus === "TERMINATED_TEACHER";
     if (isLoading || isOverdue || disabledMode || pausedByTeacher || terminatedByTeacher) return;
 
     setAnswers((prev) => {
@@ -559,7 +580,7 @@ export default function QuizAssignmentForm({
     questionType: string
   ) => {
     const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
-    const terminatedByTeacher = attemptStatus === "TERMINATED_BY_TEACHER";
+    const terminatedByTeacher = attemptStatus === "TERMINATED_TEACHER";
     if (isLoading || isOverdue || disabledMode || pausedByTeacher || terminatedByTeacher) return;
     const key = e.key;
     if (key === 'Enter' || key === ' ') {
@@ -604,7 +625,7 @@ export default function QuizAssignmentForm({
 
   const scrollToFirstUnanswered = useCallback(() => {
     const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
-    const terminatedByTeacher = attemptStatus === "TERMINATED_BY_TEACHER";
+    const terminatedByTeacher = attemptStatus === "TERMINATED_TEACHER";
     if (singleQuestionMode || pausedByTeacher || terminatedByTeacher) return;
     for (const qid of orderedQuestionIds) {
       const q = questionsById[qid];
@@ -640,7 +661,7 @@ export default function QuizAssignmentForm({
     }
 
     const pausedByTeacher = attemptStatus === "PAUSED_BY_TEACHER";
-    const terminatedByTeacher = attemptStatus === "TERMINATED_BY_TEACHER";
+    const terminatedByTeacher = attemptStatus === "TERMINATED_TEACHER";
 
     if (pausedByTeacher || terminatedByTeacher) {
       toast({ title: "Không thể nộp bài", description: "Giáo viên đang tạm dừng hoặc đã chấm dứt phiên thi.", variant: "destructive" });
@@ -657,18 +678,10 @@ export default function QuizAssignmentForm({
       return;
     }
 
-    // Validate tất cả câu hỏi đều đã trả lời
-    if (!allAnswered) {
-      toast({
-        title: "Lỗi",
-        description: `Vui lòng trả lời tất cả ${totalQuestions} câu hỏi`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Xác nhận nộp bài
-    const confirmMsg = `Bạn đã trả lời ${answeredCount}/${totalQuestions} câu. Xác nhận nộp bài?`;
+    const confirmMsg = allAnswered
+      ? `Bạn đã trả lời ${answeredCount}/${totalQuestions} câu. Xác nhận nộp bài?`
+      : `Bạn mới trả lời ${answeredCount}/${totalQuestions} câu, còn ${totalQuestions - answeredCount} câu chưa trả lời. Vẫn muốn nộp bài?`;
     const ok = await confirm({
       title: "Xác nhận nộp bài",
       description: confirmMsg,
@@ -677,11 +690,14 @@ export default function QuizAssignmentForm({
     });
     if (!ok) return;
 
-    // Transform answers từ Map sang Array
-    const answersArray = Array.from(answers.entries()).map(([questionId, optionIds]) => ({
-      questionId,
-      optionIds: Array.from(optionIds),
-    }));
+    // Transform answers: luôn gửi đủ tất cả câu hỏi, câu chưa trả lời có mảng optionIds rỗng
+    const answersArray = assignment.questions.map((q) => {
+      const set = answers.get(q.id) || new Set<string>();
+      return {
+        questionId: q.id,
+        optionIds: Array.from(set),
+      };
+    });
 
     // Chuẩn bị snapshot presentation (questionOrder/optionOrder)
     const qOrder = questionOrder || assignment.questions.map((q) => q.id);
@@ -747,8 +763,22 @@ export default function QuizAssignmentForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
+      className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 relative"
     >
+      <Dialog open={blockedByTeacher} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {pausedByTeacher ? "Phiên thi đang tạm dừng" : "Phiên thi đã bị chấm dứt"}
+            </DialogTitle>
+            <DialogDescription>
+              {pausedByTeacher
+                ? "Giáo viên đang tạm dừng phiên thi của bạn. Vui lòng chờ cho đến khi giáo viên tiếp tục."
+                : "Giáo viên đã chấm dứt phiên thi. Bài làm hiện tại của bạn sẽ được nộp tự động và vẫn được tính điểm."}
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
       {/* Progress indicator */}
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
         <div className="flex items-center justify-between mb-2">
@@ -756,7 +786,7 @@ export default function QuizAssignmentForm({
             Tiến độ: {answeredCount}/{totalQuestions} câu đã trả lời
           </span>
           <div className="flex items-center gap-3">
-            {!singleQuestionMode && !allAnswered && !disabledMode && (
+            {!singleQuestionMode && !allAnswered && !disabledMode && !blockedByTeacher && (
               <Button type="button" variant="outline" onClick={scrollToFirstUnanswered}>
                 Tới câu chưa trả lời
               </Button>
@@ -855,7 +885,7 @@ export default function QuizAssignmentForm({
             </div>
           </div>
         )}
-        {!disabledMode && (
+        {!disabledMode && !blockedByTeacher && (
           <div className="mt-3 text-right">
             <Button
               type="button"
@@ -907,7 +937,7 @@ export default function QuizAssignmentForm({
                         type="text"
                         value={getFillText(question)}
                         onChange={(e) => handleFillChange(question, e.target.value)}
-                        disabled={isLoading || isOverdue || disabledMode}
+                        disabled={isLoading || isOverdue || disabledMode || blockedByTeacher}
                         aria-label={`Nhập đáp án cho câu ${index + 1}`}
                         aria-required="true"
                         onKeyDown={(e) => {
@@ -940,13 +970,13 @@ export default function QuizAssignmentForm({
                               isSelected
                                 ? "bg-indigo-50 border-indigo-500"
                                 : "bg-white border-gray-200 hover:border-indigo-300"
-                              } ${isOverdue || isLoading || disabledMode ? "opacity-60 cursor-not-allowed" : ""}`}
+                            } ${isOverdue || isLoading || disabledMode || blockedByTeacher ? "opacity-60 cursor-not-allowed" : ""}`}
                           >
                             <input
                               type={(question.type === "SINGLE" || question.type === "TRUE_FALSE") ? "radio" : "checkbox"}
                               checked={isSelected}
                               onChange={() => toggleOption(question.id, option.id, question.type)}
-                              disabled={isLoading || isOverdue || disabledMode}
+                              disabled={isLoading || isOverdue || disabledMode || blockedByTeacher}
                               className="mt-1"
                               aria-label={`Câu ${index + 1} - ${String.fromCharCode(65 + optIdx)}: ${option.content}`}
                               name={(question.type === "SINGLE" || question.type === "TRUE_FALSE") ? `question-${question.id}` : undefined}
@@ -997,14 +1027,14 @@ export default function QuizAssignmentForm({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {!singleQuestionMode && !allAnswered && !disabledMode && (
+          {!singleQuestionMode && !allAnswered && !disabledMode && !blockedByTeacher && (
             <Button type="button" variant="outline" onClick={scrollToFirstUnanswered}>
               Tới câu chưa trả lời
             </Button>
           )}
           <Button
             type="submit"
-            disabled={isLoading || isOverdue || !allAnswered}
+            disabled={isLoading || isOverdue}
           >
             {isLoading
               ? "Đang xử lý..."

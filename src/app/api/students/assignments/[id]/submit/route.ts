@@ -395,6 +395,8 @@ export async function PUT(
 
     // Validate dựa trên loại assignment
     let submissionContent = "";
+    let calculatedGrade: number | null = null;
+    let autoFeedback: string | null = null;
     if (submission.assignment.type === "ESSAY") {
       if (!content || !content.trim()) {
         return NextResponse.json(
@@ -420,7 +422,7 @@ export async function PUT(
           { status: 400 }
         );
       }
-      // Validate tất cả questions đều có answer
+      // Validate tất cả questions đều có answer (theo questionId)
       const answeredQuestionIds = new Set(answers.map((a) => a.questionId));
       const questionIds = new Set(submission.assignment.questions.map((q) => q.id));
       if (
@@ -432,16 +434,44 @@ export async function PUT(
           { status: 400 }
         );
       }
+
+      // Auto-chấm lại quiz cho lần cập nhật
+      try {
+        const quizSubmission = validateQuizSubmission({
+          assignmentId,
+          studentId: user.id,
+          answers: answers.map((a) => ({
+            questionId: a.questionId,
+            selectedOptions: a.optionIds,
+          })),
+        });
+
+        const gradeResult = await autoGradeQuiz(quizSubmission, true);
+        calculatedGrade = gradeResult.grade;
+        autoFeedback = gradeResult.feedback;
+      } catch (autoGradeError) {
+        console.error('[AUTO_GRADE][PUT] Error auto-grading quiz:', autoGradeError);
+        // Fallback đơn giản: không tính lại điểm, để giáo viên quyết định
+        calculatedGrade = null;
+        autoFeedback = null;
+      }
+
       // Lưu answers dưới dạng JSON string
       submissionContent = JSON.stringify(answers);
     }
 
-    // Update submission
+    // Update submission (và grade/feedback nếu là quiz)
+    const updateData: any = {
+      content: submissionContent,
+    };
+    if (submission.assignment.type === "QUIZ") {
+      updateData.grade = calculatedGrade;
+      updateData.feedback = autoFeedback;
+    }
+
     const updatedSubmission = await prisma.assignmentSubmission.update({
       where: { id: submission.id },
-      data: {
-        content: submissionContent,
-      },
+      data: updateData,
       include: {
         assignment: {
           select: {

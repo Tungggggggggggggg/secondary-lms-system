@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,54 +27,66 @@ import {
   BarChart3
 } from "lucide-react";
 
-// Mock data đơn giản cho UI
-const mockStudentSessions = [
-  {
-    id: "1",
-    studentName: "Nguyễn Văn A",
-    assignmentTitle: "Kiểm tra Toán học",
-    status: "IN_PROGRESS",
-    startTime: "14:30",
-    timeRemaining: "25:30",
-    progress: 60,
-    currentQuestion: 8,
-    totalQuestions: 15,
-    suspiciousActivities: 2,
-    isOnline: true
-  },
-  {
-    id: "2", 
-    studentName: "Trần Thị B",
-    assignmentTitle: "Kiểm tra Toán học",
-    status: "PAUSED",
-    startTime: "14:15",
-    timeRemaining: "10:45",
-    progress: 40,
-    currentQuestion: 6,
-    totalQuestions: 15,
-    suspiciousActivities: 0,
-    isOnline: false
-  },
-  {
-    id: "3",
-    studentName: "Lê Văn C", 
-    assignmentTitle: "Kiểm tra Toán học",
-    status: "COMPLETED",
-    startTime: "14:00",
-    timeRemaining: "00:00",
-    progress: 100,
-    currentQuestion: 15,
-    totalQuestions: 15,
-    suspiciousActivities: 1,
-    isOnline: true
-  }
-];
+// Mock data đơn giản cho UI (để trống, chỉ dùng cho demo nếu cần)
+const mockStudentSessions: Array<{
+  //   {
+  //   id: "1",
+  //   studentName: "Nguyễn Văn A",
+  //   assignmentTitle: "Kiểm tra Toán học",
+  //   status: "IN_PROGRESS",
+  //   startTime: "14:30",
+  //   timeRemaining: "25:30",
+  //   progress: 60,
+  //   currentQuestion: 8,
+  //   totalQuestions: 15,
+  //   suspiciousActivities: 2,
+  //   isOnline: true
+  // },
+  // {
+  //   id: "2", 
+  //   studentName: "Trần Thị B",
+  //   assignmentTitle: "Kiểm tra Toán học",
+  //   status: "PAUSED",
+  //   startTime: "14:15",
+  //   timeRemaining: "10:45",
+  //   progress: 40,
+  //   currentQuestion: 6,
+  //   totalQuestions: 15,
+  //   suspiciousActivities: 0,
+  //   isOnline: false
+  // },
+  // {
+  //   id: "3",
+  //   studentName: "Lê Văn C", 
+  //   assignmentTitle: "Kiểm tra Toán học",
+  //   status: "COMPLETED",
+  //   startTime: "14:00",
+  //   timeRemaining: "00:00",
+  //   progress: 100,
+  //   currentQuestion: 15,
+  //   totalQuestions: 15,
+  //   suspiciousActivities: 1,
+  //   isOnline: true
+  // }
+  id: string;
+  studentName: string;
+  assignmentTitle: string;
+  status: string;
+  startTime: string;
+  timeRemaining: string;
+  progress: number;
+  currentQuestion: number;
+  totalQuestions: number;
+  suspiciousActivities: number;
+  isOnline: boolean;
+}> = [];
 
 /**
  * Trang giám sát thi trực tuyến cho giáo viên
  * URL: /dashboard/teacher/exams/monitor
  */
 export default function ExamMonitorPage() {
+  const { toast } = useToast();
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
   const [assignmentIdInput, setAssignmentIdInput] = useState("");
@@ -92,21 +105,25 @@ export default function ExamMonitorPage() {
   const assignmentIdFromQuery = searchParams.get("assignmentId");
 
   const [assignmentTitle, setAssignmentTitle] = useState<string | null>(null);
+  const [assignmentQuestionCount, setAssignmentQuestionCount] = useState<number | null>(null);
+  const [assignmentTimeLimitMinutes, setAssignmentTimeLimitMinutes] = useState<number | null>(null);
   const [loadingAssignment, setLoadingAssignment] = useState(false);
 
-  // Nếu có assignmentId trên URL (truy cập thực tế từ bài Quiz), không dùng mock demo
-  const useDemoSessions = !assignmentIdFromQuery;
+  // Chỉ dùng mock demo khi KHÔNG có assignmentId trên URL và cũng không nhập thủ công
+  const useDemoSessions = !assignmentIdFromQuery && !assignmentIdInput.trim();
+
+  const effectiveAssignmentId = assignmentIdFromQuery || assignmentIdInput.trim();
 
   // Auto refresh: tự động tải lại logs & phiên thi theo assignment hiện tại
   useEffect(() => {
     if (!isAutoRefresh) return;
 
     // Ưu tiên assignmentId trên URL, fallback sang input thủ công
-    const effectiveAssignmentId = assignmentIdFromQuery || assignmentIdInput.trim();
-    if (!effectiveAssignmentId) return;
+    const effectiveIdForLogs = assignmentIdFromQuery || assignmentIdInput.trim();
+    if (!effectiveIdForLogs) return;
 
     const tick = () => {
-      fetchEvents(effectiveAssignmentId);
+      fetchEvents(effectiveIdForLogs);
     };
 
     // Gọi ngay 1 lần và sau đó lặp lại ~2s/lần
@@ -145,21 +162,25 @@ export default function ExamMonitorPage() {
       fetchEvents(assignmentIdFromQuery);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignmentIdFromQuery]);
+  }, [effectiveAssignmentId]);
 
   useEffect(() => {
-    if (!assignmentIdFromQuery) return;
+    if (!effectiveAssignmentId) return;
 
     let cancelled = false;
 
     const load = async () => {
       try {
         setLoadingAssignment(true);
-        const res = await fetch(`/api/assignments/${assignmentIdFromQuery}`);
+        const res = await fetch(`/api/assignments/${effectiveAssignmentId}`);
         const j = await res.json();
         if (!res.ok || !j?.success) throw new Error(j?.message || res.statusText);
         if (!cancelled) {
           setAssignmentTitle(j.data?.title ?? null);
+          const qc = Array.isArray(j.data?.questions) ? j.data.questions.length : null;
+          setAssignmentQuestionCount(qc);
+          const tl = typeof j.data?.timeLimitMinutes === 'number' ? j.data.timeLimitMinutes : null;
+          setAssignmentTimeLimitMinutes(tl);
         }
       } catch (e) {
         console.error("[ExamMonitor] load assignment title error", e);
@@ -242,6 +263,8 @@ export default function ExamMonitorPage() {
       hasResumed: boolean;
       hasCompleted: boolean;
       hasTerminated: boolean;
+      answeredQuestionIds: Set<string>;
+      lastQuestionIndex: number | null;
     }>();
 
     for (const ev of events) {
@@ -249,6 +272,22 @@ export default function ExamMonitorPage() {
       const createdAt = ev.createdAt;
       const sev = severityOf(ev.eventType);
       const existing = map.get(key);
+
+      const isPauseEvent = ev.eventType === 'SESSION_PAUSED' || ev.eventType === 'TEACHER_PAUSE_SESSION';
+      const isResumeEvent = ev.eventType === 'SESSION_RESUMED' || ev.eventType === 'TEACHER_RESUME_SESSION';
+      const isCompletedEvent = ev.eventType === 'SESSION_COMPLETED';
+      const isTerminatedEvent = ev.eventType === 'SESSION_TERMINATED' || ev.eventType === 'TEACHER_TERMINATE_SESSION';
+
+      const meta = (ev as any).metadata as any | null;
+      const answeredQuestionId = ev.eventType === 'QUESTION_ANSWERED' && meta && typeof meta.questionId === 'string'
+        ? meta.questionId
+        : null;
+      const questionIndexFromAnswered = ev.eventType === 'QUESTION_ANSWERED' && meta && typeof meta.currentQuestionIndex === 'number'
+        ? meta.currentQuestionIndex
+        : null;
+      const questionIndexFromChanged = ev.eventType === 'QUESTION_CHANGED' && meta && typeof meta.toIndex === 'number'
+        ? meta.toIndex
+        : null;
 
       if (!existing) {
         map.set(key, {
@@ -261,10 +300,12 @@ export default function ExamMonitorPage() {
           eventCount: 1,
           highCount: sev === 'high' ? 1 : 0,
           mediumCount: sev === 'medium' ? 1 : 0,
-          hasPaused: ev.eventType === 'SESSION_PAUSED',
-          hasResumed: ev.eventType === 'SESSION_RESUMED',
-          hasCompleted: ev.eventType === 'SESSION_COMPLETED',
-          hasTerminated: ev.eventType === 'SESSION_TERMINATED',
+          hasPaused: isPauseEvent,
+          hasResumed: isResumeEvent,
+          hasCompleted: isCompletedEvent,
+          hasTerminated: isTerminatedEvent,
+          answeredQuestionIds: answeredQuestionId ? new Set<string>([answeredQuestionId]) : new Set<string>(),
+          lastQuestionIndex: questionIndexFromAnswered ?? questionIndexFromChanged ?? null,
         });
       } else {
         if (createdAt < existing.firstEventAt) existing.firstEventAt = createdAt;
@@ -274,10 +315,14 @@ export default function ExamMonitorPage() {
         if (sev === 'high') existing.highCount += 1;
         else if (sev === 'medium') existing.mediumCount += 1;
 
-        if (ev.eventType === 'SESSION_PAUSED') existing.hasPaused = true;
-        if (ev.eventType === 'SESSION_RESUMED') existing.hasResumed = true;
-        if (ev.eventType === 'SESSION_COMPLETED') existing.hasCompleted = true;
-        if (ev.eventType === 'SESSION_TERMINATED') existing.hasTerminated = true;
+        if (isPauseEvent) existing.hasPaused = true;
+        if (isResumeEvent) existing.hasResumed = true;
+        if (isCompletedEvent) existing.hasCompleted = true;
+        if (isTerminatedEvent) existing.hasTerminated = true;
+
+         if (answeredQuestionId) existing.answeredQuestionIds.add(answeredQuestionId);
+         if (questionIndexFromAnswered != null) existing.lastQuestionIndex = questionIndexFromAnswered;
+         if (questionIndexFromChanged != null) existing.lastQuestionIndex = questionIndexFromChanged;
       }
     }
 
@@ -306,6 +351,8 @@ export default function ExamMonitorPage() {
         hasResumed: s.hasResumed,
         hasCompleted: s.hasCompleted,
         hasTerminated: s.hasTerminated,
+        answeredCount: s.answeredQuestionIds.size,
+        lastQuestionIndex: s.lastQuestionIndex,
         status,
         isOnline,
       };
@@ -315,21 +362,53 @@ export default function ExamMonitorPage() {
   const monitorSessions = useMemo(() => {
     if (useDemoSessions) return mockStudentSessions;
     const title = assignmentTitle || 'Bài thi';
-    return derivedSessions.map((s) => ({
-      id: s.id,
-      studentName: s.fullname,
-      assignmentTitle: title,
-      status: s.status,
-      startTime: new Date(s.firstEventAt).toLocaleTimeString(),
-      timeRemaining: '-',
-      progress: 0,
-      currentQuestion: 0,
-      totalQuestions: 0,
-      // Đếm theo SỐ LẦN cảnh báo (event high + medium)
-      suspiciousActivities: (s.highCount ?? 0) + (s.mediumCount ?? 0),
-      isOnline: s.isOnline as boolean,
-    }));
-  }, [useDemoSessions, derivedSessions, assignmentTitle]);
+
+    const byStudent = new Map<string, typeof derivedSessions[number]>();
+    for (const s of derivedSessions) {
+      if (!byStudent.has(s.studentId)) {
+        byStudent.set(s.studentId, s);
+      }
+    }
+
+    const totalQ = assignmentQuestionCount ?? 0;
+
+    return Array.from(byStudent.values()).map((s) => {
+      // Tiến độ dựa trên số câu đã trả lời
+      const answeredCount = (s as any).answeredCount as number | undefined ?? 0;
+      const safeTotalQ = totalQ > 0 ? totalQ : 0;
+      const progress = safeTotalQ > 0
+        ? Math.min(100, Math.max(0, Math.round((answeredCount / safeTotalQ) * 100)))
+        : 0;
+
+      // Thời gian còn lại: vẫn dùng tính toán từ timeLimit (nếu có)
+      let timeRemainingLabel: string | null = null;
+      const limitMinutes = assignmentTimeLimitMinutes ?? null;
+      if (limitMinutes && limitMinutes > 0) {
+        const now = Date.now();
+        const startTs = new Date(s.firstEventAt).getTime();
+        const totalSec = limitMinutes * 60;
+        const elapsedSec = Math.max(0, Math.floor((now - startTs) / 1000));
+        const remainingSec = Math.max(0, totalSec - elapsedSec);
+        const m = Math.floor(remainingSec / 60);
+        const sec = remainingSec % 60;
+        timeRemainingLabel = `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+      }
+
+      return {
+        id: s.id,
+        studentName: s.fullname,
+        assignmentTitle: title,
+        status: s.status,
+        startTime: new Date(s.firstEventAt).toLocaleTimeString(),
+        timeRemaining: timeRemainingLabel ?? '-',
+        progress,
+        currentQuestion: answeredCount,
+        totalQuestions: safeTotalQ,
+        suspiciousActivities: (s.highCount ?? 0) + (s.mediumCount ?? 0),
+        isOnline: s.isOnline as boolean,
+      };
+    });
+  }, [useDemoSessions, derivedSessions, assignmentTitle, assignmentQuestionCount, assignmentTimeLimitMinutes]);
 
   const activeCount = useDemoSessions
     ? mockStudentSessions.filter((s) => s.status === 'IN_PROGRESS').length
@@ -355,7 +434,9 @@ export default function ExamMonitorPage() {
       case 'PAUSED':
         return <Badge variant="warning" className="bg-yellow-100 text-yellow-800">Tạm dừng</Badge>;
       case 'COMPLETED':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800">Hoàn thành</Badge>;
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800">Đã nộp bài</Badge>;
+      case 'TERMINATED':
+        return <Badge variant="destructive" className="bg-red-100 text-red-700">Đã chấm dứt</Badge>;
       default:
         return <Badge variant="outline">Không xác định</Badge>;
     }
@@ -403,6 +484,18 @@ export default function ExamMonitorPage() {
       if (action === "EXTEND_TIME") {
         setExtendReasonInput("");
       }
+      const actionLabel =
+        action === "EXTEND_TIME"
+          ? "Gia hạn thời gian"
+          : action === "PAUSE"
+          ? "Tạm dừng phiên thi"
+          : action === "RESUME"
+          ? "Tiếp tục phiên thi"
+          : "Chấm dứt phiên thi";
+      toast({
+        title: "Đã gửi lệnh",
+        description: `${actionLabel} cho học sinh đã được áp dụng thành công (nếu học sinh đang làm bài).`,
+      });
     } catch (e) {
       console.error("[TeacherOverride] network error", e);
       window.alert("Có lỗi xảy ra khi gửi lệnh. Vui lòng thử lại.");
@@ -422,6 +515,39 @@ export default function ExamMonitorPage() {
       return;
     }
     void callTeacherOverride(sessionKey, "EXTEND_TIME", { minutes, reason: extendReasonInput.trim() });
+  };
+
+  const handleExtendTimeAll = () => {
+    const minutes = Number(extendMinutesInput);
+    if (!minutes || minutes <= 0) {
+      window.alert("Số phút gia hạn phải lớn hơn 0.");
+      return;
+    }
+    const reason = extendReasonInput.trim();
+    if (!reason) {
+      window.alert("Vui lòng nhập lý do gia hạn.");
+      return;
+    }
+
+    if (!assignmentIdFromQuery) {
+      window.alert("Chức năng gia hạn tất cả chỉ dùng được khi mở từ bài Quiz (có assignmentId trên URL).");
+      return;
+    }
+
+    const source = useDemoSessions ? mockStudentSessions : monitorSessions;
+    const targets = source.filter((s) => s.status === 'IN_PROGRESS' || s.status === 'PAUSED');
+    if (targets.length === 0) {
+      window.alert("Không có phiên nào đang thi hoặc tạm dừng để gia hạn.");
+      return;
+    }
+
+    if (!window.confirm(`Gia hạn thêm ${minutes} phút cho ${targets.length} học sinh?`)) {
+      return;
+    }
+
+    targets.forEach((s) => {
+      void callTeacherOverride(s.id, "EXTEND_TIME", { minutes, reason });
+    });
   };
 
   const handlePauseSession = (sessionKey: string) => {
@@ -549,63 +675,75 @@ export default function ExamMonitorPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {monitorSessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedStudent(session.id)}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            {session.isOnline ? (
-                              <CheckCircle className="w-5 h-5 text-green-500" />
-                            ) : (
-                              <WifiOff className="w-5 h-5 text-red-500" />
-                            )}
-                            <div>
-                              <h3 className="font-medium">{session.studentName}</h3>
-                              <p className="text-sm text-gray-600">{session.assignmentTitle}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-6">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">Tiến độ</p>
+                    {monitorSessions.map((session) => {
+                      const isSelected = selectedStudent === session.id;
+                      return (
+                        <div
+                          key={session.id}
+                          className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
+                            isSelected ? "bg-blue-50 border-blue-500 shadow-sm" : "bg-white hover:bg-gray-50"
+                          }`}
+                          onClick={() => setSelectedStudent(session.id)}
+                        >
+                          <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                              <div className="w-20 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-blue-600 h-2 rounded-full" 
-                                  style={{ width: `${session.progress}%` }}
-                                />
+                              {session.isOnline ? (
+                                <CheckCircle className="w-5 h-5 text-green-500" />
+                              ) : (
+                                <WifiOff className="w-5 h-5 text-red-500" />
+                              )}
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-medium">{session.studentName}</h3>
+                                  {isSelected && (
+                                    <Badge variant="outline" className="text-xs border-blue-500 text-blue-700 bg-blue-50">
+                                      Đang điều khiển
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600">{session.assignmentTitle}</p>
                               </div>
-                              <span className="text-sm font-medium">{session.progress}%</span>
                             </div>
                           </div>
 
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">Thời gian còn lại</p>
-                            <p className="font-medium">{session.timeRemaining}</p>
-                          </div>
+                          <div className="flex items-center gap-6">
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600">Tiến độ</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-20 bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-blue-600 h-2 rounded-full"
+                                    style={{ width: `${session.progress}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm font-medium">{session.progress}%</span>
+                              </div>
+                            </div>
 
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">Câu hỏi</p>
-                            <p className="font-medium">{session.currentQuestion}/{session.totalQuestions}</p>
-                          </div>
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600">Thời gian còn lại</p>
+                              <p className="font-medium">{session.timeRemaining}</p>
+                            </div>
 
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600">Cảnh báo</p>
-                            <Badge variant={session.suspiciousActivities > 0 ? "destructive" : "outline"}>
-                              {session.suspiciousActivities}
-                            </Badge>
-                          </div>
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600">Câu hỏi</p>
+                              <p className="font-medium">
+                                {session.currentQuestion}/{session.totalQuestions}
+                              </p>
+                            </div>
 
-                          <div>
-                            {getStatusBadge(session.status)}
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600">Cảnh báo</p>
+                              <Badge variant={session.suspiciousActivities > 0 ? "destructive" : "outline"}>
+                                {session.suspiciousActivities}
+                              </Badge>
+                            </div>
+
+                            <div>{getStatusBadge(session.status)}</div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -811,14 +949,25 @@ export default function ExamMonitorPage() {
                                   disabled={controlsLoading}
                                 />
                               </div>
-                              <Button 
-                                onClick={() => handleExtendTime(student.id)}
-                                className="w-full"
-                                disabled={controlsLoading}
-                              >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Gia hạn thời gian
-                              </Button>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <Button 
+                                  onClick={() => handleExtendTime(student.id)}
+                                  className="w-full"
+                                  disabled={controlsLoading}
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Gia hạn cho học sinh này
+                                </Button>
+                                <Button 
+                                  variant="outline"
+                                  onClick={handleExtendTimeAll}
+                                  className="w-full"
+                                  disabled={controlsLoading}
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Gia hạn cho tất cả
+                                </Button>
+                              </div>
                             </CardContent>
                           </Card>
 
@@ -827,18 +976,29 @@ export default function ExamMonitorPage() {
                               <CardTitle className="text-base">Hành động khẩn cấp</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                              <Button variant="outline" className="w-full">
+                              <Button
+                                
+                                className="w-full"
+                                onClick={() => handlePauseSession(student.id)}
+                                disabled={controlsLoading || student.status !== 'IN_PROGRESS'}
+                              >
                                 <Pause className="w-4 h-4 mr-2" />
                                 Tạm dừng phiên thi
                               </Button>
-                              <Button variant="outline" className="w-full">
+                              <Button
+                               
+                                className="w-full"
+                                onClick={() => handleResumeSession(student.id)}
+                                disabled={controlsLoading}
+                              >
                                 <Play className="w-4 h-4 mr-2" />
                                 Tiếp tục phiên thi
                               </Button>
                               <Button 
-                                variant="outline" 
+                               
                                 className="w-full border-red-300 text-red-600 hover:bg-red-50"
                                 onClick={() => handleTerminateSession(student.id)}
+                                disabled={controlsLoading}
                               >
                                 <StopCircle className="w-4 h-4 mr-2" />
                                 Chấm dứt phiên thi
