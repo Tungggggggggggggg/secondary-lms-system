@@ -12,13 +12,13 @@ export const CreateUserBodySchema = z.object({
   email: z.string().email(),
   fullname: z.string().min(1).max(200),
   password: z.string().min(6),
-  role: z.enum(["SUPER_ADMIN", "ADMIN", "TEACHER", "STUDENT", "PARENT"]).default("ADMIN"),
+  role: z.enum(["STAFF", "TEACHER", "STUDENT", "PARENT", "SUPER_ADMIN"]).default("STUDENT"),
 });
 
 export const UpdateUserBodySchema = z.object({
   fullname: z.string().min(1).max(200).optional(),
   email: z.string().email().optional(),
-  role: z.enum(["SUPER_ADMIN", "ADMIN", "TEACHER", "STUDENT", "PARENT"]).optional(),
+  role: z.enum(["STAFF", "TEACHER", "STUDENT", "PARENT", "SUPER_ADMIN"]).optional(),
 });
 
 export type ListUsersQuery = z.infer<typeof ListUsersQuerySchema>;

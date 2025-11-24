@@ -82,17 +82,18 @@ export default function CommandPaletteProvider({ children }: { children: React.R
       "Phụ huynh"
     );
 
-    const adminItems = [...SUPER_ADMIN_NAV_ITEMS, ...ADMIN_NAV_ITEMS];
+    // Admin commands theo vai trò
+    const adminItems = role === "SUPER_ADMIN" ? SUPER_ADMIN_NAV_ITEMS : role === "STAFF" ? ADMIN_NAV_ITEMS.filter((i) => i.id !== 'audit') : [];
     adminItems.forEach((x) => cmds.push({ id: `Admin:${x.href}`, label: x.label, href: x.href, section: "Admin" }));
 
     return cmds;
-  }, []);
+  }, [role]);
 
   const commands = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filterByRole = (item: CommandItem) => {
       if (!role) return true;
-      if (role === "SUPER_ADMIN" || role === "ADMIN") return item.section === "Admin";
+      if (role === "SUPER_ADMIN" || role === "STAFF") return item.section === "Admin";
       if (role === "TEACHER") return item.section === "Giáo viên";
       if (role === "STUDENT") return item.section === "Học sinh";
       if (role === "PARENT") return item.section === "Phụ huynh";

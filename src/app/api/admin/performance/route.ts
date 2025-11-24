@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
-import { UserRole } from '@prisma/client'
+import { isStaffRole } from '@/lib/rbac/role-utils'
 import { getCachedUser, getCacheStats } from '@/lib/user-cache'
 import { getPerformanceStats } from '@/lib/performance-monitor'
 
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       session.user.email || undefined
     )
 
-    if (!user || user.role !== UserRole.ADMIN) {
+    if (!user || !isStaffRole(user.role)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Forbidden - Admin only' 

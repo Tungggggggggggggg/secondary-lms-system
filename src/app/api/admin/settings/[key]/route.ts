@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/org-scope";
-import { requirePolicy } from "@/lib/rbac/policy";
+import { requireSettingsWrite } from "@/lib/rbac/guards";
 import { withRequestLogging } from "@/lib/logging/request";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
 import { SettingKeyParamSchema, SettingBodySchema } from "@/lib/validators/admin/settings";
@@ -10,7 +10,7 @@ export const GET = withRequestLogging(async (req: NextRequest, { params }: { par
   const startedAt = Date.now();
   try {
     const actor = await requireSession(req);
-    await requirePolicy("SETTINGS_WRITE", actor);
+    await requireSettingsWrite(actor);
     enforceRateLimit({ route: "admin.settings.get", ip: (req.headers.get("x-forwarded-for") || req.ip || "").split(",")[0].trim(), userId: actor.id, limit: 60 });
     const { key } = SettingKeyParamSchema.parse(params);
     const value = await settingsRepo.get(key);
@@ -29,7 +29,7 @@ export const PUT = withRequestLogging(async (req: NextRequest, { params }: { par
   const startedAt = Date.now();
   try {
     const actor = await requireSession(req);
-    await requirePolicy("SETTINGS_WRITE", actor);
+    await requireSettingsWrite(actor);
     enforceRateLimit({ route: "admin.settings.set", ip: (req.headers.get("x-forwarded-for") || req.ip || "").split(",")[0].trim(), userId: actor.id, limit: 20 });
     const { key } = SettingKeyParamSchema.parse(params);
     const body = await req.json();
@@ -50,7 +50,7 @@ export const DELETE = withRequestLogging(async (req: NextRequest, { params }: { 
   const startedAt = Date.now();
   try {
     const actor = await requireSession(req);
-    await requirePolicy("SETTINGS_WRITE", actor);
+    await requireSettingsWrite(actor);
     enforceRateLimit({ route: "admin.settings.delete", ip: (req.headers.get("x-forwarded-for") || req.ip || "").split(",")[0].trim(), userId: actor.id, limit: 20 });
     const { key } = SettingKeyParamSchema.parse(params);
     await settingsRepo.remove(key);

@@ -3,7 +3,7 @@ import { getToken } from "next-auth/jwt";
 
 const roleToDashboard: Record<string, string> = {
     SUPER_ADMIN: "/dashboard/admin/system",
-    ADMIN: "/dashboard/admin/overview",
+    STAFF: "/dashboard/admin/overview",
     TEACHER: "/dashboard/teacher/dashboard",
     STUDENT: "/dashboard/student/dashboard",
     PARENT: "/dashboard/parent/dashboard",
@@ -60,16 +60,29 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(new URL(target, url));
     }
 
-    // Chặn truy cập khu vực admin: chỉ ADMIN hoặc SUPER_ADMIN được phép
+    // Chặn truy cập khu vực admin: chỉ STAFF hoặc SUPER_ADMIN được phép
     if (pathname.startsWith('/dashboard/admin')) {
-        if (!role || (role !== 'ADMIN' && role !== 'SUPER_ADMIN')) {
+        if (!role || (role !== 'STAFF' && role !== 'SUPER_ADMIN')) {
             const target = role ? roleToDashboard[role] ?? '/' : '/auth/login';
             console.log('[Middleware] Admin access denied', { role, target });
             return NextResponse.redirect(new URL(target, url));
         }
+        // Các khu vực chỉ dành cho SUPER_ADMIN
+        if (
+            role === 'STAFF' && (
+                pathname.startsWith('/dashboard/admin/users') ||
+                pathname.startsWith('/dashboard/admin/system') ||
+                pathname.startsWith('/dashboard/admin/audit') ||
+                pathname.startsWith('/dashboard/admin/moderation')
+            )
+        ) {
+            const target = roleToDashboard['STAFF'];
+            console.log('[Middleware] Super-admin-only area blocked for STAFF', { pathname, role, target });
+            return NextResponse.redirect(new URL(target, url));
+        }
         // Chuẩn hóa: '/dashboard/admin' -> role cụ thể
         if (pathname === '/dashboard/admin') {
-            const target = role === 'SUPER_ADMIN' ? roleToDashboard['SUPER_ADMIN'] : roleToDashboard['ADMIN'];
+            const target = role === 'SUPER_ADMIN' ? roleToDashboard['SUPER_ADMIN'] : roleToDashboard['STAFF'];
             console.log('[Middleware] Normalizing admin path', { role, target });
             return NextResponse.redirect(new URL(target, url));
         }

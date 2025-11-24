@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { useSession } from "next-auth/react";
 
 // ============================================
 // Types
@@ -84,11 +85,14 @@ export default function ClassroomDetailModal({
 }: ClassroomDetailModalProps) {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role as string | undefined;
   const [classroom, setClassroom] = useState<ClassroomDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [removingStudentId, setRemovingStudentId] = useState<string | null>(null);
   const [isDeletingClassroom, setIsDeletingClassroom] = useState(false);
+  const [orgId, setOrgId] = useState("");
   
   // Pagination & Search states
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -131,6 +135,25 @@ export default function ClassroomDetailModal({
     }
   }, [isOpen, classroomId]);
 
+  // Sync global org context for write-guard
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/org/context");
+        const data = await res.json();
+        if (mounted) setOrgId(data?.orgId || "");
+      } catch {}
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener("org-context-changed", handler as any);
+    return () => {
+      mounted = false;
+      window.removeEventListener("org-context-changed", handler as any);
+    };
+  }, []);
+
   // Filter students based on search query
   useEffect(() => {
     if (!classroom) return;
@@ -156,6 +179,10 @@ export default function ClassroomDetailModal({
 
   const handleExportStudents = async () => {
     if (!classroom) return;
+    if (role === "SUPER_ADMIN" && !orgId) {
+      toast({ title: "Yêu cầu chọn Trường/Đơn vị", description: "Vui lòng chọn Trường/Đơn vị ở góc phải Header trước khi xuất dữ liệu.", variant: "destructive" });
+      return;
+    }
 
     try {
       setIsExporting(true);
@@ -202,6 +229,10 @@ export default function ClassroomDetailModal({
 
   const handleRemoveStudent = async (studentId: string, studentName: string) => {
     if (!classroom) return;
+    if (role === "SUPER_ADMIN" && !orgId) {
+      toast({ title: "Yêu cầu chọn Trường/Đơn vị", description: "Vui lòng chọn Trường/Đơn vị ở góc phải Header trước khi thực hiện thao tác này.", variant: "destructive" });
+      return;
+    }
     const confirmed = await confirm({
       title: "Xóa học sinh khỏi lớp",
       description: `Bạn có chắc muốn xóa học sinh "${studentName}" khỏi lớp "${classroom.name}"?`,
@@ -243,6 +274,10 @@ export default function ClassroomDetailModal({
 
   const handleDeleteClassroom = async () => {
     if (!classroom) return;
+    if (role === "SUPER_ADMIN" && !orgId) {
+      toast({ title: "Yêu cầu chọn Trường/Đơn vị", description: "Vui lòng chọn Trường/Đơn vị ở góc phải Header trước khi thực hiện thao tác này.", variant: "destructive" });
+      return;
+    }
     const confirmed = await confirm({
       title: "Xóa lớp học",
       description: `Bạn có chắc muốn xóa lớp học "${classroom.name}"?\nViệc này sẽ xóa lớp học và loại bỏ tất cả học sinh khỏi lớp. Thao tác này không thể hoàn tác.`,
@@ -308,7 +343,8 @@ export default function ClassroomDetailModal({
               <Button
                 variant="ghost"
                 onClick={handleDeleteClassroom}
-                disabled={isDeletingClassroom}
+                disabled={isDeletingClassroom || (role === "SUPER_ADMIN" && !orgId)}
+                title={role === "SUPER_ADMIN" && !orgId ? "Chọn Trường/Đơn vị để thao tác" : undefined}
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
                 {isDeletingClassroom ? (
@@ -390,7 +426,8 @@ export default function ClassroomDetailModal({
                     <div className="flex gap-2">
                       <Button
                         onClick={handleExportStudents}
-                        disabled={isExporting || classroom.studentsCount === 0}
+                        disabled={isExporting || classroom.studentsCount === 0 || (role === "SUPER_ADMIN" && !orgId)}
+                        title={role === "SUPER_ADMIN" && !orgId ? "Chọn Trường/Đơn vị để thao tác" : undefined}
                         className="flex items-center gap-2"
                       >
                         {isExporting ? (
@@ -460,7 +497,8 @@ export default function ClassroomDetailModal({
                               <Button
                                 variant="ghost"
                                 onClick={() => handleRemoveStudent(student.id, student.fullname)}
-                                disabled={removingStudentId === student.id}
+                                disabled={removingStudentId === student.id || (role === "SUPER_ADMIN" && !orgId)}
+                                title={role === "SUPER_ADMIN" && !orgId ? "Chọn Trường/Đơn vị để thao tác" : undefined}
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
                                 {removingStudentId === student.id ? (

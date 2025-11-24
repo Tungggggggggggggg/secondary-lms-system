@@ -64,6 +64,18 @@ export async function getAuthenticatedUser(
       return null;
     }
 
+    // Chặn người dùng bị khoá theo system settings
+    if (user) {
+      try {
+        const row = await prisma.systemSetting.findUnique({ where: { key: "disabled_users" } });
+        const list = Array.isArray(row?.value) ? (row!.value as any) : [];
+        if (Array.isArray(list) && list.includes(user.id)) {
+          userCache.set(req, null);
+          return null;
+        }
+      } catch {}
+    }
+
     // Cache user cho request này
     userCache.set(req, user);
 

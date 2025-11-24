@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/org-scope";
+import { requireAuditRead } from "@/lib/rbac/guards";
 import { auditRepo } from "@/lib/repositories/audit-repo";
 import { QueryAuditSchema } from "@/lib/validators/admin/audit";
 import { withRequestLogging } from "@/lib/logging/request";
@@ -24,7 +25,6 @@ export const GET = withRequestLogging(async (req: NextRequest) => {
   try {
     const actor = await requireSession(req);
     enforceRateLimit({ route: "admin.audit.query", ip: (req.headers.get("x-forwarded-for") || req.ip || "").split(",")[0].trim(), userId: actor.id, limit: 120 });
-    // SUPER_ADMIN xem tất cả, role khác: chỉ xem theo org nếu được filter phía UI (có thể siết thêm sau)
     const url = new URL(req.url);
     const valid = QueryAuditSchema.parse({
       orgId: url.searchParams.get("orgId"),
@@ -35,6 +35,7 @@ export const GET = withRequestLogging(async (req: NextRequest) => {
       cursor: url.searchParams.get("cursor"),
       limit: url.searchParams.get("limit"),
     });
+    await requireAuditRead(actor, valid.orgId || null);
     const res = await auditRepo.query({ organizationId: valid.orgId || null, actorId: valid.actorId || null, action: valid.action || null, from: valid.from || null, to: valid.to || null, limit: valid.limit || 50, cursor: valid.cursor || null });
 
     const format = url.searchParams.get("format");

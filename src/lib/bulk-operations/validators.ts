@@ -44,7 +44,7 @@ export const validateStudentId = (studentId: string): boolean => {
 // ============================================
 
 export const validateUserRole = (role: string): role is UserRole => {
-  const validRoles: UserRole[] = ['ADMIN', 'TEACHER', 'STUDENT', 'PARENT', 'SUPER_ADMIN'];
+  const validRoles: UserRole[] = ['STAFF', 'TEACHER', 'STUDENT', 'PARENT', 'SUPER_ADMIN'];
   return validRoles.includes(role as UserRole);
 };
 

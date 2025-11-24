@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
-import { requireOrgAccess } from "@/lib/org-scope";
+import { requireReportsRead } from "@/lib/rbac/guards";
 
 // GET /api/admin/org/reports/timeseries?orgId=...&days=14
 // Trả về thống kê theo ngày: users, classrooms, courses, assignments, announcements
 export const GET = withApiLogging(async (req: NextRequest) => {
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) return errorResponse(401, "Unauthorized");
-  if (authUser.role !== "ADMIN" && authUser.role !== "SUPER_ADMIN") {
-    return errorResponse(403, "Forbidden: ADMIN/SUPER_ADMIN only");
-  }
 
   const { searchParams } = new URL(req.url);
-  const orgId = await (async () => {
-    try { return await requireOrgAccess(req, authUser, searchParams.get("orgId")); } catch (e: any) { return null; }
-  })();
+  const orgId = searchParams.get("orgId");
+  try { await requireReportsRead({ id: authUser.id, role: authUser.role }, orgId || undefined as any); } catch { return errorResponse(403, "Forbidden: insufficient permissions"); }
   if (!orgId) return errorResponse(400, "Missing or invalid orgId");
   const days = Math.min(parseInt(searchParams.get("days") || "14", 10), 90);
 

@@ -28,24 +28,24 @@ const mockAssignment: AssignmentData = {
   title: 'Test Assignment',
   description: 'Test Description',
   type: 'QUIZ',
-  timeSettings: {
-    dueDate: new Date(Date.now() + 3600000).toISOString().slice(0, 16), // 1 hour from now
-    openAt: new Date().toISOString().slice(0, 16),
-    lockAt: '',
-    timeLimitMinutes: '60'
-  },
-  quizQuestions: [
-    {
-      id: 'q1',
-      content: 'Test Question 1',
-      type: 'SINGLE',
-      order: 1,
-      options: [
-        { label: 'A', content: 'Option A', isCorrect: true },
-        { label: 'B', content: 'Option B', isCorrect: false }
-      ]
-    }
-  ]
+  quizContent: {
+    questions: [
+      {
+        id: 'q1',
+        content: 'Test Question 1',
+        type: 'SINGLE',
+        order: 1,
+        options: [
+          { label: 'A', content: 'Option A', isCorrect: true },
+          { label: 'B', content: 'Option B', isCorrect: false }
+        ]
+      }
+    ],
+    timeLimitMinutes: 60,
+    openAt: new Date(),
+    lockAt: new Date(Date.now() + 3600000),
+    maxAttempts: 1,
+  }
 }
 
 const mockAntiCheatConfig: AntiCheatConfig = {

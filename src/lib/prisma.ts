@@ -1,3 +1,4 @@
+import 'server-only'
 import { PrismaClient } from '@prisma/client'
 
 // PrismaClient được khởi tạo với cấu hình tối ưu cho production
@@ -65,9 +66,13 @@ if (!globalForPrisma.prisma) {
 
 // OPTIMIZE: Disconnect khi app shutdown (chủ yếu cho development)
 if (process.env.NODE_ENV === 'development') {
-  process.on('beforeExit', async () => {
-    await _prisma.$disconnect()
-  })
+  const g = globalForPrisma as unknown as { __prisma_beforeExit_registered?: boolean }
+  if (!g.__prisma_beforeExit_registered) {
+    process.on('beforeExit', async () => {
+      await _prisma.$disconnect()
+    })
+    g.__prisma_beforeExit_registered = true
+  }
 }
 
 export const prisma = _prisma

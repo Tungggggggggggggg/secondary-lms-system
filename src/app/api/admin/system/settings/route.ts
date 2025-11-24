@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
+import { writeAudit } from "@/lib/logging/audit";
 
 // GET /api/admin/system/settings
 export const GET = withApiLogging(async (req: NextRequest) => {
@@ -30,6 +31,17 @@ export const PUT = withApiLogging(async (req: NextRequest) => {
     update: { value: body.value as any },
     create: { key: body.key, value: body.value as any },
   });
+  try {
+    await writeAudit({
+      actorId: authUser.id,
+      action: "SETTINGS_UPDATE",
+      entityType: "SYSTEM",
+      entityId: row.key,
+      metadata: { key: row.key },
+    });
+  } catch (e) {
+    console.error("[ADMIN_SYSTEM_SETTINGS_PUT] Failed to write audit", e);
+  }
   return NextResponse.json({ success: true, key: row.key });
 }, "ADMIN_SYSTEM_SETTINGS_PUT");
 

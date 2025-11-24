@@ -143,7 +143,7 @@ export default function AdminOrgPage() {
             variant="ghost"
             size="default"
             className="h-8 w-8 p-0"
-            title="Xem thành viên"
+            title="Xem thành viên tổ chức"
           >
             <Users className="h-4 w-4" />
           </Button>

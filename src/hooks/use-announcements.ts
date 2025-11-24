@@ -23,6 +23,7 @@ export interface AnnouncementComment {
   content: string;
   createdAt: string;
   parentId?: string | null;
+  status?: "APPROVED" | "REJECTED"; // optional để tương thích
   author: {
     id: string;
     fullname: string;
@@ -86,6 +87,90 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
       }
     },
     [toast, enableCreate]
+  );
+
+  // Teacher actions: hide / unhide / delete comment
+  const hideComment = useCallback(
+    async (announcementId: string, commentId: string): Promise<boolean> => {
+      if (!enableCreate) return false;
+      try {
+        const res = await fetch(`/api/announcements/${announcementId}/comments/${commentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "hide" }),
+        });
+        if (!res.ok) throw new Error("Ẩn bình luận thất bại");
+        // Optimistic: cập nhật status trong state
+        setComments((prev) => {
+          const list = prev[announcementId] || [];
+          const mapStatus = (arr: AnnouncementComment[]): AnnouncementComment[] => arr.map((c) => ({
+            ...c,
+            status: c.id === commentId ? "REJECTED" : c.status,
+            replies: c.replies ? mapStatus(c.replies) : c.replies,
+          }));
+          return { ...prev, [announcementId]: mapStatus(list) };
+        });
+        return true;
+      } catch (e: any) {
+        toast({ title: "Lỗi", description: e?.message || "Ẩn bình luận thất bại", variant: "destructive" });
+        return false;
+      }
+    },
+    [enableCreate, toast]
+  );
+
+  const unhideComment = useCallback(
+    async (announcementId: string, commentId: string): Promise<boolean> => {
+      if (!enableCreate) return false;
+      try {
+        const res = await fetch(`/api/announcements/${announcementId}/comments/${commentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "unhide" }),
+        });
+        if (!res.ok) throw new Error("Hiện bình luận thất bại");
+        setComments((prev) => {
+          const list = prev[announcementId] || [];
+          const mapStatus = (arr: AnnouncementComment[]): AnnouncementComment[] => arr.map((c) => ({
+            ...c,
+            status: c.id === commentId ? "APPROVED" : c.status,
+            replies: c.replies ? mapStatus(c.replies) : c.replies,
+          }));
+          return { ...prev, [announcementId]: mapStatus(list) };
+        });
+        return true;
+      } catch (e: any) {
+        toast({ title: "Lỗi", description: e?.message || "Hiện bình luận thất bại", variant: "destructive" });
+        return false;
+      }
+    },
+    [enableCreate, toast]
+  );
+
+  const deleteComment = useCallback(
+    async (announcementId: string, commentId: string): Promise<boolean> => {
+      if (!enableCreate) return false;
+      try {
+        const res = await fetch(`/api/announcements/${announcementId}/comments/${commentId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Xóa bình luận thất bại");
+        // Lựa chọn: xoá khỏi UI (nếu là top-level) hoặc đánh dấu REJECTED như hide
+        setComments((prev) => {
+          const list = prev[announcementId] || [];
+          const markOrRemove = (arr: AnnouncementComment[]): AnnouncementComment[] => arr
+            .filter((c) => c.id !== commentId) // xoá nếu là top-level
+            .map((c) => ({
+              ...c,
+              replies: c.replies ? c.replies.filter((r) => r.id !== commentId) : c.replies,
+            }));
+          return { ...prev, [announcementId]: markOrRemove(list) };
+        });
+        return true;
+      } catch (e: any) {
+        toast({ title: "Lỗi", description: e?.message || "Xóa bình luận thất bại", variant: "destructive" });
+        return false;
+      }
+    },
+    [enableCreate, toast]
   );
 
   const createAnnouncement = useCallback(
@@ -205,8 +290,9 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
         }
 
         setCommentsLoading((prev) => ({ ...prev, [announcementId]: true }));
+        const includeHidden = enableCreate ? "&includeHidden=true" : "";
         const res = await fetch(
-          `/api/announcements/${announcementId}/comments?page=${page}&pageSize=${pageSize}`,
+          `/api/announcements/${announcementId}/comments?page=${page}&pageSize=${pageSize}${includeHidden}`,
           { cache: "no-store" }
         );
         const json = await res.json();
@@ -275,9 +361,7 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
       } finally {
         setCommentsLoading((prev) => ({ ...prev, [announcementId]: false }));
       }
-    },
-    [toast, fetchedComments, commentsFetched, enableCreate]
-  );
+    }, [toast, fetchedComments, commentsFetched, enableCreate]);
 
   // Cho phép đánh dấu stale để buộc reload lần sau (chỉ cho teacher)
   const markCommentsStale = useCallback((announcementId: string) => {
@@ -410,6 +494,9 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
     // Teacher-only features (undefined if not enabled)
     createAnnouncement: enableCreate ? createAnnouncement : undefined,
     uploadAttachment: enableUpload ? uploadAttachment : undefined,
+    hideComment: enableCreate ? hideComment : undefined,
+    unhideComment: enableCreate ? unhideComment : undefined,
+    deleteComment: enableCreate ? deleteComment : undefined,
     // Student-only features (undefined if not enabled)
     getAttachmentDownloadUrl: enableAttachmentDownload ? getAttachmentDownloadUrl : undefined,
     fetchRecentComments: enableRecentComments ? fetchRecentComments : undefined,

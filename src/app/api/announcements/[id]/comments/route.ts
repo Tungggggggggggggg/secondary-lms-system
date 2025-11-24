@@ -7,6 +7,7 @@ import {
   isTeacherOfClassroom,
 } from "@/lib/api-utils";
 import { UserRole } from "@prisma/client";
+import { enforceRateLimit, RateLimitError } from "@/lib/http/rate-limit";
 
 // GET: Lấy danh sách comments của một announcement (teacher owner hoặc student trong lớp)
 export async function GET(
@@ -46,9 +47,9 @@ export async function GET(
     const classroomId = ann.classroomId;
 
     // Kiểm tra quyền truy cập: giáo viên sở hữu lớp hoặc học sinh trong lớp
-    const canView =
-      (user.role === UserRole.TEACHER && (await isTeacherOfClassroom(user.id, classroomId))) ||
-      (user.role === UserRole.STUDENT && (await isStudentInClassroom(user.id, classroomId)));
+    const isTeacherOwner = user.role === UserRole.TEACHER && (await isTeacherOfClassroom(user.id, classroomId));
+    const isStudentMember = user.role === UserRole.STUDENT && (await isStudentInClassroom(user.id, classroomId));
+    const canView = isTeacherOwner || isStudentMember;
     if (!canView) {
       return NextResponse.json(
         { success: false, message: "Forbidden", requestId },
@@ -59,6 +60,8 @@ export async function GET(
     // Lấy query params
     const { searchParams } = new URL(req.url);
     const recent = searchParams.get("recent") === "true";
+    const includeHidden = searchParams.get("includeHidden") === "true";
+    const statusFilter = isTeacherOwner && includeHidden ? undefined : "APPROVED" as const;
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const pageSize = recent ? 2 : Math.min(50, Math.max(1, parseInt(searchParams.get("pageSize") || "10", 10)));
 
@@ -68,6 +71,7 @@ export async function GET(
         where: {
           announcementId,
           parentId: null, // Chỉ lấy top-level comments
+          ...(statusFilter ? { status: statusFilter } : {}),
         },
         orderBy: { createdAt: "asc" },
         select: {
@@ -75,6 +79,7 @@ export async function GET(
           content: true,
           createdAt: true,
           parentId: true,
+          status: true,
           author: {
             select: {
               id: true,
@@ -114,6 +119,7 @@ export async function GET(
           where: {
             announcementId,
             parentId: { in: parentIds },
+            ...(statusFilter ? { status: statusFilter } : {}),
           },
           orderBy: { createdAt: "asc" },
           select: {
@@ -121,6 +127,7 @@ export async function GET(
             content: true,
             createdAt: true,
             parentId: true,
+            status: true,
             author: {
               select: { id: true, fullname: true, email: true },
             },
@@ -162,6 +169,7 @@ export async function GET(
         where: {
           announcementId,
           parentId: null, // Chỉ lấy top-level comments
+          ...(statusFilter ? { status: statusFilter } : {}),
         },
         orderBy: { createdAt: "asc" },
         skip: (page - 1) * pageSize,
@@ -171,6 +179,7 @@ export async function GET(
           content: true,
           createdAt: true,
           parentId: true,
+          status: true,
           author: {
             select: {
               id: true,
@@ -184,6 +193,7 @@ export async function GET(
         where: {
           announcementId,
           parentId: null, // Chỉ đếm top-level comments cho pagination
+          ...(statusFilter ? { status: statusFilter } : {}),
         },
       }),
     ]);
@@ -204,6 +214,7 @@ export async function GET(
         where: {
           announcementId,
           parentId: { in: topLevelIds },
+          ...(statusFilter ? { status: statusFilter } : {}),
         },
         orderBy: { createdAt: "asc" },
         select: {
@@ -211,6 +222,7 @@ export async function GET(
           content: true,
           createdAt: true,
           parentId: true,
+          status: true,
           author: {
             select: {
               id: true,
@@ -309,6 +321,31 @@ export async function POST(
         { success: false, message: "Forbidden", requestId },
         { status: 403 }
       );
+    }
+
+    // Chặn bình luận nếu bài đăng đã khóa (dùng raw SQL để tương thích trước/ sau migrate)
+    try {
+      const lockedRows = await prisma.$queryRaw<{ comments_locked: boolean }[]>`SELECT "comments_locked" FROM "announcements" WHERE id = ${announcementId} LIMIT 1`;
+      if (Array.isArray(lockedRows) && lockedRows[0]?.comments_locked) {
+        return NextResponse.json(
+          { success: false, message: "Bình luận đã bị khóa cho bài đăng này", requestId },
+          { status: 403 }
+        );
+      }
+    } catch {}
+
+    // Rate limit bình luận theo ip+user+org
+    try {
+      const ip = (req.headers.get("x-forwarded-for") || (req as any).ip || "").split(",")[0].trim();
+      const classroom = await prisma.classroom.findUnique({ where: { id: classroomId }, select: { organizationId: true } });
+      enforceRateLimit({ route: "announcements.comments.post", ip, userId: user.id, orgId: classroom?.organizationId || undefined, limit: 8, windowMs: 30_000 });
+    } catch (e) {
+      if (e instanceof RateLimitError) {
+        return NextResponse.json(
+          { success: false, message: "Bạn đang bình luận quá nhanh, vui lòng thử lại sau", requestId },
+          { status: 429 }
+        );
+      }
     }
 
     const body = await req.json().catch(() => null);

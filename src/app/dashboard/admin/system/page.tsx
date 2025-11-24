@@ -1,6 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AnimatedSection from "@/components/admin/AnimatedSection";
 import StatsCard from "@/components/admin/stats/StatsCard";
@@ -18,6 +20,13 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function AdminSystemPage() {
   const { data: session } = useSession();
   const role = (session?.user as any)?.role as string | undefined;
+  const router = useRouter();
+
+  useEffect(() => {
+    if (role && role !== "SUPER_ADMIN") {
+      router.replace("/dashboard/admin/overview");
+    }
+  }, [role, router]);
 
   // Fetch system stats
   const { data: statsData, error, isLoading } = useSWR("/api/admin/system/stats", fetcher);

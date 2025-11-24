@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import { ModerationItem, ModerationQueueFilter } from "@/types/admin";
 import { useToast } from "@/hooks/use-toast";
@@ -22,17 +22,29 @@ export function useAdminModeration(filter?: ModerationQueueFilter) {
   if (filters.type) queryParams.set("type", filters.type);
   if (filters.orgId) queryParams.set("orgId", filters.orgId);
   if (filters.status) queryParams.set("status", filters.status);
+  if ((filters as any).startDate) queryParams.set("startDate", (filters as any).startDate as string);
+  if ((filters as any).endDate) queryParams.set("endDate", (filters as any).endDate as string);
   if (filters.limit) queryParams.set("limit", String(filters.limit));
   if (filters.cursor) queryParams.set("cursor", filters.cursor);
 
   const { data, error, isLoading, mutate } = useSWR<{
     ok: boolean;
-    data?: { items: ModerationItem[]; nextCursor?: string | null };
+    data?: { items: ModerationItem[]; nextCursor?: string | null; counts?: { pending: number; approved: number; rejected: number } };
     error?: string;
   }>(`/api/admin/moderation/queue?${queryParams.toString()}`, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2000,
   });
+
+  // Standardize error toast
+  useEffect(() => {
+    if (error) {
+      try {
+        toast({ title: "Lỗi tải danh sách kiểm duyệt", description: "Vui lòng kiểm tra phạm vi Trường/Đơn vị và thử lại.", variant: "destructive" });
+      } catch {}
+    }
+  }, [error, toast]);
 
   // Approve item
   const approveItem = useCallback(
@@ -43,7 +55,9 @@ export function useAdminModeration(filter?: ModerationQueueFilter) {
             ? `/api/admin/moderation/announcements/${itemId}/approve`
             : `/api/admin/moderation/comments/${itemId}/approve`;
 
-        const response = await fetch(endpoint, { method: "POST" });
+        const headers: Record<string, string> = {};
+        if (filters.orgId) headers["x-org-id"] = String(filters.orgId);
+        const response = await fetch(endpoint, { method: "POST", headers });
         const result = await response.json();
 
         if (!response.ok || !result.ok) {
@@ -84,11 +98,11 @@ export function useAdminModeration(filter?: ModerationQueueFilter) {
             ? `/api/admin/moderation/announcements/${itemId}/reject`
             : `/api/admin/moderation/comments/${itemId}/reject`;
 
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (filters.orgId) headers["x-org-id"] = String(filters.orgId);
         const response = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({ reason }),
         });
 
@@ -145,6 +159,7 @@ export function useAdminModeration(filter?: ModerationQueueFilter) {
   return {
     items: data?.data?.items || [],
     nextCursor: data?.data?.nextCursor,
+    counts: data?.data?.counts,
     isLoading,
     error,
     filters,

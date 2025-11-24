@@ -2,7 +2,7 @@
  * Constants cho Admin Dashboard
  */
 
-import { UserRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 
 // ============================================
 // Roles & Permissions
@@ -10,17 +10,17 @@ import { UserRole } from "@prisma/client";
 
 export const USER_ROLES: UserRole[] = [
   "SUPER_ADMIN",
-  "ADMIN",
+  "STAFF",
   "TEACHER",
   "STUDENT",
   "PARENT",
 ];
 
-export const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN"];
+export const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "STAFF"];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  SUPER_ADMIN: "Super Admin",
-  ADMIN: "Admin",
+  SUPER_ADMIN: "Admin hệ thống",
+  STAFF: "Quản trị tổ chức",
   TEACHER: "Giáo viên",
   STUDENT: "Học sinh",
   PARENT: "Phụ huynh",
@@ -28,7 +28,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 export const ROLE_COLORS: Record<UserRole, string> = {
   SUPER_ADMIN: "text-red-600 bg-red-50",
-  ADMIN: "text-blue-600 bg-blue-50",
+  STAFF: "text-blue-600 bg-blue-50",
   TEACHER: "text-purple-600 bg-purple-50",
   STUDENT: "text-green-600 bg-green-50",
   PARENT: "text-orange-600 bg-orange-50",
@@ -56,17 +56,10 @@ export const SUPER_ADMIN_NAV_ITEMS: AdminNavItem[] = [
     roles: ["SUPER_ADMIN"],
   },
   {
-    id: "bulk-operations",
-    label: "Tạo hàng loạt",
-    href: "/dashboard/admin/bulk",
-    icon: "Zap",
-    roles: ["SUPER_ADMIN"],
-  },
-  {
-    id: "classrooms",
-    label: "Quản lý lớp học",
-    href: "/dashboard/admin/classrooms",
-    icon: "BookOpen",
+    id: "organizations",
+    label: "Tổ chức",
+    href: "/dashboard/admin/org",
+    icon: "Building2",
     roles: ["SUPER_ADMIN"],
   },
   {
@@ -105,57 +98,43 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     label: "Tổng quan",
     href: "/dashboard/admin/overview",
     icon: "LayoutDashboard",
-    roles: ["ADMIN"],
+    roles: ["STAFF"],
   },
   {
     id: "bulk-operations",
-    label: "Tạo hàng loạt",
+    label: "Nhập liệu",
     href: "/dashboard/admin/bulk",
     icon: "Zap",
-    roles: ["ADMIN"],
+    roles: ["STAFF"],
   },
   {
     id: "classrooms",
     label: "Quản lý lớp học",
     href: "/dashboard/admin/classrooms",
     icon: "BookOpen",
-    roles: ["ADMIN"],
-  },
-  {
-    id: "organizations",
-    label: "Tổ chức",
-    href: "/dashboard/admin/org",
-    icon: "Building2",
-    roles: ["ADMIN"],
+    roles: ["STAFF"],
   },
   {
     id: "members",
-    label: "Thành viên",
+    label: "Thành viên tổ chức",
     href: "/dashboard/admin/org/members",
     icon: "Users",
-    roles: ["ADMIN"],
+    roles: ["STAFF"],
   },
   {
-    id: "moderation",
-    label: "Kiểm duyệt",
-    href: "/dashboard/admin/moderation",
-    icon: "ShieldCheck",
-    roles: ["ADMIN"],
+    id: "org-settings",
+    label: "Cài đặt tổ chức",
+    href: "/dashboard/admin/org/settings",
+    icon: "Settings",
+    roles: ["STAFF"],
   },
   {
     id: "reports",
     label: "Báo cáo",
     href: "/dashboard/admin/reports",
     icon: "BarChart3",
-    roles: ["ADMIN"],
-  },
-  {
-    id: "settings",
-    label: "Cài đặt",
-    href: "/dashboard/admin/settings",
-    icon: "Settings",
-    roles: ["ADMIN"],
-  },
+    roles: ["STAFF"],
+  }
 ];
 
 // ============================================

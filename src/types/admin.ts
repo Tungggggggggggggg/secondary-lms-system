@@ -2,7 +2,7 @@
  * Type definitions cho Admin Dashboard
  */
 
-import { UserRole } from "@prisma/client";
+import type { UserRole, OrgRole } from "@prisma/client";
 
 // ============================================
 // User Types
@@ -15,6 +15,8 @@ export interface AdminUser {
   role: UserRole;
   createdAt: string;
   updatedAt?: string;
+  disabled?: boolean;
+  twofaEnabled?: boolean;
   [key: string]: unknown;
 }
 
@@ -59,7 +61,7 @@ export interface OrganizationMember {
   id: string;
   organizationId: string;
   userId: string;
-  roleInOrg: string | null;
+  roleInOrg: OrgRole | null;
   createdAt: string;
   user: AdminUser;
   [key: string]: unknown;
@@ -130,6 +132,8 @@ export interface ModerationQueueFilter {
   type?: "announcement" | "comment";
   orgId?: string;
   status?: "PENDING" | "APPROVED" | "REJECTED";
+  startDate?: string;
+  endDate?: string;
   limit?: number;
   cursor?: string;
 }
@@ -147,16 +151,19 @@ export interface ReportsOverview {
   announcements: number;
   comments: number;
   pending: number;
+  hiddenComments?: number;
+  lockedAnnouncements?: number;
+  deletedComments?: number;
 }
 
 export interface ReportsUsage {
   anns: Array<{
-    createdAt: string;
-    _count: { createdAt: number };
+    date: string;
+    count: number;
   }>;
   cmts: Array<{
-    createdAt: string;
-    _count: { createdAt: number };
+    date: string;
+    count: number;
   }>;
 }
 

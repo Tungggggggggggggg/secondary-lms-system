@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { resolveOrgId } from "@/lib/org-scope";
 
 // ============================================
 // GET - Lấy danh sách lớp học
@@ -19,8 +20,8 @@ export async function GET(req: NextRequest) {
       return errorResponse(401, "Unauthorized");
     }
 
-    // Chỉ ADMIN và SUPER_ADMIN được phép xem danh sách lớp học
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(authUser.role)) {
+    // Chỉ ADMIN (STAFF) và SUPER_ADMIN được phép xem danh sách lớp học
+    if (!['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(authUser.role)) {
       return errorResponse(403, "Chỉ Admin được phép xem danh sách lớp học");
     }
 
@@ -29,9 +30,23 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const search = searchParams.get('search') || '';
+    const orgParam = searchParams.get('orgId') || undefined;
+
+    // Xác định orgId áp dụng: query -> cookie/header -> membership (STAFF/ADMIN)
+    let orgId = orgParam || resolveOrgId(req) || undefined;
+    if (!orgId && authUser.role !== 'SUPER_ADMIN') {
+      const mem = await prisma.organizationMember.findFirst({
+        where: { userId: authUser.id },
+        select: { organizationId: true }
+      });
+      orgId = mem?.organizationId || undefined;
+    }
 
     // Build where clause
     const whereClause: any = {};
+    if (orgId) {
+      whereClause.organizationId = orgId;
+    }
     
     if (search) {
       whereClause.OR = [
@@ -42,7 +57,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch classrooms with related data
-    const [classrooms, totalCount] = await Promise.all([
+    const [classrooms, totalCount, totalStudentsAll, teacherGroups] = await Promise.all([
       prisma.classroom.findMany({
         where: whereClause,
         include: {
@@ -75,12 +90,14 @@ export async function GET(req: NextRequest) {
         skip: (page - 1) * limit,
         take: limit
       }),
-      prisma.classroom.count({ where: whereClause })
+      prisma.classroom.count({ where: whereClause }),
+      prisma.classroomStudent.count({ where: { classroom: { is: whereClause as any } } }),
+      prisma.classroom.groupBy({ by: ['teacherId'], where: whereClause })
     ]);
 
-    // Calculate statistics
-    const totalStudents = classrooms.reduce((sum, classroom) => sum + classroom.students.length, 0);
-    const totalTeachers = new Set(classrooms.map(c => c.teacherId)).size;
+    // Calculate statistics (toàn bộ theo bộ lọc, không giới hạn phân trang)
+    const totalStudents = totalStudentsAll;
+    const totalTeachers = teacherGroups.length;
 
     console.log(`[ADMIN_CLASSROOMS_API] Retrieved ${classrooms.length} classrooms for user: ${authUser.id}`);
 

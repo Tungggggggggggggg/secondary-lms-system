@@ -18,6 +18,7 @@ export interface CommentItem {
     content: string;
     createdAt: string;
     parentId?: string | null;
+    status?: "APPROVED" | "REJECTED";
     author: {
         id: string;
         fullname: string;

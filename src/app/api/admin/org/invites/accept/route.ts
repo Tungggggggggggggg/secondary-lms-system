@@ -20,7 +20,7 @@ export const POST = withApiLogging(async (req: NextRequest) => {
 
   const email: string = payload.email;
   const orgId: string = payload.orgId;
-  const role: string = payload.role || "STUDENT";
+  const role: string = (payload.role || "STUDENT").toString().toUpperCase();
 
   const hashed = await bcrypt.hash(body.password, 10);
 
@@ -28,14 +28,14 @@ export const POST = withApiLogging(async (req: NextRequest) => {
   const user = await prisma.user.upsert({
     where: { email },
     update: {},
-    create: { email, fullname: body.fullname, password: hashed, role: role as any },
+    create: { email, fullname: body.fullname, password: hashed, role: "STUDENT" as any },
   });
 
   // Thêm vào organization nếu chưa có
   await prisma.organizationMember.upsert({
     where: { organizationId_userId: { organizationId: orgId, userId: user.id } },
     update: {},
-    create: { organizationId: orgId, userId: user.id, roleInOrg: role },
+    create: { organizationId: orgId, userId: user.id, roleInOrg: (["OWNER","ADMIN","TEACHER","STUDENT","PARENT"].includes(role) ? (role as any) : "STUDENT") },
   });
 
   await writeAudit({ actorId: user.id, action: "ORG_INVITE_ACCEPT", entityType: "ORGANIZATION", entityId: orgId, metadata: { email, role } });

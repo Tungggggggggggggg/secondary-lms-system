@@ -22,6 +22,9 @@ export function useTeacherAnnouncements() {
     createAnnouncement: hook.createAnnouncement!,
     addComment: hook.addComment,
     uploadAttachment: hook.uploadAttachment!,
+    hideComment: hook.hideComment!,
+    unhideComment: hook.unhideComment!,
+    deleteComment: hook.deleteComment!,
     // Comments functions
     comments: hook.comments,
     commentsTotal: hook.commentsTotal,

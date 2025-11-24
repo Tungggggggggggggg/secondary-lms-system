@@ -7,7 +7,7 @@ import * as Icons from "lucide-react";
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/ui/avatar";
 import { ADMIN_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS, ROLE_LABELS } from "@/lib/admin/admin-constants";
-import { UserRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { useSidebarState } from "@/hooks/useSidebarState";
@@ -41,21 +41,20 @@ export default function AdminSidebar({
   const { expanded, toggle } = useSidebarState("sidebar:admin");
   const isSuperAdmin = userRole === "SUPER_ADMIN";
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV_ITEMS : ADMIN_NAV_ITEMS;
+  const [brandColor, setBrandColor] = useState<string>("#8b5cf6");
 
   const groups: { title: string; ids: string[] }[] = isSuperAdmin
     ? [
         { title: "Tổng quan", ids: ["overview"] },
-        { title: "Tổ chức", ids: ["organizations", "members"] },
-        { title: "Lớp học & Nội dung", ids: ["classrooms", "moderation", "reports"] },
+        { title: "Tổ chức", ids: ["organizations"] },
         { title: "Hệ thống", ids: ["system", "settings", "users", "audit"] },
-        { title: "Tác vụ", ids: ["bulk-operations"] },
       ]
     : [
         { title: "Tổng quan", ids: ["overview"] },
-        { title: "Tổ chức", ids: ["organizations", "members"] },
-        { title: "Lớp học & Nội dung", ids: ["classrooms", "moderation", "reports"] },
-        { title: "Cài đặt", ids: ["settings"] },
-        { title: "Tác vụ", ids: ["bulk-operations"] },
+        { title: "Lớp học", ids: ["classrooms"] },
+        { title: "Tổ chức", ids: ["members", "org-settings"] },
+        { title: "Nhập liệu", ids: ["bulk-operations"] },
+        { title: "Báo cáo", ids: ["reports"] },
       ];
 
   // Animation khi sidebar mount
@@ -88,6 +87,24 @@ export default function AdminSidebar({
         animation.kill();
       };
     }
+  }, []);
+
+  // Load brand color từ org settings
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/admin/org/settings");
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && mounted) {
+          setBrandColor(data?.settings?.brandColor || "#8b5cf6");
+        }
+      } catch {}
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener("org-context-changed", handler as any);
+    return () => window.removeEventListener("org-context-changed", handler as any);
   }, []);
 
   // Render icon từ lucide-react
@@ -148,14 +165,14 @@ export default function AdminSidebar({
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <Link href="/dashboard/admin/overview" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: brandColor }}>
                 <Icons.Shield className="h-5 w-5 text-white" />
               </div>
               {expanded && (
                 <div>
-                  <h1 className="font-bold text-lg text-gray-900">Admin Panel</h1>
+                  <h1 className="font-bold text-lg text-gray-900">Bảng quản trị</h1>
                   <p className="text-xs text-gray-500">
-                    {isSuperAdmin ? "Super Admin" : "Admin"}
+                    {ROLE_LABELS[userRole as UserRole] || (isSuperAdmin ? "Super Admin" : "Admin")}
                   </p>
                 </div>
               )}
@@ -184,11 +201,10 @@ export default function AdminSidebar({
                           aria-label={item.label}
                           className={cn(
                             "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
-                            "hover:bg-gray-50 hover:text-violet-600",
-                            active
-                              ? "bg-violet-50 text-violet-600 border-l-2 border-violet-600"
-                              : "text-gray-700"
+                            "hover:bg-gray-50",
+                            active ? "bg-violet-50 border-l-2" : "text-gray-700"
                           )}
+                          style={active ? { color: brandColor, borderLeftColor: brandColor } : undefined}
                         >
                           {Icon}
                           <span>{item.label}</span>
@@ -212,11 +228,10 @@ export default function AdminSidebar({
                   className={cn(
                     "flex items-center gap-3 py-3 rounded-lg text-sm font-medium transition-all duration-200",
                     expanded ? "px-4" : "px-2",
-                    "hover:bg-gray-50 hover:text-violet-600",
-                    active
-                      ? "bg-violet-50 text-violet-600 border-l-2 border-violet-600"
-                      : "text-gray-700"
+                    "hover:bg-gray-50",
+                    active ? "bg-violet-50 border-l-2" : "text-gray-700"
                   )}
+                  style={active ? { color: brandColor, borderLeftColor: brandColor } : undefined}
                 >
                   <Tooltip content={item.label}>
                     <span className="inline-flex items-center justify-center">{Icon}</span>

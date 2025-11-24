@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import prisma from '@/lib/prisma';
 import { UserRole, Prisma } from '@prisma/client';
+import { writeAudit } from '@/lib/logging/audit';
 
 export async function PUT(req: Request) {
   try {
@@ -33,6 +34,13 @@ export async function PUT(req: Request) {
       return NextResponse.json({ message: 'Vai trò không hợp lệ.' }, { status: 400 });
     }
 
+    // Chỉ cho phép tự đổi giữa các vai trò không đặc quyền
+    const selfAssignable: UserRole[] = ['TEACHER', 'STUDENT', 'PARENT'];
+    if (!selfAssignable.includes(normalized as UserRole)) {
+      console.warn('[API Update Role] Self-escalation attempt blocked', { userId: session.user.id, requestedRole: normalized });
+      return NextResponse.json({ message: 'Không được phép tự thay đổi sang vai trò đặc quyền.' }, { status: 403 });
+    }
+
     // Cập nhật vai trò của người dùng trong cơ sở dữ liệu
     console.log('[API Update Role] Updating user role in database', { userId: session.user.id, newRole: normalized });
     const updatedUser = await prisma.user.update({
@@ -42,10 +50,17 @@ export async function PUT(req: Request) {
       select: { id: true, email: true, fullname: true, role: true, createdAt: true, updatedAt: true },
     });
 
-    console.log('[API Update Role] Role updated successfully in database', { 
-      userId: updatedUser.id, 
-      newRole: updatedUser.role 
-    });
+    try {
+      await writeAudit({
+        actorId: updatedUser.id,
+        action: 'USER_ROLE_CHANGE',
+        entityType: 'USER',
+        entityId: updatedUser.id,
+        metadata: { newRole: updatedUser.role },
+      });
+    } catch (e) {
+      console.error('[API Update Role] Failed to write audit log', e);
+    }
 
     // Trả về thông tin người dùng đã cập nhật
     return NextResponse.json({ message: 'Cập nhật vai trò thành công!', user: updatedUser }, { status: 200 });

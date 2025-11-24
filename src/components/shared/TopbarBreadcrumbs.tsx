@@ -28,7 +28,7 @@ function mapLabel(role: Props["role"], segment: string): string {
     settings: "Cài đặt",
     users: "Người dùng",
     org: "Tổ chức",
-    members: "Thành viên",
+    members: "Thành viên tổ chức",
     moderation: "Kiểm duyệt",
     reports: "Báo cáo",
     audit: "Audit Logs",

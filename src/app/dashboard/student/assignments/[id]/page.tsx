@@ -186,11 +186,12 @@ export default function StudentAssignmentDetailPage({
   // Xử lý submit quiz
   const handleQuizSubmit = async (
     answers: Array<{ questionId: string; optionIds: string[] }>,
-    presentation: { questionOrder: string[]; optionOrder: Record<string, string[]>; seed?: number | string; versionHash?: string }
+    presentation?: { questionOrder: string[]; optionOrder: Record<string, string[]>; seed?: number | string; versionHash?: string }
   ) => {
     if (!assignmentId) return;
 
-    const result = await submitAssignment(assignmentId, { answers, presentation });
+    const payload: any = presentation ? { answers, presentation } : { answers };
+    const result = await submitAssignment(assignmentId, payload);
 
     if (result) {
       const message =

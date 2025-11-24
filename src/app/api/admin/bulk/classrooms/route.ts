@@ -12,6 +12,7 @@ import { validateBulkClassroom } from "@/lib/bulk-operations/validators";
 import { writeAudit } from "@/lib/logging/audit";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { isStaffRole, isSuperAdminRole } from "@/lib/rbac/policy";
 
 // ============================================
 // POST - Tạo lớp học hàng loạt
@@ -29,10 +30,10 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       return errorResponse(401, "Unauthorized");
     }
 
-    // Chỉ ADMIN và SUPER_ADMIN được phép tạo bulk classroom
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(authUser.role)) {
+    // Chỉ STAFF và SUPER_ADMIN được phép tạo bulk classroom
+    if (!(isStaffRole(authUser.role) || isSuperAdminRole(authUser.role))) {
       console.warn(`[BULK_CLASSROOMS_API] Unauthorized role: ${authUser.role} for user: ${authUser.id}`);
-      return errorResponse(403, "Chỉ Admin và Super Admin được phép tạo lớp học hàng loạt");
+      return errorResponse(403, "Chỉ Staff và Super Admin được phép tạo lớp học hàng loạt");
     }
 
     // Parse request body
@@ -71,8 +72,13 @@ export const POST = withApiLogging(async (req: NextRequest) => {
     
     console.log(`[BULK_CLASSROOMS_API] Starting bulk operation: ${operationId}`);
 
-    // Set organization ID từ user context nếu không có
-    if (!body.organizationId && authUser.role === 'ADMIN') {
+    // Enforce organizationId for SUPER_ADMIN writes
+    if (!body.organizationId && isSuperAdminRole(authUser.role)) {
+      return errorResponse(400, "Vui lòng chọn Trường/Đơn vị trước khi thực hiện thao tác này (organizationId required)");
+    }
+
+    // Set organization ID từ user context nếu không có (STAFF)
+    if (!body.organizationId && isStaffRole(authUser.role)) {
       // Lấy organization của admin
       const orgMember = await prisma?.organizationMember.findFirst({
         where: { userId: authUser.id },
@@ -175,7 +181,7 @@ export const PUT = withApiLogging(async (req: NextRequest) => {
       return errorResponse(401, "Unauthorized");
     }
 
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(authUser.role)) {
+    if (!(isStaffRole(authUser.role) || isSuperAdminRole(authUser.role))) {
       return errorResponse(403, "Forbidden");
     }
 

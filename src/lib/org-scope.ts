@@ -1,13 +1,15 @@
 import { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { isStaffRole } from "@/lib/rbac/role-utils";
 
 // Helper: lấy orgId từ query/header; ưu tiên query -> header -> null
 export function resolveOrgId(req: NextRequest): string | null {
   const url = new URL(req.url);
   const qp = url.searchParams.get("orgId") || url.searchParams.get("organizationId");
   const header = req.headers.get("x-org-id");
-  return (qp || header || null) as string | null;
+  const cookie = req.cookies.get("x-org-id")?.value || null;
+  return (qp || header || cookie || null) as string | null;
 }
 
 // Bảo đảm có session, trả về user rút gọn cho guards
@@ -31,7 +33,7 @@ export function requireSuperAdmin(user: { id: string; role: string }): void {
 export async function requireOrgAdmin(user: { id: string; role: string }, orgId?: string | null): Promise<string> {
   if (!orgId) throw new Error("Missing orgId");
   if (user.role === "SUPER_ADMIN") return orgId;
-  if (user.role !== "ADMIN") throw new Error("Forbidden: admin only");
+  if (!isStaffRole(user.role)) throw new Error("Forbidden: admin only");
   const member = await prisma.organizationMember.findFirst({ where: { organizationId: orgId, userId: user.id }, select: { id: true } });
   if (!member) throw new Error("Forbidden: not a member of organization");
   return orgId;

@@ -20,6 +20,7 @@ export async function writeAudit(
     metadata?: Prisma.InputJsonValue;
     ip?: string | null;
     userAgent?: string | null;
+    organizationId?: string | null;
   }
 ): Promise<void> {
   try {
@@ -32,6 +33,7 @@ export async function writeAudit(
         metadata: params.metadata ?? undefined,
         ip: params.ip ?? undefined,
         userAgent: params.userAgent ?? undefined,
+        organizationId: params.organizationId ?? undefined,
       },
     });
   } catch (error) {

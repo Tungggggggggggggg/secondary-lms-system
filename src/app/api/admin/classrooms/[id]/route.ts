@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { resolveOrgId } from "@/lib/org-scope";
 
 // ============================================
 // GET - Lấy chi tiết lớp học
@@ -22,8 +23,8 @@ export async function GET(
       return errorResponse(401, "Unauthorized");
     }
 
-    // Chỉ ADMIN và SUPER_ADMIN được phép xem chi tiết lớp học
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(authUser.role)) {
+    // Chỉ ADMIN (STAFF) và SUPER_ADMIN được phép xem chi tiết lớp học
+    if (!['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(authUser.role)) {
       return errorResponse(403, "Chỉ Admin được phép xem chi tiết lớp học");
     }
 
@@ -107,7 +108,7 @@ export async function DELETE(
       return errorResponse(401, "Unauthorized");
     }
 
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(authUser.role)) {
+    if (!['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(authUser.role)) {
       return errorResponse(403, "Chỉ Admin được phép thực hiện thao tác này");
     }
 
@@ -115,6 +116,18 @@ export async function DELETE(
     const studentId = searchParams.get('studentId');
     const deleteClassroom = searchParams.get('deleteClassroom') === 'true';
     const classroomId = params.id;
+
+    // Với SUPER_ADMIN: bắt buộc chọn org và phải khớp với lớp học
+    if (authUser.role === 'SUPER_ADMIN') {
+      const selectedOrg = resolveOrgId(req);
+      if (!selectedOrg) {
+        return errorResponse(400, "Vui lòng chọn Trường/Đơn vị trước khi thực hiện thao tác này");
+      }
+      const clsOrg = await prisma.classroom.findUnique({ where: { id: classroomId }, select: { organizationId: true } });
+      if (clsOrg?.organizationId && clsOrg.organizationId !== selectedOrg) {
+        return errorResponse(400, "Phạm vi Trường/Đơn vị không khớp với lớp học");
+      }
+    }
 
     if (deleteClassroom) {
       // Xóa toàn bộ lớp học

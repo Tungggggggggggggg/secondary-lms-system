@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 export default function AdminAuditPage() {
   const { data: session } = useSession();
   const role = (session?.user as any)?.role as string | undefined;
+  const sessionOrgId = (session as any)?.orgId as string | undefined;
   const [orgId, setOrgId] = useState("");
   const [actorId, setActorId] = useState("");
   const [action, setAction] = useState("");
@@ -47,6 +48,30 @@ export default function AdminAuditPage() {
     endDate: endDate || undefined,
     limit: 50,
   });
+
+  // Đồng bộ orgId mặc định từ session nếu chưa chọn
+  useEffect(() => {
+    if (!orgId && sessionOrgId) setOrgId(sessionOrgId);
+  }, [sessionOrgId]);
+
+  // Sync orgId with OrgSwitcher context
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/org/context");
+        const data = await res.json();
+        if (mounted) setOrgId(data?.orgId || "");
+      } catch {}
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener("org-context-changed", handler as any);
+    return () => {
+      mounted = false;
+      window.removeEventListener("org-context-changed", handler as any);
+    };
+  }, []);
 
   // Apply filters automatically when they change
   useEffect(() => {
@@ -124,7 +149,7 @@ export default function AdminAuditPage() {
 
   // Export CSV
   const handleExportCSV = () => {
-    const csvData = logs.map((log) => ({
+    const csvData = logs.map((log: AuditLog) => ({
       "Thời gian": formatDate(log.createdAt, "full"),
       "Hành động": log.action,
       "Actor ID": log.actorId,
@@ -187,13 +212,14 @@ export default function AdminAuditPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">
-                Organization ID
+                Trường/Đơn vị
               </label>
               <Input
                 type="text"
-                placeholder="Organization ID"
+                placeholder="Trường/Đơn vị (đặt trong Header)"
                 value={orgId}
                 onChange={(e) => setOrgId(e.target.value)}
+                disabled
               />
             </div>
             <div>

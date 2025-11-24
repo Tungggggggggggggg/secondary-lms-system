@@ -6,7 +6,7 @@ import {
   isStudentInClassroom,
   getRequestId,
 } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
+import { UserRole, ModerationStatus } from "@prisma/client";
 
 // GET: Liệt kê announcements của một classroom (newest-first, có pagination)
 export async function GET(
@@ -49,7 +49,7 @@ export async function GET(
 
     const [items, total] = await Promise.all([
       prisma.announcement.findMany({
-        where: { classroomId },
+        where: { classroomId, status: ModerationStatus.APPROVED },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -73,7 +73,7 @@ export async function GET(
           _count: { select: { comments: true } },
         },
       }),
-      prisma.announcement.count({ where: { classroomId } }),
+      prisma.announcement.count({ where: { classroomId, status: ModerationStatus.APPROVED } }),
     ]);
 
     const res = NextResponse.json(
@@ -144,11 +144,15 @@ export async function POST(
       );
     }
 
+    // Xác định organizationId từ classroom
+    const classroom = await prisma.classroom.findUnique({ where: { id: classroomId }, select: { organizationId: true } });
+
     const created = await prisma.announcement.create({
       data: {
         classroomId,
         authorId: user.id,
         content,
+        organizationId: classroom?.organizationId ?? null,
       },
       select: {
         id: true,

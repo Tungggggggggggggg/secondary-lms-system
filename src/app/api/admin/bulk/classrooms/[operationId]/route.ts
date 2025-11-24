@@ -25,8 +25,8 @@ export const GET = withApiLogging(async (
       return errorResponse(401, "Unauthorized");
     }
 
-    // Chỉ ADMIN và SUPER_ADMIN được phép xem progress
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(authUser.role)) {
+    // Chỉ ADMIN (STAFF) và SUPER_ADMIN được phép xem progress
+    if (!['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(authUser.role)) {
       return errorResponse(403, "Forbidden");
     }
 

@@ -6,6 +6,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,22 @@ interface Classroom {
   updatedAt: string;
 }
 
+interface ClassroomsApiResponse {
+  success: boolean;
+  classrooms: Classroom[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
+  statistics: {
+    totalClassrooms: number;
+    totalStudents: number;
+    totalTeachers: number;
+  };
+}
+
 interface ClassroomStudent {
   id: string;
   studentId: string;
@@ -70,12 +87,16 @@ interface ClassroomStudent {
 
 export default function AdminClassroomsPage() {
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role as string | undefined;
+  const [orgId, setOrgId] = useState("");
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [filteredClassrooms, setFilteredClassrooms] = useState<Classroom[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [stats, setStats] = useState<{ totalClassrooms: number; totalStudents: number; totalTeachers: number }>({ totalClassrooms: 0, totalStudents: 0, totalTeachers: 0 });
 
   // ============================================
   // Data Fetching
@@ -90,9 +111,12 @@ export default function AdminClassroomsPage() {
         throw new Error('Failed to fetch classrooms');
       }
 
-      const data = await response.json();
+      const data: ClassroomsApiResponse = await response.json();
       setClassrooms(data.classrooms || []);
       setFilteredClassrooms(data.classrooms || []);
+      if (data.statistics) {
+        setStats(data.statistics);
+      }
     } catch (error) {
       console.error('Error fetching classrooms:', error);
       toast({
@@ -108,6 +132,30 @@ export default function AdminClassroomsPage() {
   useEffect(() => {
     fetchClassrooms();
   }, []);
+
+  // Sync with global OrgSwitcher context
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/org/context");
+        const data = await res.json();
+        if (mounted) setOrgId(data?.orgId || "");
+      } catch {}
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener("org-context-changed", handler as any);
+    return () => {
+      mounted = false;
+      window.removeEventListener("org-context-changed", handler as any);
+    };
+  }, []);
+
+  // Re-fetch when org changes
+  useEffect(() => {
+    fetchClassrooms();
+  }, [orgId]);
 
   // ============================================
   // Search & Filter
@@ -132,6 +180,10 @@ export default function AdminClassroomsPage() {
   };
 
   const handleExportStudents = (classroom: Classroom) => {
+    if (role === "SUPER_ADMIN" && !orgId) {
+      toast({ title: "Yêu cầu chọn Trường/Đơn vị", description: "Vui lòng chọn Trường/Đơn vị ở góc phải Header trước khi xuất dữ liệu.", variant: "destructive" });
+      return;
+    }
     const csvContent = [
       ['STT', 'Họ tên', 'Email', 'Ngày tham gia'].join(','),
       ...classroom.students.map((student, index) => [
@@ -223,7 +275,7 @@ export default function AdminClassroomsPage() {
     <div className="space-y-6">
       <AdminHeader
         title="Quản lý lớp học"
-        userRole="ADMIN"
+        userRole={role || ""}
       />
 
       {/* Stats & Actions */}
@@ -234,7 +286,7 @@ export default function AdminClassroomsPage() {
               <BookOpen className="h-5 w-5 text-blue-500" />
               <div>
                 <p className="text-sm text-gray-600">Tổng lớp học</p>
-                <p className="text-2xl font-bold">{classrooms.length}</p>
+                <p className="text-2xl font-bold">{stats.totalClassrooms}</p>
               </div>
             </div>
           </CardContent>
@@ -246,9 +298,7 @@ export default function AdminClassroomsPage() {
               <Users className="h-5 w-5 text-green-500" />
               <div>
                 <p className="text-sm text-gray-600">Tổng học sinh</p>
-                <p className="text-2xl font-bold">
-                  {classrooms.reduce((total, classroom) => total + classroom.students.length, 0)}
-                </p>
+                <p className="text-2xl font-bold">{stats.totalStudents}</p>
               </div>
             </div>
           </CardContent>
@@ -260,9 +310,7 @@ export default function AdminClassroomsPage() {
               <GraduationCap className="h-5 w-5 text-purple-500" />
               <div>
                 <p className="text-sm text-gray-600">Giáo viên</p>
-                <p className="text-2xl font-bold">
-                  {new Set(classrooms.map(c => c.teacherId)).size}
-                </p>
+                <p className="text-2xl font-bold">{stats.totalTeachers}</p>
               </div>
             </div>
           </CardContent>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 import { CreateUserInput, UpdateUserInput } from "@/types/admin";
 import { USER_ROLES, ROLE_LABELS } from "@/lib/admin/admin-constants";
 

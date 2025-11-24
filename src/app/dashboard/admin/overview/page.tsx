@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -52,35 +52,64 @@ export default function AdminOverviewPage() {
       />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Tổng người dùng"
-          value={stats.totalUsers || stats.users || 0}
-          icon={<Users className="h-5 w-5" />}
-          color="primary"
-          description={isSuperAdmin && stats.newUsersLast30Days
-            ? `${stats.newUsersLast30Days} người dùng mới trong 30 ngày qua`
-            : undefined}
-        />
-        <StatsCard
-          title="Lớp học"
-          value={stats.totalClassrooms || stats.classrooms || 0}
-          icon={<GraduationCap className="h-5 w-5" />}
-          color="success"
-        />
-        <StatsCard
-          title="Khóa học"
-          value={stats.totalCourses || stats.courses || 0}
-          icon={<BookOpen className="h-5 w-5" />}
-          color="warning"
-        />
-        <StatsCard
-          title="Bài tập"
-          value={stats.totalAssignments || stats.assignments || 0}
-          icon={<FileText className="h-5 w-5" />}
-          color="default"
-        />
-      </div>
+      {isSuperAdmin ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Tổng người dùng"
+            value={stats.totalUsers || 0}
+            icon={<Users className="h-5 w-5" />}
+            color="primary"
+            description={stats.newUsersLast30Days
+              ? `${stats.newUsersLast30Days} người dùng mới trong 30 ngày qua`
+              : undefined}
+          />
+          <StatsCard
+            title="Lớp học"
+            value={stats.totalClassrooms || 0}
+            icon={<GraduationCap className="h-5 w-5" />}
+            color="success"
+          />
+          <StatsCard
+            title="Khóa học"
+            value={stats.totalCourses || 0}
+            icon={<BookOpen className="h-5 w-5" />}
+            color="warning"
+          />
+          <StatsCard
+            title="Bài tập"
+            value={stats.totalAssignments || 0}
+            icon={<FileText className="h-5 w-5" />}
+            color="default"
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Thành viên tổ chức"
+            value={stats.users || 0}
+            icon={<Users className="h-5 w-5" />}
+            color="primary"
+          />
+          <StatsCard
+            title="Thông báo"
+            value={stats.announcements || 0}
+            icon={<MessageSquare className="h-5 w-5" />}
+            color="info"
+          />
+          <StatsCard
+            title="Bình luận"
+            value={stats.comments || 0}
+            icon={<MessageSquare className="h-5 w-5" />}
+            color="success"
+          />
+          <StatsCard
+            title="Chờ duyệt"
+            value={stats.pending || 0}
+            icon={<AlertCircle className="h-5 w-5" />}
+            color="warning"
+          />
+        </div>
+      )}
 
       {/* Additional Stats for SUPER_ADMIN */}
       {isSuperAdmin && (
@@ -154,7 +183,7 @@ export default function AdminOverviewPage() {
                 href="/dashboard/admin/users"
                 className="mt-4 inline-block text-sm text-violet-600 hover:text-violet-700 font-medium"
               >
-                Xem tất cả →
+                Xem tất cả 
               </Link>
             </CardContent>
           </Card>
@@ -202,7 +231,7 @@ export default function AdminOverviewPage() {
                 href="/dashboard/admin/org"
                 className="mt-4 inline-block text-sm text-violet-600 hover:text-violet-700 font-medium"
               >
-                Xem tất cả →
+                Xem tất cả 
               </Link>
             </CardContent>
           </Card>
@@ -269,12 +298,12 @@ export default function AdminOverviewPage() {
                     </p>
                   </Link>
                   <Link
-                    href="/dashboard/admin/org"
+                    href="/dashboard/admin/org/settings"
                     className="block p-3 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    <p className="font-medium text-gray-900">Quản lý tổ chức</p>
+                    <p className="font-medium text-gray-900">Cài đặt tổ chức</p>
                     <p className="text-sm text-gray-500">
-                      Xem và quản lý tổ chức
+                      Branding, policy duyệt nội dung, cấu hình tổ chức
                     </p>
                   </Link>
                 </>

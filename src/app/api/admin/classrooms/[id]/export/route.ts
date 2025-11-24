@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { resolveOrgId } from "@/lib/org-scope";
 
 // ============================================
 // GET - Xuất danh sách học sinh CSV
@@ -22,8 +23,8 @@ export async function GET(
       return errorResponse(401, "Unauthorized");
     }
 
-    // Chỉ ADMIN và SUPER_ADMIN được phép xuất danh sách
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(authUser.role)) {
+    // Chỉ ADMIN (STAFF) và SUPER_ADMIN được phép xuất danh sách
+    if (!['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(authUser.role)) {
       return errorResponse(403, "Chỉ Admin được phép xuất danh sách học sinh");
     }
 
@@ -58,6 +59,18 @@ export async function GET(
 
     if (!classroom) {
       return errorResponse(404, "Không tìm thấy lớp học");
+    }
+
+    // Với SUPER_ADMIN: bắt buộc chọn org và phải khớp với lớp học
+    if (authUser.role === 'SUPER_ADMIN') {
+      const selectedOrg = resolveOrgId(req);
+      if (!selectedOrg) {
+        return errorResponse(400, "Vui lòng chọn Trường/Đơn vị trước khi thực hiện thao tác này");
+      }
+      const clsOrg = await prisma.classroom.findUnique({ where: { id: classroomId }, select: { organizationId: true } });
+      if (clsOrg?.organizationId && clsOrg.organizationId !== selectedOrg) {
+        return errorResponse(400, "Phạm vi Trường/Đơn vị không khớp với lớp học");
+      }
     }
 
     // Generate CSV content

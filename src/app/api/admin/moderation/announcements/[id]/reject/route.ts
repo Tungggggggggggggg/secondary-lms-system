@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/org-scope";
-import { requirePolicy } from "@/lib/rbac/policy";
+import { requireModerationReview } from "@/lib/rbac/guards";
 import { moderationRepo } from "@/lib/repositories/moderation-repo";
 import { auditRepo } from "@/lib/repositories/audit-repo";
 import { withRequestLogging } from "@/lib/logging/request";
 import { ModerationBodySchema } from "@/lib/validators/admin/moderation";
 import { enforceRateLimit, RateLimitError } from "@/lib/http/rate-limit";
+import { resolveOrgId } from "@/lib/org-scope";
 
 export const POST = withRequestLogging(async (req: NextRequest, { params }: { params: { id: string } }) => {
   const startedAt = Date.now();
@@ -15,7 +16,16 @@ export const POST = withRequestLogging(async (req: NextRequest, { params }: { pa
     const body = await req.json();
     const { reason } = ModerationBodySchema.parse(body);
     const ann = await (await import("@/lib/prisma")).prisma.announcement.findUnique({ where: { id: params.id }, select: { id: true, organizationId: true } });
-    await requirePolicy("MODERATION_REVIEW", actor, ann?.organizationId || undefined);
+    const selectedOrg = resolveOrgId(req);
+    if (actor.role === "SUPER_ADMIN") {
+      if (!selectedOrg) {
+        return NextResponse.json({ ok: false, error: "Vui lòng chọn Trường/Đơn vị trước khi thực hiện thao tác này" }, { status: 400 });
+      }
+      if (ann?.organizationId && selectedOrg !== ann.organizationId) {
+        return NextResponse.json({ ok: false, error: "Phạm vi Trường/Đơn vị không khớp với nội dung" }, { status: 400 });
+      }
+    }
+    await requireModerationReview(actor, ann?.organizationId || undefined);
     await moderationRepo.rejectAnnouncement(params.id, actor.id, reason || "");
     await auditRepo.write({ actorId: actor.id, actorRole: actor.role, action: "MOD_REJECT_ANNOUNCEMENT", entityType: "Announcement", entityId: params.id, organizationId: ann?.organizationId || null, metadata: { reason: reason || null }, ip: null, userAgent: null });
     const duration = Date.now() - startedAt;

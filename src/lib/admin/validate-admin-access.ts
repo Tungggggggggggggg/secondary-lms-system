@@ -4,6 +4,7 @@
 
 import { UserRole } from "@prisma/client";
 import { ADMIN_ROLES } from "./admin-constants";
+import { isSuperAdminRole as isSuperAdminUtil } from "../rbac/role-utils";
 
 /**
  * Kiểm tra user có phải là admin không
@@ -23,7 +24,7 @@ export function isAdmin(role: UserRole | string | null | undefined): boolean {
 export function isSuperAdmin(
   role: UserRole | string | null | undefined
 ): boolean {
-  return role === "SUPER_ADMIN";
+  return isSuperAdminUtil(role as string | null | undefined);
 }
 
 /**
@@ -112,7 +113,7 @@ export function getAssignableRoles(
   currentRole: UserRole | string | null | undefined
 ): UserRole[] {
   if (isSuperAdmin(currentRole)) {
-    return ["SUPER_ADMIN", "ADMIN", "TEACHER", "STUDENT", "PARENT"];
+    return ["SUPER_ADMIN", "STAFF", "TEACHER", "STUDENT", "PARENT"];
   }
   if (isAdmin(currentRole)) {
     return ["TEACHER", "STUDENT", "PARENT"];

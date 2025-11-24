@@ -137,7 +137,7 @@ export const createSingleUser = async (
           email: normalizeEmail(userInput.email),
           fullname: userInput.fullname.trim(),
           password: hashedPassword,
-          role: userInput.role
+          role: 'STUDENT'
         },
         select: {
           id: true,
@@ -153,7 +153,7 @@ export const createSingleUser = async (
           data: {
             organizationId,
             userId: user.id,
-            roleInOrg: userInput.role === 'TEACHER' ? 'TEACHER' : 'MEMBER'
+            roleInOrg: (['TEACHER','STUDENT','PARENT'].includes(userInput.role as any) ? (userInput.role as any) : 'STUDENT')
           }
         });
       }

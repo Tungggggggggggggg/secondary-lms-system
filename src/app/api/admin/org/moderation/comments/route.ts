@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
-import { requireOrgAccess } from "@/lib/org-scope";
+import { requireModerationReview } from "@/lib/rbac/guards";
 import { writeAudit } from "@/lib/logging/audit";
+import { isStaffRole, isSuperAdminRole } from "@/lib/rbac/policy";
 
 // GET: danh sách pending
 export const GET = withApiLogging(async (req: NextRequest) => {
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) return errorResponse(401, "Unauthorized");
-  if (authUser.role !== "ADMIN" && authUser.role !== "SUPER_ADMIN") {
-    return errorResponse(403, "Forbidden: ADMIN/SUPER_ADMIN only");
-  }
 
   const { searchParams } = new URL(req.url);
-  const orgId = await (async () => {
-    try { return await requireOrgAccess(req, authUser, searchParams.get("orgId")); } catch (e: any) { return null; }
-  })();
+  const orgId = searchParams.get("orgId");
+  try { await requireModerationReview({ id: authUser.id, role: authUser.role }, orgId || undefined as any); } catch { return errorResponse(403, "Forbidden: insufficient permissions"); }
   if (!orgId) return errorResponse(400, "Missing or invalid orgId");
 
   const items = await prisma.announcementComment.findMany({
@@ -31,7 +28,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
 export const POST = withApiLogging(async (req: NextRequest) => {
   const authUser = await getAuthenticatedUser(req);
   if (!authUser) return errorResponse(401, "Unauthorized");
-  if (authUser.role !== "ADMIN" && authUser.role !== "SUPER_ADMIN") {
+  if (!isStaffRole(authUser.role) && !isSuperAdminRole(authUser.role)) {
     return errorResponse(403, "Forbidden: ADMIN/SUPER_ADMIN only");
   }
 
@@ -39,6 +36,30 @@ export const POST = withApiLogging(async (req: NextRequest) => {
   try { body = await req.json(); } catch { return errorResponse(400, "Invalid JSON body"); }
   if (!Array.isArray(body.ids) || body.ids.length === 0) return errorResponse(400, "ids required");
   if (!body.action || !["APPROVE", "REJECT"].includes(body.action)) return errorResponse(400, "invalid action");
+
+  // Enforce org-scope for ADMIN: tất cả comments phải thuộc các tổ chức mà admin là thành viên
+  if (isStaffRole(authUser.role)) {
+    const commentOrgs = await prisma.announcementComment.findMany({
+      where: { id: { in: body.ids } },
+      select: { announcement: { select: { organizationId: true } } },
+    });
+    const orgIds = Array.from(
+      new Set(
+        commentOrgs
+          .map((x) => x.announcement?.organizationId)
+          .filter((x): x is string => !!x)
+      )
+    );
+    if (orgIds.length === 0) {
+      return errorResponse(400, "No valid comments found for moderation");
+    }
+    const memberships = await prisma.organizationMember.findMany({
+      where: { userId: authUser.id, organizationId: { in: orgIds } },
+      select: { id: true, organizationId: true },
+    });
+    const hasAll = orgIds.every((oid) => memberships.some((m) => m.organizationId === oid));
+    if (!hasAll) return errorResponse(403, "Forbidden: some comments are outside of your organization scope");
+  }
 
   const status = body.action === "APPROVE" ? "APPROVED" : "REJECTED";
   const now = new Date();

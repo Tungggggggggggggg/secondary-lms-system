@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AnimatedSection from "@/components/admin/AnimatedSection";
@@ -15,10 +15,12 @@ import { formatDate } from "@/lib/admin/format-date";
 import { formatRelativeTime } from "@/lib/admin/format-date";
 import { CheckCircle2, XCircle, MessageSquare, FileText, Filter, CheckSquare, Square } from "lucide-react";
 import { ModerationItem } from "@/types/admin";
-import { MODERATION_STATUS_COLORS } from "@/lib/admin/admin-constants";
+import { MODERATION_STATUS_COLORS, MODERATION_STATUS_LABELS } from "@/lib/admin/admin-constants";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { usePrompt } from "@/components/providers/PromptProvider";
+import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 /**
  * Component ModerationPage - Trang kiểm duyệt nội dung
@@ -27,6 +29,7 @@ import { usePrompt } from "@/components/providers/PromptProvider";
 export default function ModerationPage() {
   const { data: session } = useSession();
   const role = (session?.user as any)?.role as string | undefined;
+  const sessionOrgId = (session as any)?.orgId as string | undefined;
   const [activeTab, setActiveTab] = useState<"announcement" | "comment">("announcement");
   const [orgId, setOrgId] = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -36,6 +39,48 @@ export default function ModerationPage() {
   const [previewItem, setPreviewItem] = useState<ModerationItem | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const prompt = usePrompt();
+  const { toast } = useToast();
+  const [orgMap, setOrgMap] = useState<Record<string, string>>({});
+
+  // Đồng bộ orgId mặc định từ session nếu chưa chọn
+  useEffect(() => {
+    if (!orgId && sessionOrgId) setOrgId(sessionOrgId);
+  }, [sessionOrgId]);
+
+  // Sync with global OrgSwitcher
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/org/context");
+        const data = await res.json();
+        if (mounted) {
+          setOrgId(data?.orgId || "");
+          setFilters({ type: activeTab, orgId: data?.orgId || undefined });
+        }
+      } catch {}
+    };
+    load();
+    // load org names for badge
+    const loadOrgs = async () => {
+      try {
+        const r = await fetch("/api/org/mine");
+        const d = await r.json();
+        if (mounted && d?.items) {
+          const map: Record<string, string> = {};
+          for (const o of d.items) map[o.id] = o.name;
+          setOrgMap(map);
+        }
+      } catch {}
+    };
+    loadOrgs();
+    const handler = () => load();
+    window.addEventListener("org-context-changed", handler as any);
+    return () => {
+      mounted = false;
+      window.removeEventListener("org-context-changed", handler as any);
+    };
+  }, [activeTab]);
 
   // Hook
   const {
@@ -43,6 +88,8 @@ export default function ModerationPage() {
     isLoading,
     filters,
     setFilters,
+    counts,
+    nextCursor,
     approveItem,
     rejectItem,
     refresh,
@@ -58,6 +105,7 @@ export default function ModerationPage() {
     setFilters({
       type: value as "announcement" | "comment",
       orgId: orgId || undefined,
+      cursor: undefined,
     });
   };
 
@@ -67,6 +115,7 @@ export default function ModerationPage() {
     setFilters({
       type: activeTab,
       orgId: value || undefined,
+      cursor: undefined,
     });
   };
 
@@ -92,19 +141,27 @@ export default function ModerationPage() {
   const handleApprove = useCallback(
     async (item: ModerationItem) => {
       try {
+        if (role === "SUPER_ADMIN" && !orgId) {
+          toast({ title: "Yêu cầu chọn Trường/Đơn vị", description: "Vui lòng chọn Trường/Đơn vị ở góc phải Header trước khi thao tác.", variant: "destructive" });
+          return;
+        }
         await approveItem(item.id, item.type);
         setSelectedItems(selectedItems.filter((id) => id !== item.id));
       } catch (error) {
         // Error handled in hook
       }
     },
-    [approveItem, selectedItems]
+    [approveItem, selectedItems, role, orgId, toast]
   );
 
   // Handle reject
   const handleReject = useCallback(
     async (item: ModerationItem, reason: string) => {
       try {
+        if (role === "SUPER_ADMIN" && !orgId) {
+          toast({ title: "Yêu cầu chọn Trường/Đơn vị", description: "Vui lòng chọn Trường/Đơn vị ở góc phải Header trước khi thao tác.", variant: "destructive" });
+          return;
+        }
         await rejectItem(item.id, item.type, reason);
         setSelectedItems(selectedItems.filter((id) => id !== item.id));
         setIsRejectDialogOpen(false);
@@ -114,12 +171,16 @@ export default function ModerationPage() {
         // Error handled in hook
       }
     },
-    [rejectItem, selectedItems]
+    [rejectItem, selectedItems, role, orgId, toast]
   );
 
   // Handle bulk approve
   const handleBulkApprove = useCallback(async () => {
     if (selectedItems.length === 0) return;
+    if (role === "SUPER_ADMIN" && !orgId) {
+      toast({ title: "Yêu cầu chọn Trường/Đơn vị", description: "Vui lòng chọn Trường/Đơn vị ở góc phải Header trước khi thao tác.", variant: "destructive" });
+      return;
+    }
 
     const promises = selectedItems.map((itemId) => {
       const item = items.find((i) => i.id === itemId);
@@ -134,11 +195,15 @@ export default function ModerationPage() {
     } catch (error) {
       // Error handled in hook
     }
-  }, [selectedItems, items, approveItem]);
+  }, [selectedItems, items, approveItem, role, orgId, toast]);
 
   // Handle bulk reject
   const handleBulkReject = useCallback(async () => {
     if (selectedItems.length === 0) return;
+    if (role === "SUPER_ADMIN" && !orgId) {
+      toast({ title: "Yêu cầu chọn Trường/Đơn vị", description: "Vui lòng chọn Trường/Đơn vị ở góc phải Header trước khi thao tác.", variant: "destructive" });
+      return;
+    }
     const reason = await prompt({
       title: "Từ chối hàng loạt",
       description: "Nhập lý do từ chối (áp dụng cho tất cả các mục đã chọn)",
@@ -163,7 +228,7 @@ export default function ModerationPage() {
     } catch (error) {
       // Error handled in hook
     }
-  }, [selectedItems, items, rejectItem, prompt]);
+  }, [selectedItems, items, rejectItem, prompt, role, orgId, toast]);
 
   // Open reject dialog
   const openRejectDialog = (item: ModerationItem) => {
@@ -177,6 +242,7 @@ export default function ModerationPage() {
     const contentPreview = item.content.length > 200
       ? `${item.content.substring(0, 200)}...`
       : item.content;
+    const orgName = item.organizationId ? (orgMap[item.organizationId] || item.organizationId) : "Không xác định";
 
     return (
       <Card
@@ -204,8 +270,11 @@ export default function ModerationPage() {
                         MODERATION_STATUS_COLORS[item.status] || "bg-gray-100"
                       }`}
                     >
-                      {item.type === "announcement" ? "Thông báo" : "Bình luận"}
+                      {MODERATION_STATUS_LABELS[item.status as keyof typeof MODERATION_STATUS_LABELS]}
                     </span>
+                    {item.organizationId && (
+                      <Badge variant="outline" className="text-[10px]">{orgName}</Badge>
+                    )}
                     <span className="text-xs text-gray-500">
                       {formatRelativeTime(item.createdAt)}
                     </span>
@@ -235,6 +304,8 @@ export default function ModerationPage() {
                 <Button
                   size="default"
                   onClick={() => handleApprove(item)}
+                  disabled={role === "SUPER_ADMIN" && !orgId}
+                  title={role === "SUPER_ADMIN" && !orgId ? "Chọn Trường/Đơn vị để thao tác" : undefined}
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                 >
                   <CheckCircle2 className="h-4 w-4" />
@@ -244,6 +315,8 @@ export default function ModerationPage() {
                   size="default"
                   variant="outline"
                   onClick={() => openRejectDialog(item)}
+                  disabled={role === "SUPER_ADMIN" && !orgId}
+                  title={role === "SUPER_ADMIN" && !orgId ? "Chọn Trường/Đơn vị để thao tác" : undefined}
                   className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
                 >
                   <XCircle className="h-4 w-4" />
@@ -278,41 +351,78 @@ export default function ModerationPage() {
         <CardHeader>
           <CardTitle>Bộ lọc</CardTitle>
           <CardDescription>
-            Lọc nội dung chờ duyệt theo tổ chức
+            Lọc nội dung chờ duyệt theo Trường/Đơn vị (sử dụng Org Switcher ở góc phải)
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 max-w-md">
-              <Input
-                type="text"
-                placeholder="Organization ID (tùy chọn)"
-                value={orgId}
-                onChange={(e) => handleOrgIdChange(e.target.value)}
-              />
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 max-w-md">
+                <Input
+                  type="text"
+                  placeholder="Trường/Đơn vị (đặt trong Header)"
+                  value={orgId}
+                  onChange={(e) => handleOrgIdChange(e.target.value)}
+                  disabled
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">Trạng thái</label>
+                <select
+                  className="h-9 px-2 border rounded-md text-sm"
+                  value={filters.status || "PENDING"}
+                  onChange={(e) => setFilters({ status: e.target.value as any, cursor: undefined })}
+                >
+                  <option value="PENDING">Chờ duyệt</option>
+                  <option value="APPROVED">Đã duyệt</option>
+                  <option value="REJECTED">Từ chối</option>
+                </select>
+              </div>
             </div>
-            <Button onClick={refresh} variant="outline">
-              Làm mới
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">Từ ngày</label>
+                <Input
+                  type="date"
+                  value={(filters as any).startDate || ""}
+                  onChange={(e) => setFilters({ startDate: e.target.value, cursor: undefined })}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">Đến ngày</label>
+                <Input
+                  type="date"
+                  value={(filters as any).endDate || ""}
+                  onChange={(e) => setFilters({ endDate: e.target.value, cursor: undefined })}
+                />
+              </div>
+              <div className="flex-1" />
+              <Button onClick={refresh} variant="outline">
+                Làm mới
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex items-center justify-between mb-4">
           <TabsList>
             <TabsTrigger value="announcement" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
-              Thông báo ({items.length})
+              {`Thông báo${activeTab === 'announcement' ? '' : ''}`}
             </TabsTrigger>
             <TabsTrigger value="comment" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Bình luận ({items.length})
+              {`Bình luận${activeTab === 'comment' ? '' : ''}`}
             </TabsTrigger>
           </TabsList>
-
-          {/* Bulk Actions */}
+          {counts && (
+            <div className="hidden md:flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${MODERATION_STATUS_COLORS['PENDING']}`}>Chờ: {counts.pending}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${MODERATION_STATUS_COLORS['APPROVED']}`}>Duyệt: {counts.approved}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${MODERATION_STATUS_COLORS['REJECTED']}`}>Từ chối: {counts.rejected}</span>
+            </div>
+          )}
           {selectedItems.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">
@@ -321,6 +431,8 @@ export default function ModerationPage() {
               <Button
                 size="default"
                 onClick={handleBulkApprove}
+                disabled={role === "SUPER_ADMIN" && !orgId}
+                title={role === "SUPER_ADMIN" && !orgId ? "Chọn Trường/Đơn vị để thao tác" : undefined}
                 className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
               >
                 <CheckCircle2 className="h-4 w-4" />
@@ -330,6 +442,8 @@ export default function ModerationPage() {
                 size="default"
                 variant="outline"
                 onClick={handleBulkReject}
+                disabled={role === "SUPER_ADMIN" && !orgId}
+                title={role === "SUPER_ADMIN" && !orgId ? "Chọn Trường/Đơn vị để thao tác" : undefined}
                 className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
               >
                 <XCircle className="h-4 w-4" />
@@ -340,7 +454,7 @@ export default function ModerationPage() {
         </div>
 
         <TabsContent value="announcement" className="space-y-4">
-          {isLoading ? (
+        {isLoading ? (
             <div className="text-center py-8 text-gray-500">Đang tải...</div>
           ) : items.length === 0 ? (
             <Card>
@@ -368,11 +482,18 @@ export default function ModerationPage() {
               <div className="space-y-4">
                 {items.map((item) => renderItemCard(item))}
               </div>
+              {nextCursor && (
+                <div className="flex justify-center">
+                  <Button variant="outline" onClick={() => setFilters({ cursor: nextCursor })}>
+                    Tải thêm
+                  </Button>
+                </div>
+              )}
             </>
           )}
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="comment" className="space-y-4">
+          <TabsContent value="comment" className="space-y-4">
           {isLoading ? (
             <div className="text-center py-8 text-gray-500">Đang tải...</div>
           ) : items.length === 0 ? (
@@ -401,9 +522,16 @@ export default function ModerationPage() {
               <div className="space-y-4">
                 {items.map((item) => renderItemCard(item))}
               </div>
+              {nextCursor && (
+                <div className="flex justify-center">
+                  <Button variant="outline" onClick={() => setFilters({ cursor: nextCursor })}>
+                    Tải thêm
+                  </Button>
+                </div>
+              )}
             </>
           )}
-        </TabsContent>
+          </TabsContent>
       </Tabs>
 
       {/* Preview Dialog */}

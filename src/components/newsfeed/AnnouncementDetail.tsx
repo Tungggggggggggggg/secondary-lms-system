@@ -31,6 +31,11 @@ export default function AnnouncementDetail({
     const isTeacher = role === "teacher";
     const activeHook = isTeacher ? teacherHook : studentHook;
 
+    // Teacher-only actions
+    const hideComment = isTeacher ? teacherHook.hideComment : undefined;
+    const unhideComment = isTeacher ? teacherHook.unhideComment : undefined;
+    const deleteComment = isTeacher ? teacherHook.deleteComment : undefined;
+
     // Lấy data từ hook đang active theo role
     const announcements = activeHook.announcements || [];
     const comments = activeHook.comments || {};
@@ -50,6 +55,9 @@ export default function AnnouncementDetail({
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [commentsPage, setCommentsPage] = useState(1);
+    const [locked, setLocked] = useState<boolean>(false);
+    const [loadingLock, setLoadingLock] = useState<boolean>(false);
+    const [togglingLock, setTogglingLock] = useState<boolean>(false);
     const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
 
     const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -68,6 +76,42 @@ export default function AnnouncementDetail({
             setCommentsPage(1);
         }
     }, [announcementId, fetchComments]);
+
+    // Load lock state (teacher only)
+    useEffect(() => {
+        let mounted = true;
+        const loadLock = async () => {
+            if (!isTeacher || !announcementId) return;
+            try {
+                setLoadingLock(true);
+                const res = await fetch(`/api/announcements/${announcementId}/lock`);
+                const data = await res.json();
+                if (mounted && res.ok && data?.success) {
+                    setLocked(Boolean(data.locked));
+                }
+            } catch {}
+            finally {
+                setLoadingLock(false);
+            }
+        };
+        loadLock();
+        return () => { mounted = false; };
+    }, [isTeacher, announcementId]);
+
+    const handleToggleLock = async () => {
+        if (!isTeacher) return;
+        try {
+            setTogglingLock(true);
+            const res = await fetch(`/api/announcements/${announcementId}/lock`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ locked: !locked }),
+            });
+            const data = await res.json();
+            if (res.ok && data?.success) setLocked(Boolean(data.locked));
+        } catch (e) {}
+        finally { setTogglingLock(false); }
+    };
 
     // Auto-scroll to bottom khi có comment mới
     useEffect(() => {
@@ -166,6 +210,36 @@ export default function AnnouncementDetail({
                                 minute: "2-digit",
                             })}
                         </span>
+                        {isTeacher && comment.status === "REJECTED" && (
+                            <span className="text-[11px] px-2 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">Đã ẩn</span>
+                        )}
+                        {isTeacher && (
+                            <div className="ml-auto flex items-center gap-2">
+                                {comment.status !== "REJECTED" ? (
+                                    <Button variant="ghost" onClick={async () => {
+                                        if (hideComment) {
+                                            await hideComment(announcementId, comment.id);
+                                            if (fetchComments) fetchComments(announcementId, 1, 10, { force: true });
+                                        }
+                                    }}>Ẩn</Button>
+                                ) : (
+                                    <Button variant="ghost" onClick={async () => {
+                                        if (unhideComment) {
+                                            await unhideComment(announcementId, comment.id);
+                                            if (fetchComments) fetchComments(announcementId, 1, 10, { force: true });
+                                        }
+                                    }}>Hiện</Button>
+                                )}
+                                <Button variant="ghost" onClick={async () => {
+                                    if (deleteComment) {
+                                        await deleteComment(announcementId, comment.id);
+                                        if (fetchComments) fetchComments(announcementId, 1, 10, { force: true });
+                                    }
+                                }}>
+                                    Xóa
+                                </Button>
+                            </div>
+                        )}
                     </div>
                     <div className="text-base text-gray-800 dark:text-gray-200 whitespace-pre-line mb-3 leading-relaxed">
                         {comment.content}
@@ -183,16 +257,13 @@ export default function AnnouncementDetail({
                                         }
                                         placeholder="Viết câu trả lời..."
                                         className="min-h-[70px] text-base"
-                                        disabled={isSubmitting}
+                                        disabled={isSubmitting || locked}
                                     />
                                     <div className="flex items-center gap-2">
                                         <Button
                                             size="default"
                                             onClick={() => handleAddComment(comment.id)}
-                                            disabled={
-                                                !replyDraft[comment.id]?.trim() ||
-                                                isSubmitting
-                                            }
+                                            disabled={!replyDraft[comment.id]?.trim() || isSubmitting || locked}
                                             className="px-4"
                                         >
                                             {isSubmitting ? "Đang gửi..." : "Gửi"}
@@ -216,7 +287,8 @@ export default function AnnouncementDetail({
                             ) : (
                                 <button
                                     onClick={() => setReplyingTo(comment.id)}
-                                    className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-medium px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                                    disabled={locked}
+                                    className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-medium px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50"
                                 >
                                     Trả lời
                                 </button>
@@ -311,6 +383,17 @@ export default function AnnouncementDetail({
                     Bình luận ({commentsPagination[announcementId]?.total ?? commentsTotal[announcementId] ?? postComments.length ?? 0})
                 </h3>
 
+                {isTeacher && (
+                    <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div className="text-sm text-gray-700">
+                            Trạng thái: {locked ? <span className="text-red-600 font-medium">Đang khóa bình luận</span> : <span className="text-green-700 font-medium">Đang mở bình luận</span>}
+                        </div>
+                        <Button variant={locked ? "outline" : "default"} onClick={handleToggleLock} disabled={loadingLock || togglingLock}>
+                            {locked ? (togglingLock ? "Đang mở khóa..." : "Mở khóa bình luận") : (togglingLock ? "Đang khóa..." : "Khóa bình luận")}
+                        </Button>
+                    </div>
+                )}
+
                 {commentsLoading[announcementId] && postComments.length === 0 ? (
                     <div className="space-y-4">
                         {[1, 2, 3].map((i) => (
@@ -366,7 +449,7 @@ export default function AnnouncementDetail({
                                     onChange={(e) => setCommentDraft(e.target.value)}
                                     placeholder="Viết bình luận..."
                                     className="min-h-[80px] flex-1 text-base"
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || locked}
                                     onKeyDown={(e) => {
                                         if (
                                             e.key === "Enter" &&
@@ -379,7 +462,7 @@ export default function AnnouncementDetail({
                                 />
                                 <Button
                                     onClick={() => handleAddComment()}
-                                    disabled={!commentDraft.trim() || isSubmitting}
+                                    disabled={!commentDraft.trim() || isSubmitting || locked}
                                     className="self-end px-6 py-2"
                                 >
                                     {isSubmitting ? "Đang gửi..." : "Gửi"}

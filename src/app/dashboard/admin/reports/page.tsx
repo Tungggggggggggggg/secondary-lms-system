@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AnimatedSection from "@/components/admin/AnimatedSection";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdminReports } from "@/hooks/admin/use-admin-reports";
-import { Users, MessageSquare, AlertCircle } from "lucide-react";
+import { Users, MessageSquare, AlertCircle, EyeOff, Lock, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/admin/format-date";
 import { exportToCSV, generateFilename } from "@/lib/admin/export-csv";
 import { Download } from "lucide-react";
@@ -22,12 +22,37 @@ import { Download } from "lucide-react";
 export default function ReportsPage() {
   const { data: session } = useSession();
   const role = (session?.user as { role?: string })?.role;
+  const sessionOrgId = (session as any)?.orgId as string | undefined;
   const [orgId, setOrgId] = useState("");
 
   // Fetch reports data
   const { overview, usage, growth, isLoading, refresh } = useAdminReports({
     orgId: orgId || undefined,
   });
+
+  // Đồng bộ orgId mặc định từ session nếu chưa chọn
+  useEffect(() => {
+    if (!orgId && sessionOrgId) setOrgId(sessionOrgId);
+  }, [sessionOrgId]);
+
+  // Sync orgId with OrgSwitcher context
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/org/context");
+        const data = await res.json();
+        if (mounted) setOrgId(data?.orgId || "");
+      } catch {}
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener("org-context-changed", handler as any);
+    return () => {
+      mounted = false;
+      window.removeEventListener("org-context-changed", handler as any);
+    };
+  }, []);
 
   // Prepare chart data
   const growthChartData = {
@@ -52,6 +77,9 @@ export default function ReportsPage() {
         announcements: overview.announcements,
         comments: overview.comments,
         pending: overview.pending,
+        hiddenComments: overview.hiddenComments ?? 0,
+        lockedAnnouncements: overview.lockedAnnouncements ?? 0,
+        deletedComments: overview.deletedComments ?? 0,
       },
     ];
 
@@ -60,6 +88,9 @@ export default function ReportsPage() {
       announcements: "Thông báo",
       comments: "Bình luận",
       pending: "Chờ duyệt",
+      hiddenComments: "Bình luận bị ẩn",
+      lockedAnnouncements: "Bài đăng khóa bình luận",
+      deletedComments: "Bình luận bị xóa",
     });
   };
 
@@ -83,7 +114,7 @@ export default function ReportsPage() {
         <CardHeader>
           <CardTitle>Bộ lọc</CardTitle>
           <CardDescription>
-            Lọc báo cáo theo tổ chức (tùy chọn)
+            Lọc báo cáo theo Trường/Đơn vị (sử dụng Org Switcher ở góc phải)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -91,9 +122,10 @@ export default function ReportsPage() {
             <div className="flex-1 max-w-md">
               <Input
                 type="text"
-                placeholder="Organization ID (tùy chọn)"
+                placeholder="Trường/Đơn vị (đặt trong Header)"
                 value={orgId}
                 onChange={(e) => setOrgId(e.target.value)}
+                disabled
               />
             </div>
             <Button onClick={refresh} variant="outline">
@@ -141,6 +173,24 @@ export default function ReportsPage() {
             icon={<AlertCircle className="h-5 w-5" />}
             color="warning"
           />
+          <StatsCard
+            title="Bình luận bị ẩn"
+            value={overview?.hiddenComments || 0}
+            icon={<EyeOff className="h-5 w-5" />}
+            color="danger"
+          />
+          <StatsCard
+            title="Bài đăng khóa bình luận"
+            value={overview?.lockedAnnouncements || 0}
+            icon={<Lock className="h-5 w-5" />}
+            color="warning"
+          />
+          <StatsCard
+            title="Bình luận bị xóa"
+            value={overview?.deletedComments || 0}
+            icon={<Trash2 className="h-5 w-5" />}
+            color="danger"
+          />
         </div>
       </div>
 
@@ -172,40 +222,53 @@ export default function ReportsPage() {
       )}
 
       {/* Usage Stats */}
-      {usage && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Hoạt động (7 ngày qua)</CardTitle>
-            <CardDescription>
-              Thống kê thông báo và bình luận
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Thông báo: {usage.anns?.length || 0} nhóm
-                </p>
-                {usage.anns && usage.anns.length > 0 && (
-                  <div className="text-sm text-gray-500">
-                    Tổng: {usage.anns.reduce((acc, item) => acc + (item._count?.createdAt || 0), 0)} thông báo
-                  </div>
-                )}
+      {usage && (() => {
+        const dateSet = new Set<string>();
+        usage.anns?.forEach((i) => dateSet.add(i.date));
+        usage.cmts?.forEach((i) => dateSet.add(i.date));
+        const dates = Array.from(dateSet).sort((a, b) => a.localeCompare(b));
+        const labels = dates.map((d) => formatDate(d, "short"));
+        const annsMap = new Map(usage.anns?.map((i) => [i.date, i.count]) || []);
+        const cmtsMap = new Map(usage.cmts?.map((i) => [i.date, i.count]) || []);
+        const usageChartData = {
+          labels,
+          datasets: [
+            {
+              label: "Thông báo",
+              data: dates.map((d) => annsMap.get(d) || 0),
+              borderColor: "#3b82f6",
+              backgroundColor: "rgba(59, 130, 246, 0.1)",
+            },
+            {
+              label: "Bình luận",
+              data: dates.map((d) => cmtsMap.get(d) || 0),
+              borderColor: "#10b981",
+              backgroundColor: "rgba(16, 185, 129, 0.1)",
+            },
+          ],
+        };
+        const totalAnns = usage.anns?.reduce((acc, item) => acc + (item.count || 0), 0) || 0;
+        const totalCmts = usage.cmts?.reduce((acc, item) => acc + (item.count || 0), 0) || 0;
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Hoạt động (7 ngày qua)</CardTitle>
+              <CardDescription>
+                Thống kê thông báo và bình luận theo ngày
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <LineChart data={usageChartData} height={300} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+                  <div>Thông báo (tổng): <span className="font-medium">{totalAnns}</span></div>
+                  <div>Bình luận (tổng): <span className="font-medium">{totalCmts}</span></div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Bình luận: {usage.cmts?.length || 0} nhóm
-                </p>
-                {usage.cmts && usage.cmts.length > 0 && (
-                  <div className="text-sm text-gray-500">
-                    Tổng: {usage.cmts.reduce((acc, item) => acc + (item._count?.createdAt || 0), 0)} bình luận
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Loading State */}
       {isLoading && (

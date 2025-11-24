@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import { AuditLog, AuditLogFilter, PaginatedResponse } from "@/types/admin";
 import { useToast } from "@/hooks/use-toast";
@@ -27,16 +27,13 @@ export function useAdminAuditLogs(filter?: AuditLogFilter) {
   if (filters.entityId) queryParams.set("entityId", filters.entityId);
   if (filters.startDate) queryParams.set("startDate", filters.startDate);
   if (filters.endDate) queryParams.set("endDate", filters.endDate);
-  if (filters.limit) queryParams.set("limit", String(filters.limit));
+  if (filters.limit) queryParams.set("take", String(filters.limit));
   if (filters.cursor) queryParams.set("cursor", filters.cursor);
 
-  const { data, error, isLoading, mutate } = useSWR<{
-    ok: boolean;
-    data?: PaginatedResponse<AuditLog>;
-    error?: string;
-  }>(`/api/admin/audit?${queryParams.toString()}`, fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
+  const { data, error, isLoading, mutate } = useSWR<any>(`/api/admin/system/audit?${queryParams.toString()}`, fetcher, {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2000,
   });
 
   // Update filter
@@ -55,14 +52,19 @@ export function useAdminAuditLogs(filter?: AuditLogFilter) {
   }, [mutate]);
 
   // Handle error
-  if (error) {
-    console.error("[useAdminAuditLogs] Error:", error);
-  }
+  useEffect(() => {
+    if (error) {
+      console.error("[useAdminAuditLogs] Error:", error);
+      try {
+        toast({ title: "Lỗi tải audit logs", description: "Vui lòng kiểm tra phạm vi Trường/Đơn vị và thử lại.", variant: "destructive" });
+      } catch {}
+    }
+  }, [error, toast]);
 
   return {
-    logs: data?.data?.items || [],
-    total: data?.data?.total,
-    nextCursor: data?.data?.nextCursor,
+    logs: data?.items || data?.data?.items || [],
+    total: data?.total ?? data?.data?.total,
+    nextCursor: data?.nextCursor ?? data?.data?.nextCursor,
     isLoading,
     error,
     filters,

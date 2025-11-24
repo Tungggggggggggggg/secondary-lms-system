@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import prisma from './prisma';
+import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
@@ -103,6 +104,11 @@ export const authOptions: NextAuthOptions = {
         session.user.fullname = (token as any).fullname || '';
         session.user.role = token.role;
       }
+      try {
+        const cookieStore = cookies();
+        const orgId = cookieStore.get('x-org-id')?.value || null;
+        (session as any).orgId = orgId;
+      } catch {}
       return session;
     },
   },

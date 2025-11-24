@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/org-scope";
-import { requirePolicy } from "@/lib/rbac/policy";
+import { requireSettingsWrite } from "@/lib/rbac/guards";
 import { withRequestLogging } from "@/lib/logging/request";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
 import { enforceRateLimit, RateLimitError } from "@/lib/http/rate-limit";
@@ -9,7 +9,7 @@ export const GET = withRequestLogging(async (req: NextRequest) => {
   const startedAt = Date.now();
   try {
     const actor = await requireSession(req);
-    await requirePolicy("SETTINGS_WRITE", actor); // chỉ SUPER_ADMIN mới pass
+    await requireSettingsWrite(actor); // chỉ SUPER_ADMIN mới pass
     enforceRateLimit({ route: "admin.settings.list", ip: (req.headers.get("x-forwarded-for") || req.ip || "").split(",")[0].trim(), userId: actor.id, limit: 30 });
     const data = await settingsRepo.listKeys();
     const duration = Date.now() - startedAt;

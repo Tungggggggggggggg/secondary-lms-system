@@ -16,27 +16,69 @@ export const GET = withApiLogging(async (req: NextRequest) => {
   if (!authUser) {
     return errorResponse(401, "Unauthorized");
   }
-  if (authUser.role !== "SUPER_ADMIN") {
-    return errorResponse(403, "Forbidden: SUPER_ADMIN only");
-  }
 
   const { searchParams } = new URL(req.url);
   const { skip, take } = parsePagination(searchParams, { defaultTake: 20, maxTake: 50 });
   const entityType = searchParams.get("entityType") || undefined;
   const actorId = searchParams.get("actorId") || undefined;
+  const entityId = searchParams.get("entityId") || undefined;
+  const action = searchParams.get("action") || undefined;
+  const startDate = searchParams.get("startDate") || undefined;
+  const endDate = searchParams.get("endDate") || undefined;
+  const orgId = searchParams.get("orgId") || undefined;
 
   const where: any = {};
   if (entityType) where.entityType = entityType;
   if (actorId) where.actorId = actorId;
+  if (entityId) where.entityId = entityId;
+  if (action) where.action = action;
+  if (orgId) where.organizationId = orgId;
+
+  // Quyền truy cập: SUPER_ADMIN full; STAFF chỉ được xem audit theo orgId mình thuộc
+  if (authUser.role !== "SUPER_ADMIN") {
+    if (authUser.role === "STAFF") {
+      if (!orgId) {
+        return errorResponse(400, "orgId is required for STAFF");
+      }
+      const membership = await prisma.organizationMember.findFirst({ where: { organizationId: orgId, userId: authUser.id }, select: { id: true } });
+      if (!membership) {
+        return errorResponse(403, "Forbidden: not a member of organization");
+      }
+      // Ép lọc theo orgId, không cho phép STAFF xem ngoài phạm vi
+      where.organizationId = orgId;
+    } else {
+      return errorResponse(403, "Forbidden");
+    }
+  }
+
+  const whereDates: any = {};
+  if (startDate || endDate) {
+    whereDates.createdAt = {} as any;
+    if (startDate) (whereDates.createdAt as any).gte = new Date(startDate);
+    if (endDate) (whereDates.createdAt as any).lte = new Date(endDate);
+  }
 
   const [items, total] = await Promise.all([
     prisma.auditLog.findMany({
-      where,
+      where: { ...where, ...whereDates },
       orderBy: { createdAt: "desc" },
       skip,
       take,
+      select: {
+        id: true,
+        actorId: true,
+        actorRole: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        metadata: true,
+        ip: true,
+        userAgent: true,
+        organizationId: true,
+        createdAt: true,
+      },
     }),
-    prisma.auditLog.count({ where }),
+    prisma.auditLog.count({ where: { ...where, ...whereDates } }),
   ]);
 
   return NextResponse.json({ success: true, items, total });

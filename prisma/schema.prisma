@@ -333,6 +333,7 @@ model Announcement {
   moderationReason String?
   status           ModerationStatus         @default(APPROVED)
   organizationId   String?
+  commentsLocked   Boolean                  @default(false) @map("comments_locked")
   attachments      AnnouncementAttachment[]
   comments         AnnouncementComment[]
   author           User                     @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -435,7 +436,7 @@ model OrganizationMember {
   id             String       @id @default(cuid())
   organizationId String
   userId         String
-  roleInOrg      String?
+  roleInOrg      OrgRole?
   createdAt      DateTime     @default(now())
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -609,11 +610,19 @@ enum ConversationType {
 }
 
 enum UserRole {
-  ADMIN
+  STAFF
   TEACHER
   STUDENT
   PARENT
   SUPER_ADMIN
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
 }
 
 enum AssignmentType {

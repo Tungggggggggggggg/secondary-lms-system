@@ -24,8 +24,8 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       return errorResponse(401, "Unauthorized");
     }
 
-    // Chỉ ADMIN và SUPER_ADMIN được phép download templates
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(authUser.role)) {
+    // Chỉ ADMIN (STAFF) và SUPER_ADMIN được phép download templates
+    if (!['ADMIN', 'STAFF', 'SUPER_ADMIN'].includes(authUser.role)) {
       return errorResponse(403, "Forbidden");
     }
 

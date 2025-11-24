@@ -34,7 +34,9 @@ export function useAdminReports(filter?: ReportsFilter) {
     data?: ReportsOverview;
     error?: string;
   }>(`/api/admin/reports/overview${queryString ? `?${queryString}` : ""}`, fetcher, {
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2000,
   });
 
   // Fetch usage
@@ -48,7 +50,9 @@ export function useAdminReports(filter?: ReportsFilter) {
     data?: ReportsUsage;
     error?: string;
   }>(`/api/admin/reports/usage${queryString ? `?${queryString}` : ""}`, fetcher, {
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2000,
   });
 
   // Fetch growth
@@ -62,11 +66,20 @@ export function useAdminReports(filter?: ReportsFilter) {
     data?: ReportsGrowth[];
     error?: string;
   }>(`/api/admin/reports/growth${queryString ? `?${queryString}` : ""}`, fetcher, {
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2000,
   });
 
   // Handle errors
   const error = overviewError || usageError || growthError;
+  if (error) {
+    console.error("[useAdminReports] Error:", error);
+    try {
+      // best-effort toast
+      toast({ title: "Lỗi tải dữ liệu báo cáo", description: "Vui lòng kiểm tra phạm vi Trường/Đơn vị và thử lại.", variant: "destructive" });
+    } catch {}
+  }
   const isLoading = overviewLoading || usageLoading || growthLoading;
 
   // Refresh all

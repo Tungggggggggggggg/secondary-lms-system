@@ -52,6 +52,60 @@ export function useAdminUserMutations() {
     [toast]
   );
 
+  // Toggle 2FA (placeholder)
+  const toggleTwoFA = useCallback(
+    async (userId: string, enabled: boolean) => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/admin/system/users/${userId}/2fa`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Không thể cập nhật 2FA");
+        }
+        toast({ title: "Thành công", description: enabled ? "Đã bật 2FA" : "Đã tắt 2FA", variant: "success" });
+        return result;
+      } catch (error: any) {
+        console.error("[useAdminUserMutations] Toggle 2FA error:", error);
+        toast({ title: "Lỗi", description: error.message || "Không thể cập nhật 2FA", variant: "destructive" });
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [toast]
+  );
+
+  // Toggle disable user (SUPER_ADMIN only)
+  const toggleDisabled = useCallback(
+    async (userId: string, disabled: boolean) => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/admin/system/users/${userId}/disable`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ disabled }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Không thể cập nhật trạng thái khoá/mở");
+        }
+        toast({ title: "Thành công", description: disabled ? "Đã khoá tài khoản" : "Đã mở khoá tài khoản", variant: "success" });
+        return result;
+      } catch (error: any) {
+        console.error("[useAdminUserMutations] Toggle disabled error:", error);
+        toast({ title: "Lỗi", description: error.message || "Không thể cập nhật trạng thái", variant: "destructive" });
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [toast]
+  );
+
   // Update user
   const updateUser = useCallback(
     async (data: UpdateUserInput) => {
@@ -222,6 +276,8 @@ export function useAdminUserMutations() {
     updateUserRole,
     resetPassword,
     deleteUser,
+    toggleDisabled,
+    toggleTwoFA,
   };
 }
 

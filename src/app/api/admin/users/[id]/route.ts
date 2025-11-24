@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession, requireOrgAdmin, resolveOrgId } from "@/lib/org-scope";
+import { requireSession, resolveOrgId } from "@/lib/org-scope";
 import { userRepo } from "@/lib/repositories/user-repo";
 import { auditRepo } from "@/lib/repositories/audit-repo";
 import { UpdateUserBodySchema } from "@/lib/validators/admin/users";
 import { withRequestLogging } from "@/lib/logging/request";
 import { enforceRateLimit, RateLimitError } from "@/lib/http/rate-limit";
+import { requireUserWrite } from "@/lib/rbac/guards";
 
 function getClientInfo(req: NextRequest) {
   return {
@@ -19,10 +20,15 @@ export const PATCH = withRequestLogging(async (req: NextRequest, { params }: { p
     const actor = await requireSession(req);
     const orgId = resolveOrgId(req);
     enforceRateLimit({ route: "admin.users.update", ip: (req.headers.get("x-forwarded-for") || req.ip || "").split(",")[0].trim(), userId: actor.id, orgId: orgId || null, limit: 30 });
-    await requireOrgAdmin(actor, orgId);
+    await requireUserWrite(actor, orgId!);
     const body = await req.json();
     const valid = UpdateUserBodySchema.parse(body);
-    const updated = await userRepo.updateUser({ id: params.id, fullname: valid.fullname, email: valid.email, globalRole: valid.role as any });
+    const updated = await userRepo.updateUser({
+      id: params.id,
+      fullname: valid.fullname,
+      email: valid.email,
+      globalRole: actor.role === "SUPER_ADMIN" ? (valid.role as any) : undefined,
+    });
 
     const { ip, userAgent } = getClientInfo(req);
     await auditRepo.write({
@@ -55,7 +61,7 @@ export const DELETE = withRequestLogging(async (req: NextRequest, { params }: { 
     const actor = await requireSession(req);
     const orgId = resolveOrgId(req);
     enforceRateLimit({ route: "admin.users.delete", ip: (req.headers.get("x-forwarded-for") || req.ip || "").split(",")[0].trim(), userId: actor.id, orgId: orgId || null, limit: 30 });
-    await requireOrgAdmin(actor, orgId);
+    await requireUserWrite(actor, orgId!);
     await userRepo.removeFromOrganization({ userId: params.id, organizationId: orgId! });
 
     const { ip, userAgent } = getClientInfo(req);

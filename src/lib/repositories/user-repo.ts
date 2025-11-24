@@ -45,21 +45,30 @@ export const userRepo = {
     return { items: users, nextCursor } as Paginated<typeof users[number]>;
   },
 
-  async createUser(params: { email: string; fullname: string; passwordHash: string; globalRole: "SUPER_ADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"; organizationId?: string | null }) {
+  async createUser(params: { email: string; fullname: string; passwordHash: string; globalRole: "SUPER_ADMIN" | "STAFF" | "TEACHER" | "STUDENT" | "PARENT"; organizationId?: string | null }) {
     const { email, fullname, passwordHash, globalRole, organizationId } = params;
     return prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { email, fullname, password: passwordHash, role: globalRole },
+        data: { email, fullname, password: passwordHash, role: 'STUDENT' as any },
         select: { id: true, email: true, fullname: true, role: true, createdAt: true },
       });
       if (organizationId) {
-        await tx.organizationMember.create({ data: { organizationId, userId: user.id } });
+        const mappedOrgRole = ((): any => {
+          const r = (globalRole || 'STUDENT') as any;
+          if (r === 'STAFF') return 'ADMIN';
+          return ['TEACHER','STUDENT','PARENT','ADMIN'].includes(r) ? r : 'STUDENT';
+        })();
+        await tx.organizationMember.upsert({
+          where: { organizationId_userId: { organizationId, userId: user.id } },
+          update: {},
+          create: { organizationId, userId: user.id, roleInOrg: mappedOrgRole },
+        });
       }
       return user;
     });
   },
 
-  async updateUser(params: { id: string; fullname?: string; email?: string; globalRole?: "SUPER_ADMIN" | "ADMIN" | "TEACHER" | "STUDENT" | "PARENT"; disable?: boolean }) {
+  async updateUser(params: { id: string; fullname?: string; email?: string; globalRole?: "SUPER_ADMIN" | "STAFF" | "TEACHER" | "STUDENT" | "PARENT"; disable?: boolean }) {
     const { id, fullname, email, globalRole } = params;
     const data: Prisma.UserUpdateInput = {};
     if (fullname !== undefined) data.fullname = fullname;
