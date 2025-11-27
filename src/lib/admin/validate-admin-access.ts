@@ -2,7 +2,7 @@
  * Utility functions để validate admin access và permissions
  */
 
-import { UserRole } from "@prisma/client";
+import type { AdminUserRole } from "./admin-constants";
 import { ADMIN_ROLES } from "./admin-constants";
 import { isSuperAdminRole as isSuperAdminUtil } from "../rbac/role-utils";
 
@@ -11,9 +11,9 @@ import { isSuperAdminRole as isSuperAdminUtil } from "../rbac/role-utils";
  * @param role - User role
  * @returns True nếu là admin
  */
-export function isAdmin(role: UserRole | string | null | undefined): boolean {
+export function isAdmin(role: AdminUserRole | string | null | undefined): boolean {
   if (!role) return false;
-  return ADMIN_ROLES.includes(role as UserRole);
+  return ADMIN_ROLES.includes(role as AdminUserRole);
 }
 
 /**
@@ -22,7 +22,7 @@ export function isAdmin(role: UserRole | string | null | undefined): boolean {
  * @returns True nếu là super admin
  */
 export function isSuperAdmin(
-  role: UserRole | string | null | undefined
+  role: AdminUserRole | string | null | undefined
 ): boolean {
   return isSuperAdminUtil(role as string | null | undefined);
 }
@@ -33,7 +33,7 @@ export function isSuperAdmin(
  * @returns True nếu có quyền truy cập
  */
 export function canAccessAdmin(
-  role: UserRole | string | null | undefined
+  role: AdminUserRole | string | null | undefined
 ): boolean {
   return isAdmin(role);
 }
@@ -44,7 +44,7 @@ export function canAccessAdmin(
  * @returns True nếu có quyền
  */
 export function canManageUsers(
-  role: UserRole | string | null | undefined
+  role: AdminUserRole | string | null | undefined
 ): boolean {
   return isSuperAdmin(role);
 }
@@ -55,7 +55,7 @@ export function canManageUsers(
  * @returns True nếu có quyền
  */
 export function canManageSystemSettings(
-  role: UserRole | string | null | undefined
+  role: AdminUserRole | string | null | undefined
 ): boolean {
   return isSuperAdmin(role);
 }
@@ -66,7 +66,7 @@ export function canManageSystemSettings(
  * @returns True nếu có quyền
  */
 export function canViewAuditLogs(
-  role: UserRole | string | null | undefined
+  role: AdminUserRole | string | null | undefined
 ): boolean {
   return isSuperAdmin(role);
 }
@@ -77,7 +77,7 @@ export function canViewAuditLogs(
  * @returns True nếu có quyền
  */
 export function canModerateContent(
-  role: UserRole | string | null | undefined
+  role: AdminUserRole | string | null | undefined
 ): boolean {
   return isAdmin(role);
 }
@@ -88,7 +88,7 @@ export function canModerateContent(
  * @returns True nếu có quyền
  */
 export function canViewReports(
-  role: UserRole | string | null | undefined
+  role: AdminUserRole | string | null | undefined
 ): boolean {
   return isAdmin(role);
 }
@@ -99,7 +99,7 @@ export function canViewReports(
  * @returns True nếu có quyền
  */
 export function canManageOrganizations(
-  role: UserRole | string | null | undefined
+  role: AdminUserRole | string | null | undefined
 ): boolean {
   return isAdmin(role);
 }
@@ -110,8 +110,8 @@ export function canManageOrganizations(
  * @returns Array of assignable roles
  */
 export function getAssignableRoles(
-  currentRole: UserRole | string | null | undefined
-): UserRole[] {
+  currentRole: AdminUserRole | string | null | undefined
+): AdminUserRole[] {
   if (isSuperAdmin(currentRole)) {
     return ["SUPER_ADMIN", "STAFF", "TEACHER", "STUDENT", "PARENT"];
   }

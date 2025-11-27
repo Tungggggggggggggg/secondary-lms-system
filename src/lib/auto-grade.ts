@@ -104,8 +104,10 @@ export async function autoGradeQuiz(
 
       // Lấy đáp án đúng từ database
       const correctOptions = question.options
-        .filter(option => option.isCorrect)
-        .map(option => option.id)
+        .filter(
+          (option: { id: string; isCorrect: boolean }) => option.isCorrect,
+        )
+        .map((option: { id: string }) => option.id)
         .sort()
 
       // Lấy đáp án của học sinh (nếu có)

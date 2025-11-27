@@ -2,7 +2,54 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+
+interface StudentGradesSubmissionRow {
+  id: string;
+  assignmentId: string;
+  content: string | null;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+  assignment: {
+    id: string;
+    title: string;
+    type: string;
+    dueDate: Date | null;
+    classrooms: {
+      classroom: {
+        id: string;
+        name: string;
+        code: string;
+        icon: string | null;
+        teacher: {
+          id: string;
+          fullname: string | null;
+          email: string;
+        } | null;
+      } | null;
+    }[];
+  };
+}
+
+interface StudentGradesMissingAssignmentRow {
+  id: string;
+  title: string;
+  type: string;
+  dueDate: Date | null;
+  classrooms: {
+    classroom: {
+      id: string;
+      name: string;
+      code: string;
+      icon: string | null;
+      teacher: {
+        id: string;
+        fullname: string | null;
+        email: string;
+      } | null;
+    } | null;
+  }[];
+}
 
 /**
  * GET /api/students/grades
@@ -22,7 +69,7 @@ export async function GET(_req: NextRequest) {
       where: { email: session.user.email },
     });
 
-    if (!user || user.role !== UserRole.STUDENT) {
+    if (!user || user.role !== "STUDENT") {
       return NextResponse.json(
         { success: false, message: "Forbidden - Student role required" },
         { status: 403 }
@@ -35,7 +82,9 @@ export async function GET(_req: NextRequest) {
       select: { classroomId: true },
     });
 
-    const classroomIds = classroomLinks.map((cs) => cs.classroomId);
+    const classroomIds = classroomLinks.map(
+      (cs: { classroomId: string }) => cs.classroomId,
+    );
 
     if (classroomIds.length === 0) {
       return NextResponse.json(
@@ -59,8 +108,12 @@ export async function GET(_req: NextRequest) {
       select: { assignmentId: true },
     });
 
-    const assignmentIdList = Array.from(
-      new Set(assignmentLinks.map((al) => al.assignmentId))
+    const assignmentIdList: string[] = Array.from(
+      new Set(
+        assignmentLinks.map(
+          (al: { assignmentId: string }) => al.assignmentId,
+        ),
+      ),
     );
 
     if (assignmentIdList.length === 0) {
@@ -78,7 +131,7 @@ export async function GET(_req: NextRequest) {
     }
 
     // Lấy tất cả submissions của student cho các assignments này (bao gồm cả chưa chấm)
-    const submissions = await prisma.assignmentSubmission.findMany({
+    const submissionsRaw = await prisma.assignmentSubmission.findMany({
       where: {
         studentId: user.id,
         assignmentId: { in: assignmentIdList },
@@ -103,8 +156,12 @@ export async function GET(_req: NextRequest) {
       orderBy: { submittedAt: "desc" },
     });
 
+    const submissions =
+      submissionsRaw as StudentGradesSubmissionRow[];
+
     // Transform data cho các bài đã nộp
-    const submissionGrades = submissions.map((sub) => {
+    const submissionGrades = submissions.map(
+      (sub: StudentGradesSubmissionRow) => {
       const classroom = sub.assignment.classrooms[0]?.classroom; // Lấy classroom đầu tiên
 
       return {
@@ -136,10 +193,12 @@ export async function GET(_req: NextRequest) {
 
     // Tìm các assignments chưa có submission nào từ student
     const submittedAssignmentIds = new Set(
-      submissions.map((sub) => sub.assignmentId)
+      submissions.map(
+        (sub: StudentGradesSubmissionRow) => sub.assignmentId,
+      ),
     );
 
-    const missingAssignments = await prisma.assignment.findMany({
+    const missingAssignmentsRaw = await prisma.assignment.findMany({
       where: {
         id: {
           in: assignmentIdList.filter(
@@ -162,10 +221,14 @@ export async function GET(_req: NextRequest) {
       },
     });
 
+    const missingAssignments =
+      missingAssignmentsRaw as StudentGradesMissingAssignmentRow[];
+
     const now = new Date();
 
     // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
-    const missingGrades = missingAssignments.map((assignment) => {
+    const missingGrades = missingAssignments.map(
+      (assignment: StudentGradesMissingAssignmentRow) => {
       const classroom = assignment.classrooms[0]?.classroom;
       const isPastDue =
         assignment.dueDate !== null && assignment.dueDate < now;
@@ -197,11 +260,16 @@ export async function GET(_req: NextRequest) {
     const grades = [...submissionGrades, ...missingGrades];
 
     // Tính điểm trung bình chỉ dựa trên các bài đã được chấm thực tế
-    const gradedSubmissions = submissions.filter((sub) => sub.grade !== null);
+    const gradedSubmissions = submissions.filter(
+      (sub: StudentGradesSubmissionRow) => sub.grade !== null,
+    );
     const averageGrade =
       gradedSubmissions.length > 0
-        ? gradedSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) /
-          gradedSubmissions.length
+        ? gradedSubmissions.reduce(
+            (sum: number, sub: StudentGradesSubmissionRow) =>
+              sum + (sub.grade || 0),
+            0,
+          ) / gradedSubmissions.length
         : 0;
 
     console.log(

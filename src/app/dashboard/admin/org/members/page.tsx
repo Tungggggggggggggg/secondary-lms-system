@@ -15,10 +15,11 @@ import { formatDate } from "@/lib/admin/format-date";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/admin/admin-constants";
 import { Users, Plus, Trash2 } from "lucide-react";
 import StatsCard from "@/components/admin/stats/StatsCard";
-import type { UserRole as PrismaUserRole } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
 import useSWR from "swr";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+
+type AppUserRole = "SUPER_ADMIN" | "STAFF" | "TEACHER" | "STUDENT" | "PARENT";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -38,7 +39,7 @@ export default function OrgMembersPage() {
   // Dialog & search state for adding members by autocomplete
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; email: string; fullname: string | null; role: PrismaUserRole }>>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; email: string; fullname: string | null; role: AppUserRole }>>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
@@ -274,7 +275,7 @@ export default function OrgMembersPage() {
       sortable: false,
       render: (value) => {
         const user = (value as any)?.user;
-        const roleValue = user?.role as PrismaUserRole;
+        const roleValue = user?.role as AppUserRole | undefined;
         if (!roleValue) return "-";
         return (
           <span

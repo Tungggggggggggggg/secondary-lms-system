@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
+import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StatsOverview() {
     const { stats, isLoading, error, fetchStats } = useTeacherDashboard();
@@ -59,19 +61,7 @@ export default function StatsOverview() {
         return (
             <div className="grid md:grid-cols-4 gap-6 mb-8">
                 {statsConfig.map((_, idx) => (
-                    <div
-                        key={idx}
-                        className="bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl p-6 animate-pulse"
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-14 h-14 bg-white/20 rounded-xl"></div>
-                            <div className="text-right">
-                                <div className="h-8 w-16 bg-white/20 rounded mb-2"></div>
-                                <div className="h-4 w-20 bg-white/20 rounded"></div>
-                            </div>
-                        </div>
-                        <div className="h-6 w-32 bg-white/20 rounded"></div>
-                    </div>
+                    <Skeleton key={idx} className="h-[140px] rounded-2xl" />
                 ))}
             </div>
         );
@@ -95,45 +85,28 @@ export default function StatsOverview() {
         );
     }
 
-    return (
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-            {statsConfig.map((config, idx) => {
-                const value = stats[config.key as keyof typeof stats] || 0;
-                const changeValue = config.changeKey 
-                    ? stats[config.changeKey as keyof typeof stats] || 0
-                    : null;
-                
-                const changeDisplay = changeValue !== null
-                    ? `${config.changePrefix} ${changeValue}${config.changeSuffix}`
-                    : config.changePrefix;
+    const items: StatItem[] = statsConfig.map((config) => {
+        const rawValue =
+            (stats[config.key as keyof typeof stats] as number | string | undefined) ?? 0;
+        const rawChange = config.changeKey
+            ? ((stats[config.changeKey as keyof typeof stats] as number | string | undefined) ?? 0)
+            : null;
 
-                return (
-                    <div
-                        key={idx}
-                        className={`bg-gradient-to-br ${config.color} rounded-2xl p-6 text-white hover-lift`}
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
-                                {config.icon}
-                            </div>
-                            <div className="text-right">
-                                <div className="text-3xl font-extrabold">
-                                    {value}
-                                </div>
-                                <div className="text-white/80 text-sm">
-                                    {config.label}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                            <span className="bg-white/20 px-2 py-1 rounded-full">
-                                {changeDisplay}
-                            </span>
-                            <span className="text-white/80">{config.changeLabel}</span>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
+        const value = typeof rawValue === "number" ? rawValue.toString() : String(rawValue);
+        const pillText =
+            rawChange !== null
+                ? `${config.changePrefix} ${rawChange}${config.changeSuffix}`
+                : config.changePrefix;
+
+        return {
+            icon: config.icon,
+            color: config.color,
+            label: config.label,
+            value,
+            pillText,
+            subtitle: config.changeLabel,
+        };
+    });
+
+    return <StatsGrid items={items} />;
 }

@@ -3,6 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
 
+interface TeacherPerformanceClassroomRow {
+  id: string;
+  name: string;
+  icon: string | null;
+  _count: {
+    students: number;
+  };
+}
+
 /**
  * API: GET /api/teachers/dashboard/performance
  * Mục đích: Lấy hiệu suất giảng dạy theo từng lớp học
@@ -39,7 +48,7 @@ export async function GET(req: NextRequest) {
     console.log(`[API /api/teachers/dashboard/performance] Teacher ID: ${userId}`);
 
     // Lấy tất cả các lớp học của teacher
-    const classrooms = await prisma.classroom.findMany({
+    const classrooms = (await prisma.classroom.findMany({
       where: {
         teacherId: userId,
         isActive: true,
@@ -58,11 +67,11 @@ export async function GET(req: NextRequest) {
         createdAt: 'desc',
       },
       take: 5, // Lấy top 5 lớp mới nhất
-    });
+    })) as TeacherPerformanceClassroomRow[];
 
     // Tính toán hiệu suất cho từng lớp
     const performanceData = await Promise.all(
-      classrooms.map(async (classroom) => {
+      classrooms.map(async (classroom: TeacherPerformanceClassroomRow) => {
         // Lấy tất cả bài tập của lớp này
         const assignments = await prisma.assignmentClassroom.findMany({
           where: {
@@ -73,7 +82,9 @@ export async function GET(req: NextRequest) {
           },
         });
 
-        const assignmentIds = assignments.map((a) => a.assignmentId);
+        const assignmentIds = assignments.map(
+          (a: { assignmentId: string }) => a.assignmentId,
+        );
 
         if (assignmentIds.length === 0) {
           // Không có bài tập nào
@@ -105,13 +116,19 @@ export async function GET(req: NextRequest) {
         });
 
         // Tính điểm trung bình
-        const totalGrade = submissions.reduce((sum, sub) => sum + (sub.grade || 0), 0);
+        const totalGrade = submissions.reduce(
+          (sum: number, sub: { grade: number | null }) =>
+            sum + (sub.grade || 0),
+          0,
+        );
         const averageGrade = submissions.length > 0 
           ? Math.round((totalGrade / submissions.length) * 100) / 100
           : 0;
 
         // Đếm số học sinh đã nộp bài (unique)
-        const uniqueStudents = new Set(submissions.map((s) => s.studentId));
+        const uniqueStudents = new Set(
+          submissions.map((s: { studentId: string }) => s.studentId),
+        );
         const submittedCount = uniqueStudents.size;
 
         return {
@@ -152,7 +169,8 @@ export async function GET(req: NextRequest) {
 /**
  * Helper function: Lấy màu gradient dựa trên icon
  */
-function getColorForIcon(icon: string): string {
+function getColorForIcon(icon: string | null): string {
+  if (!icon) return 'from-gray-400 to-gray-500';
   if (icon.includes('📜') || icon.includes('📚')) return 'from-yellow-400 to-yellow-500';
   if (icon.includes('🗺️')) return 'from-emerald-400 to-emerald-500';
   if (icon.includes('🗣️')) return 'from-blue-400 to-blue-500';

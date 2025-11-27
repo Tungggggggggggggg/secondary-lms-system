@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+
+interface QuizAnswerOptionRow {
+  id: string;
+  isCorrect: boolean;
+}
+
+interface QuizAnswerQuestionRow {
+  id: string;
+  options: QuizAnswerOptionRow[];
+}
 
 /**
  * GET /api/students/assignments/[id]/answers
@@ -13,7 +22,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
@@ -78,18 +87,20 @@ export async function GET(
     }
 
     // Lấy đáp án đúng (IDs) cho từng câu
-    const questions = await prisma.question.findMany({
+    const questions = (await prisma.question.findMany({
       where: { assignmentId },
       select: {
         id: true,
         options: { select: { id: true, isCorrect: true }, orderBy: { order: "asc" } },
       },
       orderBy: { order: "asc" },
-    });
+    })) as QuizAnswerQuestionRow[];
 
-    const data = questions.map((q) => ({
+    const data = questions.map((q: QuizAnswerQuestionRow) => ({
       questionId: q.id,
-      correctOptionIds: q.options.filter((o) => o.isCorrect).map((o) => o.id),
+      correctOptionIds: q.options
+        .filter((o: QuizAnswerOptionRow) => o.isCorrect)
+        .map((o: QuizAnswerOptionRow) => o.id),
     }));
 
     return NextResponse.json(

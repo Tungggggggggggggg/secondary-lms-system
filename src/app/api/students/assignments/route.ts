@@ -1,7 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser } from "@/lib/api-utils";
+
+interface StudentAssignmentSubmissionRow {
+  id: string;
+  assignmentId: string;
+  content: string | null;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+}
+
+interface StudentAssignmentRow {
+  addedAt: Date;
+  assignment: {
+    id: string;
+    title: string;
+    description: string | null;
+    dueDate: Date | null;
+    openAt: Date | null;
+    lockAt: Date | null;
+    timeLimitMinutes: number | null;
+    type: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  classroom: {
+    id: string;
+    name: string;
+    code: string;
+    icon: string | null;
+    teacher: {
+      id: string;
+      fullname: string | null;
+      email: string;
+    } | null;
+  };
+}
 
 /**
  * GET /api/students/assignments
@@ -12,7 +47,7 @@ import { getAuthenticatedUser } from "@/lib/api-utils";
 export async function GET(req: NextRequest) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -26,7 +61,9 @@ export async function GET(req: NextRequest) {
       select: { classroomId: true },
     });
 
-    const classroomIds = studentClassrooms.map((sc) => sc.classroomId);
+    const classroomIds = studentClassrooms.map(
+      (sc: { classroomId: string }) => sc.classroomId,
+    );
 
     if (classroomIds.length === 0) {
       return NextResponse.json(
@@ -36,7 +73,7 @@ export async function GET(req: NextRequest) {
     }
 
     // OPTIMIZE: Query trực tiếp với classroomId IN thay vì nested some() - sử dụng index
-    const allAssignments = await prisma.assignmentClassroom.findMany({
+    const allAssignments = (await prisma.assignmentClassroom.findMany({
       where: {
         classroomId: { in: classroomIds },
       },
@@ -70,7 +107,7 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: { addedAt: "desc" },
-    });
+    })) as StudentAssignmentRow[];
 
     if (allAssignments.length === 0) {
       return NextResponse.json(
@@ -79,10 +116,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const assignmentIds = allAssignments.map((ac) => ac.assignment.id);
+    const assignmentIds = allAssignments.map(
+      (ac: StudentAssignmentRow) => ac.assignment.id,
+    );
 
     // OPTIMIZE: Fetch submissions song song với counts (nếu cần) cho tất cả assignments
-    const [studentSubmissions] = await Promise.all([
+    const [studentSubmissionsRaw] = await Promise.all([
       prisma.assignmentSubmission.findMany({
         where: {
           assignmentId: { in: assignmentIds },
@@ -100,13 +139,17 @@ export async function GET(req: NextRequest) {
       // Counts có thể được fetch riêng nếu cần, nhưng tạm thời bỏ qua để tối ưu
     ]);
 
+    const studentSubmissions =
+      studentSubmissionsRaw as StudentAssignmentSubmissionRow[];
+
     // Tạo map để lookup submission nhanh
-    const submissionMap = new Map(
-      studentSubmissions.map((sub) => [sub.assignmentId, sub])
-    );
+    const submissionMap = new Map<string, StudentAssignmentSubmissionRow>();
+    studentSubmissions.forEach((sub: StudentAssignmentSubmissionRow) => {
+      submissionMap.set(sub.assignmentId, sub);
+    });
 
     // Transform data để trả về (optimize: sử dụng classroom từ join)
-    const assignments = allAssignments.map((ac) => {
+    const assignments = allAssignments.map((ac: StudentAssignmentRow) => {
       const assignment = ac.assignment;
       const submission = submissionMap.get(assignment.id);
       const classroom = ac.classroom;

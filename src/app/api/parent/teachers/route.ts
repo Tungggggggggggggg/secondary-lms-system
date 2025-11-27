@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+
+interface ParentTeacherClassroomRow {
+  classroom: {
+    id: string;
+    name: string;
+    code: string;
+    icon: string | null;
+    teacher: {
+      id: string;
+      email: string;
+      fullname: string | null;
+    } | null;
+  };
+  student: {
+    id: string;
+    fullname: string | null;
+  };
+}
 
 /**
  * GET /api/parent/teachers
@@ -9,7 +26,7 @@ import { UserRole } from "@prisma/client";
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req, UserRole.PARENT);
+    const user = await getAuthenticatedUser(req, "PARENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -41,7 +58,9 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const studentIds = relationships.map((rel) => rel.studentId);
+    const studentIds = relationships.map(
+      (rel: { studentId: string }) => rel.studentId,
+    );
 
     // Lấy tất cả các lớp mà các con đã tham gia
     const studentClassrooms = await prisma.classroomStudent.findMany({
@@ -73,21 +92,21 @@ export async function GET(req: NextRequest) {
       {
         id: string;
         email: string;
-        fullname: string;
+        fullname: string | null;
         classrooms: Array<{
           id: string;
           name: string;
           code: string;
-          icon: string;
+          icon: string | null;
           students: Array<{
             id: string;
-            fullname: string;
+            fullname: string | null;
           }>;
         }>;
       }
     >();
 
-    studentClassrooms.forEach((sc) => {
+    studentClassrooms.forEach((sc: ParentTeacherClassroomRow) => {
       const teacher = sc.classroom.teacher;
       if (teacher) {
         const existing = teacherMap.get(teacher.id);

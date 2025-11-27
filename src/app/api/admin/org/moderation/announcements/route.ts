@@ -43,7 +43,18 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       where: { id: { in: body.ids } },
       select: { organizationId: true },
     });
-    const orgIds = Array.from(new Set(annOrgs.map(x => x.organizationId).filter((x): x is string => !!x)));
+    interface AnnouncementOrgRow {
+      organizationId: string | null;
+    }
+
+    const orgIdSet = new Set<string>();
+    (annOrgs as AnnouncementOrgRow[]).forEach((row) => {
+      if (row.organizationId) {
+        orgIdSet.add(row.organizationId);
+      }
+    });
+
+    const orgIds = Array.from(orgIdSet);
     if (orgIds.length === 0) {
       return errorResponse(400, "No valid announcements found for moderation");
     }
@@ -51,7 +62,14 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       where: { userId: authUser.id, organizationId: { in: orgIds } },
       select: { organizationId: true },
     });
-    const hasAll = orgIds.every(oid => memberships.some(m => m.organizationId === oid));
+
+    interface MembershipRow {
+      organizationId: string;
+    }
+
+    const hasAll = orgIds.every((oid: string) =>
+      memberships.some((m: MembershipRow) => m.organizationId === oid)
+    );
     if (!hasAll) return errorResponse(403, "Forbidden: some announcements are outside of your organization scope");
   }
 

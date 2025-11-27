@@ -15,9 +15,10 @@ import { useAdminUserMutations } from "@/hooks/admin/use-admin-user-mutations";
 import { formatDate } from "@/lib/admin/format-date";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/admin/admin-constants";
 import { Plus, Edit, Trash2, Key, Lock, Unlock } from "lucide-react";
-import type { UserRole as PrismaUserRole } from "@prisma/client";
 import { usePrompt } from "@/components/providers/PromptProvider";
 import { useRouter } from "next/navigation";
+
+type AppUserRole = "SUPER_ADMIN" | "STAFF" | "TEACHER" | "STUDENT" | "PARENT";
 
 /**
  * Component AdminUsersPage - Trang quản lý users cho SUPER_ADMIN
@@ -87,7 +88,7 @@ export default function AdminUsersPage() {
       label: "Vai trò",
       sortable: true,
       render: (value) => {
-        const roleValue = value as PrismaUserRole;
+        const roleValue = value as AppUserRole;
         return (
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium ${

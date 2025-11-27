@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
-import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/assignments/[id]/classrooms
@@ -29,7 +28,7 @@ export async function GET(
       ? await prisma.user.findUnique({ where: { email: session.user.email } })
       : null;
 
-    if (!user || user.role !== UserRole.TEACHER) {
+    if (!user || user.role !== 'TEACHER') {
       return NextResponse.json({ 
         success: false, 
         message: 'Forbidden - Teacher only' 
@@ -77,8 +76,23 @@ export async function GET(
       }
     });
 
+    interface AssignmentClassroomRow {
+      addedAt: Date | string;
+      classroom: {
+        id: string;
+        name: string;
+        code: string;
+        icon: string | null;
+        _count: {
+          students: number;
+        };
+      };
+    }
+
     // Lấy danh sách classroom IDs
-    const classroomIds = assignmentClassrooms.map(ac => ac.classroom.id);
+    const classroomIds = assignmentClassrooms.map(
+      (ac: AssignmentClassroomRow) => ac.classroom.id
+    );
 
     // Lấy danh sách students trong các classrooms này
     const classroomStudents = await prisma.classroomStudent.findMany({
@@ -91,60 +105,107 @@ export async function GET(
       }
     });
 
+    interface ClassroomStudentRow {
+      classroomId: string;
+      studentId: string;
+    }
+
     // Lấy submissions của assignment này
     const submissions = await prisma.assignmentSubmission.findMany({
       where: {
         assignmentId: params.id,
-        studentId: { in: classroomStudents.map(cs => cs.studentId) }
+        studentId: {
+          in: classroomStudents.map(
+            (cs: ClassroomStudentRow) => cs.studentId
+          ),
+        },
       },
       select: {
         studentId: true
       }
     });
 
+    interface AssignmentSubmissionRow {
+      studentId: string;
+    }
+
     // Tạo map: studentId -> hasSubmitted
-    const submissionMap = new Set(submissions.map(s => s.studentId));
+    const submissionMap = new Set(
+      submissions.map((s: AssignmentSubmissionRow) => s.studentId)
+    );
 
     // Tạo map: classroomId -> studentIds
-    const classroomStudentMap = classroomStudents.reduce((map, cs) => {
-      if (!map.has(cs.classroomId)) {
-        map.set(cs.classroomId, []);
-      }
-      map.get(cs.classroomId)!.push(cs.studentId);
-      return map;
-    }, new Map<string, string[]>());
+    const classroomStudentMap = classroomStudents.reduce(
+      (
+        map: Map<string, string[]>,
+        cs: ClassroomStudentRow
+      ) => {
+        if (!map.has(cs.classroomId)) {
+          map.set(cs.classroomId, []);
+        }
+        map.get(cs.classroomId)!.push(cs.studentId);
+        return map;
+      },
+      new Map<string, string[]>()
+    );
+
+    interface AssignmentClassroomSummary {
+      classroomId: string;
+      classroomName: string;
+      classroomCode: string;
+      classroomIcon: string | null;
+      studentCount: number;
+      submissionCount: number;
+      assignedAt: Date | string;
+      color: string;
+    }
 
     // Transform data để phù hợp với frontend
-    const transformedData = assignmentClassrooms.map(ac => {
-      const classroomId = ac.classroom.id;
-      const totalStudents = ac.classroom._count.students;
-      const studentIds = classroomStudentMap.get(classroomId) || [];
-      
-      // Tính số bài nộp thực tế cho classroom này
-      const submissionCount = studentIds.filter(studentId => 
-        submissionMap.has(studentId)
-      ).length;
+    const transformedData: AssignmentClassroomSummary[] = assignmentClassrooms.map(
+      (ac: AssignmentClassroomRow) => {
+        const classroomId = ac.classroom.id;
+        const totalStudents = ac.classroom._count.students;
+        const studentIds = classroomStudentMap.get(classroomId) || [];
 
-      return {
-        classroomId: ac.classroom.id,
-        classroomName: ac.classroom.name,
-        classroomCode: ac.classroom.code,
-        classroomIcon: ac.classroom.icon,
-        studentCount: totalStudents,
-        submissionCount: submissionCount,
-        assignedAt: ac.addedAt,
-        // Màu sắc cố định cho mỗi classroom (dựa trên ID)
-        color: `#${ac.classroom.id.slice(0, 6).split('').map(c => c.charCodeAt(0)).join('').slice(0, 6)}`
-      };
-    });
+        // Tính số bài nộp thực tế cho classroom này
+        const submissionCount = studentIds.filter(
+          (studentId: string) => submissionMap.has(studentId)
+        ).length;
+
+        return {
+          classroomId: ac.classroom.id,
+          classroomName: ac.classroom.name,
+          classroomCode: ac.classroom.code,
+          classroomIcon: ac.classroom.icon,
+          studentCount: totalStudents,
+          submissionCount: submissionCount,
+          assignedAt: ac.addedAt,
+          // Màu sắc cố định cho mỗi classroom (dựa trên ID)
+          color: `#${ac.classroom.id
+            .slice(0, 6)
+            .split('')
+            .map((c: string) => c.charCodeAt(0))
+            .join('')
+            .slice(0, 6)}`,
+        };
+      }
+    );
 
     return NextResponse.json({ 
       success: true, 
       data: transformedData,
       summary: {
         totalClassrooms: transformedData.length,
-        totalStudents: transformedData.reduce((sum, cls) => sum + cls.studentCount, 0),
-        totalSubmissions: transformedData.reduce((sum, cls) => sum + cls.submissionCount, 0)
+        totalStudents: transformedData.reduce(
+          (sum: number, cls: AssignmentClassroomSummary) =>
+            sum + cls.studentCount,
+          0
+        ),
+        totalSubmissions: transformedData.reduce(
+          (sum: number, cls: AssignmentClassroomSummary) =>
+            sum + cls.submissionCount,
+          0
+        ),
       }
     }, { status: 200 });
 

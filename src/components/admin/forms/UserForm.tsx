@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { UserRole } from "@prisma/client";
 import { CreateUserInput, UpdateUserInput } from "@/types/admin";
 import { USER_ROLES, ROLE_LABELS } from "@/lib/admin/admin-constants";
 
@@ -34,7 +33,7 @@ export default function UserForm({
     email: initialData?.email || "",
     fullname: initialData?.fullname || "",
     password: "",
-    role: (initialData?.role as UserRole) || "STUDENT",
+    role: (initialData?.role ?? "STUDENT") as CreateUserInput["role"],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -45,7 +44,7 @@ export default function UserForm({
         email: initialData.email || "",
         fullname: initialData.fullname || "",
         password: "",
-        role: (initialData.role as UserRole) || "STUDENT",
+        role: (initialData.role ?? "STUDENT") as CreateUserInput["role"],
       });
     }
   }, [initialData]);
@@ -169,7 +168,10 @@ export default function UserForm({
           id="role"
           value={formData.role}
           onChange={(e) =>
-            setFormData({ ...formData, role: e.target.value as UserRole })
+            setFormData({
+              ...formData,
+              role: e.target.value as CreateUserInput["role"],
+            })
           }
           disabled={loading}
           className="block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-black focus:outline-none focus:ring-2 focus:ring-violet-500"

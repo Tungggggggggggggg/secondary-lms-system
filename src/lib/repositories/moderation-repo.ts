@@ -52,7 +52,7 @@ export const moderationRepo = {
         const last = items.pop()!;
         nextCursor = last.id;
       }
-      const mapped: QueueItem[] = items.map((i) => ({
+      const mapped: QueueItem[] = items.map((i: any) => ({
         id: i.id,
         type: "announcement",
         createdAt: i.createdAt,

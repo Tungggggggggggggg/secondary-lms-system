@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import prisma from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
     try {
@@ -32,13 +31,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         }
 
         // Nếu là giáo viên: chỉ xem được lớp học của mình
-        if (user.role === UserRole.TEACHER) {
+        if (user.role === "TEACHER") {
             if (classroom.teacherId !== user.id) {
                 return NextResponse.json({ error: "Forbidden" }, { status: 403 });
             }
         }
         // Nếu là học sinh: kiểm tra đã tham gia lớp chưa
-        else if (user.role === UserRole.STUDENT) {
+        else if (user.role === "STUDENT") {
             const isMember = await prisma.classroomStudent.findFirst({
                 where: {
                     classroomId: classroom.id,

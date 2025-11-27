@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { resolveOrgId } from "@/lib/org-scope";
 
 // ============================================
@@ -66,10 +67,22 @@ export async function GET(
     }
 
     // Format response data
+    interface ClassroomStudentRow {
+      id: string;
+      joinedAt: Date | string;
+      student: {
+        id: string;
+        fullname: string;
+        email: string;
+        role: string;
+        createdAt: Date | string;
+      };
+    }
+
     const formattedClassroom = {
       ...classroom,
       studentsCount: classroom.students.length,
-      students: classroom.students.map((cs, index) => ({
+      students: classroom.students.map((cs: ClassroomStudentRow, index: number) => ({
         id: cs.student.id,
         stt: index + 1,
         fullname: cs.student.fullname,
@@ -141,7 +154,7 @@ export async function DELETE(
       }
 
       // Xóa trong transaction
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Xóa tất cả học sinh khỏi lớp
         await tx.classroomStudent.deleteMany({
           where: { classroomId: classroomId }

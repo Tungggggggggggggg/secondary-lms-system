@@ -24,6 +24,8 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     orderBy: { organization: { name: "asc" } },
     select: { organization: { select: { id: true, name: true } } },
   });
-  const items = memberships.map((m) => m.organization);
+  const items = memberships.map(
+    (m: { organization: { id: string; name: string } }) => m.organization,
+  );
   return NextResponse.json({ success: true, items });
 }, "ORG_MINE_LIST");

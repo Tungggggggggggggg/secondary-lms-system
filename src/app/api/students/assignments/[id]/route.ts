@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+
+interface StudentAssignmentQuestionRow {
+  id: string;
+  content: string;
+  type: string;
+  order: number | null;
+  options: unknown;
+  _count: {
+    comments: number;
+  };
+}
 
 /**
  * GET /api/students/assignments/[id]
@@ -14,7 +24,7 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -161,7 +171,8 @@ export async function GET(
         icon: classroom.icon,
         teacher: classroom.teacher,
       },
-      questions: assignmentData.questions.map((q) => ({
+      questions: (assignmentData.questions as StudentAssignmentQuestionRow[]).map(
+        (q: StudentAssignmentQuestionRow) => ({
         id: q.id,
         content: q.content,
         type: q.type,

@@ -20,38 +20,51 @@ export const GET = withApiLogging(async (req: NextRequest) => {
 
   // Sử dụng truy vấn SQL thô để date_trunc theo ngày
   // Lưu ý: users không có organizationId -> báo cáo toàn cục cho users
-  const [classrooms, courses, assignments, announcements, users] = await Promise.all([
-    prisma.$queryRawUnsafe<any[]>(
+  interface CountRow {
+    d: string;
+    c: number;
+  }
+
+  const rawResults = await Promise.all([
+    prisma.$queryRawUnsafe(
       `select to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') d, count(*) c
        from "classrooms"
        where "createdAt" >= $1 and "organizationId" = $2
        group by 1 order by 1`, [from, orgId]
     ),
-    prisma.$queryRawUnsafe<any[]>(
+    prisma.$queryRawUnsafe(
       `select to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') d, count(*) c
        from "courses"
        where "createdAt" >= $1 and "organizationId" = $2
        group by 1 order by 1`, [from, orgId]
     ),
-    prisma.$queryRawUnsafe<any[]>(
+    prisma.$queryRawUnsafe(
       `select to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') d, count(*) c
        from "assignments"
        where "createdAt" >= $1 and "organizationId" = $2
        group by 1 order by 1`, [from, orgId]
     ),
-    prisma.$queryRawUnsafe<any[]>(
+    prisma.$queryRawUnsafe(
       `select to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') d, count(*) c
        from "announcements"
        where "createdAt" >= $1 and "organizationId" = $2
        group by 1 order by 1`, [from, orgId]
     ),
-    prisma.$queryRawUnsafe<any[]>(
+    prisma.$queryRawUnsafe(
       `select to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') d, count(*) c
        from "users"
        where "createdAt" >= $1
        group by 1 order by 1`, [from]
     ),
   ]);
+
+  const [classrooms, courses, assignments, announcements, users] = rawResults as [
+    CountRow[],
+    CountRow[],
+    CountRow[],
+    CountRow[],
+    CountRow[],
+  ];
 
   return NextResponse.json({ success: true, series: { classrooms, courses, assignments, announcements, users } });
 }, "ADMIN_ORG_REPORTS_TIMESERIES");

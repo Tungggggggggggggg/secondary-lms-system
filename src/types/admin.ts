@@ -2,7 +2,9 @@
  * Type definitions cho Admin Dashboard
  */
 
-import type { UserRole, OrgRole } from "@prisma/client";
+import type { AdminUserRole } from "@/lib/admin/admin-constants";
+
+export type AdminOrgRole = "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
 
 // ============================================
 // User Types
@@ -12,7 +14,7 @@ export interface AdminUser {
   id: string;
   email: string;
   fullname: string;
-  role: UserRole;
+  role: AdminUserRole;
   createdAt: string;
   updatedAt?: string;
   disabled?: boolean;
@@ -31,7 +33,7 @@ export interface CreateUserInput {
   email: string;
   fullname: string;
   password: string;
-  role: UserRole;
+  role: AdminUserRole;
   organizationId?: string;
 }
 
@@ -39,7 +41,7 @@ export interface UpdateUserInput {
   id: string;
   email?: string;
   fullname?: string;
-  role?: UserRole;
+  role?: AdminUserRole;
 }
 
 // ============================================
@@ -61,7 +63,7 @@ export interface OrganizationMember {
   id: string;
   organizationId: string;
   userId: string;
-  roleInOrg: OrgRole | null;
+  roleInOrg: AdminOrgRole | null;
   createdAt: string;
   user: AdminUser;
   [key: string]: unknown;

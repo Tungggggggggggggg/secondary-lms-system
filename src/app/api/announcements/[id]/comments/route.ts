@@ -6,7 +6,6 @@ import {
   isStudentInClassroom,
   isTeacherOfClassroom,
 } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
 import { enforceRateLimit, RateLimitError } from "@/lib/http/rate-limit";
 
 // GET: Lấy danh sách comments của một announcement (teacher owner hoặc student trong lớp)
@@ -47,8 +46,8 @@ export async function GET(
     const classroomId = ann.classroomId;
 
     // Kiểm tra quyền truy cập: giáo viên sở hữu lớp hoặc học sinh trong lớp
-    const isTeacherOwner = user.role === UserRole.TEACHER && (await isTeacherOfClassroom(user.id, classroomId));
-    const isStudentMember = user.role === UserRole.STUDENT && (await isStudentInClassroom(user.id, classroomId));
+    const isTeacherOwner = user.role === "TEACHER" && (await isTeacherOfClassroom(user.id, classroomId));
+    const isStudentMember = user.role === "STUDENT" && (await isStudentInClassroom(user.id, classroomId));
     const canView = isTeacherOwner || isStudentMember;
     if (!canView) {
       return NextResponse.json(
@@ -100,13 +99,18 @@ export async function GET(
         const randomCount = Math.floor(Math.random() * 2) + 1; // 1 hoặc 2
         const shuffled = [...allTopLevelComments].sort(() => Math.random() - 0.5);
         pickedTopLevel = shuffled.slice(0, randomCount);
-        pickedTopLevel.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        pickedTopLevel.sort(
+          (
+            a: { createdAt: Date | string },
+            b: { createdAt: Date | string }
+          ) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
       } else {
         pickedTopLevel = allTopLevelComments;
       }
 
       // Lấy replies cho các top-level đã chọn và gắn vào data (nested structure)
-      const parentIds = pickedTopLevel.map((c) => c.id);
+      const parentIds = pickedTopLevel.map((c: { id: string }) => c.id);
       let replies: Array<{
         id: string;
         content: string;
@@ -135,17 +139,31 @@ export async function GET(
         });
       }
 
-      const repliesByParent = replies.reduce((acc, reply) => {
-        if (!reply.parentId) return acc;
-        if (!acc[reply.parentId]) acc[reply.parentId] = [] as typeof replies;
-        acc[reply.parentId].push(reply);
-        return acc;
-      }, {} as Record<string, typeof replies>);
+      const repliesByParent = replies.reduce(
+        (
+          acc: Record<string, typeof replies>,
+          reply: {
+            id: string;
+            content: string;
+            createdAt: Date | string;
+            parentId: string | null;
+            author: { id: string; fullname: string; email: string };
+          }
+        ) => {
+          if (!reply.parentId) return acc;
+          if (!acc[reply.parentId]) acc[reply.parentId] = [] as typeof replies;
+          acc[reply.parentId].push(reply);
+          return acc;
+        },
+        {} as Record<string, typeof replies>
+      );
 
-      const recentWithReplies = pickedTopLevel.map((tl) => ({
-        ...tl,
-        replies: repliesByParent[tl.id] || [],
-      }));
+      const recentWithReplies = pickedTopLevel.map(
+        (tl: { id: string } & { [key: string]: unknown }) => ({
+          ...tl,
+          replies: repliesByParent[tl.id] || [],
+        })
+      );
 
       console.log(
         `[INFO] [GET] /api/announcements/${announcementId}/comments?recent=true - Picked ${recentWithReplies.length}/${total} top-level with ${replies.length} replies (requestId: ${requestId})`
@@ -199,7 +217,7 @@ export async function GET(
     ]);
 
     // Lấy tất cả reply comments cho các top-level comments đã lấy
-    const topLevelIds = topLevelComments.map((c) => c.id);
+    const topLevelIds = topLevelComments.map((c: { id: string }) => c.id);
     let replies: Array<{
       id: string;
       content: string;
@@ -235,18 +253,41 @@ export async function GET(
     }
 
     // Group replies theo parentId
-    const repliesByParent = replies.reduce((acc, reply) => {
-      if (!reply.parentId) return acc;
-      if (!acc[reply.parentId]) acc[reply.parentId] = [];
-      acc[reply.parentId].push(reply);
-      return acc;
-    }, {} as Record<string, typeof replies>);
+    const repliesByParent = replies.reduce(
+      (
+        acc: Record<string, typeof replies>,
+        reply: {
+          id: string;
+          content: string;
+          createdAt: Date | string;
+          parentId: string | null;
+          author: { id: string; fullname: string; email: string };
+        }
+      ) => {
+        if (!reply.parentId) return acc;
+        if (!acc[reply.parentId]) acc[reply.parentId] = [] as typeof replies;
+        acc[reply.parentId].push(reply);
+        return acc;
+      },
+      {} as Record<string, typeof replies>
+    );
 
     // Kết hợp top-level comments với replies
-    const commentsWithReplies = topLevelComments.map((comment) => ({
-      ...comment,
-      replies: repliesByParent[comment.id] || [],
-    }));
+    const commentsWithReplies = topLevelComments.map(
+      (
+        comment: {
+          id: string;
+          content: string;
+          createdAt: Date | string;
+          parentId: string | null;
+          status: string;
+          author: { id: string; fullname: string; email: string };
+        }
+      ) => ({
+        ...comment,
+        replies: repliesByParent[comment.id] || [],
+      })
+    );
 
     console.log(
       `[INFO] [GET] /api/announcements/${announcementId}/comments - Found ${topLevelComments.length} top-level comments with ${replies.length} replies (page ${page}, total: ${total}, requestId: ${requestId})`
@@ -314,8 +355,8 @@ export async function POST(
 
     const classroomId = ann.classroomId;
     const canComment =
-      (user.role === UserRole.TEACHER && (await isTeacherOfClassroom(user.id, classroomId))) ||
-      (user.role === UserRole.STUDENT && (await isStudentInClassroom(user.id, classroomId)));
+      (user.role === "TEACHER" && (await isTeacherOfClassroom(user.id, classroomId))) ||
+      (user.role === "STUDENT" && (await isStudentInClassroom(user.id, classroomId)));
     if (!canComment) {
       return NextResponse.json(
         { success: false, message: "Forbidden", requestId },

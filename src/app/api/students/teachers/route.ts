@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+
+interface StudentTeacherClassroomRow {
+  classroom: {
+    id: string;
+    name: string;
+    code: string;
+    icon: string | null;
+    teacher: {
+      id: string;
+      email: string;
+      fullname: string | null;
+    } | null;
+  };
+}
+
+interface Teacher {
+  id: string;
+  email: string;
+  fullname: string | null;
+  classrooms: Array<{
+    id: string;
+    name: string;
+    code: string;
+    icon: string | null;
+  }>;
+}
 
 /**
  * GET /api/students/teachers
@@ -9,7 +34,7 @@ import { UserRole } from "@prisma/client";
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -18,7 +43,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Lấy tất cả các lớp học sinh đã tham gia
-    const studentClassrooms = await prisma.classroomStudent.findMany({
+    const studentClassrooms = (await prisma.classroomStudent.findMany({
       where: { studentId: user.id },
       include: {
         classroom: {
@@ -33,7 +58,7 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-    });
+    })) as StudentTeacherClassroomRow[];
 
     // Tạo map để loại bỏ giáo viên trùng lặp
     const teacherMap = new Map<
@@ -41,17 +66,17 @@ export async function GET(req: NextRequest) {
       {
         id: string;
         email: string;
-        fullname: string;
+        fullname: string | null;
         classrooms: Array<{
           id: string;
           name: string;
           code: string;
-          icon: string;
+          icon: string | null;
         }>;
       }
     >();
 
-    studentClassrooms.forEach((sc) => {
+    studentClassrooms.forEach((sc: StudentTeacherClassroomRow) => {
       const teacher = sc.classroom.teacher;
       if (teacher) {
         const existing = teacherMap.get(teacher.id);

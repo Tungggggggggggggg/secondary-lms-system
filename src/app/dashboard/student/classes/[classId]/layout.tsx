@@ -6,7 +6,6 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 
 type Props = {
     children: React.ReactNode;
@@ -26,7 +25,7 @@ export default async function StudentClassroomLayout({ children, params }: Props
         where: { email: session.user?.email! },
     });
 
-    if (!user || user.role !== UserRole.STUDENT) {
+    if (!user || user.role !== "STUDENT") {
         notFound();
     }
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
 
 /**
@@ -13,7 +12,7 @@ export async function PUT(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -159,7 +158,7 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

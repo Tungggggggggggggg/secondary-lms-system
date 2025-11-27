@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 /**
  * Repository cho ParentStudentLinkRequest
@@ -195,7 +195,7 @@ export const parentStudentLinkRequestRepo = {
       }
 
       // Approve request và tạo link trong transaction
-      return await prisma.$transaction(async (tx) => {
+      return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Cập nhật request
         await tx.parentStudentLinkRequest.update({
           where: { id: requestId },
@@ -331,7 +331,7 @@ export const parentStudentLinkRequestRepo = {
         throw new Error("Database model not available. Please run: npx prisma generate");
       }
 
-      const where: Prisma.ParentStudentLinkRequestWhereInput = {
+      const where: { parentId: string; status?: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" } = {
         parentId,
       };
 
@@ -378,7 +378,7 @@ export const parentStudentLinkRequestRepo = {
     const { studentId, status, limit = 20, skip = 0 } = params;
 
     try {
-      const where: Prisma.ParentStudentLinkRequestWhereInput = {
+      const where: { studentId: string; status?: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" } = {
         studentId,
       };
 

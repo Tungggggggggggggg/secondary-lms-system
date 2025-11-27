@@ -1,6 +1,8 @@
 "use client";
 
 import useSWR from "swr";
+import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -29,52 +31,54 @@ export default function StatsOverview() {
     return (
       <div className="grid md:grid-cols-4 gap-6 mb-8">
         {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="bg-gray-200 rounded-2xl p-6 animate-pulse"
-            style={{ height: "140px" }}
-          />
+          <Skeleton key={i} className="h-[140px] rounded-2xl" />
         ))}
       </div>
     );
   }
 
   if (error || !stats) {
-    return (
-      <div className="grid md:grid-cols-4 gap-6 mb-8">
-        {[
-          { icon: "📖", color: "from-blue-500 to-blue-600", label: "Bài học", value: "—", sub: "Lỗi tải dữ liệu" },
-          { icon: "✍️", color: "from-purple-500 to-purple-600", label: "Bài tập", value: "—", sub: "Lỗi tải dữ liệu" },
-          { icon: "⭐", color: "from-pink-500 to-pink-600", label: "Điểm TB", value: "—", sub: "Lỗi tải dữ liệu" },
-          { icon: "🔥", color: "from-yellow-500 to-orange-500", label: "Lớp học", value: "—", sub: "Lỗi tải dữ liệu" },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className={`bg-gradient-to-br ${s.color} rounded-2xl p-6 text-white hover-lift`}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
-                {s.icon}
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-extrabold">{s.value}</div>
-                <div className="text-white/80 text-sm">{s.label}</div>
-              </div>
-            </div>
-            <p className="text-sm text-white/80">{s.sub}</p>
-          </div>
-        ))}
-      </div>
-    );
+    const errorItems: StatItem[] = [
+      {
+        icon: "📖",
+        color: "from-blue-500 to-blue-600",
+        label: "Bài học",
+        value: "—",
+        subtitle: "Lỗi tải dữ liệu",
+      },
+      {
+        icon: "✍️",
+        color: "from-purple-500 to-purple-600",
+        label: "Bài tập",
+        value: "—",
+        subtitle: "Lỗi tải dữ liệu",
+      },
+      {
+        icon: "⭐",
+        color: "from-pink-500 to-pink-600",
+        label: "Điểm TB",
+        value: "—",
+        subtitle: "Lỗi tải dữ liệu",
+      },
+      {
+        icon: "🔥",
+        color: "from-yellow-500 to-orange-500",
+        label: "Lớp học",
+        value: "—",
+        subtitle: "Lỗi tải dữ liệu",
+      },
+    ];
+
+    return <StatsGrid items={errorItems} />;
   }
 
-  const statsData = [
+  const items: StatItem[] = [
     {
       icon: "📖",
       color: "from-blue-500 to-blue-600",
       label: "Bài học",
       value: stats.totalLessons.toString(),
-      sub:
+      subtitle:
         stats.newLessonsThisWeek > 0
           ? `↑ ${stats.newLessonsThisWeek} bài mới tuần này`
           : "Không có bài mới",
@@ -84,14 +88,16 @@ export default function StatsOverview() {
       color: "from-purple-500 to-purple-600",
       label: "Bài tập",
       value: stats.totalAssignments.toString(),
-      sub: `${stats.submittedAssignments} đã nộp${stats.upcomingAssignments > 0 ? ` • ${stats.upcomingAssignments} sắp đến hạn` : ""}`,
+      subtitle: `${stats.submittedAssignments} đã nộp${
+        stats.upcomingAssignments > 0 ? ` • ${stats.upcomingAssignments} sắp đến hạn` : ""
+      }`,
     },
     {
       icon: "⭐",
       color: "from-pink-500 to-pink-600",
       label: "Điểm TB",
       value: stats.averageGrade > 0 ? stats.averageGrade.toFixed(1) : "—",
-      sub:
+      subtitle:
         stats.gradeChange > 0
           ? `↑ ${stats.gradeChange.toFixed(1)} so với tháng trước`
           : stats.gradeChange < 0
@@ -103,33 +109,12 @@ export default function StatsOverview() {
       color: "from-yellow-500 to-orange-500",
       label: "Lớp học",
       value: stats.totalClassrooms.toString(),
-      sub:
+      subtitle:
         stats.newClassroomsThisWeek > 0
           ? `+${stats.newClassroomsThisWeek} lớp mới tuần này`
           : "Không có lớp mới",
     },
   ];
 
-  return (
-    <div className="grid md:grid-cols-4 gap-6 mb-8">
-      {statsData.map((s) => (
-        <div
-          key={s.label}
-          className={`bg-gradient-to-br ${s.color} rounded-2xl p-6 text-white hover-lift`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
-              {s.icon}
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-extrabold">{s.value}</div>
-              <div className="text-white/80 text-sm">{s.label}</div>
-            </div>
-          </div>
-          <p className="text-sm text-white/80">{s.sub}</p>
-        </div>
-      ))}
-    </div>
-  );
+  return <StatsGrid items={items} />;
 }
-  

@@ -4,8 +4,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { UserRole } from "@prisma/client";
 import { 
   BulkClassroomInput, 
   BulkClassroomResult, 
@@ -130,7 +130,7 @@ export const createSingleUser = async (
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Tạo user trong transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Tạo user
       const user = await tx.user.create({
         data: {
@@ -338,7 +338,7 @@ export const createBulkClassroom = async (
 
     console.log(`[BULK_PROCESSOR] Creating classroom with organizationId: ${organizationId}`);
 
-    const classroom = await prisma.$transaction(async (tx) => {
+    const classroom = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Tạo classroom
       const newClassroom = await tx.classroom.create({
         data: {
@@ -480,7 +480,7 @@ export const checkDuplicateEmails = async (emails: string[]): Promise<string[]> 
     select: { email: true }
   });
 
-  return existingUsers.map(user => user.email);
+  return existingUsers.map((user: { email: string }) => user.email);
 };
 
 /**
@@ -496,5 +496,7 @@ export const checkDuplicateClassroomCodes = async (codes: string[]): Promise<str
     select: { code: true }
   });
 
-  return existingClassrooms.map(classroom => classroom.code);
+  return existingClassrooms.map(
+    (classroom: { code: string }) => classroom.code,
+  );
 };

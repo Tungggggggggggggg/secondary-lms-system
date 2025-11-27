@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
     try {
-        const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+        const user = await getAuthenticatedUser(req, "STUDENT");
         if (!user) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         const url = new URL(req.url);
         const assignmentId = url.searchParams.get("assignmentId");

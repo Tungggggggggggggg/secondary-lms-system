@@ -3,7 +3,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
 import { getCachedUser } from '@/lib/user-cache'
-import { Prisma, UserRole, AssignmentType, QuestionType } from '@prisma/client'
+import type { Prisma, QuestionType } from '@prisma/client'
+
+const ALLOWED_QUESTION_TYPES = [
+  'SINGLE',
+  'MULTIPLE',
+  'TRUE_FALSE',
+  'FILL_BLANK',
+  'ESSAY',
+] as const;
 
 // Lấy chi tiết bài tập (chỉ giáo viên chủ sở hữu)
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
@@ -39,7 +47,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       }, { status: 404 })
     }
     
-    if (me.role !== UserRole.TEACHER) {
+    if (me.role !== 'TEACHER') {
       console.error(`[ASSIGNMENT GET ${requestId}] Access denied - User role: ${me.role}`)
       return NextResponse.json({ 
         success: false, 
@@ -128,15 +136,15 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     }, { status: 200 })
     
   } catch (error: unknown) {
-    console.error(`[ASSIGNMENT GET ${requestId}] Unexpected error after ${Date.now() - startTime}ms:`, error)
-    
-    // Detailed error logging
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error(`[ASSIGNMENT GET ${requestId}] Prisma known error:`, error.code, error.message)
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-      console.error(`[ASSIGNMENT GET ${requestId}] Prisma validation error:`, error.message)
+    console.error(
+      `[ASSIGNMENT GET ${requestId}] Unexpected error after ${Date.now() - startTime}ms:`,
+      error,
+    );
+
+    if (error instanceof Error) {
+      console.error(`[ASSIGNMENT GET ${requestId}] Error message:`, error.message);
     }
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ 
       success: false, 
@@ -154,7 +162,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
     const me = await prisma.user.findUnique({ where: { id: session.user.id } })
-    if (!me || me.role !== UserRole.TEACHER) {
+    if (!me || me.role !== 'TEACHER') {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
     }
 
@@ -166,14 +174,10 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     await prisma.assignment.delete({ where: { id: params.id } })
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error('[ASSIGNMENT DELETE] Prisma known error:', error.code, error.message, error.meta)
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-      console.error('[ASSIGNMENT DELETE] Prisma validation error:', error.message)
-    } else if (error instanceof Error) {
-      console.error('[ASSIGNMENT DELETE] Unexpected error:', error.message, error.stack)
+    if (error instanceof Error) {
+      console.error('[ASSIGNMENT DELETE] Error:', error.message, error.stack);
     } else {
-      console.error('[ASSIGNMENT DELETE] Unknown error:', error)
+      console.error('[ASSIGNMENT DELETE] Unknown error:', error);
     }
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ success: false, message: errorMessage }, { status: 500 })
@@ -188,7 +192,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
     const me = await prisma.user.findUnique({ where: { id: session.user.id } });
-    if (!me || me.role !== UserRole.TEACHER) {
+    if (!me || me.role !== 'TEACHER') {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
     // Kiểm tra ownership assignment
@@ -209,8 +213,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (!title || !type) {
       return NextResponse.json({ success: false, message: 'Thiếu trường bắt buộc title/type' }, { status: 400 });
     }
-    // type cần về đúng enum
-    const normalizedType = (typeof type === 'string' ? type.toUpperCase() : '') as AssignmentType;
+    // Chuẩn hoá type về dạng chuỗi in hoa (ESSAY, QUIZ, ...)
+    const normalizedType = (typeof type === 'string' ? type.toUpperCase() : '');
     const updateData: Record<string, unknown> = {
       title,
       description: description ?? null,
@@ -276,8 +280,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           order: typeof o?.order === 'number' ? o.order : undefined,
         })),
       }));
+
       for (let i = 0; i < normalizedQuestions.length; i++) {
         const q = normalizedQuestions[i];
+        if (!ALLOWED_QUESTION_TYPES.includes(q.type as any)) {
+          return NextResponse.json({ success: false, message: `Câu ${i + 1} có kiểu không hợp lệ: ${q.type}` }, { status: 400 });
+        }
         if (q.type === 'SINGLE' || q.type === 'TRUE_FALSE') {
           const correct = (q.options || []).filter((o) => !!o.isCorrect);
           if (correct.length !== 1) {
@@ -311,11 +319,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Nếu truyền questions: cập nhật lại toàn bộ câu hỏi và đáp án (xoá hết cũ, insert mới)
     let updatedAssignment;
     try {
-      updatedAssignment = await prisma.$transaction(async (tx) => {
+      updatedAssignment = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Cập nhật assignment metadata
         await tx.assignment.update({
           where: { id: params.id },
-          data: updateData as Prisma.AssignmentUpdateInput,
+          // Dùng any để tránh phụ thuộc vào type Prisma cụ thể (AssignmentUpdateInput có thể thay đổi theo schema)
+          data: updateData as any,
         });
         if (questions && Array.isArray(questions)) {
           // Xoá hết câu hỏi cũ
@@ -324,15 +333,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           const qs = normalizedQuestions ?? questions;
           for (const [qIndex, q] of qs.entries()) {
             const { content, type: questionType, order, options } = q as any;
-            const qTypeUpperStr = (typeof questionType === 'string' ? questionType.toUpperCase() : '');
-            if (!Object.values(QuestionType).includes(qTypeUpperStr as QuestionType)) {
+            const qTypeUpperStr = (typeof questionType === 'string' ? questionType.toUpperCase() : '') as QuestionType;
+            if (!ALLOWED_QUESTION_TYPES.includes(qTypeUpperStr as any)) {
               throw new Error(`Invalid question type at index ${qIndex}`);
             }
             const newQuestion = await tx.question.create({
               data: {
                 assignmentId: params.id,
                 content,
-                type: qTypeUpperStr as QuestionType,
+                type: qTypeUpperStr,
                 order: order ?? qIndex + 1,
               }
             });
@@ -374,12 +383,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
     return NextResponse.json({ success: true, message: 'Cập nhật bài tập thành công', data: updatedAssignment }, { status: 200 });
   } catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error('[ASSIGNMENT PUT] Prisma known error:', error.code, error.message, error.meta);
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-      console.error('[ASSIGNMENT PUT] Prisma validation error:', error.message);
-    } else if (error instanceof Error) {
-      console.error('[ASSIGNMENT PUT] Unexpected error:', error.message, error.stack);
+    if (error instanceof Error) {
+      console.error('[ASSIGNMENT PUT] Error:', error.message, error.stack);
     } else {
       console.error('[ASSIGNMENT PUT] Unknown error:', error);
     }

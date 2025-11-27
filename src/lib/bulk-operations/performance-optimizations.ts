@@ -117,7 +117,7 @@ export const batchInsertUsers = async (
   
   for (let i = 0; i < users.length; i += batchSize) {
     const batch = users.slice(i, i + batchSize);
-    
+
     const batchResult = await prisma.$transaction(async (tx) => {
       const promises = batch.map(user => 
         tx.user.create({
@@ -171,7 +171,9 @@ export const checkDuplicatesOptimized = async (emails: string[]): Promise<Set<st
     }
   });
   
-  return new Set(existingUsers.map(user => user.email));
+  return new Set(
+    existingUsers.map((user: { email: string }) => user.email),
+  );
 };
 
 // ============================================

@@ -2,8 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
-import { UserRole } from '@prisma/client'
 import { getCachedUser } from '@/lib/user-cache'
+
+interface TeacherClassroomRow {
+  id: string
+  name: string
+  description: string | null
+  code: string
+  icon: string | null
+  maxStudents: number | null
+  createdAt: Date
+  _count: {
+    students: number
+  }
+}
 
 /**
  * API lấy danh sách lớp học của giáo viên hiện tại
@@ -25,7 +37,7 @@ export async function GET(req: NextRequest) {
       session.user.email || undefined
     )
 
-    if (!user || user.role !== UserRole.TEACHER) {
+    if (!user || user.role !== 'TEACHER') {
       return NextResponse.json({ 
         success: false, 
         message: 'Forbidden - Teacher only' 
@@ -33,7 +45,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Lấy danh sách lớp học của teacher với số lượng học sinh
-    const classrooms = await prisma.classroom.findMany({
+    const classrooms = (await prisma.classroom.findMany({
       where: {
         teacherId: user.id,
         isActive: true
@@ -55,10 +67,10 @@ export async function GET(req: NextRequest) {
       orderBy: {
         createdAt: 'desc'
       }
-    });
+    })) as TeacherClassroomRow[];
 
     // Transform data để phù hợp với frontend
-    const transformedClassrooms = classrooms.map(cls => ({
+    const transformedClassrooms = classrooms.map((cls: TeacherClassroomRow) => ({
       id: cls.id,
       name: cls.name,
       description: cls.description,

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
-import { UserRole } from '@prisma/client'
 import { isTeacherOfAssignment } from '@/lib/api-utils'
 
 export async function GET(req: NextRequest) {
@@ -12,7 +11,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
     const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } })
-    if (!me || me.role !== UserRole.TEACHER) {
+    if (!me || me.role !== 'TEACHER') {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
     }
 
@@ -74,7 +73,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
     const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } })
-    if (!me || me.role !== UserRole.STUDENT) {
+    if (!me || me.role !== 'STUDENT') {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
     }
 

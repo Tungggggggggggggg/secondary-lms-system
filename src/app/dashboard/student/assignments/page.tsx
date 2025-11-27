@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import EmptyState from "@/components/shared/EmptyState";
+import SectionCard from "@/components/shared/SectionCard";
 import { useStudentAssignments, StudentAssignment } from "@/hooks/use-student-assignments";
 
 /**
@@ -239,47 +243,52 @@ export default function AssignmentsPage() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-4 shadow border border-gray-100">
-          <div className="text-sm text-gray-600 mb-1">Tổng số bài tập</div>
-          <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
+      <SectionCard
+        title="Tổng quan bài tập"
+        description="Thống kê nhanh trạng thái bài tập của bạn"
+        className="mb-6"
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Tổng số bài tập</div>
+            <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Chưa nộp</div>
+            <div className="text-2xl font-bold text-orange-600">{stats.pending}</div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Đã nộp</div>
+            <div className="text-2xl font-bold text-green-600">{stats.submitted}</div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Quá hạn</div>
+            <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow border border-gray-100">
-          <div className="text-sm text-gray-600 mb-1">Chưa nộp</div>
-          <div className="text-2xl font-bold text-orange-600">{stats.pending}</div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow border border-gray-100">
-          <div className="text-sm text-gray-600 mb-1">Đã nộp</div>
-          <div className="text-2xl font-bold text-green-600">{stats.submitted}</div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow border border-gray-100">
-          <div className="text-sm text-gray-600 mb-1">Quá hạn</div>
-          <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-        </div>
-      </div>
+      </SectionCard>
 
       {/* Filter và Search */}
       <div className="flex items-center justify-between gap-4 mb-6">
-        <select
+        <Select
           value={statusFilter}
           onChange={(e) =>
             setStatusFilter(
               e.target.value as "all" | "pending" | "submitted" | "overdue"
             )
           }
-          className="px-4 py-2 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="all">Tất cả bài tập</option>
           <option value="pending">Chưa nộp</option>
           <option value="submitted">Đã nộp</option>
           <option value="overdue">Quá hạn</option>
-        </select>
-        <input
+        </Select>
+        <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Tìm kiếm bài tập..."
-          className="flex-1 px-4 py-2 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1"
         />
       </div>
 
@@ -289,17 +298,15 @@ export default function AssignmentsPage() {
           Đang tải danh sách bài tập...
         </div>
       ) : filteredAssignments.length === 0 ? (
-        <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
-          <div className="text-5xl mb-4">📝</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">
-            Chưa có bài tập nào
-          </h3>
-          <p className="text-gray-600">
-            {assignments.length === 0
+        <EmptyState
+          icon="📝"
+          title="Chưa có bài tập nào"
+          description={
+            assignments.length === 0
               ? "Bạn chưa có bài tập nào từ các lớp học"
-              : "Không tìm thấy bài tập nào phù hợp với bộ lọc"}
-          </p>
-        </div>
+              : "Không tìm thấy bài tập nào phù hợp với bộ lọc"
+          }
+        />
       ) : (
         <div className="space-y-4">
           {filteredAssignments.map((assignment) => (

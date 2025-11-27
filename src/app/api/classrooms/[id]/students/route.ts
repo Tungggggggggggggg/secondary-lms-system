@@ -1,7 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, isTeacherOfClassroom } from "@/lib/api-utils";
+
+interface ClassroomStudentRow {
+  id: string;
+  joinedAt: Date;
+  student: {
+    id: string;
+    fullname: string | null;
+    email: string;
+    createdAt: Date;
+  };
+}
+
+interface AssignmentIdRow {
+  assignmentId: string;
+}
+
+interface SubmissionRow {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  grade: number | null;
+  submittedAt: Date;
+}
+
+interface AssignmentRow {
+  id: string;
+}
+
+interface ParentLinkRow {
+  studentId: string;
+  parent: {
+    id: string;
+    fullname: string;
+    email: string;
+  };
+}
 
 /**
  * GET /api/classrooms/[id]/students
@@ -14,7 +49,7 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -34,7 +69,7 @@ export async function GET(
     }
 
     // Lấy danh sách học sinh trong lớp với thông tin chi tiết
-    const classroomStudents = await prisma.classroomStudent.findMany({
+    const classroomStudents = (await prisma.classroomStudent.findMany({
       where: { classroomId },
       select: {
         id: true,
@@ -49,20 +84,24 @@ export async function GET(
         },
       },
       orderBy: { joinedAt: "desc" },
-    });
+    })) as ClassroomStudentRow[];
 
     // Lấy tất cả assignments trong lớp này
-    const assignmentIds = await prisma.assignmentClassroom.findMany({
+    const assignmentIds = (await prisma.assignmentClassroom.findMany({
       where: { classroomId },
       select: { assignmentId: true },
-    });
+    })) as AssignmentIdRow[];
 
-    const assignmentIdList = assignmentIds.map((ac) => ac.assignmentId);
+    const assignmentIdList = assignmentIds.map(
+      (ac: AssignmentIdRow) => ac.assignmentId,
+    );
 
     // Lấy submissions của tất cả học sinh cho các assignments trong lớp
-    const studentIds = classroomStudents.map((cs) => cs.student.id);
-    
-    const [submissions, assignments, parentLinks] = await Promise.all([
+    const studentIds = classroomStudents.map(
+      (cs: ClassroomStudentRow) => cs.student.id,
+    );
+
+    const [submissionsRaw, assignmentsRaw, parentLinksRaw] = await Promise.all([
       // Lấy tất cả submissions của học sinh trong lớp
       assignmentIdList.length > 0 && studentIds.length > 0
         ? prisma.assignmentSubmission.findMany({
@@ -98,6 +137,10 @@ export async function GET(
         : [],
     ]);
 
+    const submissions = submissionsRaw as SubmissionRow[];
+    const assignments = assignmentsRaw as AssignmentRow[];
+    const parentLinks = parentLinksRaw as ParentLinkRow[];
+
     // Tính toán thống kê cho từng học sinh
     const studentStats = new Map<
       string,
@@ -111,7 +154,7 @@ export async function GET(
     >();
 
     // Khởi tạo stats cho mỗi học sinh
-    studentIds.forEach((studentId) => {
+    studentIds.forEach((studentId: string) => {
       studentStats.set(studentId, {
         totalAssignments: assignments.length,
         submittedCount: 0,
@@ -122,7 +165,7 @@ export async function GET(
     });
 
     // Tính toán từ submissions
-    submissions.forEach((submission) => {
+    submissions.forEach((submission: SubmissionRow) => {
       const stats = studentStats.get(submission.studentId);
       if (stats) {
         stats.submittedCount += 1;
@@ -134,22 +177,29 @@ export async function GET(
     });
 
     // Tính điểm trung bình
-    studentStats.forEach((stats, studentId) => {
+    studentStats.forEach((stats) => {
       if (stats.gradedCount > 0) {
         stats.averageGrade = stats.totalGrade / stats.gradedCount;
       }
     });
 
     // Map danh sách phụ huynh theo studentId
-    const parentsByStudent = new Map<string, { id: string; fullname: string; email: string }[]>();
-    (parentLinks as Array<{ studentId: string; parent: { id: string; fullname: string; email: string } }>).forEach((pl) => {
+    const parentsByStudent = new Map<
+      string,
+      { id: string; fullname: string; email: string }[]
+    >();
+    parentLinks.forEach((pl: ParentLinkRow) => {
       const arr = parentsByStudent.get(pl.studentId) || [];
-      arr.push({ id: pl.parent.id, fullname: pl.parent.fullname, email: pl.parent.email });
+      arr.push({
+        id: pl.parent.id,
+        fullname: pl.parent.fullname,
+        email: pl.parent.email,
+      });
       parentsByStudent.set(pl.studentId, arr);
     });
 
     // Transform data để trả về
-    const students = classroomStudents.map((cs) => {
+    const students = classroomStudents.map((cs: ClassroomStudentRow) => {
       const stats = studentStats.get(cs.student.id) || {
         totalAssignments: assignments.length,
         submittedCount: 0,

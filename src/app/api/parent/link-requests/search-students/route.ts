@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 
+interface ParentSearchStudentClassroomRow {
+  classroom: {
+    id: string;
+    name: string;
+  };
+}
+
+interface ParentSearchStudentRow {
+  id: string;
+  email: string;
+  fullname: string | null;
+  role: string;
+  studentClassrooms: ParentSearchStudentClassroomRow[];
+}
+
+interface ParentStudentLinkRow {
+  studentId: string;
+}
+
 /**
  * GET /api/parent/link-requests/search-students
  * Tìm kiếm học sinh để gửi link request
@@ -31,7 +50,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     };
 
     // Tìm học sinh
-    const [students, total] = await Promise.all([
+    const [studentsRaw, total] = await Promise.all([
       prisma.user.findMany({
         where,
         take: limit,
@@ -59,8 +78,12 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       prisma.user.count({ where }),
     ]);
 
+    const students = studentsRaw as ParentSearchStudentRow[];
+
     // Kiểm tra xem đã có link hoặc request chưa
-    const studentIds = students.map((s) => s.id);
+    const studentIds = students.map(
+      (s: ParentSearchStudentRow) => s.id,
+    );
     
     const [existingLinks, existingRequests] = await Promise.all([
       prisma.parentStudent.findMany({
@@ -80,16 +103,26 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       }),
     ]);
 
-    const linkedStudentIds = new Set(existingLinks.map((l) => l.studentId));
-    const requestedStudentIds = new Set(existingRequests.map((r) => r.studentId));
+    const linkedStudentIds = new Set(
+      (existingLinks as ParentStudentLinkRow[]).map(
+        (l: ParentStudentLinkRow) => l.studentId,
+      ),
+    );
+    const requestedStudentIds = new Set(
+      (existingRequests as ParentStudentLinkRow[]).map(
+        (r: ParentStudentLinkRow) => r.studentId,
+      ),
+    );
 
     // Format kết quả
-    const results = students.map((student) => ({
+    const results = students.map((student: ParentSearchStudentRow) => ({
       id: student.id,
       email: student.email,
       fullname: student.fullname,
       role: student.role,
-      classrooms: student.studentClassrooms.map((sc) => sc.classroom),
+      classrooms: student.studentClassrooms.map(
+        (sc: ParentSearchStudentClassroomRow) => sc.classroom,
+      ),
       isLinked: linkedStudentIds.has(student.id),
       hasExistingRequest: requestedStudentIds.has(student.id),
     }));

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
 
 /**
@@ -14,7 +13,7 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

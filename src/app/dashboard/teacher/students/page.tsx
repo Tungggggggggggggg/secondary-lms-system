@@ -5,6 +5,9 @@ import StudentList, { StudentListItem } from "@/components/teacher/students/Stud
 import StudentStats from "@/components/teacher/students/StudentStats";
 import { useClassroom } from "@/hooks/use-classroom";
 import type { ClassroomStudent } from "@/hooks/use-classroom-students";
+import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import EmptyState from "@/components/shared/EmptyState";
 
 export default function StudentsPage() {
   const { classrooms, fetchClassrooms, isLoading: loadingClassrooms, error: classroomError } =
@@ -185,8 +188,7 @@ export default function StudentsPage() {
       {/* Filter & Search */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <select
-            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+          <Select
             value={selectedClassId}
             onChange={(e) => setSelectedClassId(e.target.value)}
           >
@@ -196,9 +198,8 @@ export default function StudentsPage() {
                 {c.name} ({c.code})
               </option>
             ))}
-          </select>
-          <select
-            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+          </Select>
+          <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -206,19 +207,18 @@ export default function StudentsPage() {
             <option value="active">Hoạt động tốt</option>
             <option value="warning">Cần chú ý</option>
             <option value="inactive">Không hoạt động</option>
-          </select>
-          <select
-            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+          </Select>
+          <Select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
           >
             <option value="name">Sắp xếp theo tên</option>
             <option value="grade">Sắp xếp theo điểm</option>
             <option value="attendance">Sắp xếp theo chuyên cần</option>
-          </select>
+          </Select>
         </div>
         <div className="relative">
-          <input
+          <Input
             type="text"
             placeholder="Tìm kiếm học sinh..."
             className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64"
@@ -237,9 +237,10 @@ export default function StudentsPage() {
           Đã xảy ra lỗi: {error}
         </div>
       ) : filteredStudents.length === 0 ? (
-        <div className="text-sm text-gray-500 bg-white border border-gray-200 rounded-xl p-6">
-          Chưa có học sinh nào để hiển thị.
-        </div>
+        <EmptyState
+          title="Chưa có học sinh nào để hiển thị"
+          description="Hãy kiểm tra bộ lọc hoặc thêm học sinh vào lớp học của bạn."
+        />
       ) : (
         <StudentList students={filteredStudents} />
       )}

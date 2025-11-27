@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
 
 /**
@@ -19,7 +18,7 @@ export async function GET(
     console.log(`[${requestId}] URL:`, req.url);
 
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       console.log(`[${requestId}] Unauthorized - No user found`);
       return NextResponse.json(
@@ -103,6 +102,21 @@ export async function GET(
       orderBy: { submittedAt: "desc" },
     });
 
+    interface TextSubmissionRow {
+      id: string;
+      content: string;
+      grade: number | null;
+      feedback: string | null;
+      submittedAt: Date;
+      attempt: number | null;
+      studentId: string;
+      student: {
+        id: string;
+        fullname: string | null;
+        email: string;
+      };
+    }
+
     // Fetch file-based submissions (new model)
     const fileSubsRaw = await prisma.submission.findMany({
       where: { assignmentId },
@@ -115,36 +129,75 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
+    interface FileSubmissionRow {
+      id: string;
+      createdAt: Date;
+      studentId: string;
+      _count: {
+        files: number;
+      };
+    }
+
+    interface StudentRow {
+      id: string;
+      fullname: string | null;
+      email: string;
+    }
+
     // Fetch student info for file-based subs
-    const studentIds = Array.from(new Set(fileSubsRaw.map((s) => s.studentId)));
-    const students = studentIds.length
-      ? await prisma.user.findMany({
+    const studentIds = Array.from(
+      new Set(
+        (fileSubsRaw as FileSubmissionRow[]).map(
+          (s: FileSubmissionRow) => s.studentId,
+        ),
+      ),
+    );
+    const students: StudentRow[] = studentIds.length
+      ? ((await prisma.user.findMany({
           where: { id: { in: studentIds } },
           select: { id: true, fullname: true, email: true },
-        })
+        })) as StudentRow[])
       : [];
-    const studentMap = new Map(students.map((u) => [u.id, u] as const));
+    const studentMap = new Map<string, StudentRow>(
+      students.map((u: StudentRow) => [u.id, u] as const),
+    );
 
     // fetch existing grades for file-based submissions from assignmentSubmission table
-    const fileGrades = studentIds.length
-      ? await prisma.assignmentSubmission.findMany({
+    interface FileGradeRow {
+      studentId: string;
+      grade: number | null;
+      feedback: string | null;
+    }
+
+    const fileGrades: FileGradeRow[] = studentIds.length
+      ? ((await prisma.assignmentSubmission.findMany({
           where: { assignmentId, studentId: { in: studentIds } },
           select: { studentId: true, grade: true, feedback: true },
-        })
+        })) as FileGradeRow[])
       : [];
-    const fileGradeMap = new Map(fileGrades.map((g) => [g.studentId, { grade: g.grade, feedback: g.feedback }] as const));
+    const fileGradeMap = new Map<string, { grade: number | null; feedback: string | null }>(
+      fileGrades.map((g: FileGradeRow) => [g.studentId, { grade: g.grade, feedback: g.feedback }]),
+    );
 
     // Build set of studentIds that submitted via files
-    const fileStudentIds = new Set(fileSubsRaw.map((s) => s.studentId));
+    const fileStudentIds = new Set(
+      (fileSubsRaw as FileSubmissionRow[]).map(
+        (s: FileSubmissionRow) => s.studentId,
+      ),
+    );
 
     // Filter out text submissions that are only placeholders for grading file-based submissions
-    const filteredTextSubs = textSubs.filter((s) => {
-      const isPlaceholder = (!s.content || s.content.trim() === "") && fileStudentIds.has(s.studentId);
-      return !isPlaceholder;
-    });
+    const filteredTextSubs = (textSubs as TextSubmissionRow[]).filter(
+      (s: TextSubmissionRow) => {
+        const isPlaceholder =
+          (!s.content || s.content.trim() === "") &&
+          fileStudentIds.has(s.studentId);
+        return !isPlaceholder;
+      },
+    );
 
     const merged = [
-      ...filteredTextSubs.map((s) => ({
+      ...filteredTextSubs.map((s: TextSubmissionRow) => ({
         id: s.id,
         content: s.content,
         grade: s.grade,
@@ -155,17 +208,21 @@ export async function GET(
         isFileSubmission: false,
         filesCount: 0,
       })),
-      ...fileSubsRaw.map((s) => ({
-        id: s.id,
-        content: `Nộp file (${s._count.files} tệp)`,
-        grade: fileGradeMap.get(s.studentId)?.grade ?? null,
-        feedback: fileGradeMap.get(s.studentId)?.feedback ?? null,
-        submittedAt: s.createdAt.toISOString(),
-        attempt: 1,
-        student: studentMap.get(s.studentId) || { id: s.studentId, fullname: "", email: "" },
-        isFileSubmission: true,
-        filesCount: s._count.files,
-      })),
+      ...((fileSubsRaw as FileSubmissionRow[]).map(
+        (s: FileSubmissionRow) => ({
+          id: s.id,
+          content: `Nộp file (${s._count.files} tệp)` ,
+          grade: fileGradeMap.get(s.studentId)?.grade ?? null,
+          feedback: fileGradeMap.get(s.studentId)?.feedback ?? null,
+          submittedAt: s.createdAt.toISOString(),
+          attempt: 1,
+          student:
+            studentMap.get(s.studentId) ||
+            ({ id: s.studentId, fullname: "", email: "" } as StudentRow),
+          isFileSubmission: true,
+          filesCount: s._count.files,
+        }),
+      )),
     ].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
 
     // Apply optional filters to merged results

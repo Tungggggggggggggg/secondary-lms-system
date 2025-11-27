@@ -19,12 +19,12 @@ export function AccordionItem({ title, defaultOpen = true, children, className, 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center justify-between text-left text-[13px] font-semibold px-3 py-2 rounded-md transition-colors ${headerClassName ?? "text-gray-700 hover:bg-gray-50"}`}
+        className={`w-full flex items-center justify-between text-left text-[13px] font-semibold px-3 py-2 rounded-md transition-colors duration-200 ease-out ${headerClassName ?? "text-gray-700 hover:bg-gray-50"}`}
       >
         <span className="uppercase tracking-wide">{title}</span>
-        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : "rotate-0"}`} />
+        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ease-out ${open ? "rotate-180" : "rotate-0"}`} />
       </button>
-      <div className={`overflow-hidden transition-[max-height] duration-300 ${open ? "max-h-[1000px]" : "max-h-0"}`}>
+      <div className={`overflow-hidden transition-[max-height] duration-300 ease-out ${open ? "max-h-[1000px]" : "max-h-0"}`}>
         <div className={`mt-1 space-y-1 ${contentClassName ?? ""}`}>{children}</div>
       </div>
     </div>

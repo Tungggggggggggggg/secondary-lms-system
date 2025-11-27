@@ -2,7 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+
+interface StudentClassroomAssignmentRow {
+  addedAt: Date;
+  assignment: {
+    id: string;
+    title: string;
+    description: string | null;
+    dueDate: Date | null;
+    openAt: Date | null;
+    lockAt: Date | null;
+    timeLimitMinutes: number | null;
+    type: string;
+    createdAt: Date;
+    updatedAt: Date;
+    _count: {
+      submissions: number;
+      questions: number;
+    };
+  };
+}
+
+interface StudentClassroomSubmissionRow {
+  id: string;
+  assignmentId: string;
+  content: string | null;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+}
 
 /**
  * GET /api/students/classrooms/[id]/assignments
@@ -26,7 +54,7 @@ export async function GET(
       where: { email: session.user.email },
     });
 
-    if (!user || user.role !== UserRole.STUDENT) {
+    if (!user || user.role !== "STUDENT") {
       return NextResponse.json(
         { success: false, message: "Forbidden - Student role required" },
         { status: 403 }
@@ -54,7 +82,7 @@ export async function GET(
     }
 
     // Lấy danh sách assignments đã được thêm vào classroom
-    const assignmentClassrooms = await prisma.assignmentClassroom.findMany({
+    const assignmentClassrooms = (await prisma.assignmentClassroom.findMany({
       where: { classroomId },
       include: {
         assignment: {
@@ -69,14 +97,14 @@ export async function GET(
         },
       },
       orderBy: { addedAt: "desc" },
-    });
+    })) as StudentClassroomAssignmentRow[];
 
     // Lấy submissions của student cho các assignments này
     const assignmentIds = assignmentClassrooms.map(
-      (ac) => ac.assignment.id
+      (ac: StudentClassroomAssignmentRow) => ac.assignment.id,
     );
 
-    const studentSubmissions = await prisma.assignmentSubmission.findMany({
+    const studentSubmissionsRaw = await prisma.assignmentSubmission.findMany({
       where: {
         assignmentId: { in: assignmentIds },
         studentId: user.id,
@@ -91,13 +119,18 @@ export async function GET(
       },
     });
 
+    const studentSubmissions =
+      studentSubmissionsRaw as StudentClassroomSubmissionRow[];
+
     // Tạo map để lookup submission nhanh
-    const submissionMap = new Map(
-      studentSubmissions.map((sub) => [sub.assignmentId, sub])
-    );
+    const submissionMap = new Map<string, StudentClassroomSubmissionRow>();
+    studentSubmissions.forEach((sub: StudentClassroomSubmissionRow) => {
+      submissionMap.set(sub.assignmentId, sub);
+    });
 
     // Transform data để trả về
-    const assignments = assignmentClassrooms.map((ac) => {
+    const assignments = assignmentClassrooms.map(
+      (ac: StudentClassroomAssignmentRow) => {
       const assignment = ac.assignment;
       const submission = submissionMap.get(assignment.id);
 

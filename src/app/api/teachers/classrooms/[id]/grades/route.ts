@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
+
+interface TeacherClassroomAssignmentSummary {
+  id: string;
+  title: string | null;
+  type: string;
+  dueDate: Date | null;
+}
 
 // GET: Danh sách submissions/grades của lớp cho giáo viên (newest-first, filter, search)
 export async function GET(
@@ -18,7 +24,7 @@ export async function GET(
       );
     }
 
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized", requestId },
@@ -45,7 +51,11 @@ export async function GET(
       where: { classroomId },
       select: { assignmentId: true },
     });
-    const assignmentIds = Array.from(new Set(ac.map((x) => x.assignmentId)));
+    const assignmentIds: string[] = Array.from(
+      new Set(
+        ac.map((x: { assignmentId: string }) => x.assignmentId),
+      ),
+    );
     if (assignmentIds.length === 0) {
       return NextResponse.json(
         { success: true, data: [], statistics: { total: 0, graded: 0 }, requestId },
@@ -61,7 +71,9 @@ export async function GET(
       },
     });
 
-    const studentIds = classroomStudents.map((cs) => cs.studentId);
+    const studentIds = classroomStudents.map(
+      (cs: { studentId: string }) => cs.studentId,
+    );
     if (studentIds.length === 0) {
       return NextResponse.json(
         { success: true, data: [], statistics: { total: 0, graded: 0 }, requestId },
@@ -70,11 +82,13 @@ export async function GET(
     }
 
     // Lấy thông tin assignments
-    const assignments = await prisma.assignment.findMany({
+    const assignments = (await prisma.assignment.findMany({
       where: { id: { in: assignmentIds } },
       select: { id: true, title: true, type: true, dueDate: true },
-    });
-    const assignmentMap = new Map(assignments.map((a) => [a.id, a]));
+    })) as TeacherClassroomAssignmentSummary[];
+    const assignmentMap = new Map<string, TeacherClassroomAssignmentSummary>(
+      assignments.map((a: TeacherClassroomAssignmentSummary) => [a.id, a]),
+    );
 
     // Lấy tất cả submissions (để lấy attempt mới nhất của mỗi cặp student-assignment)
     const submissions = await prisma.assignmentSubmission.findMany({
@@ -127,7 +141,10 @@ export async function GET(
     );
 
     const now = new Date();
-    const virtualRows = classroomStudents.flatMap((cs) =>
+    const virtualRows = classroomStudents.flatMap((cs: {
+      studentId: string;
+      student: { id: string; fullname: string | null; email: string };
+    }) =>
       assignmentIds
         .filter((assignmentId) => !existingKeys.has(`${cs.studentId}-${assignmentId}`))
         .map((assignmentId) => {
@@ -173,12 +190,16 @@ export async function GET(
     // Lọc theo search
     if (search) {
       const q = search.toLowerCase();
-      allRows = allRows.filter(
-        (d) =>
-          d.student.fullname.toLowerCase().includes(q) ||
-          d.student.email.toLowerCase().includes(q) ||
-          d.assignment.title.toLowerCase().includes(q)
-      );
+      allRows = allRows.filter((d) => {
+        const fullname = (d.student.fullname ?? "").toLowerCase();
+        const email = d.student.email.toLowerCase();
+        const title = d.assignment.title.toLowerCase();
+        return (
+          fullname.includes(q) ||
+          email.includes(q) ||
+          title.includes(q)
+        );
+      });
     }
 
     // Tổng và số đã chấm

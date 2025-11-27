@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+
+interface TeacherAssignmentCommentRow {
+  id: string;
+  content: string;
+  createdAt: Date;
+  user: {
+    id: string;
+    fullname: string | null;
+    email: string;
+  };
+  question: {
+    id: string;
+    content: string;
+    order: number | null;
+  };
+}
 
 /**
  * GET /api/teachers/assignments/[id]/comments
@@ -14,7 +29,7 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -93,17 +108,19 @@ export async function GET(
     ]);
 
     // Transform data
-    const commentsData = comments.map((comment) => ({
-      id: comment.id,
-      content: comment.content,
-      createdAt: comment.createdAt.toISOString(),
-      user: comment.user,
-      question: {
-        id: comment.question.id,
-        content: comment.question.content,
-        order: comment.question.order,
-      },
-    }));
+    const commentsData = comments.map(
+      (comment: TeacherAssignmentCommentRow) => ({
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt.toISOString(),
+        user: comment.user,
+        question: {
+          id: comment.question.id,
+          content: comment.question.content,
+          order: comment.question.order,
+        },
+      }),
+    );
 
     console.log(
       `[INFO] [GET] /api/teachers/assignments/${assignmentId}/comments - Found ${commentsData.length} comments (total: ${total}, page: ${page})`

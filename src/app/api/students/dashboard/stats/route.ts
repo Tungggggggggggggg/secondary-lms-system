@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 
 /**
  * GET /api/students/dashboard/stats
@@ -9,7 +8,7 @@ import { UserRole } from "@prisma/client";
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -40,7 +39,9 @@ export async function GET(req: NextRequest) {
       select: { classroomId: true },
     });
 
-    const classroomIds = studentClassrooms.map((sc) => sc.classroomId);
+    const classroomIds = studentClassrooms.map(
+      (sc: { classroomId: string }) => sc.classroomId,
+    );
 
     let totalAssignments = 0;
     let submittedAssignments = 0;
@@ -53,7 +54,9 @@ export async function GET(req: NextRequest) {
         select: { assignmentId: true },
       });
 
-      const assignmentIds = assignmentClassrooms.map((ac) => ac.assignmentId);
+      const assignmentIds = assignmentClassrooms.map(
+        (ac: { assignmentId: string }) => ac.assignmentId,
+      );
 
       if (assignmentIds.length > 0) {
         // Đếm tổng số assignments
@@ -81,7 +84,9 @@ export async function GET(req: NextRequest) {
         });
 
         // Kiểm tra xem học sinh đã nộp chưa
-        const upcomingIds = upcomingAssignmentsData.map((a) => a.id);
+        const upcomingIds = upcomingAssignmentsData.map(
+          (a: { id: string }) => a.id,
+        );
         if (upcomingIds.length > 0) {
           const submittedUpcoming = await prisma.assignmentSubmission.count({
             where: {
@@ -105,8 +110,11 @@ export async function GET(req: NextRequest) {
 
     const averageGrade =
       gradedSubmissions.length > 0
-        ? gradedSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) /
-          gradedSubmissions.length
+        ? gradedSubmissions.reduce(
+            (sum: number, sub: { grade: number | null }) =>
+              sum + (sub.grade || 0),
+            0,
+          ) / gradedSubmissions.length
         : 0;
 
     // 5. Tính điểm trung bình tháng trước để so sánh
@@ -124,8 +132,11 @@ export async function GET(req: NextRequest) {
 
     const lastMonthAverage =
       lastMonthGradedSubmissions.length > 0
-        ? lastMonthGradedSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) /
-          lastMonthGradedSubmissions.length
+        ? lastMonthGradedSubmissions.reduce(
+            (sum: number, sub: { grade: number | null }) =>
+              sum + (sub.grade || 0),
+            0,
+          ) / lastMonthGradedSubmissions.length
         : 0;
 
     const gradeChange = averageGrade - lastMonthAverage;
@@ -136,7 +147,9 @@ export async function GET(req: NextRequest) {
       select: { courseId: true },
     });
 
-    const courseIds = coursesInClassrooms.map((cc) => cc.courseId);
+    const courseIds = coursesInClassrooms.map(
+      (cc: { courseId: string }) => cc.courseId,
+    );
     const totalLessons =
       courseIds.length > 0
         ? await prisma.lesson.count({

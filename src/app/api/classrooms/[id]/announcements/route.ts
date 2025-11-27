@@ -6,7 +6,6 @@ import {
   isStudentInClassroom,
   getRequestId,
 } from "@/lib/api-utils";
-import { UserRole, ModerationStatus } from "@prisma/client";
 
 // GET: Liệt kê announcements của một classroom (newest-first, có pagination)
 export async function GET(
@@ -33,8 +32,8 @@ export async function GET(
 
     // Quyền xem: giáo viên sở hữu lớp hoặc học sinh thuộc lớp
     const canView =
-      (user.role === UserRole.TEACHER && (await isTeacherOfClassroom(user.id, classroomId))) ||
-      (user.role === UserRole.STUDENT && (await isStudentInClassroom(user.id, classroomId)));
+      (user.role === "TEACHER" && (await isTeacherOfClassroom(user.id, classroomId))) ||
+      (user.role === "STUDENT" && (await isStudentInClassroom(user.id, classroomId)));
 
     if (!canView) {
       return NextResponse.json(
@@ -49,7 +48,7 @@ export async function GET(
 
     const [items, total] = await Promise.all([
       prisma.announcement.findMany({
-        where: { classroomId, status: ModerationStatus.APPROVED },
+        where: { classroomId, status: "APPROVED" as any },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -73,7 +72,7 @@ export async function GET(
           _count: { select: { comments: true } },
         },
       }),
-      prisma.announcement.count({ where: { classroomId, status: ModerationStatus.APPROVED } }),
+      prisma.announcement.count({ where: { classroomId, status: "APPROVED" as any } }),
     ]);
 
     const res = NextResponse.json(
@@ -119,7 +118,7 @@ export async function POST(
       );
     }
 
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized", requestId },

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
 import { autoGradeQuiz, validateQuizSubmission } from "@/lib/auto-grade";
 import crypto from "crypto";
@@ -15,7 +14,7 @@ export async function POST(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -109,11 +108,17 @@ export async function POST(
         );
       }
       // Validate tất cả questions đều có answer
-      const answeredQuestionIds = new Set(answers.map((a) => a.questionId));
-      const questionIds = new Set(assignment.questions.map((q) => q.id));
+      const answeredQuestionIds = new Set<string>(
+        answers.map((a) => a.questionId),
+      );
+      const questionIds = new Set<string>(
+        assignment.questions.map((q: { id: string }) => q.id),
+      );
       if (
         answeredQuestionIds.size !== questionIds.size ||
-        !Array.from(questionIds).every((id) => answeredQuestionIds.has(id))
+        !Array.from(questionIds).every(
+          (id: string) => answeredQuestionIds.has(id),
+        )
       ) {
         return NextResponse.json(
           { success: false, message: "All questions must be answered" },
@@ -196,24 +201,37 @@ export async function POST(
           if (!answer) continue;
 
           const correctOptionIds = question.options
-            .filter((opt) => opt.isCorrect)
-            .map((opt) => opt.id);
+            .filter(
+              (opt: { id: string; isCorrect: boolean }) => opt.isCorrect,
+            )
+            .map((opt: { id: string }) => opt.id);
 
           const selectedOptionIds = [...answer.optionIds];
 
           let qScore = 0;
           if (question.type === 'SINGLE' || question.type === 'TRUE_FALSE') {
-            const ok = (correctOptionIds.length === selectedOptionIds.length) && correctOptionIds.every(id => selectedOptionIds.includes(id));
+            const ok =
+              correctOptionIds.length === selectedOptionIds.length &&
+              correctOptionIds.every((id: string) =>
+                selectedOptionIds.includes(id),
+              );
             qScore = ok ? 1 : 0;
           } else if (question.type === 'MULTIPLE') {
             const correctSet = new Set(correctOptionIds);
             const selectedSet = new Set(selectedOptionIds);
             let TP = 0, FP = 0;
-            selectedSet.forEach(id => { if (correctSet.has(id)) TP++; else FP++; });
+            selectedSet.forEach((id: string) => {
+              if (correctSet.has(id)) TP++;
+              else FP++;
+            });
             const T = correctOptionIds.length || 1;
             qScore = Math.max(0, Math.min(1, (TP - penaltyAlpha * FP) / T));
           } else if (question.type === 'FILL_BLANK') {
-            qScore = selectedOptionIds.some(id => correctOptionIds.includes(id)) ? 1 : 0;
+            qScore = selectedOptionIds.some((id: string) =>
+              correctOptionIds.includes(id),
+            )
+              ? 1
+              : 0;
           }
           scoreSum += qScore;
         }
@@ -228,11 +246,11 @@ export async function POST(
 
       // Tạo contentSnapshot để freeze nội dung đề tại thời điểm nộp
       try {
-        const snapshotQuestions = assignment.questions.map((q) => ({
+        const snapshotQuestions = assignment.questions.map((q: any) => ({
           id: q.id,
           content: (q as any).content,
           type: q.type,
-          options: (q.options || []).map((o) => ({
+          options: (q.options || []).map((o: any) => ({
             id: o.id,
             label: (o as any).label,
             content: (o as any).content,
@@ -341,7 +359,7 @@ export async function PUT(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -423,11 +441,17 @@ export async function PUT(
         );
       }
       // Validate tất cả questions đều có answer (theo questionId)
-      const answeredQuestionIds = new Set(answers.map((a) => a.questionId));
-      const questionIds = new Set(submission.assignment.questions.map((q) => q.id));
+      const answeredQuestionIds = new Set<string>(
+        answers.map((a) => a.questionId),
+      );
+      const questionIds = new Set<string>(
+        submission.assignment.questions.map((q: { id: string }) => q.id),
+      );
       if (
         answeredQuestionIds.size !== questionIds.size ||
-        !Array.from(questionIds).every((id) => answeredQuestionIds.has(id))
+        !Array.from(questionIds).every(
+          (id: string) => answeredQuestionIds.has(id),
+        )
       ) {
         return NextResponse.json(
           { success: false, message: "All questions must be answered" },

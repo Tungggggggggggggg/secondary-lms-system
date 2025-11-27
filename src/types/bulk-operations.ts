@@ -3,7 +3,12 @@
  * Hỗ trợ tạo lớp học hàng loạt với validation chuyên nghiệp
  */
 
-import { UserRole } from "@prisma/client";
+export type BulkUserRole =
+  | "STAFF"
+  | "TEACHER"
+  | "STUDENT"
+  | "PARENT"
+  | "SUPER_ADMIN";
 
 // ============================================
 // Bulk User Creation Types
@@ -12,7 +17,7 @@ import { UserRole } from "@prisma/client";
 export interface BulkUserInput {
   email: string;
   fullname: string;
-  role: UserRole;
+  role: BulkUserRole;
   password?: string; // Tự động generate nếu không có
   existingUserId?: string; // ID của user có sẵn (không tạo mới)
   metadata?: Record<string, unknown>;
@@ -31,7 +36,7 @@ export interface BulkUserResult {
     id: string;
     email: string;
     fullname: string;
-    role: UserRole;
+    role: BulkUserRole;
     generatedPassword?: string;
   };
   error?: string;

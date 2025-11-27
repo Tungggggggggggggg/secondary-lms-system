@@ -7,7 +7,6 @@ import * as Icons from "lucide-react";
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/ui/avatar";
 import { ADMIN_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS, ROLE_LABELS } from "@/lib/admin/admin-constants";
-import type { UserRole } from "@prisma/client";
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { useSidebarState } from "@/hooks/useSidebarState";
@@ -15,11 +14,13 @@ import SidebarToggleButton from "@/components/shared/SidebarToggleButton";
 import Tooltip from "@/components/ui/tooltip";
 import { AccordionItem } from "@/components/ui/accordion";
 
+type AppUserRole = "SUPER_ADMIN" | "STAFF" | "TEACHER" | "STUDENT" | "PARENT";
+
 /**
  * Props cho AdminSidebar component
  */
 interface AdminSidebarProps {
-  userRole: UserRole | string;
+  userRole: string;
   userEmail?: string;
   userFullname?: string;
   className?: string;
@@ -172,7 +173,7 @@ export default function AdminSidebar({
                 <div>
                   <h1 className="font-bold text-lg text-gray-900">Bảng quản trị</h1>
                   <p className="text-xs text-gray-500">
-                    {ROLE_LABELS[userRole as UserRole] || (isSuperAdmin ? "Super Admin" : "Admin")}
+                    {ROLE_LABELS[userRole as AppUserRole] || (isSuperAdmin ? "Super Admin" : "Admin")}
                   </p>
                 </div>
               )}
@@ -261,7 +262,7 @@ export default function AdminSidebar({
                     {userEmail || ""}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {ROLE_LABELS[userRole as UserRole] || userRole}
+                    {ROLE_LABELS[userRole as AppUserRole] || userRole}
                   </p>
                 </>
               )}

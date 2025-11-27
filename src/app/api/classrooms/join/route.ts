@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth-options";
-import { UserRole } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +18,8 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email! },
     });
-    if (!user || user.role !== UserRole.STUDENT) {
+    if (!user || user.role !== "STUDENT") {
+
       return NextResponse.json(
         { success: false, message: "Chỉ học sinh mới có thể tham gia lớp học" },
         { status: 403 }
@@ -57,7 +57,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Kiểm tra xem đã là thành viên chưa
-    const isMember = classroom.students.some(student => student.studentId === user.id);
+    const isMember = classroom.students.some(
+      (student: { studentId: string }) => student.studentId === user.id,
+    );
     if (isMember) {
       return NextResponse.json(
         { success: false, message: "Bạn đã là thành viên của lớp học này" },

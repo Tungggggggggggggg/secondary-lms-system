@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser, isTeacherOfAssignment, getRequestId } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
 
 const BUCKET =
   process.env.SUPABASE_ASSIGNMENTS_BUCKET ||
@@ -40,9 +39,9 @@ export async function GET(
 
     // Quyền xem: giáo viên (tác giả) hoặc học sinh thuộc lớp có assignment này
     let canView = false;
-    if (user.role === UserRole.TEACHER) {
+    if (user.role === "TEACHER") {
       canView = await isTeacherOfAssignment(user.id, assignmentId);
-    } else if (user.role === UserRole.STUDENT) {
+    } else if (user.role === "STUDENT") {
       // Kiểm tra student có ở bất kỳ lớp nào chứa assignment này
       const ac = await prisma.assignmentClassroom.findFirst({
         where: { assignmentId, classroom: { students: { some: { studentId: user.id } } } },
@@ -64,9 +63,18 @@ export async function GET(
       select: { id: true, name: true, path: true, size: true, mimeType: true, createdAt: true },
     });
 
+    interface AssignmentFileRow {
+      id: string;
+      name: string;
+      path: string;
+      size: number;
+      mimeType: string | null;
+      createdAt: Date | string;
+    }
+
     // Tạo signed URLs TTL 15 phút
     const entries = await Promise.all(
-      files.map(async (f) => {
+      files.map(async (f: AssignmentFileRow) => {
         const { data } = await admin.storage
           .from(BUCKET)
           .createSignedUrl(f.path, 900, { download: true, transform: undefined });
@@ -112,7 +120,7 @@ export async function DELETE(
       );
     }
 
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized", requestId },

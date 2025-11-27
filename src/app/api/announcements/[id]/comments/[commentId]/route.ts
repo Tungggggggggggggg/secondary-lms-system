@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
-import { UserRole, ModerationStatus } from "@prisma/client";
 
 // PATCH: Hide/Unhide comment (teacher of the classroom only)
 export async function PATCH(req: NextRequest, { params }: { params: { id: string; commentId: string } }) {
@@ -17,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const ann = await prisma.announcement.findUnique({ where: { id: announcementId }, select: { classroomId: true } });
     if (!ann) return NextResponse.json({ success: false, message: "Announcement not found", requestId }, { status: 404 });
 
-    if (user.role !== UserRole.TEACHER || !(await isTeacherOfClassroom(user.id, ann.classroomId))) {
+    if (user.role !== "TEACHER" || !(await isTeacherOfClassroom(user.id, ann.classroomId))) {
       return NextResponse.json({ success: false, message: "Forbidden", requestId }, { status: 403 });
     }
 
@@ -37,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = await prisma.announcementComment.update({
       where: { id: commentId },
       data: {
-        status: action === "hide" ? ModerationStatus.REJECTED : ModerationStatus.APPROVED,
+        status: (action === "hide" ? "REJECTED" : "APPROVED") as any,
         moderatedAt: new Date(),
         moderatedById: user.id,
       },
@@ -84,7 +83,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const ann = await prisma.announcement.findUnique({ where: { id: announcementId }, select: { classroomId: true } });
     if (!ann) return NextResponse.json({ success: false, message: "Announcement not found", requestId }, { status: 404 });
 
-    if (user.role !== UserRole.TEACHER || !(await isTeacherOfClassroom(user.id, ann.classroomId))) {
+    if (user.role !== "TEACHER" || !(await isTeacherOfClassroom(user.id, ann.classroomId))) {
       return NextResponse.json({ success: false, message: "Forbidden", requestId }, { status: 403 });
     }
 
@@ -96,7 +95,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const updated = await prisma.announcementComment.update({
       where: { id: commentId },
       data: {
-        status: ModerationStatus.REJECTED,
+        status: "REJECTED" as any,
         moderatedAt: new Date(),
         moderatedById: user.id,
       },

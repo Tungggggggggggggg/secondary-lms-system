@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { SUPER_ADMIN_NAV_ITEMS, ADMIN_NAV_ITEMS } from "@/lib/admin/admin-constants";
-import type { UserRole } from "@prisma/client";
 import OrgSwitcher from "@/components/admin/OrgSwitcher";
 import ViewAsToggle from "@/components/admin/ViewAsToggle";
 
@@ -12,7 +11,7 @@ import ViewAsToggle from "@/components/admin/ViewAsToggle";
  * Props cho AdminHeader component
  */
 interface AdminHeaderProps {
-  userRole: UserRole | string;
+  userRole: string;
   title?: string;
   className?: string;
 }

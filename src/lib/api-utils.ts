@@ -1,15 +1,34 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import  prisma  from "@/lib/prisma";
-import { User, UserRole } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+
+const USER_ROLES = [
+  "SUPER_ADMIN",
+  "STAFF",
+  "TEACHER",
+  "STUDENT",
+  "PARENT",
+] as const;
+
+export type UserRole = (typeof USER_ROLES)[number];
+
+type AuthUser = {
+  id: string;
+  email: string;
+  fullname: string | null;
+  role: UserRole | string;
+  password: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 /**
  * Request-scoped cache để tránh query user nhiều lần trong cùng một request
  * Sử dụng WeakMap để tự động cleanup khi request kết thúc
  */
-const userCache = new WeakMap<NextRequest, User | null>();
+const userCache = new WeakMap<NextRequest, AuthUser | null>();
 
 /**
  * Lấy authenticated user từ session với request-scoped caching
@@ -26,7 +45,7 @@ const userCache = new WeakMap<NextRequest, User | null>();
 export async function getAuthenticatedUser(
   req: NextRequest,
   requiredRole?: UserRole
-): Promise<User | null> {
+): Promise<AuthUser | null> {
   // Kiểm tra cache trước
   if (userCache.has(req)) {
     const cachedUser = userCache.get(req)!;
@@ -45,7 +64,7 @@ export async function getAuthenticatedUser(
     }
 
     // Query user từ database
-    const user = await prisma.user.findUnique({
+    const user = (await prisma.user.findUnique({
       where: { email: session.user.email },
       select: {
         id: true,
@@ -56,7 +75,7 @@ export async function getAuthenticatedUser(
         createdAt: true,
         updatedAt: true,
       },
-    });
+    })) as AuthUser | null;
 
     // Kiểm tra role nếu có yêu cầu
     if (user && requiredRole && user.role !== requiredRole) {
@@ -277,7 +296,8 @@ export async function getStudentAssignmentForQuestion(
 
   // Kiểm tra student có trong classroom nào có assignment này không
   const hasAccess = question.assignment.classrooms.some(
-    (ac) => ac.classroom.students.length > 0
+    (ac: { classroom: { students: unknown[] } }) =>
+      ac.classroom.students.length > 0
   );
 
   return hasAccess ? question.assignmentId : null;

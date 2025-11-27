@@ -2,8 +2,17 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import prisma from '@/lib/prisma';
-import { UserRole, Prisma } from '@prisma/client';
 import { writeAudit } from '@/lib/logging/audit';
+
+const ALLOWED_USER_ROLES = [
+  'SUPER_ADMIN',
+  'STAFF',
+  'TEACHER',
+  'STUDENT',
+  'PARENT',
+] as const;
+
+type UserRoleString = (typeof ALLOWED_USER_ROLES)[number];
 
 export async function PUT(req: Request) {
   try {
@@ -29,14 +38,14 @@ export async function PUT(req: Request) {
     const normalized = role.trim().toUpperCase();
     console.log('[API Update Role] Role normalization', { original: role, normalized });
     
-    if (!Object.values(UserRole).includes(normalized as UserRole)) {
+    if (!(ALLOWED_USER_ROLES as readonly string[]).includes(normalized)) {
       console.error('[API Update Role] Invalid role value:', role);
       return NextResponse.json({ message: 'Vai trò không hợp lệ.' }, { status: 400 });
     }
 
     // Chỉ cho phép tự đổi giữa các vai trò không đặc quyền
-    const selfAssignable: UserRole[] = ['TEACHER', 'STUDENT', 'PARENT'];
-    if (!selfAssignable.includes(normalized as UserRole)) {
+    const selfAssignable: UserRoleString[] = ['TEACHER', 'STUDENT', 'PARENT'];
+    if (!selfAssignable.includes(normalized as UserRoleString)) {
       console.warn('[API Update Role] Self-escalation attempt blocked', { userId: session.user.id, requestedRole: normalized });
       return NextResponse.json({ message: 'Không được phép tự thay đổi sang vai trò đặc quyền.' }, { status: 403 });
     }
@@ -45,7 +54,7 @@ export async function PUT(req: Request) {
     console.log('[API Update Role] Updating user role in database', { userId: session.user.id, newRole: normalized });
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
-      data: { role: normalized as UserRole },
+      data: { role: normalized as UserRoleString },
       // Chỉ chọn các trường hiện có trong schema Prisma tối giản
       select: { id: true, email: true, fullname: true, role: true, createdAt: true, updatedAt: true },
     });
@@ -64,12 +73,8 @@ export async function PUT(req: Request) {
 
     // Trả về thông tin người dùng đã cập nhật
     return NextResponse.json({ message: 'Cập nhật vai trò thành công!', user: updatedUser }, { status: 200 });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error('[API Update Role] Prisma known error:', error.code, error.message, error.meta);
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-      console.error('[API Update Role] Prisma validation error:', error.message);
-    } else if (error instanceof Error) {
+  } catch (error: unknown) {
+    if (error instanceof Error) {
       console.error('[API Update Role] Unexpected error:', error.message, error.stack);
     } else {
       console.error('[API Update Role] Unknown error:', error);

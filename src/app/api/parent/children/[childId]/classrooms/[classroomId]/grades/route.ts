@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+
+interface ChildSubmissionRow {
+  id: string;
+  assignmentId: string;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+  assignment: {
+    id: string;
+    title: string;
+    type: string;
+    dueDate: Date | null;
+  };
+}
 
 /**
  * GET /api/parent/children/[childId]/classrooms/[classroomId]/grades
@@ -26,7 +39,7 @@ export const GET = withApiLogging(async (
       return errorResponse(401, "Unauthorized");
     }
 
-    if (authUser.role !== UserRole.PARENT) {
+    if (authUser.role !== "PARENT") {
       return errorResponse(403, "Forbidden - PARENT role required");
     }
 
@@ -55,7 +68,7 @@ export const GET = withApiLogging(async (
       select: { id: true, role: true },
     });
 
-    if (!student || student.role !== UserRole.STUDENT) {
+    if (!student || student.role !== "STUDENT") {
       return errorResponse(404, "Student not found");
     }
 
@@ -77,8 +90,12 @@ export const GET = withApiLogging(async (
       select: { assignmentId: true },
     });
 
-    const assignmentIdList = Array.from(
-      new Set(assignmentIds.map((ac) => ac.assignmentId))
+    const assignmentIdList: string[] = Array.from(
+      new Set<string>(
+        assignmentIds.map(
+          (ac: { assignmentId: string }) => ac.assignmentId,
+        ),
+      ),
     );
 
     if (assignmentIdList.length === 0) {
@@ -98,7 +115,7 @@ export const GET = withApiLogging(async (
     }
 
     // Lấy submissions của student cho các assignments này
-    const submissions = await prisma.assignmentSubmission.findMany({
+    const submissions = (await prisma.assignmentSubmission.findMany({
       where: {
         studentId: childId,
         assignmentId: { in: assignmentIdList },
@@ -114,10 +131,10 @@ export const GET = withApiLogging(async (
         },
       },
       orderBy: { submittedAt: "desc" },
-    });
+    })) as ChildSubmissionRow[];
 
     // Transform data cho các bài đã nộp (bao gồm cả chưa chấm)
-    const submissionGrades = submissions.map((sub) => ({
+    const submissionGrades = submissions.map((sub: ChildSubmissionRow) => ({
       id: sub.id,
       assignmentId: sub.assignment.id,
       assignmentTitle: sub.assignment.title,
@@ -138,7 +155,7 @@ export const GET = withApiLogging(async (
       where: {
         id: {
           in: assignmentIdList.filter(
-            (id) => !submittedAssignmentIds.has(id)
+            (id: string) => !submittedAssignmentIds.has(id),
           ),
         },
       },
@@ -153,7 +170,8 @@ export const GET = withApiLogging(async (
     const now = new Date();
 
     // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
-    const missingGrades = missingAssignments.map((assignment) => {
+    const missingGrades = missingAssignments.map(
+      (assignment: { id: string; title: string; type: string; dueDate: Date | null }) => {
       const isPastDue =
         assignment.dueDate !== null && assignment.dueDate < now;
 
@@ -170,12 +188,15 @@ export const GET = withApiLogging(async (
         submittedAt: null as string | null,
         status: isPastDue ? "graded" : "pending",
       };
-    });
+    },
+    );
 
     const grades = [...submissionGrades, ...missingGrades];
 
     // Tính điểm trung bình (chỉ tính các bài đã chấm)
-    const gradedSubmissions = submissions.filter((sub) => sub.grade !== null);
+    const gradedSubmissions = submissions.filter(
+      (sub: ChildSubmissionRow) => sub.grade !== null,
+    );
     const totalSubmissions = submissions.length;
     const totalGraded = gradedSubmissions.length;
     const totalPending = totalSubmissions - totalGraded;

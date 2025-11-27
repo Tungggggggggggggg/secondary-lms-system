@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -50,7 +49,7 @@ export async function POST(
 				{ status: 500 }
 			);
 		}
-		const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+		const user = await getAuthenticatedUser(req, "TEACHER");
 		if (!user) {
 			return NextResponse.json(
 				{ success: false, message: "Unauthorized", requestId },

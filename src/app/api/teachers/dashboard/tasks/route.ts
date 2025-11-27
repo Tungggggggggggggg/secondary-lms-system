@@ -3,6 +3,42 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
 
+interface TeacherPendingAssignmentRow {
+  id: string;
+  title: string;
+  dueDate: Date | null;
+  _count: {
+    submissions: number;
+  };
+  classrooms: {
+    classroom: {
+      name: string | null;
+    };
+  }[];
+}
+
+interface TeacherUpcomingAssignmentRow {
+  id: string;
+  title: string;
+  dueDate: Date | null;
+  classrooms: {
+    classroom: {
+      name: string | null;
+    };
+  }[];
+}
+
+interface TeacherCompletedAssignmentRow {
+  id: string;
+  title: string;
+  dueDate: Date | null;
+  classrooms: {
+    classroom: {
+      name: string | null;
+    };
+  }[];
+}
+
 /**
  * API: GET /api/teachers/dashboard/tasks
  * Mục đích: Lấy danh sách công việc sắp tới của teacher
@@ -42,7 +78,7 @@ export async function GET(req: NextRequest) {
     const tasks: any[] = [];
 
     // 1. Lấy bài tập có submissions chưa chấm (URGENT)
-    const pendingAssignments = await prisma.assignment.findMany({
+    const pendingAssignments = (await prisma.assignment.findMany({
       where: {
         authorId: userId,
         submissions: {
@@ -75,10 +111,10 @@ export async function GET(req: NextRequest) {
         dueDate: 'asc',
       },
       take: 3,
-    });
+    })) as TeacherPendingAssignmentRow[];
 
     // Thêm vào danh sách tasks
-    pendingAssignments.forEach((assignment) => {
+    pendingAssignments.forEach((assignment: TeacherPendingAssignmentRow) => {
       const classroomName = assignment.classrooms[0]?.classroom.name || 'Không xác định';
       const isToday = assignment.dueDate 
         ? new Date(assignment.dueDate).toDateString() === now.toDateString()
@@ -98,7 +134,7 @@ export async function GET(req: NextRequest) {
 
     // 2. Lấy bài tập sắp hết hạn (trong 3 ngày tới)
     const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const upcomingAssignments = await prisma.assignment.findMany({
+    const upcomingAssignments = (await prisma.assignment.findMany({
       where: {
         authorId: userId,
         dueDate: {
@@ -125,9 +161,9 @@ export async function GET(req: NextRequest) {
         dueDate: 'asc',
       },
       take: 2,
-    });
+    })) as TeacherUpcomingAssignmentRow[];
 
-    upcomingAssignments.forEach((assignment) => {
+    upcomingAssignments.forEach((assignment: TeacherUpcomingAssignmentRow) => {
       const classroomName = assignment.classrooms[0]?.classroom.name || 'Không xác định';
       const dueDate = assignment.dueDate || now;
       const daysUntilDue = Math.ceil((new Date(dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -146,7 +182,7 @@ export async function GET(req: NextRequest) {
 
     // 3. Lấy bài tập đã hoàn thành gần đây (trong 2 ngày qua)
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
-    const completedAssignments = await prisma.assignment.findMany({
+    const completedAssignments = (await prisma.assignment.findMany({
       where: {
         authorId: userId,
         dueDate: {
@@ -180,9 +216,9 @@ export async function GET(req: NextRequest) {
         dueDate: 'desc',
       },
       take: 1,
-    });
+    })) as TeacherCompletedAssignmentRow[];
 
-    completedAssignments.forEach((assignment) => {
+    completedAssignments.forEach((assignment: TeacherCompletedAssignmentRow) => {
       const classroomName = assignment.classrooms[0]?.classroom.name || 'Không xác định';
 
       tasks.push({

@@ -5,7 +5,6 @@ import RecentClasses from "@/components/teacher/dashboard/RecentClasses";
 import PerformanceChart from "@/components/teacher/dashboard/PerformanceChart";
 
 import RecentActivity from "@/components/teacher/dashboard/RecentActivity";
-import WeeklyGoals from "@/components/teacher/dashboard/WeeklyGoals";
 
 
 export default function DashboardPage() {
@@ -22,7 +21,6 @@ export default function DashboardPage() {
                 <div className="space-y-8">
                    
                     <RecentActivity />
-                    <WeeklyGoals />
                 </div>
             </div>
 

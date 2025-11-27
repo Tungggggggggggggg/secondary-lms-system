@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { Prisma, UserRole } from '@prisma/client';
+
+const ALLOWED_USER_ROLES = [
+  'SUPER_ADMIN',
+  'STAFF',
+  'TEACHER',
+  'STUDENT',
+  'PARENT',
+] as const;
+
+type UserRole = (typeof ALLOWED_USER_ROLES)[number];
 
 export async function POST(req: Request) {
   try {
@@ -49,7 +58,7 @@ export async function POST(req: Request) {
 
     // 6. Tạo người dùng mới trong cơ sở dữ liệu
     // KHÔNG truyền role = null để Prisma áp dụng default từ schema (STUDENT)
-    const data: Prisma.UserCreateInput = {
+    const data: any = {
       fullname,
       email,
       password: hashedPassword,
@@ -58,7 +67,7 @@ export async function POST(req: Request) {
     // Nếu FE có gửi role hợp lệ thì set; nếu không bỏ qua để dùng default
     if (typeof role === 'string') {
       const upper = role.toUpperCase();
-      if (Object.values(UserRole).includes(upper as UserRole)) {
+      if ((ALLOWED_USER_ROLES as readonly string[]).includes(upper)) {
         data.role = upper as UserRole;
       }
     }
@@ -75,21 +84,19 @@ export async function POST(req: Request) {
       updatedAt: newUser.updatedAt,
     };
     return NextResponse.json({ message: 'Đăng ký thành công!', user: safeUser }, { status: 201 });
-  } catch (error) {
-    // Log lỗi chi tiết để debug và phân loại lỗi Prisma
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') {
-        console.error('[API Register] Unique constraint failed:', error.meta);
-        return NextResponse.json({ message: 'Email đã tồn tại.' }, { status: 409 });
-      }
-      console.error('[API Register] Prisma known error:', error.code, error.message, error.meta);
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-      console.error('[API Register] Prisma validation error:', error.message);
-    } else if (error instanceof Error) {
+  } catch (error: unknown) {
+    // Log lỗi chi tiết để debug và phân loại lỗi unique constraint nếu có
+    if (typeof error === 'object' && error && (error as any).code === 'P2002') {
+      console.error('[API Register] Unique constraint failed:', (error as any).meta);
+      return NextResponse.json({ message: 'Email đã tồn tại.' }, { status: 409 });
+    }
+
+    if (error instanceof Error) {
       console.error('[API Register] Unexpected error:', error.message, error.stack);
     } else {
       console.error('[API Register] Unknown error:', error);
     }
+
     return NextResponse.json({ message: 'Đã xảy ra lỗi trong quá trình đăng ký.' }, { status: 500 });
   }
 }

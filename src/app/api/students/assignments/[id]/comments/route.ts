@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+
+interface StudentAssignmentCommentRow {
+  id: string;
+  content: string;
+  createdAt: Date;
+  user: {
+    id: string;
+    fullname: string | null;
+    email: string;
+  };
+  question: {
+    id: string;
+    content: string;
+    order: number | null;
+  };
+}
 
 /**
  * GET /api/students/assignments/[id]/comments
@@ -14,7 +29,7 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -49,7 +64,7 @@ export async function GET(
     // OPTIMIZE: Query trực tiếp từ question_comments với join đến questions
     // Thay vì query questions trước rồi mới query comments (2 queries → 1 query)
     // Sử dụng raw query để join trực tiếp
-    const [comments, total] = await Promise.all([
+    const [commentsRaw, total] = await Promise.all([
       // Lấy comments với question info trong một query
       prisma.questionComment.findMany({
         where: {
@@ -90,8 +105,10 @@ export async function GET(
       }),
     ]);
 
+    const comments = commentsRaw as StudentAssignmentCommentRow[];
+
     // Transform data
-    const commentsData = comments.map((comment) => ({
+    const commentsData = comments.map((comment: StudentAssignmentCommentRow) => ({
       id: comment.id,
       content: comment.content,
       createdAt: comment.createdAt.toISOString(),
@@ -142,7 +159,7 @@ export async function POST(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

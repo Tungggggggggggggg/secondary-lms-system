@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
@@ -27,7 +26,7 @@ function slugifyFileName(name: string): string {
 export async function POST(req: NextRequest) {
     const requestId = crypto.randomUUID();
     try {
-        const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+        const user = await getAuthenticatedUser(req, "STUDENT");
         if (!user) {
             return NextResponse.json({ success: false, message: "Unauthorized", requestId }, { status: 401 });
         }

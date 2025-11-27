@@ -81,8 +81,10 @@ export const reportsRepo = {
           ORDER BY 1 ASC
         `;
 
-    const anns = annsRows.map((r) => ({ date: r.date, count: Number(r.count) }));
-    const cmts = cmtsRows.map((r) => ({ date: r.date, count: Number(r.count) }));
+    type UsageRow = { date: string; count: bigint };
+
+    const anns = annsRows.map((r: UsageRow) => ({ date: r.date, count: Number(r.count) }));
+    const cmts = cmtsRows.map((r: UsageRow) => ({ date: r.date, count: Number(r.count) }));
     return { anns, cmts };
   },
 

@@ -3,17 +3,25 @@
  * Giảm thời gian query từ 208ms xuống <50ms
  */
 
-import { User } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
+export type CachedUser = {
+  id: string
+  email: string | null
+  fullname: string | null
+  role: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 // In-memory cache cho user data (production nên dùng Redis)
-const userCache = new Map<string, { user: User; timestamp: number }>()
+const userCache = new Map<string, { user: CachedUser; timestamp: number }>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 phút
 
 /**
  * Lấy user với caching để tối ưu performance
  */
-export async function getCachedUser(userId?: string, email?: string): Promise<User | null> {
+export async function getCachedUser(userId?: string, email?: string): Promise<CachedUser | null> {
   try {
     const cacheKey = userId || email || ''
     if (!cacheKey) return null
@@ -55,14 +63,14 @@ export async function getCachedUser(userId?: string, email?: string): Promise<Us
 
     // Lưu vào cache
     if (user) {
-      userCache.set(cacheKey, { 
-        user: user as User, 
-        timestamp: Date.now() 
+      userCache.set(cacheKey, {
+        user: user as CachedUser,
+        timestamp: Date.now(),
       })
       console.log(`[USER_CACHE] Cached user ${cacheKey}`)
     }
 
-    return user as User | null
+    return user as CachedUser | null
   } catch (error) {
     console.error('[USER_CACHE] Error:', error)
     return null

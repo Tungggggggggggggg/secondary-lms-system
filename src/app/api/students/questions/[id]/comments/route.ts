@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, getStudentAssignmentForQuestion } from "@/lib/api-utils";
+
+interface StudentQuestionCommentRow {
+  id: string;
+  content: string;
+  createdAt: Date;
+  user: {
+    id: string;
+    fullname: string | null;
+    email: string;
+  };
+}
 
 /**
  * GET /api/students/questions/[id]/comments
@@ -14,7 +24,7 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -94,12 +104,12 @@ export async function GET(
     ]);
 
     // Transform data
-    const commentsData = comments.map((comment) => ({
+    const commentsData = comments.map((comment: StudentQuestionCommentRow) => ({
       id: comment.id,
       content: comment.content,
       createdAt: comment.createdAt.toISOString(),
       user: comment.user,
-    }));
+    }) as const);
 
     console.log(
       `[INFO] [GET] /api/students/questions/${questionId}/comments - Found ${commentsData.length} comments (page ${page})`
@@ -140,7 +150,7 @@ export async function POST(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+    const user = await getAuthenticatedUser(req, "STUDENT");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

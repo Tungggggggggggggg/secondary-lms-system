@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, isTeacherOfClassroom, isTeacherOfAssignment } from "@/lib/api-utils";
+
+interface AssignmentClassroomRow {
+  addedAt: Date;
+  assignment: {
+    id: string;
+    title: string;
+    description: string | null;
+    dueDate: Date | null;
+    openAt: Date | null;
+    lockAt: Date | null;
+    type: string;
+    createdAt: Date;
+    updatedAt: Date;
+    _count: {
+      submissions: number;
+      questions: number;
+    };
+  };
+}
+
+interface FileCountRow {
+  assignmentId: string;
+  _count: {
+    assignmentId: number;
+  };
+}
 
 /**
  * GET /api/classrooms/[id]/assignments
@@ -13,7 +38,7 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -33,7 +58,7 @@ export async function GET(
     }
 
     // Optimize: Sử dụng select thay vì include để chỉ lấy fields cần thiết
-    const assignmentClassrooms = await prisma.assignmentClassroom.findMany({
+    const assignmentClassrooms = (await prisma.assignmentClassroom.findMany({
       where: { classroomId },
       select: {
         addedAt: true,
@@ -58,30 +83,42 @@ export async function GET(
         },
       },
       orderBy: { addedAt: "desc" },
-    });
+    })) as AssignmentClassroomRow[];
 
     // Also count file-based submissions
-    const assignmentIds = assignmentClassrooms.map((ac) => ac.assignment.id);
-    const fileCounts = assignmentIds.length
-      ? await prisma.submission.groupBy({
-          by: ["assignmentId"],
-          where: { assignmentId: { in: assignmentIds } },
-          _count: { assignmentId: true },
-        })
-      : [];
-    const fileCountMap = new Map(fileCounts.map((c) => [c.assignmentId, c._count.assignmentId] as const));
+    const assignmentIds = assignmentClassrooms.map(
+      (ac: AssignmentClassroomRow) => ac.assignment.id,
+    );
+
+    let fileCounts: FileCountRow[] = [];
+    if (assignmentIds.length) {
+      const raw = await prisma.submission.groupBy({
+        by: ["assignmentId"],
+        where: { assignmentId: { in: assignmentIds } },
+        _count: { assignmentId: true },
+      });
+      fileCounts = raw as unknown as FileCountRow[];
+    }
+    const fileCountMap = new Map<string, number>(
+      fileCounts.map((c: FileCountRow) => [c.assignmentId, c._count.assignmentId]),
+    );
 
     // Transform data để trả về
-    const assignments = assignmentClassrooms.map((ac) => {
-      const base = ac.assignment as any;
-      const fileCount = fileCountMap.get(base.id) || 0;
-      return {
-        ...base,
-        addedAt: ac.addedAt.toISOString(),
-        _count: { ...base._count, submissions: (base._count?.submissions || 0) + fileCount },
-        fileSubmissions: fileCount,
-      };
-    });
+    const assignments = assignmentClassrooms.map(
+      (ac: AssignmentClassroomRow) => {
+        const base = ac.assignment;
+        const fileCount = fileCountMap.get(base.id) || 0;
+        return {
+          ...base,
+          addedAt: ac.addedAt.toISOString(),
+          _count: {
+            ...base._count,
+            submissions: (base._count?.submissions || 0) + fileCount,
+          },
+          fileSubmissions: fileCount,
+        };
+      },
+    );
 
     console.log(
       `[INFO] [GET] /api/classrooms/${classroomId}/assignments - Found ${assignments.length} assignments`
@@ -113,7 +150,7 @@ export async function POST(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -254,7 +291,7 @@ export async function DELETE(
     }
 
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

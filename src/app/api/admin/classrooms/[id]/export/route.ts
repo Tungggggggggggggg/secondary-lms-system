@@ -82,7 +82,16 @@ export async function GET(
       'Ngày tạo tài khoản'
     ];
 
-    const csvRows = classroom.students.map((cs, index) => [
+    interface ClassroomStudentRow {
+      joinedAt: Date | string;
+      student: {
+        fullname: string;
+        email: string;
+        createdAt: Date | string;
+      };
+    }
+
+    const csvRows = classroom.students.map((cs: ClassroomStudentRow, index: number) => [
       (index + 1).toString(),
       `"${cs.student.fullname}"`,
       cs.student.email,
@@ -93,7 +102,7 @@ export async function GET(
     // Add header row
     const csvContent = [
       csvHeaders.join(','),
-      ...csvRows.map(row => row.join(','))
+      ...csvRows.map((row: string[]) => row.join(','))
     ].join('\n');
 
     // Add BOM for proper UTF-8 encoding in Excel

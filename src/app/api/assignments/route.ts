@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
-import { Prisma, AssignmentType, QuestionType, UserRole } from '@prisma/client'
 import { createAssignmentSchema, paginationSchema } from '@/types/api'
 import { getCachedUser } from '@/lib/user-cache'
 import { withPerformanceTracking } from '@/lib/performance-monitor'
+
+const ALLOWED_QUESTION_TYPES = [
+  'SINGLE',
+  'MULTIPLE',
+  'TRUE_FALSE',
+  'FILL_BLANK',
+  'ESSAY',
+] as const;
 
 // Lấy danh sách bài tập theo giáo viên hiện tại - TỐI ƯU SELECT + pagination + user cache + performance tracking
 export async function GET(req: NextRequest) {
@@ -21,7 +28,7 @@ export async function GET(req: NextRequest) {
       session.user.email || undefined
     )
 
-    if (!user || user.role !== UserRole.TEACHER) {
+    if (!user || user.role !== 'TEACHER') {
       return NextResponse.json({ success: true, data: [] }, { status: 200 })
     }
 
@@ -36,13 +43,19 @@ export async function GET(req: NextRequest) {
 
     const whereClause: { authorId: string; id?: { in?: string[]; notIn?: string[] } } = { authorId: user.id };
 
+    interface AssignmentClassroomIdRow {
+      assignmentId: string;
+    }
+
     if (classroomId && !availableForClassroom) {
       const assignmentIds = await prisma.assignmentClassroom.findMany({
         where: { classroomId },
         select: { assignmentId: true },
       });
       whereClause.id = {
-        in: assignmentIds.map((ac) => ac.assignmentId),
+        in: assignmentIds.map(
+          (ac: AssignmentClassroomIdRow) => ac.assignmentId,
+        ),
       };
     }
 
@@ -51,7 +64,9 @@ export async function GET(req: NextRequest) {
         where: { classroomId },
         select: { assignmentId: true },
       });
-      const addedAssignmentIds = assignmentIds.map((ac) => ac.assignmentId);
+      const addedAssignmentIds = assignmentIds.map(
+        (ac: AssignmentClassroomIdRow) => ac.assignmentId,
+      );
       if (addedAssignmentIds.length > 0) {
         whereClause.id = {
           notIn: addedAssignmentIds,
@@ -96,7 +111,7 @@ export async function POST(req: NextRequest) {
       session.user.email || undefined
     )
 
-    if (!me || me.role !== UserRole.TEACHER) {
+    if (!me || me.role !== 'TEACHER') {
       return NextResponse.json({ success: false, message: 'Forbidden - Teacher only' }, { status: 403 })
     }
 
@@ -117,7 +132,7 @@ export async function POST(req: NextRequest) {
 
     const { title, description, dueDate, type, questions, openAt, lockAt, timeLimitMinutes } = parsed.data
 
-    const normalizedType = type.toUpperCase() as AssignmentType
+    const normalizedType = type.toUpperCase()
 
     const data: any = {
       title,
@@ -130,7 +145,7 @@ export async function POST(req: NextRequest) {
       author: { connect: { id: me.id } },
     }
 
-    if (data.type === AssignmentType.QUIZ) {
+    if (normalizedType === 'QUIZ') {
       if (!questions || !Array.isArray(questions) || questions.length === 0) {
         return NextResponse.json({ success: false, message: 'Quiz requires at least 1 question' }, { status: 400 })
       }
@@ -138,7 +153,7 @@ export async function POST(req: NextRequest) {
       data.questions = {
         create: questions.map((q, idx) => {
           const qType = (q.type || 'SINGLE').toUpperCase()
-          if (!Object.values(QuestionType).includes(qType as QuestionType)) {
+          if (!ALLOWED_QUESTION_TYPES.includes(qType as any)) {
             throw new Error(`Invalid question type at index ${idx}`)
           }
           const opts = q.options || []
@@ -154,7 +169,7 @@ export async function POST(req: NextRequest) {
           }
           return {
             content: q.content,
-            type: qType as QuestionType,
+            type: qType,
             order: typeof q.order === 'number' ? q.order : idx + 1,
             options: {
               create: opts.map((opt, j) => ({
@@ -177,12 +192,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: created }, { status: 201 })
   } catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error('[ASSIGNMENTS POST] Prisma known error:', error.code, error.message, error.meta)
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-      console.error('[ASSIGNMENTS POST] Prisma validation error:', error.message)
-    } else if (error instanceof Error) {
-      console.error('[ASSIGNMENTS POST] Unexpected error:', error.message, error.stack)
+    if (error instanceof Error) {
+      console.error('[ASSIGNMENTS POST] Error:', error.message, error.stack)
     } else {
       console.error('[ASSIGNMENTS POST] Unknown error:', error)
     }

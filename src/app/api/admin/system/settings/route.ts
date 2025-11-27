@@ -11,7 +11,15 @@ export const GET = withApiLogging(async (req: NextRequest) => {
 
   const rows = await prisma.systemSetting.findMany();
   const settings: Record<string, unknown> = {};
-  rows.forEach(r => { (settings as any)[r.key] = r.value ?? null; });
+
+  interface SystemSettingRow {
+    key: string;
+    value: unknown;
+  }
+
+  rows.forEach((r: SystemSettingRow) => {
+    (settings as any)[r.key] = r.value ?? null;
+  });
   return NextResponse.json({ success: true, settings });
 }, "ADMIN_SYSTEM_SETTINGS_GET");
 

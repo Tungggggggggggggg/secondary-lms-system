@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+
+interface ParentChildSubmissionRow {
+  id: string;
+  studentId: string;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+  assignment: {
+    id: string;
+    title: string;
+    type: string;
+    dueDate: Date | null;
+    classrooms: Array<{
+      classroom: {
+        id: string;
+        name: string;
+        code: string;
+        icon: string | null;
+        teacher: {
+          id: string;
+          fullname: string | null;
+          email: string;
+        } | null;
+      } | null;
+    }>;
+  };
+}
 
 /**
  * GET /api/parent/children/grades
@@ -16,7 +42,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       return errorResponse(401, "Unauthorized");
     }
 
-    if (authUser.role !== UserRole.PARENT) {
+    if (authUser.role !== "PARENT") {
       return errorResponse(403, "Forbidden - PARENT role required");
     }
 
@@ -49,10 +75,12 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       );
     }
 
-    const studentIds = relationships.map((rel) => rel.studentId);
+    const studentIds = relationships.map(
+      (rel: { studentId: string }) => rel.studentId,
+    );
 
     // Lấy tất cả submissions của tất cả con
-    const submissions = await prisma.assignmentSubmission.findMany({
+    const submissions = (await prisma.assignmentSubmission.findMany({
       where: {
         studentId: { in: studentIds },
       },
@@ -74,7 +102,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
         },
       },
       orderBy: { submittedAt: "desc" },
-    });
+    })) as ParentChildSubmissionRow[];
 
     // Transform data và nhóm theo student
     const gradesByStudent: Record<
@@ -83,7 +111,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
         student: {
           id: string;
           email: string;
-          fullname: string;
+          fullname: string | null;
           role: string;
         };
         grades: Array<{
@@ -100,12 +128,12 @@ export const GET = withApiLogging(async (req: NextRequest) => {
             id: string;
             name: string;
             code: string;
-            icon: string;
-            teacher?: {
+            icon: string | null;
+            teacher: {
               id: string;
-              fullname: string;
+              fullname: string | null;
               email: string;
-            };
+            } | null;
           } | null;
         }>;
         statistics: {
@@ -118,21 +146,31 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     > = {};
 
     // Khởi tạo cho mỗi student
-    relationships.forEach((rel) => {
-      gradesByStudent[rel.studentId] = {
-        student: rel.student,
-        grades: [],
-        statistics: {
-          totalSubmissions: 0,
-          totalGraded: 0,
-          totalPending: 0,
-          averageGrade: 0,
-        },
-      };
-    });
+    relationships.forEach(
+      (rel: {
+        studentId: string;
+        student: {
+          id: string;
+          email: string;
+          fullname: string | null;
+          role: string;
+        };
+      }) => {
+        gradesByStudent[rel.studentId] = {
+          student: rel.student,
+          grades: [],
+          statistics: {
+            totalSubmissions: 0,
+            totalGraded: 0,
+            totalPending: 0,
+            averageGrade: 0,
+          },
+        };
+      },
+    );
 
     // Phân loại submissions theo student
-    submissions.forEach((sub) => {
+    submissions.forEach((sub: ParentChildSubmissionRow) => {
       const classroom = sub.assignment.classrooms[0]?.classroom;
 
       const gradeEntry = {

@@ -20,7 +20,16 @@ export const parentStudentRepo = {
     studentId?: string | null;
   }) {
     const { search, limit = 20, skip = 0, parentId, studentId } = params || {};
-    const where: Prisma.ParentStudentWhereInput = {};
+    type SearchFilter = {
+      fullname?: { contains: string; mode: "insensitive" };
+      email?: { contains: string; mode: "insensitive" };
+    };
+
+    const where: {
+      parentId?: string;
+      studentId?: string;
+      OR?: { parent?: SearchFilter; student?: SearchFilter }[];
+    } = {};
 
     if (parentId) {
       where.parentId = parentId;
@@ -222,7 +231,7 @@ export const parentStudentRepo = {
     // Note: Since parentId and studentId are part of unique constraint,
     // we need to delete and recreate, or use a different approach
     // For simplicity, we'll delete and create in a transaction
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Delete existing
       await tx.parentStudent.delete({
         where: { id },

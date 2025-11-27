@@ -1,9 +1,30 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateClassroomCode } from "@/lib/utils";
-import { Prisma, UserRole } from "@prisma/client";
 import { getAuthenticatedUser } from "@/lib/api-utils";
+
+interface StudentClassroomRow {
+  joinedAt: Date;
+  classroom: {
+    id: string;
+    name: string;
+    description: string | null;
+    code: string;
+    icon: string;
+    maxStudents: number;
+    teacherId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    teacher: {
+      id: string;
+      fullname: string | null;
+      email: string;
+    };
+    _count: {
+      students: number;
+    };
+  };
+}
 
 // Handler GET: Lấy danh sách lớp học cho giáo viên hoặc học sinh hiện tại
 export async function GET(req: NextRequest) {
@@ -18,7 +39,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Nếu là giáo viên: trả về lớp học do giáo viên tạo
-    if (user.role === UserRole.TEACHER) {
+    if (user.role === "TEACHER") {
       // OPTIMIZE: Sử dụng index [teacherId] đã có sẵn
       const classrooms = await prisma.classroom.findMany({
         where: { teacherId: user.id },
@@ -42,9 +63,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Nếu là học sinh: trả về lớp học mà học sinh đã tham gia
-    if (user.role === UserRole.STUDENT) {
+    if (user.role === "STUDENT") {
       // OPTIMIZE: Sử dụng composite index [studentId, joinedAt] cho query sắp xếp
-      const studentClassrooms = await prisma.classroomStudent.findMany({
+      const studentClassrooms = (await prisma.classroomStudent.findMany({
         where: { studentId: user.id },
         select: {
           joinedAt: true,
@@ -66,8 +87,8 @@ export async function GET(req: NextRequest) {
           },
         },
         orderBy: { joinedAt: 'desc' }, // Sử dụng composite index [studentId, joinedAt]
-      });
-      const classrooms = studentClassrooms.map(sc => ({
+      })) as StudentClassroomRow[];
+      const classrooms = studentClassrooms.map((sc: StudentClassroomRow) => ({
         ...sc.classroom,
         joinedAt: sc.joinedAt, // Thông tin thời gian tham gia
       }));
@@ -90,7 +111,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -142,7 +163,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Tạo lớp học mới
-  const classroom = await prisma.classroom.create({
+    const classroom = await prisma.classroom.create({
       data: {
         name,
         description,
@@ -171,17 +192,16 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error) {
-    // Log lỗi có phân loại Prisma
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error('[ERROR][CLASSROOMS POST] Prisma known error:', error.code, error.message, error.meta);
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-      console.error('[ERROR][CLASSROOMS POST] Prisma validation error:', error.message);
+  } catch (error: unknown) {
+    // Log lỗi, ưu tiên bắt lỗi unique constraint nếu có
+    if (typeof error === "object" && error && (error as any).code === "P2002") {
+      console.error("[ERROR][CLASSROOMS POST] Unique constraint error:", (error as any).meta);
     } else if (error instanceof Error) {
-      console.error('[ERROR][CLASSROOMS POST] Unexpected error:', error.message, error.stack);
+      console.error("[ERROR][CLASSROOMS POST] Unexpected error:", error.message, error.stack);
     } else {
-      console.error('[ERROR][CLASSROOMS POST] Unknown error:', error);
+      console.error("[ERROR][CLASSROOMS POST] Unknown error:", error);
     }
+
     return NextResponse.json(
       { success: false, message: "Internal server error" },
       { status: 500 }

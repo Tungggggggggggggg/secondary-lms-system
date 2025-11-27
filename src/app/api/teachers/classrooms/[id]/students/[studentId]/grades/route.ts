@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
+
+interface TeacherStudentSubmissionRow {
+  id: string;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+  assignment: {
+    id: string;
+    title: string;
+    type: string;
+    dueDate: Date | null;
+  };
+}
 
 // GET: Điểm chi tiết của một học sinh trong lớp (teacher view)
 export async function GET(
@@ -19,7 +31,7 @@ export async function GET(
       );
     }
 
-    const user = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized", requestId },
@@ -40,7 +52,9 @@ export async function GET(
       where: { classroomId },
       select: { assignmentId: true },
     });
-    const assignmentIds = ac.map((x) => x.assignmentId);
+    const assignmentIds = ac.map(
+      (x: { assignmentId: string }) => x.assignmentId,
+    );
     if (assignmentIds.length === 0) {
       return NextResponse.json(
         { success: true, data: [], statistics: { totalGraded: 0, averageGrade: 0 }, requestId },
@@ -48,7 +62,7 @@ export async function GET(
       );
     }
 
-    const submissions = await prisma.assignmentSubmission.findMany({
+    const submissionsRaw = await prisma.assignmentSubmission.findMany({
       where: { studentId, assignmentId: { in: assignmentIds } },
       include: {
         assignment: { select: { id: true, title: true, type: true, dueDate: true } },
@@ -56,7 +70,10 @@ export async function GET(
       orderBy: { submittedAt: "desc" },
     });
 
-    const grades = submissions.map((sub) => ({
+    const submissions =
+      submissionsRaw as TeacherStudentSubmissionRow[];
+
+    const grades = submissions.map((sub: TeacherStudentSubmissionRow) => ({
       id: sub.id,
       assignmentId: sub.assignment.id,
       assignmentTitle: sub.assignment.title,
@@ -65,11 +82,25 @@ export async function GET(
       grade: sub.grade,
       feedback: sub.feedback,
       submittedAt: sub.submittedAt.toISOString(),
-      status: sub.grade !== null ? "graded" : sub.submittedAt ? "submitted" : "pending",
+      status:
+        sub.grade !== null
+          ? "graded"
+          : sub.submittedAt
+          ? "submitted"
+          : "pending",
     }));
 
-    const graded = submissions.filter((s) => s.grade !== null);
-    const averageGrade = graded.length > 0 ? graded.reduce((sum, s) => sum + (s.grade || 0), 0) / graded.length : 0;
+    const graded = submissions.filter(
+      (s: TeacherStudentSubmissionRow) => s.grade !== null,
+    );
+    const averageGrade =
+      graded.length > 0
+        ? graded.reduce(
+            (sum: number, s: TeacherStudentSubmissionRow) =>
+              sum + (s.grade || 0),
+            0,
+          ) / graded.length
+        : 0;
 
     return NextResponse.json(
       {

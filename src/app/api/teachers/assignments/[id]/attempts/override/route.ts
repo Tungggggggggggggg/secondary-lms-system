@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
 import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
 
 /**
@@ -12,7 +11,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const teacher = await getAuthenticatedUser(req, UserRole.TEACHER);
+    const teacher = await getAuthenticatedUser(req, "TEACHER");
     if (!teacher) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

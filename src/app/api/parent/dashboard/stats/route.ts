@@ -1,7 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+
+interface ParentChildLinkRow {
+  studentId: string;
+  student: {
+    id: string;
+    email: string;
+    fullname: string | null;
+    role: string;
+  };
+}
+
+interface ParentStatsSubmissionRow {
+  id: string;
+  grade: number | null;
+  submittedAt: Date;
+}
+
+interface StudentClassroomRow {
+  classroomId: string;
+}
+
+interface AssignmentClassroomRow {
+  assignmentId: string;
+}
+
+interface UpcomingAssignmentRow {
+  id: string;
+}
 
 /**
  * GET /api/parent/dashboard/stats
@@ -9,8 +36,8 @@ import { UserRole } from "@prisma/client";
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req, UserRole.PARENT);
-    if (!user) {
+    const authUser = await getAuthenticatedUser(req, "PARENT");
+    if (!authUser) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -18,9 +45,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Lấy danh sách tất cả con của phụ huynh
-    const relationships = await prisma.parentStudent.findMany({
+    const relationships = (await prisma.parentStudent.findMany({
       where: {
-        parentId: user.id,
+        parentId: authUser.id,
         status: "ACTIVE",
       },
       include: {
@@ -33,9 +60,11 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-    });
+    })) as ParentChildLinkRow[];
 
-    const studentIds = relationships.map((rel) => rel.studentId);
+    const studentIds = relationships.map(
+      (rel: ParentChildLinkRow) => rel.studentId,
+    );
     const totalChildren = relationships.length;
 
     // Nếu không có con nào, trả về stats rỗng
@@ -54,7 +83,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Lấy tất cả submissions của tất cả con
-    const submissions = await prisma.assignmentSubmission.findMany({
+    const submissions = (await prisma.assignmentSubmission.findMany({
       where: {
         studentId: { in: studentIds },
       },
@@ -63,17 +92,23 @@ export async function GET(req: NextRequest) {
         grade: true,
         submittedAt: true,
       },
-    });
+    })) as ParentStatsSubmissionRow[];
 
     const totalSubmissions = submissions.length;
-    const gradedSubmissions = submissions.filter((sub) => sub.grade !== null);
+    const gradedSubmissions = submissions.filter(
+      (sub: ParentStatsSubmissionRow) => sub.grade !== null,
+    );
     const totalGraded = gradedSubmissions.length;
     const totalPending = totalSubmissions - totalGraded;
 
     // Tính điểm trung bình tổng
     const overallAverage =
       totalGraded > 0
-        ? gradedSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) / totalGraded
+        ? gradedSubmissions.reduce(
+            (sum: number, sub: ParentStatsSubmissionRow) =>
+              sum + (sub.grade || 0),
+            0,
+          ) / totalGraded
         : 0;
 
     // Tính điểm trung bình tháng trước để so sánh
@@ -81,7 +116,7 @@ export async function GET(req: NextRequest) {
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    const lastMonthSubmissions = await prisma.assignmentSubmission.findMany({
+    const lastMonthSubmissions = (await prisma.assignmentSubmission.findMany({
       where: {
         studentId: { in: studentIds },
         grade: { not: null },
@@ -91,36 +126,43 @@ export async function GET(req: NextRequest) {
         },
       },
       select: { grade: true },
-    });
+    })) as { grade: number | null }[];
 
     const lastMonthAverage =
       lastMonthSubmissions.length > 0
-        ? lastMonthSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) /
-          lastMonthSubmissions.length
+        ? lastMonthSubmissions.reduce(
+            (sum: number, sub: { grade: number | null }) =>
+              sum + (sub.grade || 0),
+            0,
+          ) / lastMonthSubmissions.length
         : 0;
 
     const averageChange = overallAverage - lastMonthAverage;
 
     // Tính số assignments sắp đến hạn của tất cả con
-    const studentClassrooms = await prisma.classroomStudent.findMany({
+    const studentClassrooms = (await prisma.classroomStudent.findMany({
       where: { studentId: { in: studentIds } },
       select: { classroomId: true },
-    });
+    })) as StudentClassroomRow[];
 
-    const classroomIds = studentClassrooms.map((sc) => sc.classroomId);
+    const classroomIds = studentClassrooms.map(
+      (sc: StudentClassroomRow) => sc.classroomId,
+    );
     let upcomingAssignments = 0;
 
     if (classroomIds.length > 0) {
-      const assignmentClassrooms = await prisma.assignmentClassroom.findMany({
+      const assignmentClassrooms = (await prisma.assignmentClassroom.findMany({
         where: { classroomId: { in: classroomIds } },
         select: { assignmentId: true },
-      });
+      })) as AssignmentClassroomRow[];
 
-      const assignmentIds = assignmentClassrooms.map((ac) => ac.assignmentId);
+      const assignmentIds = assignmentClassrooms.map(
+        (ac: AssignmentClassroomRow) => ac.assignmentId,
+      );
 
       if (assignmentIds.length > 0) {
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const upcomingAssignmentsData = await prisma.assignment.findMany({
+        const upcomingAssignmentsData = (await prisma.assignment.findMany({
           where: {
             id: { in: assignmentIds },
             dueDate: {
@@ -129,9 +171,11 @@ export async function GET(req: NextRequest) {
             },
           },
           select: { id: true },
-        });
+        })) as UpcomingAssignmentRow[];
 
-        const upcomingIds = upcomingAssignmentsData.map((a) => a.id);
+        const upcomingIds = upcomingAssignmentsData.map(
+          (a: UpcomingAssignmentRow) => a.id,
+        );
         if (upcomingIds.length > 0) {
           const submittedUpcoming = await prisma.assignmentSubmission.count({
             where: {

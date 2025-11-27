@@ -46,6 +46,13 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       },
     });
 
+    interface UsersByRoleRow {
+      role: string;
+      _count: {
+        role: number;
+      };
+    }
+
     // Lấy số lượng users mới trong 30 ngày qua
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -69,7 +76,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
         totalAnnouncements,
         totalComments,
         usersByRole: usersByRole.reduce(
-          (acc, item) => {
+          (acc: Record<string, number>, item: UsersByRoleRow) => {
             acc[item.role] = item._count.role;
             return acc;
           },

@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma, UserRole } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+
+export type GlobalUserRole =
+  | "SUPER_ADMIN"
+  | "STAFF"
+  | "TEACHER"
+  | "STUDENT"
+  | "PARENT";
 
 export type Paginated<T> = {
   items: T[];
@@ -7,11 +14,22 @@ export type Paginated<T> = {
   total?: number;
 };
 
+export type RepoUser = {
+  id: string;
+  email: string;
+  fullname: string | null;
+  role: string;
+  createdAt: Date;
+};
+
 // Repository cho User phục vụ trang Admin
 export const userRepo = {
   async listByOrganization(params: { organizationId: string; limit?: number; cursor?: string | null; search?: string | null; includeRole?: boolean }) {
     const { organizationId, limit = 20, cursor, search } = params;
-    const where: Prisma.UserWhereInput = {
+    const where: {
+      organizationMemberships: { some: { organizationId: string } };
+      OR?: { email?: { contains: string; mode: "insensitive" }; fullname?: { contains: string; mode: "insensitive" } }[];
+    } = {
       organizationMemberships: { some: { organizationId } },
     };
     if (search) {
@@ -45,9 +63,9 @@ export const userRepo = {
     return { items: users, nextCursor } as Paginated<typeof users[number]>;
   },
 
-  async createUser(params: { email: string; fullname: string; passwordHash: string; globalRole: "SUPER_ADMIN" | "STAFF" | "TEACHER" | "STUDENT" | "PARENT"; organizationId?: string | null }) {
+  async createUser(params: { email: string; fullname: string; passwordHash: string; globalRole: GlobalUserRole; organizationId?: string | null }): Promise<RepoUser> {
     const { email, fullname, passwordHash, globalRole, organizationId } = params;
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.user.create({
         data: { email, fullname, password: passwordHash, role: 'STUDENT' as any },
         select: { id: true, email: true, fullname: true, role: true, createdAt: true },
@@ -64,16 +82,18 @@ export const userRepo = {
           create: { organizationId, userId: user.id, roleInOrg: mappedOrgRole },
         });
       }
-      return user;
+      return user as RepoUser;
     });
   },
 
-  async updateUser(params: { id: string; fullname?: string; email?: string; globalRole?: "SUPER_ADMIN" | "STAFF" | "TEACHER" | "STUDENT" | "PARENT"; disable?: boolean }) {
+  async updateUser(params: { id: string; fullname?: string; email?: string; globalRole?: GlobalUserRole; disable?: boolean }) {
     const { id, fullname, email, globalRole } = params;
-    const data: Prisma.UserUpdateInput = {};
+    const data: { fullname?: string; email?: string; role?: GlobalUserRole } = {};
     if (fullname !== undefined) data.fullname = fullname;
     if (email !== undefined) data.email = email;
-    if (globalRole !== undefined) data.role = globalRole as UserRole;
+    if (globalRole !== undefined) {
+      data.role = globalRole;
+    }
     return prisma.user.update({ where: { id }, data, select: { id: true, email: true, fullname: true, role: true } });
   },
 

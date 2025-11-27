@@ -2,13 +2,18 @@
  * Constants cho Admin Dashboard
  */
 
-import type { UserRole } from "@prisma/client";
+export type AdminUserRole =
+  | "SUPER_ADMIN"
+  | "STAFF"
+  | "TEACHER"
+  | "STUDENT"
+  | "PARENT";
 
 // ============================================
 // Roles & Permissions
 // ============================================
 
-export const USER_ROLES: UserRole[] = [
+export const USER_ROLES: AdminUserRole[] = [
   "SUPER_ADMIN",
   "STAFF",
   "TEACHER",
@@ -16,9 +21,9 @@ export const USER_ROLES: UserRole[] = [
   "PARENT",
 ];
 
-export const ADMIN_ROLES: UserRole[] = ["SUPER_ADMIN", "STAFF"];
+export const ADMIN_ROLES: AdminUserRole[] = ["SUPER_ADMIN", "STAFF"];
 
-export const ROLE_LABELS: Record<UserRole, string> = {
+export const ROLE_LABELS: Record<AdminUserRole, string> = {
   SUPER_ADMIN: "Admin hệ thống",
   STAFF: "Quản trị tổ chức",
   TEACHER: "Giáo viên",
@@ -26,7 +31,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   PARENT: "Phụ huynh",
 };
 
-export const ROLE_COLORS: Record<UserRole, string> = {
+export const ROLE_COLORS: Record<AdminUserRole, string> = {
   SUPER_ADMIN: "text-red-600 bg-red-50",
   STAFF: "text-blue-600 bg-blue-50",
   TEACHER: "text-purple-600 bg-purple-50",
@@ -43,7 +48,7 @@ export interface AdminNavItem {
   label: string;
   href: string;
   icon: string; // lucide-react icon name
-  roles: UserRole[];
+  roles: AdminUserRole[];
   children?: AdminNavItem[];
 }
 

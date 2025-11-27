@@ -12,6 +12,17 @@ function normalizeVi(input?: string) {
         .trim();
 }
 
+interface ClassroomSearchRow {
+    id: string;
+    name: string;
+    code: string;
+    description: string | null;
+    createdAt: Date | string;
+    teacher: {
+        fullname: string | null;
+    } | null;
+}
+
 export async function GET(req: Request) {
     try {
         const url = new URL(req.url);
@@ -68,7 +79,7 @@ export async function GET(req: Request) {
                 teacher: { select: { fullname: true } },
             },
             ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        });
+        }) as ClassroomSearchRow[];
 
         let nextCursor: string | undefined = undefined;
         if (classes.length > limit) {
@@ -76,12 +87,15 @@ export async function GET(req: Request) {
             nextCursor = nextItem?.id;
         }
 
-        const items = classes.map((c) => ({
+        const items = classes.map((c: ClassroomSearchRow) => ({
             id: c.id,
             name: c.name,
             code: c.code,
-            teacherName: (c as any).teacher?.fullname ?? "",
-            createdAt: c.createdAt.toISOString?.() ?? String(c.createdAt),
+            teacherName: c.teacher?.fullname ?? "",
+            createdAt:
+                c.createdAt instanceof Date
+                    ? c.createdAt.toISOString()
+                    : String(c.createdAt),
             joined: false,
         }));
 

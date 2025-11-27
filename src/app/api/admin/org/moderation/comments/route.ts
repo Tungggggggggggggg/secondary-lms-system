@@ -43,13 +43,19 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       where: { id: { in: body.ids } },
       select: { announcement: { select: { organizationId: true } } },
     });
-    const orgIds = Array.from(
-      new Set(
-        commentOrgs
-          .map((x) => x.announcement?.organizationId)
-          .filter((x): x is string => !!x)
-      )
-    );
+    interface CommentOrgRow {
+      announcement: { organizationId: string | null } | null;
+    }
+
+    const orgIdSet = new Set<string>();
+    (commentOrgs as CommentOrgRow[]).forEach((row) => {
+      const orgId = row.announcement?.organizationId;
+      if (orgId) {
+        orgIdSet.add(orgId);
+      }
+    });
+
+    const orgIds = Array.from(orgIdSet);
     if (orgIds.length === 0) {
       return errorResponse(400, "No valid comments found for moderation");
     }
@@ -57,7 +63,14 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       where: { userId: authUser.id, organizationId: { in: orgIds } },
       select: { id: true, organizationId: true },
     });
-    const hasAll = orgIds.every((oid) => memberships.some((m) => m.organizationId === oid));
+
+    interface MembershipRow {
+      organizationId: string;
+    }
+
+    const hasAll = orgIds.every((oid: string) =>
+      memberships.some((m: MembershipRow) => m.organizationId === oid)
+    );
     if (!hasAll) return errorResponse(403, "Forbidden: some comments are outside of your organization scope");
   }
 

@@ -1,20 +1,32 @@
-require('@rushstack/eslint-patch/modern-module-resolution');
-
 /** @type {import('eslint').Linter.Config} */
 module.exports = {
-  extends: ['next/core-web-vitals'],
-  plugins: ['@typescript-eslint'],
+  root: true,
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 2020,
+    sourceType: 'module',
+    ecmaFeatures: { jsx: true },
+  },
+  env: {
+    browser: true,
+    node: true,
+    es2020: true,
+  },
+  plugins: ['@typescript-eslint', '@next/next', 'react-hooks'],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended'],
+  ignorePatterns: ['.next/**', 'node_modules/**', 'out/**', 'build/**'],
   rules: {
-    // Tắt các rule đang sinh nhiều warning trong giai đoạn hiện tại
+    // Giảm noise để tập trung vào lỗi quan trọng
     '@typescript-eslint/no-explicit-any': 'off',
-    'no-unused-vars': 'off',
     '@typescript-eslint/no-unused-vars': 'off',
     '@typescript-eslint/no-empty-object-type': 'off',
     '@typescript-eslint/no-non-null-asserted-optional-chain': 'off',
-    'react-hooks/exhaustive-deps': 'off',
-    'react/no-unescaped-entities': 'off',
+    'no-unused-vars': 'off',
+    '@typescript-eslint/ban-ts-comment': 'off',
     '@next/next/no-img-element': 'off',
-    'prefer-spread': 'off',
+    'react-hooks/exhaustive-deps': 'off',
+    'no-empty': 'off',
     'prefer-const': 'off',
+    'prefer-spread': 'off',
   },
 };

@@ -3,6 +3,7 @@
 import { useStudentAssignments } from "@/hooks/use-student-assignments";
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
+import ActivityList, { type ActivityItem } from "@/components/shared/ActivityList";
 
 export default function RecentActivity() {
   const { assignments, isLoading, error, fetchAllAssignments } = useStudentAssignments();
@@ -71,86 +72,22 @@ export default function RecentActivity() {
     return activities.slice(0, 5); // Chỉ lấy 5 hoạt động gần nhất
   }, [assignments]);
 
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          🔔 Hoạt động gần đây
-        </h2>
-        <div className="space-y-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex gap-3 animate-pulse">
-              <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-              <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-20"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          🔔 Hoạt động gần đây
-        </h2>
-        <div className="text-red-500 text-center py-4">
-          Có lỗi xảy ra: {error}
-        </div>
-      </div>
-    );
-  }
-
-  if (recentActivities.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          🔔 Hoạt động gần đây
-        </h2>
-        <div className="text-center py-8 text-gray-500">
-          <p>Chưa có hoạt động nào</p>
-        </div>
-      </div>
-    );
-  }
+  const items: ActivityItem[] = recentActivities.map((act, index) => ({
+    id: index,
+    color: act.color,
+    icon: act.icon,
+    primaryText: act.text,
+    secondaryText: act.time,
+    href: act.link,
+  }));
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
-      <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-        🔔 Hoạt động gần đây
-      </h2>
-      <div className="space-y-4">
-        {recentActivities.map((act, index) => {
-          const content = (
-            <div key={index} className="flex gap-3">
-              <div
-                className={`w-10 h-10 bg-gradient-to-r ${act.color} rounded-full flex items-center justify-center text-white font-bold`}
-              >
-                {act.icon}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-gray-800">{act.text}</p>
-                <p className="text-xs text-gray-500">{act.time}</p>
-              </div>
-            </div>
-          );
-
-          if (act.link) {
-            return (
-              <Link key={index} href={act.link} className="block hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
-                {content}
-              </Link>
-            );
-          }
-
-          return content;
-        })}
-      </div>
-    </div>
+    <ActivityList
+      title="🔔 Hoạt động gần đây"
+      loading={isLoading}
+      error={error ? String(error) : null}
+      items={items}
+      emptyMessage="Chưa có hoạt động nào"
+    />
   );
 }
-  

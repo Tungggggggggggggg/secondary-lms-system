@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { writeAudit } from "@/lib/logging/audit";
 
@@ -26,7 +27,7 @@ export const POST = withApiLogging(async (req: NextRequest) => {
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Demote current owner to ADMIN
       await tx.organizationMember.update({ where: { id: currentOwner.id }, data: { roleInOrg: "ADMIN" as any } });
 

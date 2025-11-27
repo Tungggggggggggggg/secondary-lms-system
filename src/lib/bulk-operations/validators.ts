@@ -3,7 +3,7 @@
  * Validation chuyên nghiệp với error handling chi tiết
  */
 
-import { UserRole } from "@prisma/client";
+import type { AdminUserRole } from "@/lib/admin/admin-constants";
 import { 
   BulkUserInput, 
   BulkClassroomInput, 
@@ -43,14 +43,14 @@ export const validateStudentId = (studentId: string): boolean => {
 // User Role Validators
 // ============================================
 
-export const validateUserRole = (role: string): role is UserRole => {
-  const validRoles: UserRole[] = ['STAFF', 'TEACHER', 'STUDENT', 'PARENT', 'SUPER_ADMIN'];
-  return validRoles.includes(role as UserRole);
+export const validateUserRole = (role: string): role is AdminUserRole => {
+  const validRoles: AdminUserRole[] = ['STAFF', 'TEACHER', 'STUDENT', 'PARENT', 'SUPER_ADMIN'];
+  return validRoles.includes(role as AdminUserRole);
 };
 
-export const validateRoleForBulkCreation = (role: UserRole): boolean => {
+export const validateRoleForBulkCreation = (role: AdminUserRole): boolean => {
   // Chỉ cho phép tạo TEACHER, STUDENT, PARENT trong bulk operations
-  const allowedRoles: UserRole[] = ['TEACHER', 'STUDENT', 'PARENT'];
+  const allowedRoles: AdminUserRole[] = ['TEACHER', 'STUDENT', 'PARENT'];
   return allowedRoles.includes(role);
 };
 

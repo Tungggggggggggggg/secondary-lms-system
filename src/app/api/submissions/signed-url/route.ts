@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
 import { supabaseAdmin } from "@/lib/supabase";
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
 
 export async function GET(req: NextRequest) {
     try {
-        const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+        const user = await getAuthenticatedUser(req, "STUDENT");
         if (!user) {
             return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         }

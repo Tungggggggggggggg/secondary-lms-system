@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -16,7 +15,7 @@ interface IncomingFileMeta {
 // GET: lấy submission hiện tại (bao gồm file) của học sinh cho 1 assignment
 export async function GET(req: NextRequest) {
     try {
-        const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+        const user = await getAuthenticatedUser(req, "STUDENT");
         if (!user) {
             return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         }
@@ -41,7 +40,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+        const user = await getAuthenticatedUser(req, "STUDENT");
         if (!user) {
             return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         }
@@ -115,7 +114,7 @@ export async function POST(req: NextRequest) {
 // PUT: xác nhận nộp bài (chuyển từ draft -> submitted)
 export async function PUT(req: NextRequest) {
     try {
-        const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+        const user = await getAuthenticatedUser(req, "STUDENT");
         if (!user) {
             return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         }

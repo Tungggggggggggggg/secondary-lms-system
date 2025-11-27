@@ -4,7 +4,6 @@ import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-u
 import { writeAudit } from "@/lib/logging/audit";
 import { invalidateMembershipCache } from "@/lib/rbac/policy";
 import { parsePagination } from "@/lib/http/pagination";
-import type { OrgRole } from "@prisma/client";
 import { requireUserRead, requireUserWrite } from "@/lib/rbac/guards";
 
 // GET /api/admin/org/members?orgId=xxx
@@ -59,14 +58,16 @@ export const POST = withApiLogging(async (req: NextRequest) => {
   }
 
   const allowedOrgRoles = ["OWNER", "ADMIN", "TEACHER", "STUDENT", "PARENT"] as const;
-  if (body.roleInOrg && !allowedOrgRoles.includes(body.roleInOrg as any)) {
+  type OrgRole = (typeof allowedOrgRoles)[number];
+
+  if (body.roleInOrg && !allowedOrgRoles.includes(body.roleInOrg as OrgRole)) {
     return errorResponse(400, "Invalid roleInOrg value");
   }
 
   // Ràng buộc: chỉ 1 OWNER duy nhất trong mỗi tổ chức
   if (body.roleInOrg === "OWNER") {
     const existingOwner = await prisma.organizationMember.findFirst({
-      where: { organizationId: body.orgId, roleInOrg: "OWNER" as any },
+      where: { organizationId: body.orgId, roleInOrg: "OWNER" as OrgRole },
       select: { id: true },
     });
     if (existingOwner) {

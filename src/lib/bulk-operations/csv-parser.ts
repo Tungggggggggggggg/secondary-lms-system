@@ -3,7 +3,7 @@
  * Hỗ trợ parse và validate dữ liệu từ file CSV/Excel
  */
 
-import { UserRole } from "@prisma/client";
+import type { AdminUserRole } from "@/lib/admin/admin-constants";
 import { 
   BulkUserInput, 
   CSVImportColumn, 
@@ -148,7 +148,7 @@ const parseCSVLine = (line: string): string[] => {
  */
 export const mapCSVToUsers = (
   csvData: Record<string, any>[],
-  role: UserRole = 'STUDENT',
+  role: AdminUserRole = 'STUDENT',
   columns: CSVImportColumn[] = STUDENT_CSV_COLUMNS
 ): CSVImportResult => {
   const errors: BulkUserValidationError[] = [];
@@ -326,7 +326,7 @@ export const generateTeacherCSVTemplate = (includeExample: boolean = true): stri
  */
 export const processUploadedFile = async (
   file: File,
-  role: UserRole = 'STUDENT'
+  role: AdminUserRole = 'STUDENT'
 ): Promise<CSVImportResult> => {
   try {
     // Validate file type

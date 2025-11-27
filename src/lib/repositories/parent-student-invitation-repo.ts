@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { generateInvitationCode } from "@/lib/utils/code-generator";
 
 /**
@@ -192,7 +192,7 @@ export const parentStudentInvitationRepo = {
       }
 
       // Tạo liên kết và cập nhật invitation trong transaction
-      return await prisma.$transaction(async (tx) => {
+      return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Cập nhật invitation
         await tx.parentStudentInvitation.update({
           where: { id: invitation.id },
@@ -258,7 +258,7 @@ export const parentStudentInvitationRepo = {
     const { studentId, status, limit = 20, skip = 0 } = params;
 
     try {
-      const where: Prisma.ParentStudentInvitationWhereInput = {
+      const where: { studentId: string; status?: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" } = {
         studentId,
       };
 

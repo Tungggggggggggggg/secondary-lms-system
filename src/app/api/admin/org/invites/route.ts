@@ -63,16 +63,28 @@ export const GET = withApiLogging(async (req: NextRequest) => {
   });
 
   // Kiểm tra revoke theo entity INVITE
-  const inviteIds = invites.map((i) => i.id);
+  interface InviteRow {
+    id: string;
+    createdAt: Date;
+    metadata: unknown;
+    actorId: string | null;
+  }
+
+  const inviteIds = invites.map((i: InviteRow) => i.id);
   const revokes = await prisma.auditLog.findMany({
     where: { action: "ORG_INVITE_REVOKE", entityType: "INVITE", entityId: { in: inviteIds } },
     select: { id: true, entityId: true },
   });
-  const revokedSet = new Set(revokes.map((r) => r.entityId));
+  interface RevokeRow {
+    id: string;
+    entityId: string | null;
+  }
+
+  const revokedSet = new Set(revokes.map((r: RevokeRow) => r.entityId));
 
   return NextResponse.json({
     success: true,
-    items: invites.map((i) => ({
+    items: invites.map((i: InviteRow) => ({
       id: i.id,
       createdAt: i.createdAt,
       email: (i.metadata as any)?.email || null,

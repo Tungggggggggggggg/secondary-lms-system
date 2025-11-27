@@ -163,7 +163,9 @@ export async function GET(req: NextRequest) {
       LIMIT 30
     `;
 
-    const streak = calculateStreak(recentActivities.map(a => new Date(a.activity_date)));
+    const streak = calculateStreak(
+      recentActivities.map((a: { activity_date: Date }) => new Date(a.activity_date)),
+    );
 
     console.log('[API /api/teachers/dashboard/goals] Goals:', goals.length, 'Streak:', streak);
 

@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
 
 export type AuditEntityType =
   | "USER"
@@ -11,13 +10,15 @@ export type AuditEntityType =
   | "SYSTEM"
   | string;
 
+export type AuditMetadata = Record<string, unknown> | null;
+
 export async function writeAudit(
   params: {
     actorId: string;
     action: string;
     entityType: AuditEntityType;
     entityId: string;
-    metadata?: Prisma.InputJsonValue;
+    metadata?: AuditMetadata;
     ip?: string | null;
     userAgent?: string | null;
     organizationId?: string | null;
@@ -30,7 +31,7 @@ export async function writeAudit(
         action: params.action,
         entityType: params.entityType,
         entityId: params.entityId,
-        metadata: params.metadata ?? undefined,
+        metadata: (params.metadata ?? undefined) as any,
         ip: params.ip ?? undefined,
         userAgent: params.userAgent ?? undefined,
         organizationId: params.organizationId ?? undefined,

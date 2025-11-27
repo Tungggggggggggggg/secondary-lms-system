@@ -28,7 +28,7 @@ export type ConversationListItem = {
 };
 
 export async function getParentIdsOfStudent(studentId: string): Promise<string[]> {
-  const links = await prisma.parentStudent.findMany({
+  const links: { parentId: string }[] = await prisma.parentStudent.findMany({
     where: { studentId, status: "ACTIVE" },
     select: { parentId: true },
   });
@@ -36,7 +36,7 @@ export async function getParentIdsOfStudent(studentId: string): Promise<string[]
 }
 
 export async function isTeacherOfStudent(teacherId: string, studentId: string): Promise<{ ok: boolean; classIds: string[] }>{
-  const memberships = await prisma.classroomStudent.findMany({
+  const memberships: { classroomId: string }[] = await prisma.classroomStudent.findMany({
     where: {
       studentId,
       classroom: { teacherId },

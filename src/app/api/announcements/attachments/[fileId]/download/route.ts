@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getAuthenticatedUser, isStudentInClassroom, isTeacherOfClassroom, getRequestId } from "@/lib/api-utils";
-import { UserRole } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
@@ -38,8 +37,8 @@ export async function GET(
 
     // Quyền truy cập: giáo viên sở hữu lớp hoặc học sinh trong lớp
     const canAccess =
-      (user.role === UserRole.TEACHER && (await isTeacherOfClassroom(user.id, classroomId))) ||
-      (user.role === UserRole.STUDENT && (await isStudentInClassroom(user.id, classroomId)));
+      (user.role === "TEACHER" && (await isTeacherOfClassroom(user.id, classroomId))) ||
+      (user.role === "STUDENT" && (await isStudentInClassroom(user.id, classroomId)));
 
     if (!canAccess) {
       return NextResponse.json({ success: false, message: "Forbidden", requestId }, { status: 403 });
