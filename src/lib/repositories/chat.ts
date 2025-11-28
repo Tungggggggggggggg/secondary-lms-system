@@ -196,28 +196,32 @@ export async function listMessages(
     id: string;
     content: string;
     createdAt: string;
-    senderId: string;
+    sender: { id: string; fullname: string; role: string };
     attachments?: { id: string; name: string; mimeType: string; sizeBytes: number; storagePath: string }[];
-  }>
+    parentId?: string | null;
+    parentMessage?: { content: string; sender: { fullname: string } } | null;
+      }>
 > {
   const prismaAny = prisma as any;
   const messages = await prismaAny.message.findMany({
     where: { conversationId },
     orderBy: { createdAt: "asc" },
     take: limit,
-    select: {
-      id: true,
-      content: true,
-      createdAt: true,
-      senderId: true,
+    include: {
       attachments: { select: { id: true, name: true, mimeType: true, sizeBytes: true, storagePath: true } },
-    },
+      parent: { select: { content: true, sender: { select: { fullname: true } } } },
+      sender: { select: { id: true, fullname: true, role: true } },
+          },
   });
   return (messages as any[]).map((m: any) => ({
     id: m.id,
     content: m.content,
     createdAt: m.createdAt.toISOString(),
-    senderId: m.senderId,
+    sender: {
+      id: m.sender.id,
+      fullname: m.sender.fullname,
+      role: m.sender.role,
+    },
     attachments: (m.attachments || []).map((a: any) => ({
       id: a.id,
       name: a.name,
@@ -225,6 +229,15 @@ export async function listMessages(
       sizeBytes: a.sizeBytes,
       storagePath: a.storagePath,
     })),
+    parentId: m.parentId,
+    parentMessage: m.parent
+      ? {
+          content: m.parent.content,
+          sender: {
+            fullname: m.parent.sender.fullname,
+          },
+        }
+      : null,
   }));
 }
 
@@ -232,7 +245,8 @@ export async function addMessage(
   conversationId: string,
   senderId: string,
   content: string,
-  attachments?: { name: string; mimeType: string; sizeBytes: number; storagePath: string }[]
+  attachments?: { name: string; mimeType: string; sizeBytes: number; storagePath: string }[],
+  parentId?: string
 ) {
   const prismaAny = prisma as any;
   const msg = await prismaAny.message.create({
@@ -240,6 +254,7 @@ export async function addMessage(
       conversationId,
       senderId,
       content,
+      parentId,
       attachments:
         attachments && attachments.length > 0
           ? {
@@ -282,6 +297,88 @@ export async function addMessage(
 export async function markRead(conversationId: string, userId: string) {
   const prismaAny = prisma as any;
   await prismaAny.conversationParticipant.updateMany({ where: { conversationId, userId }, data: { lastReadAt: new Date() } });
+}
+
+
+export async function searchMessages(userId: string, query: string) {
+  const conversations = await prisma.conversationParticipant.findMany({
+    where: { userId },
+    select: { conversationId: true },
+  });
+  const conversationIds = conversations.map((c) => c.conversationId);
+
+  const messages = await prisma.message.findMany({
+    where: {
+      conversationId: { in: conversationIds },
+      content: { contains: query, mode: 'insensitive' },
+    },
+    include: {
+      sender: { select: { fullname: true } },
+      conversation: { select: { participants: { include: { user: { select: { fullname: true } } } } } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  });
+
+  return messages.map(msg => ({
+    id: msg.id,
+    content: msg.content,
+    createdAt: msg.createdAt.toISOString(),
+    senderName: msg.sender.fullname,
+    conversationId: msg.conversationId,
+    conversationName: msg.conversation.participants.map(p => p.user.fullname).join(', '),
+  }));
+}
+
+export async function listAttachments(conversationId: string) {
+  const attachments = await prisma.chatAttachment.findMany({
+    where: {
+      message: {
+        conversationId: conversationId,
+      },
+    },
+    orderBy: {
+      message: {
+        createdAt: 'desc',
+      },
+    },
+    take: 100, // Giới hạn số lượng file trả về
+  });
+
+  // Regex để tìm URLs trong nội dung tin nhắn
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const messagesWithLinks = await prisma.message.findMany({
+    where: {
+      conversationId: conversationId,
+      content: {
+        contains: 'http',
+      },
+    },
+    select: {
+      content: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: 100,
+  });
+
+  const links = messagesWithLinks.flatMap(msg => {
+    const found = msg.content.match(urlRegex);
+    return found ? found.map(url => ({ url, createdAt: msg.createdAt.toISOString() })) : [];
+  });
+
+  return {
+    files: attachments.map(att => ({
+      id: att.id,
+      name: att.name,
+      mimeType: att.mimeType,
+      sizeBytes: att.sizeBytes,
+      storagePath: att.storagePath,
+    })),
+    links: links,
+  };
 }
 
 export async function totalUnreadCount(userId: string): Promise<number> {

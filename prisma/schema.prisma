@@ -38,9 +38,9 @@ model User {
   conversationsCreated            Conversation[]             @relation("UserConversationsCreated")
   conversationsAsContextStudent   Conversation[]             @relation("ConversationContextStudent")
   conversationParticipants        ConversationParticipant[]
-  messagesSent                    Message[]
   examEvents                      ExamEvent[]
   assignmentAttempts              AssignmentAttempt[]
+  messagesSent                    Message[]
 
   @@index([email])
   @@index([role, createdAt])
@@ -575,17 +575,23 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String           @id @default(cuid())
+  id             String            @id @default(cuid())
   conversationId String
   senderId       String
   content        String
-  createdAt      DateTime         @default(now())
+  createdAt      DateTime          @default(now())
   attachments    ChatAttachment[]
-  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User             @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // For message replies
+  parentId       String?           @map("parent_id")
+  parent         Message?          @relation("MessageReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies        Message[]         @relation("MessageReplies")
 
   @@index([conversationId, createdAt])
   @@index([senderId])
+  @@index([parentId])
   @@map("messages")
 }
 
@@ -602,6 +608,7 @@ model ChatAttachment {
   @@index([messageId])
   @@map("chat_attachments")
 }
+
 
 enum ConversationType {
   DM

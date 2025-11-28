@@ -20,13 +20,27 @@ export async function GET(req: NextRequest) {
       }, { status: 401 })
     }
 
-    // ✅ SỬ DỤNG CACHE CHO USER LOOKUP
-    const user = await getCachedUser(
-      session.user.id || undefined, 
-      session.user.email || undefined
+    const sessionUser = session.user as any
+    const sessionUserId = (sessionUser.id as string | undefined) || undefined
+    const sessionUserEmail = (sessionUser.email as string | undefined) || undefined
+    const sessionRole = (sessionUser.role as string | undefined) || undefined
+
+    // ✅ SỬ DỤNG CACHE CHO USER LOOKUP (perf), nhưng quyền dựa trên session.role
+    const cachedUser = await getCachedUser(
+      sessionUserId,
+      sessionUserEmail
     )
 
-    if (!user || user.role !== 'TEACHER') {
+    if (sessionRole !== 'TEACHER') {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Forbidden - Teacher only' 
+      }, { status: 403 })
+    }
+
+    const teacherId = cachedUser?.id ?? sessionUserId
+
+    if (!teacherId) {
       return NextResponse.json({ 
         success: false, 
         message: 'Forbidden - Teacher only' 
@@ -44,23 +58,23 @@ export async function GET(req: NextRequest) {
       avg_grade: number | null
     }>>`
       SELECT 
-        (SELECT COUNT(*) FROM "assignments" WHERE "authorId" = ${user.id}) as total_assignments,
-        (SELECT COUNT(*) FROM "classrooms" WHERE "teacherId" = ${user.id} AND "isActive" = true) as total_classrooms,
+        (SELECT COUNT(*) FROM "assignments" WHERE "authorId" = ${teacherId}) as total_assignments,
+        (SELECT COUNT(*) FROM "classrooms" WHERE "teacherId" = ${teacherId} AND "isActive" = true) as total_classrooms,
         (SELECT COUNT(*) FROM "classroom_students" cs 
          JOIN "classrooms" c ON c."id" = cs."classroomId" 
-         WHERE c."teacherId" = ${user.id} AND c."isActive" = true) as total_students,
+         WHERE c."teacherId" = ${teacherId} AND c."isActive" = true) as total_students,
         (SELECT COUNT(*) FROM "assignment_submissions" asub 
          JOIN "assignments" a ON a."id" = asub."assignmentId" 
-         WHERE a."authorId" = ${user.id}) as total_submissions,
+         WHERE a."authorId" = ${teacherId}) as total_submissions,
         (SELECT COUNT(DISTINCT a."id") FROM "assignments" a 
          JOIN "assignment_submissions" asub ON asub."assignmentId" = a."id"
-         WHERE a."authorId" = ${user.id}) as assignments_with_submissions,
+         WHERE a."authorId" = ${teacherId}) as assignments_with_submissions,
         (SELECT COUNT(*) FROM "assignment_submissions" asub 
          JOIN "assignments" a ON a."id" = asub."assignmentId" 
-         WHERE a."authorId" = ${user.id} AND asub."grade" IS NOT NULL) as graded_submissions,
+         WHERE a."authorId" = ${teacherId} AND asub."grade" IS NOT NULL) as graded_submissions,
         (SELECT AVG(asub."grade") FROM "assignment_submissions" asub 
          JOIN "assignments" a ON a."id" = asub."assignmentId" 
-         WHERE a."authorId" = ${user.id} AND asub."grade" IS NOT NULL) as avg_grade
+         WHERE a."authorId" = ${teacherId} AND asub."grade" IS NOT NULL) as avg_grade
     `
 
     const rawStats = statsResult[0]
@@ -78,9 +92,9 @@ export async function GET(req: NextRequest) {
     const assignmentsInClassrooms = await prisma.assignmentClassroom.count({
       where: {
         assignment: {
-          authorId: user.id
-        }
-      }
+          authorId: teacherId,
+        },
+      },
     });
 
     // Tính tỷ lệ nộp bài

@@ -1,20 +1,25 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { sendMessage } from "@/hooks/use-chat";
-import { Loader2, Paperclip } from "lucide-react";
+import { MessageDTO, sendMessage } from "@/hooks/use-chat";
+import { Loader2, Paperclip, X, Smile } from "lucide-react";
 import { toast } from "sonner";
 import { uploadChatFile } from "@/lib/supabase-upload";
+import TextareaAutosize from 'react-textarea-autosize';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 type Props = {
   conversationId?: string | null;
   onSent?: () => void;
+  replyingTo?: MessageDTO | null;
+  onCancelReply?: () => void;
 };
 
-export default function ChatComposer({ conversationId, onSent }: Props) {
+export default function ChatComposer({ conversationId, onSent, replyingTo, onCancelReply }: Props) {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const ref = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -24,12 +29,14 @@ export default function ChatComposer({ conversationId, onSent }: Props) {
   const doSend = async () => {
     if (!conversationId) return;
     const content = value.trim();
-    if (!content) return;
+    if (!content && (!replyingTo || !replyingTo.attachments)) return; // Allow sending empty message if it's a reply with attachment
+
     try {
       setSending(true);
-      await sendMessage(conversationId, content);
+      await sendMessage(conversationId, content, undefined, replyingTo?.id);
       setValue("");
       onSent?.();
+      onCancelReply?.(); // Clear reply state after sending
     } catch (e) {
       console.error("[ChatComposer] send error", e);
       toast.error("Không gửi được tin nhắn, vui lòng thử lại.");
@@ -76,9 +83,21 @@ export default function ChatComposer({ conversationId, onSent }: Props) {
   };
 
   return (
-    <div className="border-t border-gray-200 p-3 bg-white rounded-b-xl">
-      <div className="flex items-end gap-2">
-        <textarea
+    <div className="border-t border-gray-200 p-3 bg-white">
+      {replyingTo && (
+        <div className="mb-2 p-2 rounded-lg bg-gray-100 border border-gray-200 text-xs text-gray-600 relative">
+          <button
+            onClick={onCancelReply}
+            className="absolute top-1 right-1 p-1 rounded-full hover:bg-gray-200"
+          >
+            <X className="h-3 w-3" />
+          </button>
+          <p className="font-semibold">Trả lời {replyingTo.sender.fullname}</p>
+          <p className="truncate italic">{replyingTo.content}</p>
+        </div>
+      )}
+      <div className="relative flex items-end gap-2">
+        <TextareaAutosize
           ref={ref}
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -88,10 +107,23 @@ export default function ChatComposer({ conversationId, onSent }: Props) {
               doSend();
             }
           }}
-          placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter để xuống dòng)"
-          className="flex-1 resize-none rounded-xl border border-gray-200 p-3 min-h-[44px] max-h-40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Nhập tin nhắn..."
+          className="flex-1 resize-none rounded-xl border border-gray-200 p-3 pr-3 min-h-[44px] max-h-40 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-transparent"
+          rows={1}
         />
         <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="h-10 w-10 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50" title="Chèn emoji">
+                <Smile className="h-5 w-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-auto border-none shadow-lg">
+              <EmojiPicker onEmojiClick={(emojiData: EmojiClickData) => {
+                setValue(prev => prev + emojiData.emoji);
+              }} />
+            </PopoverContent>
+          </Popover>
           <button
             type="button"
             onClick={handlePickFiles}

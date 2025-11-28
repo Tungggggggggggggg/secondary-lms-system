@@ -6,12 +6,14 @@ import { prisma } from '@/lib/prisma';
 interface TeacherDashboardSubmissionActivityRow {
   id: string;
   submittedAt: Date;
+  assignmentId: string;
   student: {
     fullname: string | null;
   };
   assignment: {
     title: string;
     classrooms: {
+      classroomId: string;
       classroom: {
         name: string | null;
       };
@@ -26,6 +28,7 @@ interface TeacherDashboardNewStudentRow {
     fullname: string | null;
   };
   classroom: {
+    id: string;
     name: string | null;
   };
 }
@@ -38,7 +41,9 @@ interface TeacherDashboardAnnouncementCommentRow {
     role: string;
   };
   announcement: {
+    id: string;
     classroom: {
+      id: string;
       name: string | null;
     };
   };
@@ -91,6 +96,7 @@ export async function GET(req: NextRequest) {
       },
       select: {
         id: true,
+        assignmentId: true,
         submittedAt: true,
         student: {
           select: {
@@ -102,6 +108,7 @@ export async function GET(req: NextRequest) {
             title: true,
             classrooms: {
               select: {
+                classroomId: true,
                 classroom: {
                   select: {
                     name: true,
@@ -120,7 +127,8 @@ export async function GET(req: NextRequest) {
     })) as TeacherDashboardSubmissionActivityRow[];
 
     recentSubmissions.forEach((submission: TeacherDashboardSubmissionActivityRow) => {
-      const classroomName = submission.assignment.classrooms[0]?.classroom.name || 'Không xác định';
+      const firstClassroom = submission.assignment.classrooms[0];
+      const classroomName = firstClassroom?.classroom.name || 'Không xác định';
       const timeAgo = getTimeAgo(new Date(submission.submittedAt));
 
       activities.push({
@@ -132,6 +140,8 @@ export async function GET(req: NextRequest) {
         detail: `${submission.assignment.title} - ${classroomName} - ${timeAgo}`,
         timestamp: submission.submittedAt,
         relatedId: submission.id,
+        assignmentId: submission.assignmentId,
+        classroomId: firstClassroom?.classroomId,
       });
     });
 
@@ -152,6 +162,7 @@ export async function GET(req: NextRequest) {
         },
         classroom: {
           select: {
+            id: true,
             name: true,
           },
         },
@@ -174,6 +185,7 @@ export async function GET(req: NextRequest) {
         detail: `${student.classroom.name} - ${timeAgo}`,
         timestamp: student.joinedAt,
         relatedId: student.id,
+        classroomId: student.classroom.id,
       });
     });
 
@@ -197,8 +209,10 @@ export async function GET(req: NextRequest) {
         },
         announcement: {
           select: {
+            id: true,
             classroom: {
               select: {
+                id: true,
                 name: true,
               },
             },
@@ -225,6 +239,8 @@ export async function GET(req: NextRequest) {
         detail: `${comment.announcement.classroom.name} - ${timeAgo}`,
         timestamp: comment.createdAt,
         relatedId: comment.id,
+        announcementId: comment.announcement.id,
+        classroomId: comment.announcement.classroom.id,
       });
     });
 

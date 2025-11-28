@@ -55,6 +55,33 @@ export default function RecentActivity() {
         }
     };
 
+    const getHrefForActivity = (activity: any): string | undefined => {
+        if (!activity) return undefined;
+
+        switch (activity.type) {
+            case 'SUBMISSION': {
+                if (activity.assignmentId) {
+                    return `/dashboard/teacher/assignments/${activity.assignmentId}/submissions`;
+                }
+                return undefined;
+            }
+            case 'JOIN': {
+                if (activity.classroomId) {
+                    return `/dashboard/teacher/classrooms/${activity.classroomId}`;
+                }
+                return undefined;
+            }
+            case 'COMMENT': {
+                if (activity.classroomId && activity.announcementId) {
+                    return `/dashboard/teacher/classrooms/${activity.classroomId}/announcements/${activity.announcementId}`;
+                }
+                return undefined;
+            }
+            default:
+                return undefined;
+        }
+    };
+
     const items: ActivityItem[] =
         !activities || activities.length === 0
             ? []
@@ -67,6 +94,7 @@ export default function RecentActivity() {
                       icon: config.short,
                       primaryText: `${icon} ${activity.actorName} ${activity.action}`,
                       secondaryText: activity.detail,
+                      href: getHrefForActivity(activity),
                   };
               });
 

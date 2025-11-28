@@ -47,7 +47,7 @@ export async function GET(
     }
 
     // Parallel queries: Assignment detail + Submission + Classroom info trong cùng lúc
-    const [assignmentData, submission, latestAttemptRow, classroom] = await Promise.all([
+    const [assignmentData, submission, classroom, latestAttemptRow] = await Promise.all([
       // Lấy assignment detail
       prisma.assignment.findUnique({
         where: { id: assignmentId },
@@ -55,54 +55,54 @@ export async function GET(
           id: true,
           title: true,
           description: true,
+          type: true,
           dueDate: true,
+          createdAt: true,
+          updatedAt: true,
           openAt: true,
           lockAt: true,
           timeLimitMinutes: true,
           submission_format: true,
           max_attempts: true,
           anti_cheat_config: true,
-          type: true,
-          createdAt: true,
-          updatedAt: true,
           author: {
-            select: { id: true, fullname: true, email: true },
+            select: {
+              id: true,
+              fullname: true,
+              email: true,
+            },
           },
           questions: {
             select: {
               id: true,
-              content: true,
               type: true,
+              content: true,
               order: true,
               options: {
                 select: {
-                  // KHÔNG select isCorrect để student không biết đáp án đúng
                   id: true,
                   label: true,
                   content: true,
+                  isCorrect: true,
                   order: true,
                 },
                 orderBy: { order: "asc" },
               },
-              _count: {
-                select: { comments: true },
+              comments: {
+                select: {
+                  id: true,
+                },
               },
             },
             orderBy: { order: "asc" },
-          },
-          _count: {
-            select: { submissions: true, questions: true },
           },
         },
       }),
       // Lấy submission của student (nếu có)
       prisma.assignmentSubmission.findFirst({
-        where: {
-          assignmentId,
-          studentId: user.id,
-        },
-        orderBy: { attempt: "desc" },
-        select: ({
+        where: { assignmentId, studentId: user.id },
+        orderBy: { submittedAt: "desc" },
+        select: {
           id: true,
           content: true,
           grade: true,
@@ -111,12 +111,7 @@ export async function GET(
           attempt: true,
           presentation: true,
           contentSnapshot: true,
-        } as any),
-      }),
-      prisma.assignmentAttempt.findFirst({
-        where: { assignmentId, studentId: user.id },
-        orderBy: { attemptNumber: 'desc' },
-        select: { attemptNumber: true },
+        },
       }),
       // Lấy classroom info
       prisma.classroom.findUnique({
@@ -127,9 +122,19 @@ export async function GET(
           code: true,
           icon: true,
           teacher: {
-            select: { id: true, fullname: true, email: true },
+            select: {
+              id: true,
+              fullname: true,
+              email: true,
+            },
           },
         },
+      }),
+      // Lấy latest attempt
+      prisma.assignmentAttempt.findFirst({
+        where: { assignmentId, studentId: user.id },
+        orderBy: { attemptNumber: "desc" },
+        select: { attemptNumber: true },
       }),
     ]);
 
@@ -149,38 +154,54 @@ export async function GET(
 
     // Transform data để trả về (kèm submission)
     const computedLatestAttempt = Math.max(submission?.attempt ?? 0, latestAttemptRow?.attemptNumber ?? 0);
+    // Dùng biến trung gian để tránh lỗi type khi truy cập quan hệ questions
+    const questions: any[] = (assignmentData as any).questions ?? [];
     const assignmentDetail = {
       id: assignmentData.id,
       title: assignmentData.title,
       description: assignmentData.description,
       dueDate: assignmentData.dueDate,
       type: assignmentData.type,
-      openAt: assignmentData.openAt ?? null,
-      lockAt: assignmentData.lockAt ?? assignmentData.dueDate,
-      timeLimitMinutes: assignmentData.timeLimitMinutes ?? null,
-      submissionFormat: assignmentData.submission_format ?? null,
-      maxAttempts: assignmentData.type === "QUIZ" ? (assignmentData.max_attempts ?? 1) : null,
-      antiCheatConfig: assignmentData.anti_cheat_config ?? null,
+      openAt: assignmentData.openAt,
+      lockAt: assignmentData.lockAt,
+      timeLimitMinutes: assignmentData.timeLimitMinutes,
+      submissionFormat: assignmentData.submission_format,
+      maxAttempts: assignmentData.type === "QUIZ" ? assignmentData.max_attempts : null,
+      antiCheatConfig: assignmentData.anti_cheat_config,
       createdAt: assignmentData.createdAt,
       updatedAt: assignmentData.updatedAt,
-      author: assignmentData.author,
+      author: {
+        id: (assignmentData as any).author.id,
+        fullname: (assignmentData as any).author.fullname,
+        email: (assignmentData as any).author.email,
+      },
       classroom: {
         id: classroom.id,
         name: classroom.name,
         code: classroom.code,
         icon: classroom.icon,
-        teacher: classroom.teacher,
+        teacher: {
+          id: classroom.teacher.id,
+          fullname: classroom.teacher.fullname,
+          email: classroom.teacher.email,
+        },
       },
-      questions: (assignmentData.questions as StudentAssignmentQuestionRow[]).map(
-        (q: StudentAssignmentQuestionRow) => ({
+      questions: questions.map((q: any) => ({
         id: q.id,
         content: q.content,
         type: q.type,
         order: q.order,
-        options: q.options, // Options KHÔNG có isCorrect
-        _count: q._count,
+        options: q.options.map((opt: any) => ({
+          id: opt.id,
+          label: opt.label,
+          content: opt.content,
+          isCorrect: opt.isCorrect,
+          order: opt.order,
+        })),
+        _count: {
+          comments: q.comments?.length || 0,
+        },
       })),
-      _count: assignmentData._count,
       latestAttempt: computedLatestAttempt,
       allowNewAttempt:
         assignmentData.type === "QUIZ"
@@ -193,10 +214,10 @@ export async function GET(
             content: submission.content,
             grade: submission.grade,
             feedback: submission.feedback,
-            submittedAt: new Date((submission as any).submittedAt).toISOString(),
+            submittedAt: new Date(submission.submittedAt).toISOString(),
             attempt: submission.attempt,
-            presentation: (submission as any).presentation ?? null,
-            contentSnapshot: (submission as any).contentSnapshot ?? null,
+            presentation: submission.presentation ?? null,
+            contentSnapshot: submission.contentSnapshot ?? null,
           }
         : null,
     };

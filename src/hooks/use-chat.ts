@@ -24,9 +24,11 @@ export type MessageDTO = {
   id: string;
   content: string;
   createdAt: string;
-  senderId: string;
+  sender: { id: string; fullname: string; role: string };
   attachments?: ChatAttachmentDTO[];
-};
+  parentId?: string | null;
+  parentMessage?: { content: string; sender: { fullname: string } } | null;
+  };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -58,12 +60,13 @@ export function useMessages(conversationId?: string) {
 export async function sendMessage(
   conversationId: string,
   content: string,
-  attachments?: { name: string; mimeType: string; sizeBytes: number; storagePath: string }[]
+  attachments?: { name: string; mimeType: string; sizeBytes: number; storagePath: string }[],
+  parentId?: string
 ) {
   const res = await fetch("/api/chat/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ conversationId, content, attachments: attachments || [] }),
+    body: JSON.stringify({ conversationId, content, attachments: attachments || [], parentId }),
   });
   return res.json();
 }
@@ -75,6 +78,7 @@ export async function markRead(conversationId: string) {
     body: JSON.stringify({ conversationId }),
   });
 }
+
 
 export function useUnreadTotal() {
   const { data } = useSWR("/api/chat/unread-total", fetcher, { refreshInterval: 6000 });

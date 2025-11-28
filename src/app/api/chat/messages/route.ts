@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!user) return errorResponse(401, "Unauthorized");
 
   try {
-    const { conversationId, content, attachments } = await req.json();
+    const { conversationId, content, attachments, parentId } = await req.json();
     if (!conversationId || ((!content || !content.trim()) && (!attachments || attachments.length === 0))) {
       return errorResponse(400, "Thiếu nội dung, tệp đính kèm hoặc conversationId");
     }
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const allowed = await isConversationParticipant(conversationId, user.id);
     if (!allowed) return errorResponse(403, "Forbidden");
 
-    const msg = await addMessage(conversationId, user.id, (content || "").trim(), attachments);
+    const msg = await addMessage(conversationId, user.id, (content || "").trim(), attachments, parentId);
     return NextResponse.json({ success: true, message: msg });
   } catch (e) {
     logger.error("chat:sendMessage:error", { userId: user.id, error: String(e) });

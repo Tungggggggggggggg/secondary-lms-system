@@ -74,13 +74,13 @@ export default function AssignmentDetailHeader({
         <div>
           <p className="text-xs text-gray-500 mb-1">Lớp học</p>
           <p className="text-sm font-semibold text-gray-800">
-            {assignment.classroom.icon} {assignment.classroom.name}
+            {assignment.classroom?.icon} {assignment.classroom?.name}
           </p>
         </div>
         <div>
           <p className="text-xs text-gray-500 mb-1">Giáo viên</p>
           <p className="text-sm font-semibold text-gray-800">
-            {assignment.classroom.teacher.fullname}
+            {assignment.classroom?.teacher?.fullname ?? "Giáo viên"}
           </p>
         </div>
         {(openAt || lockAt) && (
