@@ -109,7 +109,12 @@ export default function MessagesPage({ role = "teacher" }: Props) {
             {/* Chat Thread and Composer */}
             <div className="flex-1 flex min-h-0 overflow-hidden">
               <div className="flex-1 flex flex-col min-w-0 min-h-0">
-                <ChatThread messages={messages} participants={selected.participants} onReply={setReplyingTo} />
+                <ChatThread
+                  messages={messages}
+                  participants={selected.participants}
+                  onReply={setReplyingTo}
+                  selfUserId={selected.self.userId}
+                />
                 <ChatComposer
                   conversationId={selectedId}
                   onSent={onSent}

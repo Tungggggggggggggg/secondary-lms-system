@@ -90,7 +90,7 @@ export default function UpcomingAssignments() {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
         <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
           📋 Bài tập sắp tới
         </h2>
@@ -107,7 +107,7 @@ export default function UpcomingAssignments() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
         <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
           📋 Bài tập sắp tới
         </h2>
@@ -120,7 +120,7 @@ export default function UpcomingAssignments() {
 
   if (upcomingAssignments.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
         <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
           📋 Bài tập sắp tới
         </h2>
@@ -132,7 +132,7 @@ export default function UpcomingAssignments() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
+    <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
       <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
         📋 Bài tập sắp tới
       </h2>

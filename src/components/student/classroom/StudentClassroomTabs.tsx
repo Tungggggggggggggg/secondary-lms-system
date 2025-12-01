@@ -2,52 +2,52 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LayoutDashboard, FileText, GraduationCap } from "lucide-react";
 
 type Props = {
     classId: string;
 };
 
-function tabClass(active: boolean) {
-    return (
-        "inline-block pb-2 text-sm border-b-2 " +
-        (active
-            ? "border-indigo-600 text-indigo-700 dark:text-indigo-400"
-            : "border-transparent hover:border-indigo-500 hover:text-indigo-600")
-    );
-}
-
 export default function StudentClassroomTabs({ classId }: Props) {
     const pathname = usePathname();
     const base = `/dashboard/student/classes/${classId}`;
     const isBase = pathname === base;
-    
+
+    const isAssignments = pathname?.startsWith(`${base}/assignments`) ?? false;
+    const isGrades = pathname?.startsWith(`${base}/grades`) ?? false;
+
+    const pillClass = (active: boolean) =>
+        [
+            "inline-flex items-center gap-2 rounded-full px-4 sm:px-5 py-2 text-xs sm:text-sm font-medium transition-colors",
+            active
+                ? "bg-white text-indigo-700 shadow-sm"
+                : "text-slate-600 hover:text-indigo-700 hover:bg-white/70",
+        ].join(" ");
+
     return (
-        <nav className="mt-4 border-b border-gray-200 dark:border-gray-800">
-            <ul className="-mb-px flex gap-6">
-                <li>
-                    <Link prefetch className={tabClass(isBase)} href={base}>
-                        Tổng quan
-                    </Link>
-                </li>
-                <li>
-                    <Link
-                        prefetch
-                        className={tabClass(pathname?.startsWith(`${base}/assignments`) ?? false)}
-                        href={`${base}/assignments`}
-                    >
-                        Bài tập
-                    </Link>
-                </li>
-                <li>
-                    <Link
-                        prefetch
-                        className={tabClass(pathname?.startsWith(`${base}/grades`) ?? false)}
-                        href={`${base}/grades`}
-                    >
-                        Điểm số
-                    </Link>
-                </li>
-            </ul>
+        <nav className="mt-6">
+            <div className="inline-flex items-center gap-1 rounded-full bg-slate-100/80 px-1 py-1 border border-slate-200">
+                <Link prefetch className={pillClass(isBase)} href={base}>
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Tổng quan</span>
+                </Link>
+                <Link
+                    prefetch
+                    className={pillClass(isAssignments)}
+                    href={`${base}/assignments`}
+                >
+                    <FileText className="h-4 w-4" />
+                    <span>Bài tập</span>
+                </Link>
+                <Link
+                    prefetch
+                    className={pillClass(isGrades)}
+                    href={`${base}/grades`}
+                >
+                    <GraduationCap className="h-4 w-4" />
+                    <span>Điểm số</span>
+                </Link>
+            </div>
         </nav>
     );
 }

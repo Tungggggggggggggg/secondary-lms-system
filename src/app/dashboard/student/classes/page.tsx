@@ -64,7 +64,7 @@ export default function ClassesPage() {
 
     if (isLoading) {
         return (
-            <div className="p-8">
+            <div className="p-6 lg:p-8">
                 <div className="grid md:grid-cols-3 gap-6">
                     {[1, 2, 3].map((i) => (
                         <div
@@ -91,7 +91,7 @@ export default function ClassesPage() {
 
     if (error) {
         return (
-            <div className="p-8">
+            <div className="p-6 lg:p-8">
                 <div className="text-red-600 font-semibold p-4 bg-red-50 rounded-xl mb-4">
                     Đã xảy ra lỗi khi tải danh sách lớp học: {error}
                 </div>
@@ -106,17 +106,17 @@ export default function ClassesPage() {
     ];
 
     return (
-        <div className="p-8">
-            <Breadcrumb items={breadcrumbItems} className="mb-4" />
+        <div className="p-6 lg:p-8 space-y-6">
+            <Breadcrumb items={breadcrumbItems} className="mb-2" />
             
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-800 mb-2">Lớp học của tôi</h1>
-                    <p className="text-gray-600">Các lớp học bạn đã tham gia</p>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">Lớp học của tôi</h1>
+                    <p className="text-sm sm:text-base text-gray-600">Các lớp học bạn đã tham gia</p>
                 </div>
                 <button
                     onClick={() => router.push("/dashboard/student/classes/join")}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all flex items-center gap-2"
+                    className="px-4 sm:px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all flex items-center gap-2 text-sm sm:text-base"
                 >
                     <span>➕</span>
                     <span>Tham gia lớp mới</span>
@@ -124,7 +124,7 @@ export default function ClassesPage() {
             </div>
 
             {/* Filter & Search */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-4">
                     <select
                         value={sortBy}
@@ -133,7 +133,7 @@ export default function ClassesPage() {
                                 e.target.value as "newest" | "oldest" | "name" | "students"
                             )
                         }
-                        className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+                        className="px-4 py-2 bg-white rounded-xl border border-gray-200 text-sm"
                     >
                         <option value="newest">Mới nhất</option>
                         <option value="oldest">Cũ nhất</option>
@@ -147,54 +147,56 @@ export default function ClassesPage() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Tìm kiếm lớp học..."
-                        className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64"
+                        className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64 text-sm"
                     />
                     <span className="absolute left-3 top-2.5">🔍</span>
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-                {filteredAndSortedClassrooms.length > 0 ? (
-                    filteredAndSortedClassrooms.map((classroom: ClassroomResponse) => (
-                        <div
-                            key={classroom.id}
-                            onClick={() => router.push(`/dashboard/student/classes/${classroom.id}`)}
-                            className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer hover:-translate-y-1"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="w-14 h-14 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center text-2xl">
-                                    {classroom.icon}
-                                </div>
-                                <div className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
-                                    Đang tham gia
-                                </div>
-                            </div>
-
-                            <h3 className="text-xl font-bold text-gray-800 mb-2">{classroom.name}</h3>
-                            <div className="text-sm text-gray-600 mb-4">
-                                GV: {classroom.teacher?.fullname || "Giáo viên"}
-                            </div>
-                            <div className="flex items-center justify-between text-sm text-gray-600">
-                                <span>Mã lớp: {classroom.code}</span>
-                                <span>{classroom._count?.students ?? 0} học sinh</span>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="col-span-3 text-center text-gray-500 py-8">
-                        {classrooms && classrooms.length > 0
-                            ? "Không tìm thấy lớp học nào phù hợp với bộ lọc."
-                            : "Không có lớp học nào. "}
-                        {(!classrooms || classrooms.length === 0) && (
-                            <button
-                                onClick={() => router.push("/dashboard/student/classes/join")}
-                                className="text-purple-600 hover:text-purple-700 underline"
+           
+                <div className="grid md:grid-cols-3 gap-6">
+                    {filteredAndSortedClassrooms.length > 0 ? (
+                        filteredAndSortedClassrooms.map((classroom: ClassroomResponse) => (
+                            <div
+                                key={classroom.id}
+                                onClick={() => router.push(`/dashboard/student/classes/${classroom.id}`)}
+                                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer hover:-translate-y-1"
                             >
-                                Tham gia lớp học đầu tiên
-                            </button>
-                        )}
-                    </div>
-                )}
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="w-14 h-14 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center text-2xl">
+                                        {classroom.icon}
+                                    </div>
+                                    <div className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
+                                        Đang tham gia
+                                    </div>
+                                </div>
+
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">{classroom.name}</h3>
+                                <div className="text-sm text-gray-600 mb-4">
+                                    GV: {classroom.teacher?.fullname || "Giáo viên"}
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-gray-600">
+                                    <span>Mã lớp: {classroom.code}</span>
+                                    <span>{classroom._count?.students ?? 0} học sinh</span>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="col-span-3 text-center text-gray-500 py-8">
+                            {classrooms && classrooms.length > 0
+                                ? "Không tìm thấy lớp học nào phù hợp với bộ lọc."
+                                : "Không có lớp học nào. "}
+                            {(!classrooms || classrooms.length === 0) && (
+                                <button
+                                    onClick={() => router.push("/dashboard/student/classes/join")}
+                                    className="text-purple-600 hover:text-purple-700 underline"
+                                >
+                                    Tham gia lớp học đầu tiên
+                                </button>
+                            )}
+                        </div>
+                    )}
+              
             </div>
         </div>
     );

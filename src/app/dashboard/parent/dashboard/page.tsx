@@ -20,7 +20,7 @@ export default function ParentDashboardPage() {
   return (
     <>
       <HeaderParent
-        title="Chào mừng Phụ huynh! 👨‍👩‍👧"
+        title="Chào mừng trở lại, Phụ huynh 👨‍👩‍👧"
         subtitle={`Theo dõi tiến độ học tập của con bạn - Hôm nay là ${formattedDate}`}
       />
 

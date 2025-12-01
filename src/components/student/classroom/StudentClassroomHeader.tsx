@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import type { ClassroomResponse } from "@/types/classroom";
 import { createConversationGeneric } from "@/hooks/use-chat";
+import { Users, MessageCircle } from "lucide-react";
 
 type Props = {
     classroom: Pick<ClassroomResponse, "id" | "name" | "code" | "icon" | "teacher" | "_count">;
@@ -38,31 +39,46 @@ export default function StudentClassroomHeader({ classroom }: Props) {
     };
 
     return (
-        <div ref={headerRef} className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-6 shadow">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-white/15 flex items-center justify-center">
-                        <span className="text-lg">{classroom.icon || "📘"}</span>
+        <div
+            ref={headerRef}
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-100 via-indigo-50 to-violet-100 border border-indigo-50 px-5 py-5 sm:px-7 sm:py-6 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+        >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-300 text-2xl text-white shadow-md">
+                        <span>{classroom.icon || "📘"}</span>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-semibold">{classroom.name}</h1>
-                        <p className="opacity-90 text-sm">
+                    <div className="space-y-1">
+                        <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">
+                            {classroom.name}
+                        </h1>
+                        <p className="text-xs sm:text-sm text-slate-600">
                             GV: {classroom.teacher?.fullname || "Giáo viên"} • Mã lớp: {classroom.code}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                            {classroom._count?.students ?? 0} học sinh đang tham gia
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-white/10 px-3 py-1.5 text-sm">
-                        {classroom._count?.students ?? 0} học sinh
-                    </span>
+
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-start sm:justify-end">
+                    <button
+                        type="button"
+                        disabled
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm cursor-not-allowed opacity-80"
+                    >
+                        <Users className="h-4 w-4" />
+                        <span>Danh sách học sinh</span>
+                    </button>
                     {classroom.teacher && (
                         <button
                             type="button"
                             onClick={handleMessageTeacher}
                             disabled={isCreatingConversation}
-                            className="inline-flex items-center rounded-md bg-white text-indigo-600 px-3 py-1.5 text-sm font-semibold shadow hover:bg-gray-100 disabled:opacity-60"
+                            className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-md hover:bg-indigo-700 disabled:opacity-60 disabled:hover:bg-indigo-600"
                         >
-                            Nhắn giáo viên
+                            <MessageCircle className="h-4 w-4" />
+                            <span>Nhắn giáo viên</span>
                         </button>
                     )}
                 </div>

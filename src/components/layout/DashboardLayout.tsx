@@ -24,15 +24,15 @@ export default function DashboardLayout({
   const { expanded } = useSidebarState(sidebarStateKey);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50">
       {sidebar}
       <main
         className={`flex-1 p-0 transition-[margin-left] duration-300 ease-in-out ${
           expanded ? "ml-72" : "ml-20"
-        } flex flex-col min-h-0 overflow-hidden`}
+        } flex flex-col min-h-screen`}
       >
         <DashboardTopbar role={role} />
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {children}
         </div>
       </main>

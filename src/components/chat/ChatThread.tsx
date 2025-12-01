@@ -17,11 +17,13 @@ type Props = {
   messages: MessageDTO[];
   participants?: Participant[];
   onReply: (message: MessageDTO) => void;
+  selfUserId?: string;
   };
 
-export default function ChatThread({ messages, participants, onReply }: Props) {
+export default function ChatThread({ messages, participants, onReply, selfUserId }: Props) {
   const { data: session } = useSession();
-  const me = (session?.user as any)?.id as string | undefined;
+  const me = (selfUserId || (session?.user as any)?.id) as string | undefined;
+  const currentRole = (session?.user as any)?.role as string | undefined;
   const endRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -29,7 +31,7 @@ export default function ChatThread({ messages, participants, onReply }: Props) {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const jumpToMessage = (mid?: string) => {
+  const jumpToMessage = (mid?: string | null) => {
     if (!mid) return;
     const el = messageRefs.current[mid] || document.getElementById(`msg-${mid}`) as HTMLDivElement | null;
     if (el) {
@@ -44,7 +46,7 @@ export default function ChatThread({ messages, participants, onReply }: Props) {
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-2 bg-gray-50/80 scrollbar-stable overscroll-contain">
       {messages.map((m, index) => {
-        const mine = me && m.sender.id === me;
+        const mine = (!!me && m.sender.id === me) || (!!currentRole && m.sender.role === currentRole);
         const sender = !mine ? m.sender : undefined;
         const createdAt = new Date(m.createdAt);
 
@@ -64,7 +66,7 @@ export default function ChatThread({ messages, participants, onReply }: Props) {
                 </span>
               </div>
             )}
-            <div className={cn("flex items-end gap-2", mine ? "justify-end" : "justify-start")}>
+            <div className={cn("flex items-end gap-2 w-full", mine ? "justify-end" : "justify-start")}>
               <div className={cn("max-w-[75%] flex flex-col group", mine ? "items-end" : "items-start")}>
                 {!mine && isFirstOfGroup && sender && (
                   <div className="mb-1 text-xs text-gray-500 ml-2">
