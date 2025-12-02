@@ -58,13 +58,13 @@ export default function MessagesPage({ role = "teacher" }: Props) {
     await refresh();
   };
 
-    return (
-    <div className="flex h-full text-sm text-gray-800 overflow-hidden">
+  return (
+    <div className="flex h-full min-h-0 text-sm text-gray-800 overflow-hidden">
       {/* Conversation List */}
-      <div className="w-full lg:w-[380px] bg-gray-50 border-r border-gray-200 flex flex-col min-h-0">
-        <div className="p-4 border-b border-gray-200">
-          <div className="text-lg font-bold text-gray-900">Tin nhắn</div>
-          <p className="text-xs text-gray-500 mt-1">
+      <div className="w-[300px] md:w-[320px] lg:w-[360px] xl:w-[380px] bg-gradient-to-b from-amber-50/50 to-orange-50/30 border-r border-amber-100 flex flex-col min-h-0 overflow-hidden shrink-0">
+        <div className="p-4 border-b border-amber-100 bg-gradient-to-r from-amber-50/70 to-orange-50/50">
+          <div className="text-lg font-bold text-amber-900">💬 Tin nhắn</div>
+          <p className="text-xs text-amber-700 mt-1 font-medium">
             {role === "teacher" ? "Giáo viên" : role === "student" ? "Học sinh" : "Phụ huynh"}
           </p>
         </div>
@@ -75,22 +75,22 @@ export default function MessagesPage({ role = "teacher" }: Props) {
         )}
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white min-h-0">
+      {/* Main Chat Area (scroller) */}
+      <div className="flex-1 flex flex-col bg-gradient-to-b from-amber-50/40 to-orange-50/20 min-h-0 overflow-y-auto overflow-x-hidden">
         {selected ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <div>
+            <div className="sticky top-0 z-20 p-4 bg-gradient-to-r from-amber-50/90 to-orange-50/70 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-amber-200 flex justify-between items-center min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-base font-bold text-gray-900 truncate">
                   {selected.participants.map((p) => p.fullname).join(", ")}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-gray-500">
                   <span>{typeLabel}</span>
                   {contextStudent && (
-                    <span className="flex items-center">
-                      <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-gray-300"></span>
-                      Về học sinh: <span className="font-semibold ml-1">{contextStudent.fullname}</span>
+                    <span className="flex items-center min-w-0">
+                      <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-amber-300 flex-shrink-0"></span>
+                      Về học sinh: <span className="font-semibold ml-1 truncate">{contextStudent.fullname}</span>
                     </span>
                   )}
                 </div>
@@ -98,7 +98,7 @@ export default function MessagesPage({ role = "teacher" }: Props) {
               <button
                 onClick={() => setIsParticipantPanelOpen(!isParticipantPanelOpen)}
                 className={`p-2 rounded-full transition-colors ${
-                  isParticipantPanelOpen ? "bg-indigo-100 text-indigo-600" : "hover:bg-gray-100"
+                  isParticipantPanelOpen ? "bg-amber-100 text-amber-600" : "hover:bg-amber-50"
                 }`}
                 title="Thông tin hội thoại"
               >
@@ -106,27 +106,29 @@ export default function MessagesPage({ role = "teacher" }: Props) {
               </button>
             </div>
 
-            {/* Chat Thread and Composer */}
-            <div className="flex-1 flex min-h-0 overflow-hidden">
-              <div className="flex-1 flex flex-col min-w-0 min-h-0">
+            {/* Chat Thread và Composer */}
+            <div className="flex-1 flex min-h-0 min-w-0 overflow-visible">
+              <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-visible">
                 <ChatThread
                   messages={messages}
                   participants={selected.participants}
                   onReply={setReplyingTo}
                   selfUserId={selected.self.userId}
                 />
-                <ChatComposer
-                  conversationId={selectedId}
-                  onSent={onSent}
-                  replyingTo={replyingTo}
-                  onCancelReply={() => setReplyingTo(null)}
-                />
+                <div className="sticky bottom-0 z-20 bg-gradient-to-r from-amber-50/90 to-orange-50/70 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-t border-amber-200">
+                  <ChatComposer
+                    conversationId={selectedId}
+                    onSent={onSent}
+                    replyingTo={replyingTo}
+                    onCancelReply={() => setReplyingTo(null)}
+                  />
+                </div>
               </div>
 
               {/* Participant Panel (Sliding Sidebar) */}
               <div
-                className={`transition-all duration-300 ease-in-out bg-white border-l border-gray-200 overflow-hidden flex flex-col min-h-0 ${
-                  isParticipantPanelOpen ? "w-full lg:w-[320px]" : "w-0"
+                className={`hidden lg:flex transition-all duration-300 ease-in-out bg-gradient-to-b from-amber-50/50 to-orange-50/30 border-l border-amber-100 flex-col min-h-0 min-w-0 shrink-0 ${
+                  isParticipantPanelOpen ? "w-[300px] overflow-hidden" : "w-0 overflow-hidden"
                 }`}
               >
                 {isParticipantPanelOpen && <ConversationInfoPanel conversation={selected} />}
@@ -134,7 +136,7 @@ export default function MessagesPage({ role = "teacher" }: Props) {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-base text-gray-500 bg-gray-50">
+          <div className="flex-1 flex items-center justify-center text-base text-amber-700 bg-gradient-to-b from-amber-50/40 to-orange-50/20">
             Chọn một hội thoại để bắt đầu nhắn tin
           </div>
         )}

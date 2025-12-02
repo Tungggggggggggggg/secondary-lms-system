@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Label from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export type ProfileRole = "teacher" | "student" | "parent";
 
@@ -121,84 +122,119 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
   const roleAvatarGradients: Record<ProfileRole, string> = {
     teacher: "from-purple-500 to-indigo-500",
     student: "from-emerald-500 to-sky-500",
-    parent: "from-orange-500 to-pink-500",
+    parent: "from-amber-400 to-orange-500",
   };
+
+  const roleColors: Record<ProfileRole, { card: string; border: string; title: string; label: string; input: string; button: string }> = {
+    teacher: {
+      card: "bg-gradient-to-br from-blue-50/50 to-indigo-50/30 border-blue-100 hover:border-blue-200",
+      border: "border-blue-200/50",
+      title: "text-blue-900",
+      label: "text-blue-700",
+      input: "blue",
+      button: "blue",
+    },
+    student: {
+      card: "bg-gradient-to-br from-green-50/50 to-emerald-50/30 border-green-100 hover:border-green-200",
+      border: "border-green-200/50",
+      title: "text-green-900",
+      label: "text-green-700",
+      input: "green",
+      button: "green",
+    },
+    parent: {
+      card: "bg-gradient-to-br from-amber-50/50 to-orange-50/30 border-amber-100 hover:border-amber-200",
+      border: "border-amber-200/50",
+      title: "text-amber-900",
+      label: "text-amber-700",
+      input: "amber",
+      button: "amber",
+    },
+  };
+
+  const colors = roleColors[role];
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border rounded-2xl p-6">
+      {/* Profile Form Card */}
+      <div className={`${colors.card} border rounded-2xl p-6 hover:shadow-lg transition-all duration-300 group`}>
         {role === "teacher" && (
           <div className="flex items-center gap-6 mb-6">
             <div
-              className={`w-24 h-24 bg-gradient-to-br ${roleAvatarGradients[role]} rounded-2xl flex items-center justify-center text-4xl text-white font-bold`}
+              className={`w-24 h-24 bg-gradient-to-br ${roleAvatarGradients[role]} rounded-2xl flex items-center justify-center text-4xl text-white font-bold group-hover:scale-110 transition-transform duration-300`}
             >
               {initial}
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">{displayName}</h2>
-              <p className="text-gray-600">{roleSubtitle}</p>
+              <h2 className={`text-2xl font-bold ${colors.title}`}>{displayName}</h2>
+              <p className={colors.label}>{roleSubtitle}</p>
             </div>
           </div>
         )}
 
-        <form onSubmit={handleSaveProfile} className="space-y-4">
+        <form onSubmit={handleSaveProfile} className="space-y-5">
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="fullname">Họ và tên</Label>
+              <Label htmlFor="fullname" className={`${colors.label} font-semibold`}>Họ và tên</Label>
               <Input
                 id="fullname"
                 type="text"
                 value={profile.fullname}
                 onChange={(e) => setProfile({ ...profile, fullname: e.target.value })}
+                color={colors.input as any}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className={`${colors.label} font-semibold`}>Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={profile.email}
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                color={colors.input as any}
                 required
               />
             </div>
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={isSavingProfile}>
+            <Button type="submit" disabled={isSavingProfile} color={colors.button as any}>
               {isSavingProfile ? "Đang cập nhật..." : "Lưu thay đổi"}
             </Button>
           </div>
         </form>
       </div>
 
-      <div className="bg-white border rounded-2xl p-6">
-        <h2 className="text-xl font-semibold mb-4">Đổi mật khẩu</h2>
-        <form onSubmit={handleChangePassword} className="space-y-4">
+      {/* Password Form Card */}
+      <div className={`${colors.card} border rounded-2xl p-6 hover:shadow-lg transition-all duration-300`}>
+        <h2 className={`text-xl font-bold ${colors.title} mb-5`}>Đổi mật khẩu</h2>
+        <form onSubmit={handleChangePassword} className="space-y-5">
           <div>
-            <Label htmlFor="currentPassword">Mật khẩu hiện tại</Label>
+            <Label htmlFor="currentPassword" className={`${colors.label} font-semibold`}>Mật khẩu hiện tại</Label>
             <Input
               id="currentPassword"
               type="password"
               value={passwords.currentPassword}
               onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
+              color={colors.input as any}
               required
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="newPassword">Mật khẩu mới</Label>
+              <Label htmlFor="newPassword" className={`${colors.label} font-semibold`}>Mật khẩu mới</Label>
               <Input
                 id="newPassword"
                 type="password"
                 value={passwords.newPassword}
                 onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
+                color={colors.input as any}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
+              <Label htmlFor="confirmPassword" className={`${colors.label} font-semibold`}>Xác nhận mật khẩu mới</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -206,12 +242,13 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
                 onChange={(e) =>
                   setPasswords({ ...passwords, confirmPassword: e.target.value })
                 }
+                color={colors.input as any}
                 required
               />
             </div>
           </div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={isChangingPassword}>
+            <Button type="submit" disabled={isChangingPassword} color={colors.button as any}>
               {isChangingPassword ? "Đang đổi mật khẩu..." : "Đổi mật khẩu"}
             </Button>
           </div>

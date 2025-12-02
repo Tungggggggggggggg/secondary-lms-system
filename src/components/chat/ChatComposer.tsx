@@ -83,12 +83,12 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
   };
 
   return (
-    <div className="border-t border-gray-200 p-3 bg-white">
+    <div className="border-t border-amber-200 p-3 bg-white">
       {replyingTo && (
-        <div className="mb-2 p-2 rounded-lg bg-gray-100 border border-gray-200 text-xs text-gray-600 relative">
+        <div className="mb-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 relative">
           <button
             onClick={onCancelReply}
-            className="absolute top-1 right-1 p-1 rounded-full hover:bg-gray-200"
+            className="absolute top-1 right-1 p-1 rounded-full hover:bg-amber-100 transition-colors"
           >
             <X className="h-3 w-3" />
           </button>
@@ -108,13 +108,13 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
             }
           }}
           placeholder="Nhập tin nhắn..."
-          className="flex-1 resize-none rounded-xl border border-gray-200 p-3 pr-3 min-h-[44px] max-h-40 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-transparent"
+          className="flex-1 resize-none rounded-xl border border-amber-200 p-3 pr-3 min-h-[44px] max-h-40 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-transparent transition-all duration-200"
           rows={1}
         />
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
-              <button type="button" className="h-10 w-10 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50" title="Chèn emoji">
+              <button type="button" className="h-10 w-10 flex items-center justify-center rounded-full border border-amber-200 text-amber-600 hover:bg-amber-50 transition-colors" title="Chèn emoji">
                 <Smile className="h-5 w-5" />
               </button>
             </PopoverTrigger>
@@ -128,7 +128,7 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
             type="button"
             onClick={handlePickFiles}
             disabled={!conversationId || sending}
-            className="h-10 w-10 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            className="h-10 w-10 flex items-center justify-center rounded-full border border-amber-200 text-amber-600 hover:bg-amber-50 disabled:opacity-50 transition-colors"
             title="Đính kèm file"
           >
             <Paperclip className="h-4 w-4" />
@@ -137,7 +137,7 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
             type="button"
             onClick={doSend}
             disabled={!value.trim() || !conversationId || sending}
-            className="h-11 px-4 rounded-xl bg-indigo-600 text-white font-semibold shadow hover:bg-indigo-700 disabled:opacity-50"
+            className="h-11 px-4 rounded-xl bg-amber-600 text-white font-semibold shadow hover:bg-amber-700 disabled:opacity-50 transition-colors"
           >
             {sending ? (
               <span className="inline-flex items-center gap-2">
@@ -160,3 +160,4 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
     </div>
   );
 }
+

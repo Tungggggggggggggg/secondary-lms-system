@@ -40,7 +40,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
     <div
       ref={ref}
       className={cn(
-        "relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col",
+        "relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col border border-gray-100",
         className
       )}
       {...props}
@@ -51,10 +51,22 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
 );
 DialogContent.displayName = "DialogContent";
 
-const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+interface DialogHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "parent" | "teacher" | "student";
+}
+
+const headerVariants = {
+  default: "bg-white border-b border-gray-200",
+  parent: "bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200",
+  teacher: "bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200",
+  student: "bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200",
+};
+
+const DialogHeader = ({ className, variant = "default", ...props }: DialogHeaderProps) => (
   <div
     className={cn(
-      "flex flex-col space-y-1.5 text-center sm:text-left px-6 py-4 border-b border-gray-200",
+      "flex flex-col space-y-1.5 text-center sm:text-left px-6 py-5",
+      headerVariants[variant],
       className
     )}
     {...props}
@@ -62,31 +74,52 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 );
 DialogHeader.displayName = "DialogHeader";
 
-const DialogTitle = React.forwardRef<
-  HTMLHeadingElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h2
-    ref={ref}
-    className={cn(
-      "text-xl font-semibold leading-none tracking-tight text-gray-800",
-      className
-    )}
-    {...props}
-  />
-));
+interface DialogTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
+  variant?: "default" | "parent" | "teacher" | "student";
+}
+
+const titleVariants = {
+  default: "text-gray-800",
+  parent: "text-amber-900",
+  teacher: "text-blue-900",
+  student: "text-green-900",
+};
+
+const DialogTitle = React.forwardRef<HTMLHeadingElement, DialogTitleProps>(
+  ({ className, variant = "default", ...props }, ref) => (
+    <h2
+      ref={ref}
+      className={cn(
+        "text-2xl font-bold leading-none tracking-tight",
+        titleVariants[variant],
+        className
+      )}
+      {...props}
+    />
+  )
+);
 DialogTitle.displayName = "DialogTitle";
 
-const DialogDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn("text-sm text-gray-600 mt-1", className)}
-    {...props}
-  />
-));
+interface DialogDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement> {
+  variant?: "default" | "parent" | "teacher" | "student";
+}
+
+const descriptionVariants = {
+  default: "text-gray-600",
+  parent: "text-amber-700",
+  teacher: "text-blue-700",
+  student: "text-green-700",
+};
+
+const DialogDescription = React.forwardRef<HTMLParagraphElement, DialogDescriptionProps>(
+  ({ className, variant = "default", ...props }, ref) => (
+    <p
+      ref={ref}
+      className={cn("text-base mt-2 font-medium", descriptionVariants[variant], className)}
+      {...props}
+    />
+  )
+);
 DialogDescription.displayName = "DialogDescription";
 
 const DialogFooter = ({
@@ -95,7 +128,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-6 py-4 border-t border-gray-200",
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 px-6 py-5 border-t border-gray-100 bg-gray-50/50",
       className
     )}
     {...props}

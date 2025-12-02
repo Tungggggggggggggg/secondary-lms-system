@@ -7,6 +7,7 @@ import NextAuthProvider from "@/components/providers/NextAuthProvider";
 import { ConfirmProvider } from "@/components/providers/ConfirmProvider";
 import { PromptProvider } from "@/components/providers/PromptProvider";
 import CommandPaletteProvider from "@/components/providers/CommandPaletteProvider";
+import SWRProvider from "@/components/providers/SWRProvider";
 
 // Configure Roboto font for the entire application
 const roboto = Roboto({
@@ -61,7 +62,9 @@ export default function RootLayout({
                     <ConfirmProvider>
                         <PromptProvider>
                             <CommandPaletteProvider>
-                                {children}
+                                <SWRProvider>
+                                    {children}
+                                </SWRProvider>
                             </CommandPaletteProvider>
                         </PromptProvider>
                     </ConfirmProvider>

@@ -17,22 +17,9 @@ import {
 import { ArrowLeft, Award, CheckCircle2, Clock, ChevronDown, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useParentGrades, GradeEntry } from "@/hooks/use-parent-grades";
+import type { ParentStudentRelationship } from "@/types/parent";
 
-interface Student {
-  id: string;
-  email: string;
-  fullname: string;
-  role: string;
-}
-
-interface ParentStudentRelationship {
-  id: string;
-  studentId: string;
-  createdAt: string;
-  student: Student;
-}
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+// types imported from shared module; SWR fetcher is provided globally
 
 /**
  * Trang điểm số của con (parent view)
@@ -59,10 +46,7 @@ export default function ParentChildGradesPage() {
     items?: ParentStudentRelationship[];
     total?: number;
     error?: string;
-  }>("/api/parent/children", fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  });
+  }>("/api/parent/children");
 
   const children = (childrenData?.success && childrenData?.items) ? childrenData.items : [];
   const selectedChild = children.find((rel) => rel.student.id === childId || rel.studentId === childId);
@@ -367,7 +351,7 @@ export default function ParentChildGradesPage() {
                     | "classroom"
                 )
               }
-              className="appearance-none px-4 pr-9 py-2 bg-white/90 rounded-full border border-slate-200 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              className="appearance-none px-4 pr-9 py-2 bg-white/90 rounded-full border border-amber-200 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
             >
               <option value="newest">Mới nhất</option>
               <option value="grade_desc">Điểm cao nhất</option>
@@ -375,7 +359,7 @@ export default function ParentChildGradesPage() {
               <option value="due_date">Hạn nộp</option>
               <option value="classroom">Theo lớp học</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500/70" />
           </div>
         </div>
 
@@ -384,7 +368,7 @@ export default function ParentChildGradesPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Tìm kiếm bài tập hoặc lớp học..."
-          className="flex-1 px-4 py-2 bg-white/90 rounded-full border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+          className="flex-1 px-4 py-2 bg-white/90 rounded-full border border-amber-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
         />
       </div>
 
@@ -407,10 +391,10 @@ export default function ParentChildGradesPage() {
         </div>
       ) : (
         <>
-          <div className="bg-white/90 rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.06)] border border-slate-100 overflow-hidden">
+          <div className="bg-white/90 rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.06)] border border-amber-100 overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-indigo-50/60">
+                <TableRow className="bg-amber-50/60">
                   <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Lớp học</TableHead>
                   <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Bài tập</TableHead>
                   <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Loại</TableHead>
@@ -426,7 +410,7 @@ export default function ParentChildGradesPage() {
                   return (
                     <TableRow
                       key={grade.id}
-                      className="hover:bg-indigo-50/40 transition-colors"
+                      className="hover:bg-amber-50/40 transition-colors"
                     >
                       <TableCell>
                         {grade.classroom ? (
@@ -447,8 +431,8 @@ export default function ParentChildGradesPage() {
                         <span
                           className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
                             grade.assignmentType === "ESSAY"
-                              ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                              : "bg-pink-50 text-pink-700 border border-pink-100"
+                              ? "bg-amber-50 text-amber-700 border border-amber-100"
+                              : "bg-orange-50 text-orange-700 border border-orange-100"
                           }`}
                         >
                           {grade.assignmentType === "ESSAY"
@@ -480,7 +464,7 @@ export default function ParentChildGradesPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenFeedback(grade)}
-                            className="inline-flex items-center gap-1 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 hover:border-indigo-200 transition-colors shadow-sm"
+                            className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 hover:border-amber-200 transition-colors shadow-sm"
                           >
                             <MessageCircle className="h-4 w-4" />
                             <span>Xem</span>

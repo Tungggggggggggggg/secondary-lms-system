@@ -3,8 +3,6 @@
 import useSWR from "swr";
 import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export default function QuickStats() {
   interface ParentStudentRelationship {
     id: string;
@@ -21,10 +19,7 @@ export default function QuickStats() {
     success?: boolean;
     items?: ParentStudentRelationship[];
     total?: number;
-  }>("/api/parent/children", fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  });
+  }>("/api/parent/children");
 
   const { data: statsData, isLoading: statsLoading } = useSWR<{
     success?: boolean;
@@ -37,10 +32,7 @@ export default function QuickStats() {
       averageChange: number;
       upcomingAssignments: number;
     };
-  }>("/api/parent/dashboard/stats", fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  });
+  }>("/api/parent/dashboard/stats");
 
   const childrenCount = (childrenData?.success && childrenData?.total) ? childrenData.total : 0;
   const stats = statsData?.data;

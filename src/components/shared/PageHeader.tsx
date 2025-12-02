@@ -1,22 +1,51 @@
+type PageRole = "teacher" | "student" | "parent";
+
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  role?: PageRole;
 }
 
-export default function PageHeader({ title, subtitle }: PageHeaderProps) {
+const roleStyles = {
+  teacher: {
+    gradient: "from-blue-100 via-indigo-50 to-purple-100",
+    border: "border-blue-200",
+    label: "text-blue-600",
+    accentFrom: "from-blue-300 to-indigo-400",
+    accentTo: "from-purple-200 to-purple-400",
+  },
+  student: {
+    gradient: "from-green-100 via-emerald-50 to-teal-100",
+    border: "border-green-200",
+    label: "text-green-600",
+    accentFrom: "from-green-300 to-emerald-400",
+    accentTo: "from-teal-200 to-teal-400",
+  },
+  parent: {
+    gradient: "from-amber-100 via-orange-50 to-rose-100",
+    border: "border-amber-200",
+    label: "text-amber-600",
+    accentFrom: "from-amber-300 to-orange-400",
+    accentTo: "from-rose-200 to-rose-400",
+  },
+};
+
+export default function PageHeader({ title, subtitle, role = "teacher" }: PageHeaderProps) {
+  const style = roleStyles[role];
+
   return (
-    <header className="mb-8">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-100 via-indigo-50 to-violet-100 border border-indigo-50 shadow-[0_18px_40px_rgba(15,23,42,0.12)] px-6 py-6 sm:px-8 sm:py-7">
+    <header className="mb-8 animate-fade-in">
+      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${style.gradient} ${style.border} border shadow-[0_18px_40px_rgba(15,23,42,0.12)] px-6 py-6 sm:px-8 sm:py-7 transition-all duration-300`}>
         <div className="flex items-center justify-between gap-6">
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold tracking-[0.16em] text-indigo-500 uppercase">
+            <p className={`text-[11px] font-semibold tracking-[0.16em] ${style.label} uppercase`}>
               Bảng điều khiển học tập
             </p>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900">
               {title}
             </h1>
             {subtitle && (
-              <p className="text-sm sm:text-base text-slate-600 max-w-xl">
+              <p className="text-sm sm:text-base text-slate-700 max-w-xl font-medium">
                 {subtitle}
               </p>
             )}
@@ -24,11 +53,11 @@ export default function PageHeader({ title, subtitle }: PageHeaderProps) {
 
           <div className="hidden sm:flex items-center justify-center">
             <div className="relative">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/80 backdrop-blur flex items-center justify-center shadow-[0_10px_30px_rgba(15,23,42,0.12)]">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/80 backdrop-blur flex items-center justify-center shadow-[0_10px_30px_rgba(15,23,42,0.12)] transition-transform duration-300 hover:scale-110">
                 <span className="text-3xl">📚</span>
               </div>
-              <div className="pointer-events-none absolute -bottom-3 -left-4 h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-200 to-emerald-400 opacity-60 blur-[2px]" />
-              <div className="pointer-events-none absolute -top-4 -right-6 h-12 w-12 rounded-full bg-gradient-to-br from-sky-200 to-indigo-300 opacity-40 blur-sm" />
+              <div className={`pointer-events-none absolute -bottom-3 -left-4 h-10 w-10 rounded-2xl bg-gradient-to-br ${style.accentFrom} opacity-60 blur-[2px]`} />
+              <div className={`pointer-events-none absolute -top-4 -right-6 h-12 w-12 rounded-full bg-gradient-to-br ${style.accentTo} opacity-40 blur-sm`} />
             </div>
           </div>
         </div>

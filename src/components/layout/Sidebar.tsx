@@ -9,17 +9,13 @@ import SidebarToggleButton from "@/components/shared/SidebarToggleButton";
 import { useUnreadTotal } from "@/hooks/use-chat";
 import Tooltip from "@/components/ui/tooltip";
 import { AccordionItem } from "@/components/ui/accordion";
+import type { CSSProperties } from "react";
+import { sidebarConfig } from "@/constants/sidebar.config";
 
 type DashboardRole = "teacher" | "student" | "parent";
 
 interface DashboardSidebarProps {
   role: DashboardRole;
-}
-
-interface MenuItem {
-  icon: string;
-  label: string;
-  href: string;
 }
 
 export default function DashboardSidebar({ role }: DashboardSidebarProps) {
@@ -30,40 +26,16 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
   const { expanded, toggle } = useSidebarState(sidebarStateKey);
   const unreadTotal = useUnreadTotal();
 
-  const teacherMenu: MenuItem[] = [
-    { icon: "📊", label: "Dashboard", href: "/dashboard/teacher/dashboard" },
-    { icon: "🏫", label: "Lớp học", href: "/dashboard/teacher/classrooms" },
-    { icon: "💬", label: "Tin nhắn", href: "/dashboard/teacher/messages" },
-    { icon: "✍️", label: "Bài tập", href: "/dashboard/teacher/assignments" },
-    { icon: "🖥️", label: "Giám sát thi", href: "/dashboard/teacher/exams/monitor" },
-    { icon: "👥", label: "Học sinh", href: "/dashboard/teacher/students" },
-    { icon: "📈", label: "Điểm số", href: "/dashboard/teacher/grades" },
-    { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/teacher/profile" },
-  ];
+  const groups = sidebarConfig[role];
 
-  const studentMenu: MenuItem[] = [
-    { icon: "📊", label: "Dashboard", href: "/dashboard/student/dashboard" },
-    { icon: "📚", label: "Lớp học", href: "/dashboard/student/classes" },
-    { icon: "💬", label: "Tin nhắn", href: "/dashboard/student/messages" },
-    { icon: "✍️", label: "Bài tập", href: "/dashboard/student/assignments" },
-    { icon: "📈", label: "Điểm số", href: "/dashboard/student/grades" },
-    { icon: "👨‍👩‍👦", label: "Gia đình", href: "/dashboard/student/family" },
-    { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/student/profile" },
-  ];
-
-  const parentMenu: MenuItem[] = [
-    { icon: "📊", label: "Dashboard", href: "/dashboard/parent/dashboard" },
-    { icon: "👨‍👩‍👧", label: "Con của tôi", href: "/dashboard/parent/children" },
-    { icon: "👨‍🏫", label: "Giáo viên", href: "/dashboard/parent/teachers" },
-    { icon: "📈", label: "Tiến độ học tập", href: "/dashboard/parent/progress" },
-    { icon: "💬", label: "Tin nhắn", href: "/dashboard/parent/messages" },
-    { icon: "⚙️", label: "Hồ sơ", href: "/dashboard/parent/profile" },
-  ];
-
-  const menuItems: MenuItem[] =
-    role === "teacher" ? teacherMenu : role === "student" ? studentMenu : parentMenu;
-
-  const isActive = (href: string) => isActivePath(pathname, href);
+  const messageHref = (() => {
+    for (const g of groups) {
+      for (const it of g.items) {
+        if (it.href.includes("/messages")) return it.href;
+      }
+    }
+    return undefined;
+  })();
 
   const userAny = session?.user as { fullname?: string; name?: string } | undefined;
   const displayName =
@@ -71,224 +43,205 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
   const defaultInitial = role === "teacher" ? "GV" : role === "student" ? "HS" : "PH";
   const roleLabel = role === "teacher" ? "Giáo viên" : role === "student" ? "Học sinh" : "Phụ huynh";
 
-  const messageHref =
-    role === "teacher"
-      ? "/dashboard/teacher/messages"
-      : role === "student"
-      ? "/dashboard/student/messages"
-      : "/dashboard/parent/messages";
+  const accent = {
+    teacher: {
+      hover: "hover:bg-gradient-to-r hover:from-blue-100/60 hover:to-indigo-100/60",
+      activeBg: "bg-gradient-to-r from-blue-100 to-indigo-100",
+      indicator: "bg-blue-600",
+      ring: "focus-visible:ring-blue-400/50",
+      textAccent: "text-slate-700",
+      hoverBorder: "hover:border-blue-300/50",
+      activeBorder: "border-blue-300",
+      iconBase: "text-slate-600 group-hover:text-blue-700",
+      iconActive: "text-blue-700 font-semibold",
+      labelBase: "text-slate-700 group-hover:text-blue-800",
+      labelActive: "text-blue-800 font-semibold",
+    },
+    student: {
+      hover: "hover:bg-gradient-to-r hover:from-green-100/60 hover:to-emerald-100/60",
+      activeBg: "bg-gradient-to-r from-green-100 to-emerald-100",
+      indicator: "bg-green-600",
+      ring: "focus-visible:ring-green-400/50",
+      textAccent: "text-slate-700",
+      hoverBorder: "hover:border-green-300/50",
+      activeBorder: "border-green-300",
+      iconBase: "text-slate-600 group-hover:text-green-700",
+      iconActive: "text-green-700 font-semibold",
+      labelBase: "text-slate-700 group-hover:text-green-800",
+      labelActive: "text-green-800 font-semibold",
+    },
+    parent: {
+      hover: "hover:bg-gradient-to-r hover:from-amber-100/60 hover:to-orange-100/60",
+      activeBg: "bg-gradient-to-r from-amber-100 to-orange-100",
+      indicator: "bg-amber-600",
+      ring: "focus-visible:ring-amber-400/50",
+      textAccent: "text-slate-700",
+      hoverBorder: "hover:border-amber-300/50",
+      activeBorder: "border-amber-300",
+      iconBase: "text-slate-600 group-hover:text-amber-700",
+      iconActive: "text-amber-700 font-semibold",
+      labelBase: "text-slate-700 group-hover:text-amber-800",
+      labelActive: "text-amber-800 font-semibold",
+    },
+  }[role];
 
-  const roleGradients: Record<DashboardRole, string> = {
-    teacher: "from-indigo-600 via-purple-600 to-pink-500",
-    student: "from-emerald-500 via-sky-500 to-blue-600",
-    parent: "from-orange-500 via-amber-500 to-rose-500",
+  const rolePalette = {
+    teacher: {
+      bg: "rgba(160, 196, 255, 0.22)",
+      border: "rgba(160, 196, 255, 0.35)",
+    },
+    student: {
+      bg: "rgba(202, 255, 191, 0.22)",
+      border: "rgba(202, 255, 191, 0.35)",
+    },
+    parent: {
+      bg: "rgba(255, 214, 165, 0.22)",
+      border: "rgba(255, 214, 165, 0.35)",
+    },
+  }[role];
+
+  const isActive = (href: string) => isActivePath(pathname, href);
+
+  const containerVars: CSSProperties = {
+    ["--sb-w-expanded" as any]: "280px",
+    ["--sb-w-collapsed" as any]: "64px",
+  };
+
+  const unreadBadge = unreadTotal > 9 ? "9+" : unreadTotal || undefined;
+
+  const flatItems = groups.flatMap((g) => g.items);
+
+  const containerStyle: CSSProperties = {
+    ...containerVars,
+    backgroundColor: rolePalette.bg,
+    borderColor: rolePalette.border,
   };
 
   return (
     <aside
+      style={containerStyle}
       className={`fixed left-0 top-0 h-full ${
-        expanded ? "w-72" : "w-20"
-      } bg-gradient-to-br ${roleGradients[role]} text-white shadow-2xl rounded-r-2xl z-50 transition-[width] duration-300 ease-in-out flex flex-col overflow-hidden`}
+        expanded ? "w-[var(--sb-w-expanded)]" : "w-[var(--sb-w-collapsed)]"
+      } text-slate-700 border-r shadow-sm z-50 transition-[width,transform] duration-300 ease-in-out flex flex-col overflow-hidden transform ${expanded ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
     >
-      <div className={`${expanded ? "p-6" : "px-2 py-4"} flex h-full flex-col overflow-hidden`}>
+      <div className={`${expanded ? "p-5" : "px-2 py-4"} flex h-full flex-col overflow-hidden`}>
         <div
-          className={`sticky top-0 z-20 flex items-center justify-between ${
-            expanded ? "mb-6 pt-1" : "mb-2 pt-1"
-          }`}
+          className={`sticky top-0 z-20 flex items-center ${
+            expanded ? "justify-between" : "justify-center"
+          } ${expanded ? "mb-4 pt-1" : "mb-2 pt-1"}`}
         >
-          <div className="flex items-center gap-3">
-            {expanded && <span className="text-4xl">🎓</span>}
-            {expanded && (
-              <span className="text-2xl font-extrabold bg-gradient-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">
-                EduVerse
-              </span>
-            )}
-          </div>
+          {expanded && (
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-extrabold text-slate-900">EduVerse</span>
+            </div>
+          )}
           <SidebarToggleButton
             expanded={expanded}
             onToggle={toggle}
             ariaControls={sidebarId}
             size={expanded ? "md" : "sm"}
+            variant="light"
           />
         </div>
-
-        <div className={`${expanded ? "bg-white/10 rounded-2xl p-4 mb-8" : "hidden"}`}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-14 h-14 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center text-2xl font-bold">
+        <div className={`${expanded ? "rounded-xl border border-gray-200 p-3 mb-4" : "hidden"}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-slate-700">
               {userAny?.name?.charAt(0).toUpperCase() || defaultInitial}
             </div>
             {expanded && (
-              <div>
-                <h3 className="font-bold text-lg">{displayName}</h3>
-                <p className="text-white/80 text-sm">{roleLabel}</p>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-slate-900 truncate" title={displayName}>{displayName}</h3>
+                <p className={`text-xs ${accent.textAccent}`}>{roleLabel}</p>
               </div>
             )}
           </div>
         </div>
-
         <nav
           id={sidebarId}
+          role="menu"
           className={`space-y-2 flex-1 overflow-y-auto ${
             expanded
               ? "pr-1 pt-1"
               : "pr-0 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
           }`}
         >
-          {role === "teacher" && expanded && (
-            <>
+          {expanded ? (
+            groups.map((group) => (
               <AccordionItem
-                title="Tổng quan"
+                key={group.title}
+                title={group.title.toUpperCase()}
                 defaultOpen
-                headerClassName="text-white/90 hover:bg-white/10"
-                contentClassName=""
+                headerClassName="text-slate-600 hover:bg-gray-50"
               >
-                {menuItems
-                  .filter((i) => i.label === "Dashboard")
-                  .map((item) => (
+                {group.items.map((item) => {
+                  const active = isActive(item.href);
+                  const Icon = item.icon;
+                  return (
                     <Link
                       key={item.href}
                       href={item.href}
                       aria-label={item.label}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
-                        isActive(item.href) ? "bg-white/30 shadow-lg" : "hover:bg-white/20"
-                      }`}
+                      className={`relative group flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all focus:outline-none border ${
+                        active ? `${accent.activeBg} ${accent.activeBorder}` : `border-transparent ${accent.hover} ${accent.hoverBorder}`
+                      } ${accent.ring}`}
                     >
-                      <span className="text-xl">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </Link>
-                  ))}
-              </AccordionItem>
-
-              <AccordionItem
-                title="Lớp học & Bài tập"
-                defaultOpen
-                headerClassName="text-white/90 hover:bg-white/10"
-              >
-                {menuItems
-                  .filter((i) => ["Lớp học", "Bài tập", "Giám sát thi"].includes(i.label))
-                  .map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-label={item.label}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
-                        isActive(item.href) ? "bg-white/30 shadow-lg" : "hover:bg-white/20"
-                      }`}
-                    >
-                      <span className="text-xl">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </Link>
-                  ))}
-              </AccordionItem>
-
-              <AccordionItem
-                title="Liên lạc & Quản lý"
-                defaultOpen
-                headerClassName="text-white/90 hover:bg-white/10"
-              >
-                {menuItems
-                  .filter((i) => ["Tin nhắn", "Học sinh", "Điểm số"].includes(i.label))
-                  .map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-label={item.label}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
-                        isActive(item.href) ? "bg-white/30 shadow-lg" : "hover:bg-white/20"
-                      }`}
-                    >
-                      <span className="text-xl">{item.icon}</span>
-                      <span>{item.label}</span>
-                      {item.href === messageHref && unreadTotal > 0 && (
+                      {active && (
+                        <span className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full ${accent.indicator}`} aria-hidden="true" />
+                      )}
+                      <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
+                      <span className={`transition-colors duration-200 ${active ? accent.labelActive : accent.labelBase}`}>{item.label}</span>
+                      {active && (
+                        <span className="sr-only" aria-current="page">Trang hiện tại</span>
+                      )}
+                      {messageHref === item.href && unreadBadge && (
                         <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
-                          {unreadTotal}
+                          {unreadBadge}
                         </span>
                       )}
                     </Link>
-                  ))}
+                  );
+                })}
               </AccordionItem>
-
-              <AccordionItem
-                title="Tài khoản"
-                defaultOpen
-                headerClassName="text-white/90 hover:bg-white/10"
-              >
-                {menuItems
-                  .filter((i) => ["Hồ sơ"].includes(i.label))
-                  .map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-label={item.label}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
-                        isActive(item.href) ? "bg-white/30 shadow-lg" : "hover:bg-white/20"
-                      }`}
-                    >
-                      <span className="text-xl">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </Link>
-                  ))}
-              </AccordionItem>
-            </>
-          )}
-
-          {role === "teacher" && !expanded &&
-            menuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-label={item.label}
-                className={`flex items-center gap-3 px-2 py-3 rounded-xl font-semibold transition-all ${
-                  isActive(item.href) ? "bg-white/30 shadow-lg" : "hover:bg-white/20"
-                }`}
-              >
-                <Tooltip content={item.label}>
-                  <span className="text-xl">{item.icon}</span>
-                </Tooltip>
-                {item.href === messageHref && unreadTotal > 0 && (
-                  <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
-                    {unreadTotal}
-                  </span>
-                )}
-              </Link>
-            ))}
-
-          {role !== "teacher" &&
-            menuItems.map((item) => {
+            ))
+          ) : (
+            flatItems.map((item) => {
               const active = isActive(item.href);
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  aria-label={!expanded ? item.label : undefined}
-                  className={`flex items-center gap-3 ${expanded ? "px-4" : "px-2"} py-3 rounded-xl font-semibold transition-all ${
-                    active ? "bg-white/30 shadow-lg" : "hover:bg-white/20 text-white/90"
+                  role="menuitem"
+                  aria-label={item.label}
+                  className={`relative group flex items-center gap-3 px-2 py-2.5 rounded-lg transition-all border ${
+                    active ? `${accent.activeBg} ${accent.activeBorder}` : `border-transparent ${accent.hover} ${accent.hoverBorder}`
                   }`}
                 >
-                  {expanded ? (
-                    <span className="text-xl">{item.icon}</span>
-                  ) : (
-                    <Tooltip content={item.label}>
-                      <span className="text-xl">{item.icon}</span>
-                    </Tooltip>
+                  {active && (
+                    <span className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full ${accent.indicator}`} aria-hidden="true" />
                   )}
-                  {expanded && <span>{item.label}</span>}
-                  {item.href === messageHref && unreadTotal > 0 && (
+                  <Tooltip content={item.label}>
+                    <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
+                  </Tooltip>
+                  {active && (
+                    <span className="sr-only" aria-current="page">Trang hiện tại</span>
+                  )}
+                  {messageHref === item.href && unreadBadge && (
                     <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
-                      {unreadTotal}
+                      {unreadBadge}
                     </span>
                   )}
                 </Link>
               );
-            })}
+            })
+          )}
         </nav>
-
         <div className="mt-auto pt-4">
           <button
             onClick={() => signOut({ callbackUrl: "/auth/login" })}
             className={`w-full flex items-center gap-3 ${
-              expanded ? "px-4" : "px-2"
-            } py-3 bg-red-500/20 rounded-xl font-semibold hover:bg-red-500/30 transition-all`}
+              expanded ? "px-3" : "px-2"
+            } py-2.5 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg font-semibold transition-all`}
             title={!expanded ? "Đăng xuất" : undefined}
             aria-label={!expanded ? "Đăng xuất" : undefined}
           >

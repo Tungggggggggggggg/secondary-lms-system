@@ -5,6 +5,8 @@ import HeaderParent from "@/components/parent/Header";
 import QuickStats from "@/components/parent/QuickStats";
 import MyChildren from "@/components/parent/MyChildren";
 import AcademicPerformance from "@/components/parent/AcademicPerformance";
+import UpcomingEvents from "@/components/parent/UpcomingEvents";
+import QuickActions from "@/components/parent/QuickActions";
 
 
 export default function ParentDashboardPage() {
@@ -32,7 +34,8 @@ export default function ParentDashboardPage() {
           <AcademicPerformance />
         </div>
         <div className="space-y-8">
-         
+          <UpcomingEvents />
+          <QuickActions />
         </div>
       </div>
     </>

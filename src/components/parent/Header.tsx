@@ -7,5 +7,5 @@ interface HeaderParentProps {
 }
 
 export default function HeaderParent(props: HeaderParentProps) {
-  return <PageHeader {...props} />;
+  return <PageHeader {...props} role="parent" />;
 }

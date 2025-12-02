@@ -7,6 +7,9 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import HeaderParent from "@/components/parent/Header";
+import EmptyState from "@/components/shared/EmptyState";
 import {
   ChevronDown,
   ChevronUp,
@@ -18,7 +21,6 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Student {
   id: string;
@@ -82,12 +84,7 @@ export default function ParentProgressPage() {
   const [sortBy, setSortBy] = useState<"name" | "average" | "submissions">("name");
 
   const { data, error, isLoading } = useSWR<AllChildrenGradesResponse>(
-    "/api/parent/children/grades",
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
+    "/api/parent/children/grades"
   );
 
   const studentsData = data?.data || [];
@@ -129,99 +126,122 @@ export default function ParentProgressPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <p className="text-gray-500">Đang tải dữ liệu...</p>
+      <>
+        <HeaderParent
+          title="Tiến độ học tập"
+          subtitle="Tổng quan kết quả học tập của tất cả con"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
+          ))}
         </div>
-      </div>
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-2xl" />
+          ))}
+        </div>
+      </>
     );
   }
 
   if (error || !data?.success) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-red-600">Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại sau.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <>
+        <HeaderParent
+          title="Tiến độ học tập"
+          subtitle="Tổng quan kết quả học tập của tất cả con"
+        />
+        <EmptyState
+          icon="❌"
+          title="Có lỗi xảy ra"
+          description="Không thể tải dữ liệu tiến độ học tập. Vui lòng thử lại sau."
+          variant="parent"
+        />
+      </>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Tiến độ học tập</h1>
-        <p className="text-gray-600">Tổng quan kết quả học tập của tất cả con</p>
-      </div>
+    <>
+      <HeaderParent
+        title="Tiến độ học tập"
+        subtitle="Tổng quan kết quả học tập của tất cả con"
+      />
 
       {/* Overall Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-102 group bg-gradient-to-br from-amber-50/50 to-orange-50/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Tổng số con</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">Tổng số con</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              <Users className="h-8 w-8 text-indigo-500" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-amber-200 to-orange-300 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                <Users className="h-6 w-6 text-amber-700" />
+              </div>
               <div>
-                <div className="text-2xl font-bold">{overallStats.totalChildren}</div>
-                <p className="text-xs text-gray-500">học sinh</p>
+                <div className="text-2xl font-bold text-amber-900">{overallStats.totalChildren}</div>
+                <p className="text-xs text-amber-600 font-medium">học sinh</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-102 group bg-gradient-to-br from-amber-50/50 to-orange-50/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Điểm trung bình</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">Điểm trung bình</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-8 w-8 text-green-500" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-amber-200 to-orange-300 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                <BarChart3 className="h-6 w-6 text-amber-700" />
+              </div>
               <div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-amber-900">
                   {overallStats.overallAverage > 0
                     ? overallStats.overallAverage.toFixed(1)
                     : "N/A"}
                 </div>
-                <p className="text-xs text-gray-500">tổng thể</p>
+                <p className="text-xs text-amber-600 font-medium">tổng thể</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-102 group bg-gradient-to-br from-amber-50/50 to-orange-50/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Đã chấm</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">Đã chấm</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              <Award className="h-8 w-8 text-blue-500" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-amber-200 to-orange-300 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                <Award className="h-6 w-6 text-amber-700" />
+              </div>
               <div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-amber-900">
                   {overallStats.totalGraded}
                 </div>
-                <p className="text-xs text-gray-500">bài tập</p>
+                <p className="text-xs text-amber-600 font-medium">bài tập</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-102 group bg-gradient-to-br from-amber-50/50 to-orange-50/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Chưa chấm</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">Chưa chấm</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-8 w-8 text-orange-500" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-amber-200 to-orange-300 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                <BookOpen className="h-6 w-6 text-amber-700" />
+              </div>
               <div>
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-amber-900">
                   {overallStats.totalPending}
                 </div>
-                <p className="text-xs text-gray-500">bài tập</p>
+                <p className="text-xs text-amber-600 font-medium">bài tập</p>
               </div>
             </div>
           </CardContent>
@@ -238,7 +258,7 @@ export default function ParentProgressPage() {
               onChange={(e) =>
                 setSortBy(e.target.value as "name" | "average" | "submissions")
               }
-              className="px-4 py-2 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="px-4 py-2 bg-white rounded-xl border-2 border-amber-300 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200"
             >
               <option value="name">Tên</option>
               <option value="average">Điểm trung bình</option>
@@ -250,20 +270,17 @@ export default function ParentProgressPage() {
 
       {/* Students List */}
       {studentsData.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Chưa có dữ liệu học tập
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Con bạn chưa có bài nộp nào hoặc chưa được liên kết.
-            </p>
+        <EmptyState
+          icon="📚"
+          title="Chưa có dữ liệu học tập"
+          description="Con bạn chưa có bài nộp nào hoặc chưa được liên kết."
+          variant="parent"
+          action={
             <Link href="/dashboard/parent/children">
-              <Button>Quản lý con</Button>
+              <Button color="amber">Quản lý con</Button>
             </Link>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : (
         <div className="space-y-4">
           {sortedStudents.map((studentData) => {
@@ -271,43 +288,43 @@ export default function ParentProgressPage() {
             const isExpanded = expandedStudents.has(student.id);
 
             return (
-              <Card key={student.id} className="overflow-hidden">
+              <Card key={student.id} className="overflow-hidden border-amber-100 hover:border-amber-200 transition-all duration-300 group">
                 <CardHeader
-                  className="cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="cursor-pointer hover:bg-amber-50/50 transition-colors p-5"
                   onClick={() => toggleStudent(student.id)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
                         {student.fullname?.charAt(0).toUpperCase() || "S"}
                       </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{student.fullname}</CardTitle>
-                        <CardDescription>{student.email}</CardDescription>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg text-gray-900 group-hover:text-amber-800 transition-colors duration-300">{student.fullname}</CardTitle>
+                        <CardDescription className="text-sm text-gray-600">{student.email}</CardDescription>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-center">
-                        <div className="text-sm text-gray-500">Điểm TB</div>
-                        <div className="text-xl font-bold text-green-600">
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="text-center hidden sm:block">
+                        <div className="text-xs text-gray-500 font-semibold">Điểm TB</div>
+                        <div className="text-lg font-bold text-amber-700">
                           {statistics.averageGrade > 0
                             ? statistics.averageGrade.toFixed(1)
                             : "N/A"}
                         </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-sm text-gray-500">Đã chấm</div>
-                        <div className="text-xl font-bold text-blue-600">
+                      <div className="text-center hidden sm:block">
+                        <div className="text-xs text-gray-500 font-semibold">Đã chấm</div>
+                        <div className="text-lg font-bold text-amber-700">
                           {statistics.totalGraded}
                         </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-sm text-gray-500">Tổng bài</div>
-                        <div className="text-xl font-bold text-gray-700">
+                      <div className="text-center hidden sm:block">
+                        <div className="text-xs text-gray-500 font-semibold">Tổng bài</div>
+                        <div className="text-lg font-bold text-amber-700">
                           {statistics.totalSubmissions}
                         </div>
                       </div>
-                      <Button variant="ghost" size="default">
+                      <Button variant="ghost" size="sm" className="text-amber-700">
                         {isExpanded ? (
                           <ChevronUp className="h-5 w-5" />
                         ) : (
@@ -319,18 +336,18 @@ export default function ParentProgressPage() {
                 </CardHeader>
 
                 {isExpanded && (
-                  <CardContent className="pt-0">
-                    <div className="border-t pt-4 space-y-4">
+                  <CardContent className="pt-0 p-5">
+                    <div className="border-t border-amber-200/50 pt-4 space-y-4">
                       {/* Quick Actions */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <Link href={`/dashboard/parent/children/${student.id}/grades`}>
-                          <Button variant="outline" size="default">
-                            Xem chi tiết điểm số
-                            <ArrowRight className="h-4 w-4 ml-2" />
+                          <Button color="amber" size="sm" className="flex items-center gap-1.5">
+                            Xem chi tiết
+                            <ArrowRight className="h-4 w-4" />
                           </Button>
                         </Link>
                         <Link href={`/dashboard/parent/children/${student.id}`}>
-                          <Button variant="outline" size="default">
+                          <Button variant="outline" color="amber" size="sm">
                             Xem thông tin
                           </Button>
                         </Link>
@@ -377,8 +394,8 @@ export default function ParentProgressPage() {
                                     <span
                                       className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
                                         grade.assignmentType === "ESSAY"
-                                          ? "bg-indigo-50 text-indigo-700"
-                                          : "bg-pink-50 text-pink-700"
+                                          ? "bg-amber-100 text-amber-700"
+                                          : "bg-orange-100 text-orange-700"
                                       }`}
                                     >
                                       {grade.assignmentType === "ESSAY"
@@ -388,7 +405,7 @@ export default function ParentProgressPage() {
                                   </TableCell>
                                   <TableCell>
                                     {grade.grade !== null ? (
-                                      <span className="font-bold text-green-600">
+                                      <span className="font-bold text-amber-700">
                                         {grade.grade.toFixed(1)}
                                       </span>
                                     ) : (
@@ -415,9 +432,9 @@ export default function ParentProgressPage() {
                                     <span
                                       className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
                                         grade.status === "graded"
-                                          ? "bg-green-100 text-green-700"
+                                          ? "bg-amber-100 text-amber-700"
                                           : grade.status === "submitted"
-                                          ? "bg-blue-100 text-blue-700"
+                                          ? "bg-orange-100 text-orange-700"
                                           : "bg-gray-100 text-gray-700"
                                       }`}
                                     >
@@ -442,7 +459,7 @@ export default function ParentProgressPage() {
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }
 

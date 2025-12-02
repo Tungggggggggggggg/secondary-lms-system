@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { CornerUpLeft, Image as ImageIcon, Paperclip } from "lucide-react";
 import { getChatFileUrl } from "@/lib/supabase-upload";
 import { cn } from "@/lib/utils";
+import { formatDateLabel, formatTimeLabel } from "@/lib/date";
 
 type Participant = {
   userId: string;
@@ -36,15 +37,15 @@ export default function ChatThread({ messages, participants, onReply, selfUserId
     const el = messageRefs.current[mid] || document.getElementById(`msg-${mid}`) as HTMLDivElement | null;
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", "ring-indigo-400", "ring-offset-1", "ring-offset-gray-50");
+      el.classList.add("ring-2", "ring-amber-400", "ring-offset-1", "ring-offset-gray-50");
       setTimeout(() => {
-        el.classList.remove("ring-2", "ring-indigo-400", "ring-offset-1", "ring-offset-gray-50");
+        el.classList.remove("ring-2", "ring-amber-400", "ring-offset-1", "ring-offset-gray-50");
       }, 1200);
     }
   };
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-2 bg-gray-50/80 scrollbar-stable overscroll-contain">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-2 bg-gradient-to-b from-amber-50/50 to-orange-50/30 scrollbar-stable overscroll-contain min-w-0">
       {messages.map((m, index) => {
         const mine = (!!me && m.sender.id === me) || (!!currentRole && m.sender.role === currentRole);
         const sender = !mine ? m.sender : undefined;
@@ -61,35 +62,35 @@ export default function ChatThread({ messages, participants, onReply, selfUserId
           <div key={m.id} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             {isNewDate && (
               <div className="flex justify-center my-3">
-                <span className="px-3 py-1 rounded-full bg-gray-200 text-xs text-gray-600 font-medium">
+                <span className="px-3 py-1 rounded-full bg-amber-200/70 text-xs text-amber-800 font-medium">
                   {formatDateLabel(createdAt)}
                 </span>
               </div>
             )}
-            <div className={cn("flex items-end gap-2 w-full", mine ? "justify-end" : "justify-start")}>
+            <div className={cn("flex items-end gap-2", mine ? "justify-end" : "justify-start")}>
               <div className={cn("max-w-[75%] flex flex-col group", mine ? "items-end" : "items-start")}>
                 {!mine && isFirstOfGroup && sender && (
                   <div className="mb-1 text-xs text-gray-500 ml-2">
                     <span className="font-medium">{sender.fullname}</span>
                   </div>
                 )}
-                <div className="relative">
+                <div className="relative group/msg">
                   <button
                     onClick={() => onReply(m)}
                     className={cn(
-                      "absolute top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-white/90 border border-gray-200 text-gray-700 shadow-sm opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 transition-opacity",
-                      mine ? "-left-9" : "-right-9"
+                      "absolute top-0 z-10 p-1 rounded-full bg-amber-500 text-white shadow-md opacity-0 group-hover/msg:opacity-100 hover:opacity-100 focus:opacity-100 transition-opacity",
+                      mine ? "right-0 -translate-y-1/2" : "left-0 -translate-y-1/2"
                     )}
                     title="Trả lời"
                   >
-                    <CornerUpLeft className="h-4 w-4" />
+                    <CornerUpLeft className="h-3.5 w-3.5" />
                   </button>
                   <div
                     className={cn(
                       "px-3 py-2 shadow-sm",
                       mine
-                        ? "bg-indigo-600 text-white"
-                        : "bg-white text-gray-800 border border-gray-200",
+                        ? "bg-amber-600 text-white"
+                        : "bg-amber-50 text-gray-800 border border-amber-200",
                       {
                         "rounded-t-2xl": isFirstOfGroup,
                         "rounded-b-2xl": isLastOfGroup,
@@ -108,7 +109,7 @@ export default function ChatThread({ messages, participants, onReply, selfUserId
                         onClick={() => jumpToMessage(m.parentId)}
                         className={cn(
                           "border-l-2 pl-2 mb-1 text-xs text-left w-full cursor-pointer hover:underline",
-                          mine ? "border-indigo-200/60" : "border-gray-400/60"
+                          mine ? "border-amber-200/60" : "border-gray-400/60"
                         )}
                         title="Đi tới tin nhắn gốc"
                       >
@@ -136,7 +137,7 @@ export default function ChatThread({ messages, participants, onReply, selfUserId
                                   <div
                                     className={cn(
                                       "flex items-center gap-1 text-[11px] group-hover:underline",
-                                      mine ? "text-indigo-100" : "text-gray-600"
+                                      mine ? "text-amber-100" : "text-amber-700"
                                     )}
                                   >
                                     <ImageIcon className="h-3 w-3" />
@@ -150,7 +151,7 @@ export default function ChatThread({ messages, participants, onReply, selfUserId
                                   rel="noreferrer"
                                   className={cn(
                                     "inline-flex items-center gap-1 text-[11px] underline-offset-2 hover:underline",
-                                    mine ? "text-indigo-100" : "text-indigo-600"
+                                    mine ? "text-amber-100" : "text-amber-600"
                                   )}
                                 >
                                   <Paperclip className="h-3 w-3" />
@@ -182,32 +183,4 @@ export default function ChatThread({ messages, participants, onReply, selfUserId
       <div ref={endRef} />
     </div>
   );
-}
-
-function formatDateLabel(date: Date): string {
-  const today = new Date();
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  const diff = (d.getTime() - t.getTime()) / (1000 * 60 * 60 * 24);
-  if (diff === 0) return "Hôm nay";
-  if (diff === -1) return "Hôm qua";
-  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-function formatTimeLabel(date: Date): string {
-  return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function normalizeRoleLabel(role: string): string {
-  switch (role) {
-    case "TEACHER":
-      return "GV";
-    case "STUDENT":
-      return "HS";
-    case "PARENT":
-      return "PH";
-    default:
-      return role;
-  }
 }

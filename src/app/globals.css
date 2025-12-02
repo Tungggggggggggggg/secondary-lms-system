@@ -289,3 +289,11 @@ input:focus-visible,
 a:focus-visible {
     @apply outline-2 outline-primary outline-offset-2;
 }
+
+@layer utilities {
+  .parent-surface { @apply bg-gradient-to-b from-amber-50/60 to-orange-50/40; }
+  .parent-card { @apply border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/20; }
+  .parent-border { @apply border-amber-200; }
+  .parent-accent { @apply text-amber-700; }
+  .parent-accent-strong { @apply text-amber-900; }
+}
