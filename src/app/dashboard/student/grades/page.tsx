@@ -194,9 +194,9 @@ export default function GradesPage() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
+      <div className="max-w-6xl mx-auto space-y-4">
+        <Breadcrumb items={breadcrumbItems} className="mb-2" />
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5 sm:p-6 text-red-700">
           <h3 className="font-semibold mb-2">Lỗi tải danh sách điểm số</h3>
           <p className="text-sm mb-4">{error}</p>
           <Button onClick={fetchAllGrades}>Thử lại</Button>
@@ -206,7 +206,7 @@ export default function GradesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <Breadcrumb items={breadcrumbItems} className="mb-2" />
 
       {/* Header + Export */}

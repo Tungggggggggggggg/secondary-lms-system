@@ -136,32 +136,56 @@ export default function SubmitAssignmentFilesPage() {
     }, [assignmentId]);
 
     return (
-        <div className="px-6 py-6">
-            <div className="mb-6">
-                <h1 className="text-2xl font-semibold">Nộp bài bằng file</h1>
-                <p className="text-sm text-gray-600">Chọn nhiều file (tối đa 20MB mỗi file). Định dạng: PDF, DOCX, DOC, TXT, PNG, JPEG, ZIP.</p>
+        <div className="max-w-4xl mx-auto space-y-6">
+            {/* Header thumbnail */}
+            <div className="relative overflow-hidden rounded-3xl border border-indigo-50 bg-gradient-to-r from-indigo-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6 sm:py-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+                <div className="space-y-1">
+                    <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-900">
+                        Nộp bài bằng file
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-600 max-w-2xl">
+                        Chọn và tải lên nhiều tệp (tối đa 20MB mỗi tệp). Hỗ trợ: PDF, DOCX, DOC, TXT, PNG, JPEG, ZIP.
+                    </p>
+                </div>
             </div>
-            <Card className="p-4">
+
+            <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm p-4 sm:p-6 space-y-5">
                 <div
-                    className="border-2 border-dashed rounded-md p-6 text-center text-sm text-gray-600"
+                    className="border-2 border-dashed border-slate-200 rounded-2xl px-4 py-6 sm:px-6 sm:py-8 text-center text-xs sm:text-sm text-slate-600 bg-slate-50/70 hover:border-indigo-300 hover:bg-slate-50 transition-colors cursor-pointer"
                     onDrop={onDrop}
                     onDragOver={onDragOver}
                 >
-                    Kéo thả tệp vào đây hoặc
+                    <p className="font-medium text-slate-800 mb-1">Kéo và thả tệp vào đây</p>
+                    <p className="text-[11px] sm:text-xs text-slate-500 mb-3">
+                        hoặc chọn từ thiết bị của bạn
+                    </p>
                     <div className="mt-2 flex justify-center">
-                        <Input type="file" multiple onChange={onFileChange} className="w-auto" />
+                        <Input type="file" multiple onChange={onFileChange} className="w-auto text-xs sm:text-sm" />
                     </div>
                 </div>
 
-                <div className="mt-4">
-                    <div className="text-sm font-medium">Đã thêm mới: {files.length} file</div>
-                    <div className="text-xs text-gray-500">Tổng {(totalSize / (1024 * 1024)).toFixed(2)} MB</div>
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <div className="text-xs sm:text-sm font-medium text-slate-800">
+                            Đã thêm mới: {files.length} tệp
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                            Tổng dung lượng: {(totalSize / (1024 * 1024)).toFixed(2)} MB
+                        </div>
+                    </div>
+                    {status && (
+                        <div className="text-[11px] sm:text-xs text-slate-500">
+                            Trạng thái hiện tại: <span className="font-semibold text-slate-700">{status}</span>
+                        </div>
+                    )}
                 </div>
 
                 {uploaded.length > 0 && (
-                    <div className="mt-4">
-                        <div className="text-sm font-medium">Trong bản nháp hiện tại ({status || "draft"}):</div>
-                        <ul className="mt-2 list-disc list-inside text-sm text-gray-700">
+                    <div className="mt-3">
+                        <div className="text-xs sm:text-sm font-medium text-slate-800">
+                            Trong bản nháp hiện tại ({status || "draft"}):
+                        </div>
+                        <ul className="mt-2 list-disc list-inside text-xs sm:text-sm text-slate-700 space-y-1">
                             {uploaded.map((f, idx) => (
                                 <li key={idx}>{f.fileName}</li>
                             ))}
@@ -169,15 +193,30 @@ export default function SubmitAssignmentFilesPage() {
                     </div>
                 )}
 
-                <div className="mt-6 flex gap-2">
-                    <Button onClick={saveDraft} disabled={(files.length === 0 && uploaded.length === 0) || isSaving || isUploading}>
+                <div className="mt-6 flex flex-wrap items-center gap-2 justify-end">
+                    <Button
+                        onClick={saveDraft}
+                        disabled={(files.length === 0 && uploaded.length === 0) || isSaving || isUploading}
+                        size="sm"
+                        className="rounded-full px-4"
+                    >
                         {isSaving || isUploading ? "Đang lưu..." : "Lưu những thay đổi"}
                     </Button>
-                    <Button variant="outline" onClick={() => setFiles([])} disabled={isSaving || isUploading}>
+                    <Button
+                        variant="outline"
+                        onClick={() => setFiles([])}
+                        disabled={isSaving || isUploading}
+                        size="sm"
+                        className="rounded-full px-4"
+                    >
                         Xoá tệp mới chọn
                     </Button>
-                    <div className="flex-1" />
-                    <Button onClick={confirmSubmit} disabled={(uploaded.length === 0 && files.length === 0) || isSubmitting}>
+                    <Button
+                        onClick={confirmSubmit}
+                        disabled={(uploaded.length === 0 && files.length === 0) || isSubmitting}
+                        size="sm"
+                        className="ml-auto inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:shadow-md hover:from-indigo-600 hover:to-sky-600 disabled:opacity-60"
+                    >
                         {isSubmitting ? "Đang xác nhận..." : "Xác nhận nộp bài"}
                     </Button>
                 </div>

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { useStudentAssignments, StudentAssignment } from "@/hooks/use-student-assignments";
 import { Button } from "@/components/ui/button";
+import { FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 /**
  * Component hiển thị assignment card cho student
@@ -58,42 +59,74 @@ function AssignmentCard({
     return () => clearInterval(interval);
   }, [dueDate, isUpcoming]);
 
-  const statusColor =
-    assignment.status === "submitted"
-      ? "bg-green-100 text-green-600"
-      : isOverdue
-      ? "bg-red-100 text-red-600"
-      : isUpcoming
-      ? "bg-blue-100 text-blue-600"
-      : "bg-gray-100 text-gray-600";
+  const statusConfig = {
+    submitted: {
+      color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      icon: CheckCircle2,
+      label: "Đã nộp"
+    },
+    overdue: {
+      color: "bg-rose-50 text-rose-700 border-rose-200",
+      icon: AlertCircle,
+      label: "Quá hạn"
+    },
+    upcoming: {
+      color: "bg-sky-50 text-sky-700 border-sky-200",
+      icon: Clock,
+      label: "Đang diễn ra"
+    },
+    default: {
+      color: "bg-slate-50 text-slate-700 border-slate-200",
+      icon: FileText,
+      label: "Chưa có hạn"
+    }
+  };
 
-  const statusText =
-    assignment.status === "submitted"
-      ? "Đã nộp"
-      : isOverdue
-      ? "Quá hạn"
-      : isUpcoming
-      ? "Đang diễn ra"
-      : "Chưa có hạn";
+  const getStatusConfig = () => {
+    if (assignment.status === "submitted") return statusConfig.submitted;
+    if (isOverdue) return statusConfig.overdue;
+    if (isUpcoming) return statusConfig.upcoming;
+    return statusConfig.default;
+  };
+
+  const currentStatus = getStatusConfig();
+  const StatusIcon = currentStatus.icon;
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer"
+    <div 
+      className="group relative bg-white/90 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-200 cursor-pointer overflow-hidden"
       onClick={() => onOpen()}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-xl font-bold text-gray-800 mb-2">
-            {assignment.title}
-          </h3>
-          {assignment.description && (
-            <p className="text-sm text-gray-600 line-clamp-2">
-              {assignment.description}
-            </p>
-          )}
+      {/* Top accent bar */}
+      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+        assignment.status === "submitted"
+          ? "from-emerald-400 to-emerald-500"
+          : isOverdue
+          ? "from-rose-400 to-rose-500"
+          : isUpcoming
+          ? "from-sky-400 to-sky-500"
+          : "from-slate-300 to-slate-400"
+      }`} />
+
+      <div className="p-4 sm:p-5">
+        {/* Header with title and badges */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900 line-clamp-2 mb-1">
+              {assignment.title}
+            </h3>
+            {assignment.description && (
+              <p className="text-xs sm:text-sm text-slate-600 line-clamp-2">
+                {assignment.description}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3 ml-4">
+
+        {/* Badges row */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
           <span
-            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
               assignment.type === "ESSAY"
                 ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                 : "bg-pink-50 text-pink-700 border-pink-200"
@@ -102,18 +135,18 @@ function AssignmentCard({
             <span>{assignment.type === "ESSAY" ? "📝" : "❓"}</span>
             <span>{assignment.type === "ESSAY" ? "Tự luận" : "Trắc nghiệm"}</span>
           </span>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColor}`}>
-            {statusText}
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${currentStatus.color}`}>
+            <StatusIcon className="h-3.5 w-3.5" />
+            <span>{currentStatus.label}</span>
           </span>
         </div>
-      </div>
 
-      <div className="mt-4 space-y-3">
+        {/* Due date and countdown */}
         {dueDate && (
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">
-              📅 Hạn nộp:{" "}
-              <span className="font-medium text-gray-800">
+          <div className="flex items-center justify-between gap-2 text-xs sm:text-sm mb-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-1.5 text-slate-600">
+              <Clock className="h-4 w-4 flex-shrink-0" />
+              <span>
                 {dueDate.toLocaleDateString("vi-VN", {
                   day: "2-digit",
                   month: "2-digit",
@@ -122,27 +155,29 @@ function AssignmentCard({
                   minute: "2-digit",
                 })}
               </span>
-            </span>
+            </div>
             {timeRemaining && isUpcoming && (
-              <span className="text-blue-600 font-medium">
-                ⏰ Còn lại: {timeRemaining}
+              <span className="text-sky-600 font-medium whitespace-nowrap">
+                ⏰ {timeRemaining}
               </span>
             )}
           </div>
         )}
 
+        {/* Submission status */}
         {assignment.submission && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-green-800">
-                  ✓ Đã nộp: {new Date(assignment.submission.submittedAt).toLocaleDateString("vi-VN")}
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-3">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-semibold text-emerald-800">
+                  Đã nộp: {new Date(assignment.submission.submittedAt).toLocaleDateString("vi-VN")}
                 </p>
                 {assignment.submission.grade !== null && (
-                  <p className="text-sm text-green-700 mt-1">
+                  <p className="text-xs sm:text-sm text-emerald-700 mt-1">
                     Điểm: <span className="font-bold">{assignment.submission.grade}</span>
                     {assignment.submission.feedback && (
-                      <span className="ml-2">• {assignment.submission.feedback}</span>
+                      <span className="text-emerald-600"> • {assignment.submission.feedback}</span>
                     )}
                   </p>
                 )}
@@ -152,25 +187,32 @@ function AssignmentCard({
         )}
 
         {isOverdue && !assignment.submission && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-sm font-semibold text-red-800">
-              ⚠️ Đã quá hạn nộp bài
-            </p>
-            <p className="text-sm text-red-700 mt-1">
-              Điểm: <span className="font-bold">0</span>
-            </p>
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 mb-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs sm:text-sm font-semibold text-rose-800">
+                  Đã quá hạn nộp bài
+                </p>
+                <p className="text-xs sm:text-sm text-rose-700 mt-1">
+                  Điểm: <span className="font-bold">0</span>
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+        {/* Action button */}
+        <div className="flex items-center justify-end pt-2">
           <Button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onOpen();
             }}
+            size="sm"
             variant={assignment.submission ? "outline" : "default"}
+            className="text-xs sm:text-sm"
           >
             {assignment.submission ? "Xem bài nộp" : (isOverdue ? "Xem chi tiết" : "Làm bài tập")}
           </Button>
@@ -223,40 +265,64 @@ export default function StudentClassroomAssignmentsPage() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
-        <h3 className="font-semibold mb-2">Lỗi tải danh sách bài tập</h3>
-        <p className="text-sm mb-4">{error}</p>
-        <Button onClick={() => fetchClassroomAssignments(classId)}>
-          Thử lại
-        </Button>
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6 text-rose-700">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-semibold mb-1">Lỗi tải danh sách bài tập</h3>
+            <p className="text-sm mb-4 text-rose-600">{error}</p>
+            <Button 
+              onClick={() => fetchClassroomAssignments(classId)}
+              size="sm"
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              Thử lại
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Bài tập của lớp</h2>
-          <p className="text-gray-600">
-            Danh sách các bài tập trong lớp học này
-          </p>
-        </div>
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
+          Bài tập của lớp
+        </h2>
+        <p className="text-sm sm:text-base text-slate-600">
+          Danh sách các bài tập trong lớp học này. Hoàn thành và nộp bài đúng hạn để đạt điểm cao.
+        </p>
       </div>
 
       {/* Assignment List */}
       {isLoading ? (
-        <div className="text-center py-12 text-gray-500 animate-pulse">
-          Đang tải danh sách bài tập...
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div 
+              key={i}
+              className="bg-white/90 rounded-2xl border border-slate-100 p-4 sm:p-5 animate-pulse"
+            >
+              <div className="h-4 bg-slate-200 rounded w-1/3 mb-3" />
+              <div className="h-3 bg-slate-100 rounded w-2/3 mb-4" />
+              <div className="flex gap-2">
+                <div className="h-6 bg-slate-100 rounded-full w-20" />
+                <div className="h-6 bg-slate-100 rounded-full w-20" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredAssignments.length === 0 ? (
-        <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
-          <div className="text-5xl mb-4">📝</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+        <div className="bg-white/90 rounded-2xl border border-slate-100 p-8 sm:p-12 text-center shadow-sm">
+          <div className="flex justify-center mb-4">
+            <div className="text-5xl">📝</div>
+          </div>
+          <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
             Chưa có bài tập nào
           </h3>
-          <p className="text-gray-600">
-            Giáo viên chưa thêm bài tập nào vào lớp học này
+          <p className="text-sm sm:text-base text-slate-600">
+            Giáo viên chưa thêm bài tập nào vào lớp học này. Hãy quay lại sau để kiểm tra.
           </p>
         </div>
       ) : (

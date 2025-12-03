@@ -69,14 +69,16 @@ export default async function StudentClassroomLayout({ children, params }: Props
     ];
 
     return (
-        <div className="px-6 py-4">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div className="mb-6 flex items-center justify-between gap-4">
                 <Breadcrumb items={breadcrumbItems} />
                 <BackButton href="/dashboard/student/classes" />
             </div>
-            <StudentClassroomHeader classroom={classroomData} />
-            <StudentClassroomTabs classId={classId} />
-            <div className="mt-6">{children}</div>
+            <div className="space-y-6">
+                <StudentClassroomHeader classroom={classroomData} />
+                <StudentClassroomTabs classId={classId} />
+                <div>{children}</div>
+            </div>
         </div>
     );
 }

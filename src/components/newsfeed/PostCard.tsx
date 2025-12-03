@@ -57,19 +57,19 @@ export default function PostCard({
     const commentCount = commentsTotal || post._count?.comments || 0;
 
     return (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-950 hover:shadow-md transition-shadow">
+        <div className="group bg-white rounded-3xl border border-slate-100 px-4 py-4 sm:px-6 sm:py-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)] hover:shadow-[0_22px_55px_rgba(79,70,229,0.16)] hover:border-indigo-100 transition-all duration-200">
             {/* Post Header */}
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-3 mb-3 sm:mb-2">
                 <Avatar
                     fullname={post.author?.fullname}
                     email={post.author?.email}
                     size="md"
                 />
-                <div>
-                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">
                         {post.author?.fullname || "Giáo viên"}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-slate-500">
                         {new Date(post.createdAt).toLocaleString("vi-VN", {
                             day: "2-digit",
                             month: "2-digit",
@@ -84,21 +84,23 @@ export default function PostCard({
             {/* Post Content - Clickable để điều hướng nếu có detailUrl */}
             {detailUrl ? (
                 <Link href={detailUrl} className="block">
-                    <div className="whitespace-pre-line text-gray-800 dark:text-gray-200 mb-3 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer">
+                    <p className="whitespace-pre-line text-sm sm:text-[15px] text-slate-800 mb-3 group-hover:text-indigo-700 transition-colors cursor-pointer">
                         {post.content}
-                    </div>
+                    </p>
                 </Link>
             ) : (
-                <div className="whitespace-pre-line text-gray-800 dark:text-gray-200 mb-3">
+                <p className="whitespace-pre-line text-sm sm:text-[15px] text-slate-800 mb-3">
                     {post.content}
-                </div>
+                </p>
             )}
 
             {/* Attachments */}
             {post.attachments && post.attachments.length > 0 && (
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 text-sm text-gray-700 dark:text-gray-300 mb-3">
-                    <div className="font-medium mb-2">Đính kèm</div>
-                    <ul className="space-y-1">
+                <div className="mt-2 rounded-2xl border border-indigo-50 bg-gradient-to-r from-indigo-50 via-sky-50 to-indigo-50 px-3.5 py-3.5 text-xs sm:text-sm text-slate-800 mb-3">
+                    <div className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase mb-1.5">
+                        Đính kèm
+                    </div>
+                    <ul className="space-y-1.5">
                         {post.attachments.map((f) => (
                             <li key={f.id}>
                                 <AttachmentLink file={f} />
@@ -108,15 +110,15 @@ export default function PostCard({
                 </div>
             )}
 
-            {/* Comments Link - Chỉ hiển thị nếu có comments hoặc detailUrl */}
+            {/* Comments Link - Chỉ hiển thị nếu có detailUrl */}
             {detailUrl && (
-                <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-3">
+                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
                     <Link
                         href={detailUrl}
-                        className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-medium"
+                        className="text-xs sm:text-sm font-semibold bg-gradient-to-r from-indigo-500 to-sky-500 bg-clip-text text-transparent hover:from-indigo-600 hover:to-sky-600 transition-colors"
                     >
                         {commentCount > 0
-                            ? `${commentCount} bình luận`
+                            ? `${commentCount} bình luận • Xem chi tiết`
                             : "Xem chi tiết"}
                     </Link>
                 </div>

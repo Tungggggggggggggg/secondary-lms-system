@@ -159,13 +159,34 @@ export default function AnnouncementsFeed({
         <div className="space-y-4">
             {isLoading && posts.length === 0 ? (
                 <div className="space-y-3">
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
+                    {[1, 2, 3].map((i) => (
+                        <div
+                            key={i}
+                            className="bg-white/90 rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm flex flex-col gap-3 animate-pulse"
+                        >
+                            <div className="flex items-center gap-3">
+                                <Skeleton className="h-9 w-9 rounded-full" />
+                                <div className="flex-1 space-y-2">
+                                    <Skeleton className="h-3 w-1/3" />
+                                    <Skeleton className="h-3 w-1/4" />
+                                </div>
+                            </div>
+                            <Skeleton className="h-3 w-full" />
+                            <Skeleton className="h-3 w-11/12" />
+                        </div>
+                    ))}
                 </div>
             ) : posts.length === 0 ? (
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Chưa có thông báo nào.
+                <div className="bg-white/90 rounded-2xl border border-slate-100 p-8 sm:p-10 text-center shadow-sm">
+                    <div className="flex justify-center mb-4">
+                        <div className="text-4xl">📢</div>
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
+                        Chưa có thông báo nào
+                    </h3>
+                    <p className="text-sm sm:text-base text-slate-600">
+                        Khi giáo viên đăng thông báo mới, chúng sẽ hiển thị tại đây.
+                    </p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -177,10 +198,10 @@ export default function AnnouncementsFeed({
                             detailUrl={getDetailUrl(p.id)}
                         />
                     ))}
-                    
+
                     {/* Sentinel cho infinite scroll (student) */}
                     {role === "student" && <div ref={sentinelRef} />}
-                    
+
                     {/* Button load more (student - manual fallback) */}
                     {role === "student" && !isLoading && hasMore && (
                         <div className="flex justify-center">
@@ -188,6 +209,7 @@ export default function AnnouncementsFeed({
                                 variant="outline"
                                 onClick={handleLoadMore}
                                 disabled={isLoading}
+                                className="rounded-full px-5"
                             >
                                 {isLoading ? "Đang tải..." : "Tải thêm"}
                             </Button>
@@ -195,10 +217,10 @@ export default function AnnouncementsFeed({
                     )}
                 </div>
             )}
-            
+
             {/* Hiển thị lỗi nếu có */}
             {error && (
-                <div className="text-sm text-red-600 dark:text-red-400">
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                     {error}
                 </div>
             )}

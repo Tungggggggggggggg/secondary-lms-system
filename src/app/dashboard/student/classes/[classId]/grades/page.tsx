@@ -13,7 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Award, CheckCircle2, Clock, ChevronDown, MessageCircle } from "lucide-react";
+import { Award, CheckCircle2, Clock, ChevronDown, MessageCircle, AlertCircle } from "lucide-react";
 
 /**
  * Trang điểm số của lớp học (student view)
@@ -134,10 +134,21 @@ export default function StudentClassroomGradesPage() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
-        <h3 className="font-semibold mb-2">Lỗi tải danh sách điểm số</h3>
-        <p className="text-sm mb-4">{error}</p>
-        <Button onClick={() => fetchClassroomGrades(classId)}>Thử lại</Button>
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6 text-rose-700">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-semibold mb-1">Lỗi tải danh sách điểm số</h3>
+            <p className="text-sm mb-4 text-rose-600">{error}</p>
+            <Button 
+              onClick={() => fetchClassroomGrades(classId)}
+              size="sm"
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              Thử lại
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -146,17 +157,17 @@ export default function StudentClassroomGradesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight mb-1">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
             Điểm số của lớp
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
             Theo dõi kết quả học tập và tiến độ các bài tập trong lớp học này.
           </p>
         </div>
-        <div className="flex items-center gap-3 justify-end">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Sắp xếp theo
-          </span>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide hidden sm:block">
+            Sắp xếp
+          </label>
           <div className="relative">
             <select
               value={sortBy}
@@ -169,14 +180,14 @@ export default function StudentClassroomGradesPage() {
                     | "due_date"
                 )
               }
-              className="appearance-none px-4 pr-9 py-2 bg-white/90 rounded-full border border-slate-200 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              className="appearance-none px-3 sm:px-4 pr-8 sm:pr-9 py-2 bg-white/90 rounded-lg border border-slate-200 text-xs sm:text-sm text-slate-700 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
             >
               <option value="newest">Mới nhất</option>
               <option value="grade_desc">Điểm cao nhất</option>
               <option value="grade_asc">Điểm thấp nhất</option>
               <option value="due_date">Hạn nộp</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <ChevronDown className="pointer-events-none absolute right-2 sm:right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           </div>
         </div>
       </div>
@@ -230,32 +241,56 @@ export default function StudentClassroomGradesPage() {
 
       {/* Grades Table */}
       {isLoading ? (
-        <div className="text-center py-12 text-gray-500 animate-pulse">
-          Đang tải danh sách điểm số...
+        <div className="bg-white/90 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="space-y-3 p-4 sm:p-6">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-4 animate-pulse">
+                <div className="h-4 bg-slate-200 rounded flex-1" />
+                <div className="h-4 bg-slate-100 rounded w-20" />
+                <div className="h-4 bg-slate-100 rounded w-20" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : sortedGrades.length === 0 ? (
-        <div className="bg-white/90 rounded-3xl p-10 text-center border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-          <div className="text-5xl mb-4">📊</div>
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">
+        <div className="bg-white/90 rounded-2xl border border-slate-100 p-8 sm:p-12 text-center shadow-sm">
+          <div className="flex justify-center mb-4">
+            <div className="text-5xl">📊</div>
+          </div>
+          <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
             Chưa có điểm số nào
           </h3>
-          <p className="text-slate-600">
+          <p className="text-sm sm:text-base text-slate-600">
             Khi bạn nộp bài và được chấm điểm, bảng điểm sẽ hiển thị tại đây.
           </p>
         </div>
       ) : (
         <>
-          <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] overflow-hidden">
+          <div className="bg-white/90 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-indigo-50/60">
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Bài tập</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Loại</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Hạn nộp</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Ngày nộp</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Điểm</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Nhận xét</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Trạng thái</TableHead>
+                <TableRow className="bg-slate-50/80 border-b border-slate-200">
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                    Bài tập
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                    Loại
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                    Hạn nộp
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                    Ngày nộp
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                    Điểm
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                    Nhận xét
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                    Trạng thái
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -349,7 +384,10 @@ export default function StudentClassroomGradesPage() {
                 <DialogHeader>
                   <DialogTitle>Nhận xét của giáo viên</DialogTitle>
                   <DialogDescription>
-                    Bài tập: <span className="font-medium">{selectedFeedback.assignmentTitle}</span>
+                    Bài tập: {""}
+                    <span className="font-medium">
+                      {selectedFeedback.assignmentTitle}
+                    </span>
                   </DialogDescription>
                 </DialogHeader>
                 <div className="px-6 py-4 text-sm text-slate-800 whitespace-pre-line max-h-[50vh] overflow-y-auto">

@@ -269,9 +269,9 @@ export default function StudentAssignmentDetailPage({
 
   if (isLoading && !assignment) {
     return (
-      <div className="p-6">
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-        <div className="text-center py-12 text-gray-500 animate-pulse">
+      <div className="max-w-5xl mx-auto space-y-4">
+        <Breadcrumb items={breadcrumbItems} className="mb-2" />
+        <div className="text-center py-12 text-slate-500 animate-pulse">
           Đang tải chi tiết bài tập...
         </div>
       </div>
@@ -280,15 +280,17 @@ export default function StudentAssignmentDetailPage({
 
   if (error && !assignment) {
     return (
-      <div className="p-6">
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
+      <div className="max-w-5xl mx-auto space-y-4">
+        <Breadcrumb items={breadcrumbItems} className="mb-2" />
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6 text-rose-700">
           <h3 className="font-semibold mb-2">Lỗi tải chi tiết bài tập</h3>
           <p className="text-sm mb-4">{error}</p>
           <Button
             onClick={() => {
               fetchAssignmentDetail(assignmentId);
             }}
+            size="sm"
+            className="bg-rose-600 hover:bg-rose-700"
           >
             Thử lại
           </Button>
@@ -299,9 +301,9 @@ export default function StudentAssignmentDetailPage({
 
   if (!assignment) {
     return (
-      <div className="p-6">
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-        <div className="text-center py-12 text-gray-400">
+      <div className="max-w-5xl mx-auto space-y-4">
+        <Breadcrumb items={breadcrumbItems} className="mb-2" />
+        <div className="text-center py-12 text-slate-400">
           Không tìm thấy bài tập
         </div>
       </div>
@@ -320,22 +322,48 @@ export default function StudentAssignmentDetailPage({
   
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center justify-between gap-3">
         <Breadcrumb items={breadcrumbItems} />
         <BackButton href="/dashboard/student/assignments" />
       </div>
 
-      <AssignmentDetailHeader assignment={assignment} submission={(submission ? (submission as any) : (fileSubmission ? ({ id: "file", submittedAt: new Date().toISOString(), grade: (submission as any)?.grade ?? null, feedback: (submission as any)?.feedback ?? null } as any) : undefined))} />
+      <AssignmentDetailHeader
+        assignment={assignment}
+        submission={
+          submission
+            ? (submission as any)
+            : fileSubmission
+            ? ({
+                id: "file",
+                submittedAt: new Date().toISOString(),
+                grade: (submission as any)?.grade ?? null,
+                feedback: (submission as any)?.feedback ?? null,
+              } as any)
+            : undefined
+        }
+      />
 
       {attachments.length > 0 && (
-        <div className="bg-white rounded-xl p-4 shadow border mb-6">
-          <h3 className="font-semibold mb-3">Tài liệu đính kèm từ giáo viên</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className="bg-white/90 rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 space-y-3">
+          <h3 className="font-semibold text-sm sm:text-base text-slate-900">
+            Tài liệu đính kèm từ giáo viên
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {attachments.map((f) => (
-              <a key={f.id} href={f.url || '#'} target="_blank" rel="noreferrer" className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition text-sm truncate">
-                <div className="font-medium truncate" title={f.name}>{f.name}</div>
-                <div className="text-xs text-gray-500 truncate">{f.mimeType}</div>
+              <a
+                key={f.id}
+                href={f.url || "#"}
+                target="_blank"
+                rel="noreferrer"
+                className="flex flex-col rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3 text-xs sm:text-sm text-slate-700 hover:bg-slate-100 hover:border-slate-200 transition-colors"
+              >
+                <span className="font-medium truncate" title={f.name}>
+                  {f.name}
+                </span>
+                <span className="mt-1 text-[11px] text-slate-500 truncate">
+                  {f.mimeType}
+                </span>
               </a>
             ))}
           </div>
@@ -343,13 +371,25 @@ export default function StudentAssignmentDetailPage({
       )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "work" | "review")}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="work" disabled={workDisabled}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "work" | "review")}
+      >
+        <TabsList className="mb-6 inline-flex rounded-full bg-slate-100/80 px-1 py-1 border border-slate-200">
+          <TabsTrigger
+            value="work"
+            disabled={workDisabled}
+            className="px-4 py-1.5 text-xs sm:text-sm rounded-full data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+          >
             {hasSubmission && canEdit ? "Chỉnh sửa bài làm" : "Làm bài"}
           </TabsTrigger>
           {hasSubmission && (
-            <TabsTrigger value="review">Xem bài nộp</TabsTrigger>
+            <TabsTrigger
+              value="review"
+              className="px-4 py-1.5 text-xs sm:text-sm rounded-full data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+            >
+              Xem bài nộp
+            </TabsTrigger>
           )}
         </TabsList>
 

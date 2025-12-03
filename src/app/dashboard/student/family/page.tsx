@@ -156,26 +156,55 @@ export default function StudentFamilyPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Quản lý Gia đình</h1>
-        <p className="text-gray-600 mt-2">
-          Quản lý liên kết với phụ huynh và các yêu cầu liên kết
-        </p>
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header thumbnail */}
+      <div className="relative overflow-hidden rounded-3xl border border-indigo-50 bg-gradient-to-r from-indigo-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6 sm:py-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl bg-white/80 shadow-sm">
+            <Users className="h-5 w-5 text-indigo-500" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-900">
+              Kết nối với gia đình
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-xl">
+              Quản lý mã mời phụ huynh, yêu cầu liên kết và danh sách phụ huynh đã kết nối.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-end sm:items-center gap-3 sm:gap-4">
+          <div className="text-right">
+            <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+              Phụ huynh đã liên kết
+            </p>
+            <p className="text-xl sm:text-2xl font-bold text-slate-900">
+              {linkedParents.length}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Create Invitation */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mời Phụ huynh</CardTitle>
-          <CardDescription>
-            Tạo mã mời để gửi cho phụ huynh của bạn
+      <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base sm:text-lg text-slate-900 flex items-center gap-2">
+            <Users className="h-5 w-5 text-indigo-500" />
+            Mời phụ huynh
+          </CardTitle>
+          <CardDescription className="text-xs sm:text-sm text-slate-600">
+            Tạo mã mời và gửi cho phụ huynh để họ liên kết tài khoản với bạn.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button onClick={handleCreateInvitation} disabled={isCreating}>
-            <Plus className="h-4 w-4 mr-2" />
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs sm:text-sm text-slate-500">
+            Mỗi mã mời chỉ sử dụng được một lần và có thời hạn nhất định.
+          </div>
+          <Button
+            onClick={handleCreateInvitation}
+            disabled={isCreating}
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-4 sm:px-5 py-2 text-sm font-semibold text-white shadow-sm hover:shadow-md hover:from-indigo-600 hover:to-sky-600 disabled:opacity-60"
+          >
+            <Plus className="h-4 w-4" />
             Tạo mã mời mới
           </Button>
         </CardContent>
@@ -183,9 +212,11 @@ export default function StudentFamilyPage() {
 
       {/* Pending Invitations */}
       {invitations.filter((inv) => inv.status === "PENDING").length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Mã mời đang chờ ({invitations.filter((inv) => inv.status === "PENDING").length})</CardTitle>
+        <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base sm:text-lg text-slate-900">
+              Mã mời đang chờ ({invitations.filter((inv) => inv.status === "PENDING").length})
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {invitations
@@ -193,11 +224,11 @@ export default function StudentFamilyPage() {
               .map((invitation) => (
                 <div
                   key={invitation.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border border-slate-100 bg-white/90 shadow-sm hover:border-slate-200 hover:shadow-md transition-all"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <code className="text-2xl font-mono font-bold bg-violet-50 px-4 py-2 rounded">
+                      <code className="text-lg sm:text-2xl font-mono font-semibold bg-slate-900 text-slate-50 px-4 py-2 rounded-2xl tracking-[0.25em]">
                         {invitation.code}
                       </code>
                       <Button
@@ -212,14 +243,15 @@ export default function StudentFamilyPage() {
                         )}
                       </Button>
                     </div>
-                    <div className="mt-2 text-sm text-gray-600">
-                      <Clock className="h-3 w-3 inline mr-1" />
-                      Hết hạn: {formatDate(invitation.expiresAt, "medium")}
+                    <div className="mt-2 text-xs sm:text-sm text-slate-600 flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" />
+                      <span>Hết hạn: {formatDate(invitation.expiresAt, "medium")}</span>
                     </div>
                   </div>
                   <Button
                     variant="outline"
-                    size="default"
+                    size="sm"
+                    className="rounded-full text-xs sm:text-sm"
                     onClick={() => handleCancelInvitation(invitation.id)}
                   >
                     Hủy
@@ -232,38 +264,42 @@ export default function StudentFamilyPage() {
 
       {/* Pending Requests */}
       {requests.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Yêu cầu liên kết ({requests.length})</CardTitle>
-            <CardDescription>
-              Các phụ huynh muốn liên kết với bạn
+        <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base sm:text-lg text-slate-900">
+              Yêu cầu liên kết ({requests.length})
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm text-slate-600">
+              Các phụ huynh muốn liên kết tài khoản với bạn.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {requests.map((request) => (
               <div
                 key={request.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
+                className="flex items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border border-slate-100 bg-white/90 shadow-sm hover:border-slate-200 hover:shadow-md transition-all"
               >
                 <div className="flex-1">
-                  <div className="font-semibold">{request.parent.fullname}</div>
-                  <div className="text-sm text-gray-600">
-                    <Mail className="h-3 w-3 inline mr-1" />
-                    {request.parent.email}
+                  <div className="font-semibold text-sm sm:text-base text-slate-900">
+                    {request.parent.fullname}
+                  </div>
+                  <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1.5 mt-0.5">
+                    <Mail className="h-3 w-3" />
+                    <span>{request.parent.email}</span>
                   </div>
                   {request.message && (
-                    <div className="mt-2 text-sm text-gray-700 italic">
-                      &quot;{request.message}&quot;
+                    <div className="mt-2 text-xs sm:text-sm text-slate-700 italic">
+                      “{request.message}”
                     </div>
                   )}
-                  <div className="mt-1 text-xs text-gray-500">
-                    <Calendar className="h-3 w-3 inline mr-1" />
-                    {formatDate(request.createdAt, "medium")}
+                  <div className="mt-1 text-[11px] text-slate-500 flex items-center gap-1.5">
+                    <Calendar className="h-3 w-3" />
+                    <span>{formatDate(request.createdAt, "medium")}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    size="default"
+                    size="sm"
                     onClick={() => handleApproveRequest(request.id)}
                   >
                     <UserCheck className="h-4 w-4 mr-1" />
@@ -271,7 +307,7 @@ export default function StudentFamilyPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    size="default"
+                    size="sm"
                     onClick={() => handleRejectRequest(request.id)}
                   >
                     <UserX className="h-4 w-4 mr-1" />
@@ -285,39 +321,43 @@ export default function StudentFamilyPage() {
       )}
 
       {/* Linked Parents */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Phụ huynh đã liên kết ({linkedParents.length})</CardTitle>
+      <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base sm:text-lg text-slate-900">
+            Phụ huynh đã liên kết ({linkedParents.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {linkedParents.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-              <p>Chưa có phụ huynh nào được liên kết</p>
-              <p className="text-sm mt-2">Tạo mã mời hoặc chờ phụ huynh gửi yêu cầu liên kết</p>
+            <div className="text-center py-8 text-slate-500">
+              <Users className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+              <p className="text-sm sm:text-base font-medium text-slate-700">Chưa có phụ huynh nào được liên kết</p>
+              <p className="text-xs sm:text-sm mt-2">
+                Tạo mã mời hoặc chờ phụ huynh gửi yêu cầu liên kết để bắt đầu.
+              </p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {linkedParents.map((link) => (
                 <div
                   key={link.id}
-                  className="p-4 border rounded-lg hover:shadow-md transition-shadow"
+                  className="p-4 sm:p-5 rounded-2xl border border-slate-100 bg-white/90 shadow-sm hover:border-slate-200 hover:shadow-md transition-all"
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                       {link.parent.fullname?.charAt(0).toUpperCase() || "P"}
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-lg">{link.parent.fullname}</div>
-                      <div className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                      <div className="font-semibold text-sm sm:text-base text-slate-900">{link.parent.fullname}</div>
+                      <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1 mt-1">
                         <Mail className="h-3 w-3" />
                         {link.parent.email}
                       </div>
-                      <div className="mt-2 text-xs text-gray-500">
-                        <Clock className="h-3 w-3 inline mr-1" />
-                        Liên kết từ: {formatDate(link.createdAt, "short")}
+                      <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        <span>Liên kết từ: {formatDate(link.createdAt, "short")}</span>
                       </div>
-                      <Badge variant="outline" className="mt-2 bg-green-50 text-green-700 border-green-200">
+                      <Badge variant="outline" className="mt-2 bg-emerald-50 text-emerald-700 border-emerald-200 rounded-full px-3 py-1 text-[11px] font-semibold">
                         Đã kích hoạt
                       </Badge>
                     </div>

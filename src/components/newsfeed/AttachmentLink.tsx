@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Button } from "@/components/ui/button";
 
 export interface AttachmentItem {
   id: string;
@@ -53,16 +52,39 @@ export default function AttachmentLink({ file }: AttachmentLinkProps) {
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="truncate" title={file.name}>
-        {file.name} <span className="text-xs text-gray-400">({Math.round(file.size / 1024)} KB)</span>
-      </span>
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" onClick={handleOpen} disabled={isLoading}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white shadow-sm">
+          <span className="text-xl text-sky-500">📄</span>
+        </div>
+        <div className="min-w-0">
+          <div
+            className="truncate text-sm font-medium text-slate-900"
+            title={file.name}
+          >
+            {file.name}
+          </div>
+          <div className="text-[11px] text-slate-500">
+            {Math.round(file.size / 1024)} KB
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <button
+          type="button"
+          onClick={handleOpen}
+          disabled={isLoading}
+          className="inline-flex items-center justify-center rounded-full px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-sky-500 shadow-sm hover:shadow-md hover:brightness-110 disabled:opacity-60"
+        >
           Xem
-        </Button>
-        <Button variant="outline" onClick={handleDownload} disabled={isLoading}>
+        </button>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={isLoading}
+          className="inline-flex items-center justify-center rounded-full px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-sky-500 to-indigo-500 shadow-sm hover:shadow-md hover:brightness-110 disabled:opacity-60"
+        >
           Tải
-        </Button>
+        </button>
       </div>
     </div>
   );
