@@ -1,3 +1,5 @@
+import { BookOpen, Users, TrendingUp, Star } from "lucide-react";
+
 export default function CourseStats() {
   const stats = [
     {
@@ -5,7 +7,7 @@ export default function CourseStats() {
       value: "12",
       change: "+2",
       changeType: "increase",
-      icon: "📚",
+      icon: <BookOpen className="h-5 w-5" />,
       color: "from-blue-500 to-blue-600"
     },
     {
@@ -13,7 +15,7 @@ export default function CourseStats() {
       value: "384",
       change: "+28",
       changeType: "increase", 
-      icon: "👥",
+      icon: <Users className="h-5 w-5" />,
       color: "from-purple-500 to-purple-600"
     },
     {
@@ -21,7 +23,7 @@ export default function CourseStats() {
       value: "86%",
       change: "+5%",
       changeType: "increase",
-      icon: "📈",
+      icon: <TrendingUp className="h-5 w-5" />,
       color: "from-green-500 to-green-600"
     },
     {
@@ -29,7 +31,7 @@ export default function CourseStats() {
       value: "4.8",
       change: "+0.2",
       changeType: "increase",
-      icon: "⭐",
+      icon: <Star className="h-5 w-5" />,
       color: "from-yellow-500 to-yellow-600"
     }
   ];

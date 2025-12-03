@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MessageSquare, BarChart3, Users, Settings } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import SectionCard from "@/components/shared/SectionCard";
 
 interface QuickAction {
   icon: React.ReactNode;
@@ -45,27 +45,25 @@ export default function QuickActions() {
   ];
 
   return (
-    <Card className="border-amber-100 hover:shadow-lg transition-shadow duration-300">
-      <CardHeader>
-        <CardTitle className="text-amber-700">Hành động nhanh</CardTitle>
-        <CardDescription>Truy cập nhanh các chức năng</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-3">
-          {actions.map((action) => (
-            <Link key={action.label} href={action.href}>
-              <div
-                className={`flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 transition-all duration-300 ${action.color} ${action.hoverColor} hover:shadow-md hover:scale-105 cursor-pointer group`}
-              >
-                <div className="transition-transform duration-300 group-hover:scale-110">
-                  {action.icon}
-                </div>
-                <p className="text-xs font-semibold mt-2 text-center">{action.label}</p>
+    <SectionCard
+      className="parent-border"
+      title={<span className="text-amber-700">Hành động nhanh</span>}
+      description="Truy cập nhanh các chức năng"
+    >
+      <div className="grid grid-cols-2 gap-3">
+        {actions.map((action) => (
+          <Link key={action.label} href={action.href}>
+            <div
+              className={`flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 transition-all duration-300 ${action.color} ${action.hoverColor} hover:shadow-md hover:scale-105 cursor-pointer group`}
+            >
+              <div className="transition-transform duration-300 group-hover:scale-110">
+                {action.icon}
               </div>
-            </Link>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+              <p className="text-xs font-semibold mt-2 text-center">{action.label}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </SectionCard>
   );
 }

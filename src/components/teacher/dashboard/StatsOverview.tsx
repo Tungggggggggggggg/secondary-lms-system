@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
 import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Users, Layers, BookOpen, ClipboardList } from "lucide-react";
 
 export default function StatsOverview() {
     const { stats, isLoading, error, fetchStats } = useTeacherDashboard();
@@ -16,7 +17,7 @@ export default function StatsOverview() {
     const statsConfig = [
         {
             color: "from-blue-500 to-blue-600",
-            icon: "👥",
+            icon: <Users className="h-5 w-5" />,
             key: "totalStudents",
             label: "Học sinh",
             changeKey: "studentsChange",
@@ -26,7 +27,7 @@ export default function StatsOverview() {
         },
         {
             color: "from-purple-500 to-purple-600",
-            icon: "🏫",
+            icon: <Layers className="h-5 w-5" />,
             key: "totalClassrooms",
             label: "Lớp học",
             changeKey: "classroomsChange",
@@ -36,7 +37,7 @@ export default function StatsOverview() {
         },
         {
             color: "from-pink-500 to-pink-600",
-            icon: "📚",
+            icon: <BookOpen className="h-5 w-5" />,
             key: "totalLessons",
             label: "Bài giảng",
             changeKey: "lessonsChange",
@@ -46,7 +47,7 @@ export default function StatsOverview() {
         },
         {
             color: "from-yellow-500 to-orange-500",
-            icon: "✍️",
+            icon: <ClipboardList className="h-5 w-5" />,
             key: "pendingSubmissions",
             label: "Bài tập chờ",
             changeKey: null,

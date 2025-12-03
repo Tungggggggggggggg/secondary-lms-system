@@ -18,7 +18,8 @@ import {
   Brain,
   Timer,
   Copy,
-  GripVertical
+  GripVertical,
+  ClipboardList
 } from 'lucide-react';
 
 // Import Types
@@ -685,7 +686,10 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
 
       {/* Summary */}
       <div className="bg-blue-50 p-6 rounded-lg">
-        <h3 className="font-medium text-blue-900 mb-2">📋 Tóm tắt bài thi</h3>
+        <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+          <ClipboardList className="h-4 w-4" />
+          <span>Tóm tắt bài thi</span>
+        </h3>
         <div className="space-y-1 text-sm text-blue-700">
           <p>• <strong>Số câu hỏi:</strong> {currentContent.questions.length}</p>
           <p>• <strong>Thời gian:</strong> {currentContent.timeLimitMinutes} phút</p>

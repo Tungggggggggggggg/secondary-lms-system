@@ -4,6 +4,8 @@ import { useStudentAssignments } from "@/hooks/use-student-assignments";
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import ActivityList, { type ActivityItem } from "@/components/shared/ActivityList";
+import TimeAgo from "@/components/shared/TimeAgo";
+import { Star, CheckCircle, Bell } from "lucide-react";
 
 export default function RecentActivity() {
   const { assignments, isLoading, error, fetchAllAssignments } = useStudentAssignments();
@@ -20,7 +22,7 @@ export default function RecentActivity() {
       icon: string;
       color: string;
       text: string;
-      time: string;
+      submittedAt: Date;
       link?: string;
       timestamp: number; // Thêm timestamp để sắp xếp
     }> = [];
@@ -28,28 +30,13 @@ export default function RecentActivity() {
     assignments.forEach((assignment) => {
       if (assignment.submission) {
         const submittedAt = new Date(assignment.submission.submittedAt);
-        const now = new Date();
-        const diffMs = now.getTime() - submittedAt.getTime();
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffHours / 24);
-
-        let timeStr = "";
-        if (diffHours < 1) {
-          timeStr = "Vừa xong";
-        } else if (diffHours < 24) {
-          timeStr = `${diffHours} giờ trước`;
-        } else if (diffDays === 1) {
-          timeStr = "1 ngày trước";
-        } else {
-          timeStr = `${diffDays} ngày trước`;
-        }
 
         if (assignment.submission.grade !== null) {
           activities.push({
             icon: "⭐",
             color: "from-green-400 to-green-500",
             text: `Nhận điểm ${assignment.submission.grade} - ${assignment.title}`,
-            time: timeStr,
+            submittedAt,
             link: `/dashboard/student/assignments/${assignment.id}`,
             timestamp: submittedAt.getTime(),
           });
@@ -58,7 +45,7 @@ export default function RecentActivity() {
             icon: "✅",
             color: "from-blue-400 to-blue-500",
             text: `Đã nộp bài tập ${assignment.title}`,
-            time: timeStr,
+            submittedAt,
             link: `/dashboard/student/assignments/${assignment.id}`,
             timestamp: submittedAt.getTime(),
           });
@@ -75,15 +62,22 @@ export default function RecentActivity() {
   const items: ActivityItem[] = recentActivities.map((act, index) => ({
     id: index,
     color: act.color,
-    icon: act.icon,
+    icon: act.icon === "⭐" ? <Star className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
     primaryText: act.text,
-    secondaryText: act.time,
+    secondaryText: <TimeAgo date={act.submittedAt} short />,
     href: act.link,
+    status: act.icon === "⭐" ? "graded" : "submitted",
   }));
 
   return (
     <ActivityList
-      title="🔔 Hoạt động gần đây"
+      className="student-border"
+      title={
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5 text-green-600" />
+          <span>Hoạt động gần đây</span>
+        </div>
+      }
       loading={isLoading}
       error={error ? String(error) : null}
       items={items}

@@ -14,7 +14,9 @@ import {
   X,
   Calendar,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  ClipboardList,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -479,9 +481,12 @@ export default function EssayContentBuilder({ content, onContentChange, assignme
 
       {/* Summary */}
       <div className="bg-blue-50 p-6 rounded-lg">
-        <h3 className="font-medium text-blue-900 mb-2">📋 Tóm tắt bài tập</h3>
+        <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+          <ClipboardList className="h-4 w-4" />
+          <span>Tóm tắt bài tập</span>
+        </h3>
         <div className="space-y-1 text-sm text-blue-700">
-          <p>• <strong>Câu hỏi:</strong> {currentContent.question ? '✓ Đã nhập' : '⚠️ Chưa nhập'}</p>
+          <p className="flex items-center gap-1">• <strong>Câu hỏi:</strong> {currentContent.question ? 'Đã nhập' : 'Chưa nhập'}</p>
           <p>• <strong>File đính kèm:</strong> {currentContent.attachments?.length || 0} file</p>
           <p>• <strong>Định dạng nộp:</strong> {
             currentContent.submissionFormat === 'TEXT' ? 'Văn bản' :

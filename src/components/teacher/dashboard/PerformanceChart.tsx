@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
 import gsap from "gsap";
+import SectionCard from "@/components/shared/SectionCard";
+import { BarChart3, BookOpen } from "lucide-react";
 
 export default function PerformanceChart() {
   const { performance, isLoading, error, fetchPerformance } = useTeacherDashboard();
@@ -25,10 +27,7 @@ export default function PerformanceChart() {
   // Loading state
   if (isLoading && !performance) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          📈 Hiệu suất giảng dạy
-        </h2>
+      <SectionCard title={<span className="flex items-center gap-2 text-indigo-700"><BarChart3 className="h-5 w-5" /> Hiệu suất giảng dạy</span>}>
         <div className="space-y-6">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
@@ -41,50 +40,41 @@ export default function PerformanceChart() {
             </div>
           ))}
         </div>
-      </div>
+      </SectionCard>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          📈 Hiệu suất giảng dạy
-        </h2>
+      <SectionCard title={<span className="flex items-center gap-2 text-indigo-700"><BarChart3 className="h-5 w-5" /> Hiệu suất giảng dạy</span>}>
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
           <p className="text-red-600 text-sm">Lỗi khi tải hiệu suất: {error}</p>
         </div>
-      </div>
+      </SectionCard>
     );
   }
 
   // No data state
   if (!performance || performance.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          📈 Hiệu suất giảng dạy
-        </h2>
+      <SectionCard title={<span className="flex items-center gap-2 text-indigo-700"><BarChart3 className="h-5 w-5" /> Hiệu suất giảng dạy</span>}>
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
           <p className="text-gray-600">Chưa có dữ liệu hiệu suất</p>
           <p className="text-sm text-gray-500 mt-2">Tạo bài tập và chấm điểm để xem hiệu suất giảng dạy</p>
         </div>
-      </div>
+      </SectionCard>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
-      <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-        📈 Hiệu suất giảng dạy
-      </h2>
+    <SectionCard title={<span className="flex items-center gap-2 text-indigo-700"><BarChart3 className="h-5 w-5" /> Hiệu suất giảng dạy</span>}>
       <div className="space-y-6">
         {performance.slice(0, 5).map((item, idx) => (
           <div key={item.classroomId}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-gray-700">
-                {item.icon} {item.classroomName}
+              <span className="text-sm font-semibold text-gray-700 inline-flex items-center gap-1">
+                <BookOpen className="h-4 w-4" /> {item.classroomName}
               </span>
               <span className="text-sm font-bold text-gray-800">{item.averageGrade}%</span>
             </div>
@@ -100,6 +90,6 @@ export default function PerformanceChart() {
           </div>
         ))}
       </div>
-    </div>
+    </SectionCard>
   );
 }

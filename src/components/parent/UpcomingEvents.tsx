@@ -1,7 +1,7 @@
 "use client";
 
-import { Calendar, Clock, AlertCircle } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Clock, AlertCircle, FileText, ClipboardList, Pin } from "lucide-react";
+import SectionCard from "@/components/shared/SectionCard";
 
 interface UpcomingEvent {
   id: string;
@@ -44,13 +44,13 @@ export default function UpcomingEvents() {
   const getEventIcon = (type: string) => {
     switch (type) {
       case "exam":
-        return "📝";
+        return <FileText className="h-4 w-4 text-amber-700" />;
       case "assignment":
-        return "📋";
+        return <ClipboardList className="h-4 w-4 text-amber-700" />;
       case "event":
-        return "📅";
+        return <Calendar className="h-4 w-4 text-amber-700" />;
       default:
-        return "📌";
+        return <Pin className="h-4 w-4 text-amber-700" />;
     }
   };
 
@@ -73,15 +73,11 @@ export default function UpcomingEvents() {
   };
 
   return (
-    <Card className="border-amber-100 hover:shadow-lg transition-shadow duration-300">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-amber-700">
-          <Calendar className="h-5 w-5" />
-          Sự kiện sắp tới
-        </CardTitle>
-        <CardDescription>Những việc cần chú ý</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <SectionCard
+      className="parent-border"
+      title={<span className="flex items-center gap-2 text-amber-700"><Calendar className="h-5 w-5" /> Sự kiện sắp tới</span>}
+      description={"Những việc cần chú ý"}
+    >
         {events.length === 0 ? (
           <div className="text-center py-6 text-gray-500">
             <p>Không có sự kiện sắp tới</p>
@@ -96,7 +92,9 @@ export default function UpcomingEvents() {
                 )}`}
               >
                 <div className="flex items-start gap-3">
-                  <span className="text-xl mt-0.5">{getEventIcon(event.type)}</span>
+                  <span className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-50 border border-amber-100">
+                    {getEventIcon(event.type)}
+                  </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-gray-900 group-hover:text-amber-700 transition-colors duration-300 truncate">
                       {event.title}
@@ -125,7 +123,6 @@ export default function UpcomingEvents() {
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </SectionCard>
   );
 }

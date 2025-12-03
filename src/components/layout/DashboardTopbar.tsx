@@ -12,17 +12,11 @@ interface DashboardTopbarProps {
 }
 
 export default function DashboardTopbar({ role }: DashboardTopbarProps) {
-  const borderClass =
-    role === "teacher"
-      ? "border-indigo-100"
-      : role === "student"
-      ? "border-emerald-100"
-      : "border-orange-100";
   const { toggle } = useSidebarState(`sidebar:${role}`);
 
   return (
     <div
-      className={`px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-30 bg-white border-b ${borderClass} shadow-sm`}
+      className={`lg:hidden px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between sticky top-0 z-30 bg-white`}
     >
       <div className="min-w-0 flex items-center gap-2">
         <button
@@ -35,7 +29,9 @@ export default function DashboardTopbar({ role }: DashboardTopbarProps) {
         </button>
         <TopbarBreadcrumbs role={role} />
       </div>
-      <NotificationBell />
+      <div className="lg:hidden">
+        <NotificationBell />
+      </div>
     </div>
   );
 }

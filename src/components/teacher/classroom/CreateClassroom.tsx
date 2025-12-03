@@ -5,6 +5,37 @@ import { useRouter } from 'next/navigation';
 import { useClassroom } from '@/hooks/use-classroom';
 import { toast } from 'sonner';
 import { CreateClassroomDTO } from '@/types/classroom';
+import {
+  BookOpen,
+  Map,
+  Mic,
+  Calculator,
+  FlaskConical,
+  Palette,
+  Music,
+  Trophy,
+  ChevronRight,
+  ChevronLeft,
+  Loader2,
+  ClipboardList,
+  RotateCcw,
+  Key,
+  Lightbulb,
+  Rocket,
+  CheckCircle,
+  AlertTriangle,
+} from 'lucide-react';
+
+const ICON_OPTIONS = [
+  { key: 'book', Icon: BookOpen },
+  { key: 'map', Icon: Map },
+  { key: 'mic', Icon: Mic },
+  { key: 'calc', Icon: Calculator },
+  { key: 'lab', Icon: FlaskConical },
+  { key: 'palette', Icon: Palette },
+  { key: 'music', Icon: Music },
+  { key: 'trophy', Icon: Trophy },
+] as const;
 
 // Reworked Step 1: Class info (taolophoc style)
 function ClassInfoForm({
@@ -74,17 +105,18 @@ function ClassInfoForm({
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">Biểu tượng lớp học</label>
         <div className="flex gap-3 flex-wrap">
-          {["📜", "🗺️", "🗣️", "🧮", "🔬", "🎨", "🎵", "⚽"].map((icon) => (
+          {ICON_OPTIONS.map(({ key, Icon }) => (
             <button
-              key={icon}
-              onClick={() => onChange({ ...data, icon })}
-              className={`w-14 h-14 text-2xl rounded-xl transition-all ${
-                data.icon === icon
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg scale-110'
-                  : 'bg-gray-100 hover:bg-gray-200'
+              key={key}
+              type="button"
+              onClick={() => onChange({ ...data, icon: key })}
+              className={`w-14 h-14 rounded-xl transition-all flex items-center justify-center ${
+                data.icon === key
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg scale-110'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
               }`}
             >
-              {icon}
+              <Icon className="h-6 w-6" />
             </button>
           ))}
         </div>
@@ -92,9 +124,10 @@ function ClassInfoForm({
 
       <button
         onClick={handleNext}
-        className="w-full py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-bold rounded-xl hover:shadow-xl transition-all"
+        className="w-full py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-bold rounded-xl hover:shadow-xl transition-all inline-flex items-center justify-center gap-2"
       >
-        Tiếp theo →
+        <span>Tiếp theo</span>
+        <ChevronRight className="h-5 w-5" aria-hidden="true" />
       </button>
     </div>
   );
@@ -133,7 +166,9 @@ function ClassCodeStep({
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-br from-yellow-400 via-orange-400 to-red-400 rounded-2xl p-8 text-white text-center">
-        <div className="text-6xl mb-4">🔑</div>
+        <div className="mb-4 flex items-center justify-center">
+          <Key className="h-10 w-10" />
+        </div>
         <h3 className="text-2xl font-bold mb-2">Mật mã lớp học</h3>
         <p className="text-white/90 text-sm mb-6">Học viên sẽ dùng mã này để tham gia lớp của bạn</p>
 
@@ -151,38 +186,39 @@ function ClassCodeStep({
         <div className="flex gap-3">
           <button
             onClick={generateCode}
-            className="flex-1 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-semibold transition-all"
+            className="flex-1 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-semibold transition-all inline-flex items-center justify-center gap-2"
           >
-            🔄 Tạo mã mới
+            <RotateCcw className="h-4 w-4" /> Tạo mã mới
           </button>
           <button
             onClick={copyCode}
-            className="flex-1 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-semibold transition-all"
+            className="flex-1 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-semibold transition-all inline-flex items-center justify-center gap-2"
           >
-            📋 Sao chép
+            <ClipboardList className="h-4 w-4" /> Sao chép
           </button>
         </div>
       </div>
 
-      <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-xl p-4">
+      <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-xl p-4 flex items-start gap-2">
+        <Lightbulb className="h-4 w-4 text-blue-700 mt-0.5" />
         <p className="text-sm text-blue-800">
-          💡 <strong>Mẹo:</strong> Mã lớp nên dễ nhớ và dễ chia sẻ. Tránh các ký tự dễ nhầm lẫn như O, 0, I, 1.
+          <strong>Mẹo:</strong> Mã lớp nên dễ nhớ và dễ chia sẻ. Tránh các ký tự dễ nhầm lẫn như O, 0, I, 1.
         </p>
       </div>
 
       <div className="flex gap-3">
         <button
           onClick={onBack}
-          className="flex-1 py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all"
+          className="flex-1 py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all inline-flex items-center justify-center gap-2"
         >
-          ← Quay lại
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" /> Quay lại
         </button>
         <button
           onClick={onNext}
           disabled={!code.trim()}
-          className="flex-1 py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-bold rounded-xl hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-bold rounded-xl hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
         >
-          Tiếp theo →
+          Tiếp theo <ChevronRight className="h-5 w-5" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -206,10 +242,14 @@ function SummaryStep({
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
-        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">📋 Xác nhận thông tin</h3>
+        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <ClipboardList className="h-5 w-5" /> Xác nhận thông tin
+        </h3>
 
         <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
-          <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-3xl">{data.icon}</div>
+          <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white">
+            {(ICON_OPTIONS.find((o) => o.key === data.icon)?.Icon || BookOpen)({ className: 'h-8 w-8' })}
+          </div>
           <div>
             <h4 className="font-bold text-lg text-gray-800">{data.name}</h4>
             <p className="text-sm text-gray-600">Mã lớp: <span className="font-mono font-bold text-purple-600">{code}</span></p>
@@ -236,20 +276,22 @@ function SummaryStep({
 
       {status === 'loading' && (
         <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-xl p-4 flex items-center gap-3">
-          <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <Loader2 className="h-5 w-5 animate-spin text-blue-700" />
           <p className="text-blue-800 font-semibold">Đang tạo lớp học...</p>
         </div>
       )}
 
       {status === 'success' && (
-        <div className="bg-green-50 border-l-4 border-green-500 rounded-r-xl p-4">
-          <p className="text-green-800 font-semibold">✅ Tạo lớp học thành công!</p>
+        <div className="bg-green-50 border-l-4 border-green-500 rounded-r-xl p-4 flex items-center gap-2">
+          <CheckCircle className="h-5 w-5 text-green-700" />
+          <p className="text-green-800 font-semibold">Tạo lớp học thành công!</p>
         </div>
       )}
 
       {status === 'error' && (
-        <div className="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-4">
-          <p className="text-red-800 font-semibold">❌ Có lỗi xảy ra. Vui lòng thử lại!</p>
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-4 flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-red-700" />
+          <p className="text-red-800 font-semibold">Có lỗi xảy ra. Vui lòng thử lại!</p>
         </div>
       )}
 
@@ -257,16 +299,20 @@ function SummaryStep({
         <button
           onClick={onBack}
           disabled={status === 'loading'}
-          className="flex-1 py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
+          className="flex-1 py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2"
         >
-          ← Quay lại
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" /> Quay lại
         </button>
         <button
           onClick={onCreate}
           disabled={status === 'loading' || status === 'success'}
-          className="flex-1 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
         >
-          {status === 'success' ? '✓ Đã tạo' : '🚀 Tạo lớp học'}
+          {status === 'success' ? (
+            <><CheckCircle className="h-5 w-5" /> Đã tạo</>
+          ) : (
+            <><Rocket className="h-5 w-5" /> Tạo lớp học</>
+          )}
         </button>
       </div>
     </div>
@@ -283,15 +329,16 @@ export default function CreateClassroom() {
     name: '',
     description: '',
     maxStudents: 30,
-    icon: '📚',
+    icon: 'book',
   });
+
   const [classCode, setClassCode] = useState<string>('');
 
   const handleCreateClass = async () => {
     setStatus('loading');
     try {
       const payload: CreateClassroomDTO & { code?: string } = { ...classData };
-  if (classCode.trim()) payload.code = classCode.trim();
+      if (classCode.trim()) payload.code = classCode.trim();
 
       const result = await createClassroom(payload as CreateClassroomDTO);
       setStatus('success');
@@ -359,7 +406,7 @@ export default function CreateClassroom() {
           {(isLoading || status === 'loading') && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white p-6 rounded-2xl">
-                <div className="animate-spin text-3xl mb-4">🔄</div>
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-4" />
                 <p className="text-gray-600">Đang tạo lớp học...</p>
               </div>
             </div>

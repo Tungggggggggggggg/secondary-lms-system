@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import { Users, CheckCircle, Star, BarChart3 } from "lucide-react";
 
 export default function QuickStats() {
   interface ParentStudentRelationship {
@@ -54,7 +55,7 @@ export default function QuickStats() {
   const items: StatItem[] = [
     {
       color: "from-blue-500 to-blue-600",
-      icon: "👨‍👩‍👧",
+      icon: <Users className="h-5 w-5" />,
       value: childrenCount.toString(),
       label: "Con được liên kết",
       pillText: childrenCount > 0 ? "✓" : "—",
@@ -62,7 +63,7 @@ export default function QuickStats() {
     },
     {
       color: "from-green-500 to-green-600",
-      icon: "✅",
+      icon: <CheckCircle className="h-5 w-5" />,
       value: stats ? stats.totalGraded.toString() : "—",
       label: "Đã chấm",
       pillText: stats && stats.totalGraded > 0 ? "✓" : "—",
@@ -70,7 +71,7 @@ export default function QuickStats() {
     },
     {
       color: "from-yellow-500 to-orange-500",
-      icon: "⭐",
+      icon: <Star className="h-5 w-5" />,
       value: stats && stats.overallAverage > 0 ? stats.overallAverage.toFixed(1) : "—",
       label: "Điểm trung bình",
       pillText:
@@ -88,7 +89,7 @@ export default function QuickStats() {
     },
     {
       color: "from-pink-500 to-purple-500",
-      icon: "📊",
+      icon: <BarChart3 className="h-5 w-5" />,
       value: stats ? stats.totalSubmissions.toString() : "—",
       label: "Tổng bài nộp",
       pillText: stats && stats.totalPending > 0 ? `${stats.totalPending} chờ` : "—",

@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BookOpen, PencilLine, Star, Flame } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -40,28 +41,28 @@ export default function StatsOverview() {
   if (error || !stats) {
     const errorItems: StatItem[] = [
       {
-        icon: "📖",
+        icon: <BookOpen className="h-5 w-5" />,
         color: "from-blue-500 to-blue-600",
         label: "Bài học",
         value: "—",
         subtitle: "Lỗi tải dữ liệu",
       },
       {
-        icon: "✍️",
-        color: "from-purple-500 to-purple-600",
+        icon: <PencilLine className="h-5 w-5" />,
+        color: "from-green-500 to-green-600",
         label: "Bài tập",
         value: "—",
         subtitle: "Lỗi tải dữ liệu",
       },
       {
-        icon: "⭐",
+        icon: <Star className="h-5 w-5" />,
         color: "from-pink-500 to-pink-600",
         label: "Điểm TB",
         value: "—",
         subtitle: "Lỗi tải dữ liệu",
       },
       {
-        icon: "🔥",
+        icon: <Flame className="h-5 w-5" />,
         color: "from-yellow-500 to-orange-500",
         label: "Lớp học",
         value: "—",
@@ -74,7 +75,7 @@ export default function StatsOverview() {
 
   const items: StatItem[] = [
     {
-      icon: "📖",
+      icon: <BookOpen className="h-5 w-5" />,
       color: "from-blue-500 to-blue-600",
       label: "Bài học",
       value: stats.totalLessons.toString(),
@@ -84,8 +85,8 @@ export default function StatsOverview() {
           : "Không có bài mới",
     },
     {
-      icon: "✍️",
-      color: "from-purple-500 to-purple-600",
+      icon: <PencilLine className="h-5 w-5" />,
+      color: "from-green-500 to-green-600",
       label: "Bài tập",
       value: stats.totalAssignments.toString(),
       subtitle: `${stats.submittedAssignments} đã nộp${
@@ -93,7 +94,7 @@ export default function StatsOverview() {
       }`,
     },
     {
-      icon: "⭐",
+      icon: <Star className="h-5 w-5" />,
       color: "from-pink-500 to-pink-600",
       label: "Điểm TB",
       value: stats.averageGrade > 0 ? stats.averageGrade.toFixed(1) : "—",
@@ -105,7 +106,7 @@ export default function StatsOverview() {
           : "Không thay đổi",
     },
     {
-      icon: "🔥",
+      icon: <Flame className="h-5 w-5" />,
       color: "from-yellow-500 to-orange-500",
       label: "Lớp học",
       value: stats.totalClassrooms.toString(),
@@ -116,5 +117,9 @@ export default function StatsOverview() {
     },
   ];
 
-  return <StatsGrid items={items} />;
+  return (
+    <>
+      <StatsGrid items={items} />
+    </>
+  );
 }

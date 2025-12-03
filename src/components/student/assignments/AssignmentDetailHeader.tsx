@@ -2,6 +2,7 @@
 
 import Badge from "@/components/ui/badge";
 import { StudentAssignmentDetail } from "@/hooks/use-student-assignments";
+import { FileText, HelpCircle, BookOpen, ArrowRight } from "lucide-react";
 
 interface AssignmentDetailHeaderProps {
   assignment: StudentAssignmentDetail;
@@ -40,7 +41,11 @@ export default function AssignmentDetailHeader({
                   : "bg-pink-50 text-pink-700 border-pink-200"
               }`}
             >
-              <span>{assignment.type === "ESSAY" ? "📝" : "❓"}</span>
+              {assignment.type === "ESSAY" ? (
+                <FileText className="h-4 w-4" />
+              ) : (
+                <HelpCircle className="h-4 w-4" />
+              )}
               <span>{assignment.type === "ESSAY" ? "Tự luận" : "Trắc nghiệm"}</span>
             </span>
             {submission && (
@@ -73,8 +78,8 @@ export default function AssignmentDetailHeader({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
         <div>
           <p className="text-xs text-gray-500 mb-1">Lớp học</p>
-          <p className="text-sm font-semibold text-gray-800">
-            {assignment.classroom?.icon} {assignment.classroom?.name}
+          <p className="text-sm font-semibold text-gray-800 inline-flex items-center gap-1">
+            <BookOpen className="h-4 w-4 text-green-600" /> {assignment.classroom?.name}
           </p>
         </div>
         <div>
@@ -86,8 +91,10 @@ export default function AssignmentDetailHeader({
         {(openAt || lockAt) && (
           <div>
             <p className="text-xs text-gray-500 mb-1">Khung thời gian</p>
-            <p className="text-sm font-semibold text-gray-800">
-              {openAt ? openAt.toLocaleString("vi-VN") : "Hiện tại"} → {lockAt ? lockAt.toLocaleString("vi-VN") : "Không giới hạn"}
+            <p className="text-sm font-semibold text-gray-800 inline-flex items-center gap-1">
+              <span>{openAt ? openAt.toLocaleString("vi-VN") : "Hiện tại"}</span>
+              <ArrowRight className="h-4 w-4 text-gray-500" />
+              <span>{lockAt ? lockAt.toLocaleString("vi-VN") : "Không giới hạn"}</span>
             </p>
           </div>
         )}

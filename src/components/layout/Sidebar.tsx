@@ -11,6 +11,7 @@ import Tooltip from "@/components/ui/tooltip";
 import { AccordionItem } from "@/components/ui/accordion";
 import type { CSSProperties } from "react";
 import { sidebarConfig } from "@/constants/sidebar.config";
+import NotificationBell from "@/components/shared/NotificationBell";
 
 type DashboardRole = "teacher" | "student" | "parent";
 
@@ -135,13 +136,16 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
               <span className="text-xl font-extrabold text-slate-900">EduVerse</span>
             </div>
           )}
-          <SidebarToggleButton
-            expanded={expanded}
-            onToggle={toggle}
-            ariaControls={sidebarId}
-            size={expanded ? "md" : "sm"}
-            variant="light"
-          />
+          <div className="flex items-center gap-2">
+            {expanded && <NotificationBell panelClassName="w-64" />}
+            <SidebarToggleButton
+              expanded={expanded}
+              onToggle={toggle}
+              ariaControls={sidebarId}
+              size={expanded ? "md" : "sm"}
+              variant="light"
+            />
+          </div>
         </div>
         <div className={`${expanded ? "rounded-xl border border-gray-200 p-3 mb-4" : "hidden"}`}>
           <div className="flex items-center gap-3">

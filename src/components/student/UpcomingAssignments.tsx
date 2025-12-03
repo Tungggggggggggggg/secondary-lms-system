@@ -1,8 +1,13 @@
 "use client";
 
 import { useStudentAssignments } from "@/hooks/use-student-assignments";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import SectionCard from "@/components/shared/SectionCard";
+import TabsButton, { type TabOption } from "@/components/shared/TabsButton";
+import AssignmentCard from "@/components/student/AssignmentCard";
+import type { PriorityLevel } from "@/components/shared/PriorityBadge";
+import { ClipboardList } from "lucide-react";
 
 export default function UpcomingAssignments() {
   const { assignments, isLoading, error, fetchAllAssignments } = useStudentAssignments();
@@ -11,89 +16,66 @@ export default function UpcomingAssignments() {
     fetchAllAssignments();
   }, [fetchAllAssignments]);
 
-  // Lọc và sắp xếp assignments sắp đến hạn
-  const upcomingAssignments = useMemo(() => {
-    if (!assignments || assignments.length === 0) return [];
+  // Tabs: all | soon (<=72h) | overdue
+  const [tab, setTab] = useState<"all" | "soon" | "overdue">("soon");
+
+  const { soonList, overdueList, allList } = useMemo(() => {
+    const result = { soonList: [] as typeof assignments, overdueList: [] as typeof assignments, allList: [] as typeof assignments };
+    if (!assignments || assignments.length === 0) return result;
 
     const now = new Date();
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    const soonHoursBound = 72; // 3 ngày
 
-    return assignments
-      .filter((assignment) => {
-        if (!assignment.dueDate) return false;
-        const dueDate = new Date(assignment.dueDate);
-        // Chỉ lấy assignments chưa nộp và sắp đến hạn
-        return (
-          dueDate >= now &&
-          dueDate <= sevenDaysFromNow &&
-          (!assignment.submission || assignment.status === "pending")
-        );
-      })
-      .sort((a, b) => {
-        if (!a.dueDate || !b.dueDate) return 0;
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      })
-      .slice(0, 5); // Chỉ lấy 5 assignments gần nhất
+    const list = assignments
+      .filter((a) => a.dueDate && (!a.submission || a.status === "pending"))
+      .sort((a, b) => new Date(a.dueDate as string).getTime() - new Date(b.dueDate as string).getTime());
+
+    const soon: typeof assignments = [];
+    const overdue: typeof assignments = [];
+    const all: typeof assignments = [];
+
+    list.forEach((a) => {
+      const due = new Date(a.dueDate as string);
+      const diffMs = due.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      if (diffMs < 0) overdue.push(a);
+      if (diffHours <= soonHoursBound && diffHours >= 0) soon.push(a);
+      if (diffMs >= 0 && diffMs <= sevenDays) all.push(a);
+    });
+
+    return { soonList: soon.slice(0, 5), overdueList: overdue.slice(0, 5), allList: all.slice(0, 5) };
   }, [assignments]);
 
-  const formatTimeRemaining = (dueDate: string) => {
-    const now = new Date();
-    const due = new Date(dueDate);
-    const diff = due.getTime() - now.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) {
-      return `${days} ngày nữa`;
-    } else if (hours > 0) {
-      return `Còn ${hours} giờ`;
-    } else {
-      return "Sắp hết hạn";
-    }
-  };
-
-  const getPriority = (dueDate: string) => {
+  const getPriority = (dueDate: string): PriorityLevel => {
     const now = new Date();
     const due = new Date(dueDate);
     const diff = due.getTime() - now.getTime();
     const hours = diff / (1000 * 60 * 60);
 
-    if (hours <= 24) {
-      return {
-        label: "SẮP HẾT HẠN",
-        color: "red",
-        borderClass: "border-red-500",
-        bgClass: "bg-red-50",
-        textClass: "text-red-600",
-        badgeClass: "bg-red-100",
-      };
-    } else if (hours <= 72) {
-      return {
-        label: "QUAN TRỌNG",
-        color: "yellow",
-        borderClass: "border-yellow-500",
-        bgClass: "bg-yellow-50",
-        textClass: "text-yellow-600",
-        badgeClass: "bg-yellow-100",
-      };
-    } else {
-      return {
-        label: "BÌNH THƯỜNG",
-        color: "blue",
-        borderClass: "border-blue-500",
-        bgClass: "bg-blue-50",
-        textClass: "text-blue-600",
-        badgeClass: "bg-blue-100",
-      };
-    }
+    if (hours <= 24) return "urgent";
+    if (hours <= 72) return "high";
+    return "normal";
   };
+
+  const tabOptions: TabOption[] = [
+    { id: "soon", label: "Sắp đến hạn" },
+    { id: "overdue", label: "Quá hạn" },
+    { id: "all", label: "7 ngày tới" },
+  ];
 
   if (isLoading) {
     return (
-      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          📋 Bài tập sắp tới
-        </h2>
+      <SectionCard
+        className="student-border"
+        title={
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-green-600" />
+            <span>Bài tập sắp tới</span>
+          </div>
+        }
+        actions={<Link href="/dashboard/student/assignments" className="text-sm text-green-600 hover:text-green-700 font-semibold">Xem tất cả</Link>}
+      >
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
@@ -101,73 +83,91 @@ export default function UpcomingAssignments() {
             </div>
           ))}
         </div>
-      </div>
+      </SectionCard>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          📋 Bài tập sắp tới
-        </h2>
-        <div className="text-red-500 text-center py-4">
-          Có lỗi xảy ra: {error}
-        </div>
-      </div>
+      <SectionCard
+        className="student-border"
+        title={
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-green-600" />
+            <span>Bài tập sắp tới</span>
+          </div>
+        }
+        actions={<Link href="/dashboard/student/assignments" className="text-sm text-green-600 hover:text-green-700 font-semibold">Xem tất cả</Link>}
+      >
+        <div className="text-red-500 text-center py-4">Có lỗi xảy ra: {String(error)}</div>
+      </SectionCard>
     );
   }
 
-  if (upcomingAssignments.length === 0) {
+  const activeList = tab === "soon" ? soonList : tab === "overdue" ? overdueList : allList;
+
+  if (!activeList || activeList.length === 0) {
     return (
-      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          📋 Bài tập sắp tới
-        </h2>
-        <div className="text-center py-8 text-gray-500">
-          <p>Không có bài tập nào sắp đến hạn</p>
+      <SectionCard
+        className="student-border"
+        title={
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-green-600" />
+            <span>Bài tập sắp tới</span>
+          </div>
+        }
+        actions={<Link href="/dashboard/student/assignments" className="text-sm text-green-600 hover:text-green-700 font-semibold">Xem tất cả</Link>}
+      >
+        <TabsButton
+          tabs={tabOptions}
+          activeTab={tab}
+          onTabChange={(id) => setTab(id as "all" | "soon" | "overdue")}
+          size="sm"
+          accent="student"
+        />
+        <div className="text-center py-8 text-gray-500 mt-4">
+          <p>Không có bài tập nào</p>
         </div>
-      </div>
+      </SectionCard>
     );
   }
 
   return (
-    <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
-      <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-        📋 Bài tập sắp tới
-      </h2>
-      <div className="space-y-4">
-        {upcomingAssignments.map((assignment) => {
+    <SectionCard
+      className="student-border"
+      title={
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-5 w-5 text-green-600" />
+          <span>Bài tập sắp tới</span>
+        </div>
+      }
+      actions={<Link href="/dashboard/student/assignments" className="text-sm text-green-600 hover:text-green-700 font-semibold">Xem tất cả</Link>}
+    >
+      <TabsButton
+        tabs={tabOptions}
+        activeTab={tab}
+        onTabChange={(id) => setTab(id as "all" | "soon" | "overdue")}
+        size="sm"
+        accent="student"
+      />
+      <div className="space-y-4 mt-4">
+        {activeList.map((assignment) => {
           if (!assignment.dueDate) return null;
           const priority = getPriority(assignment.dueDate);
-          const timeRemaining = formatTimeRemaining(assignment.dueDate);
           const classroomName = assignment.classroom?.name || "Lớp học";
 
           return (
-            <Link
+            <AssignmentCard
               key={assignment.id}
-              href={`/dashboard/student/assignments/${assignment.id}`}
-              className="block"
-            >
-              <div
-                className={`border-l-4 ${priority.borderClass} ${priority.bgClass} rounded-r-xl p-4 hover:shadow-md transition-shadow cursor-pointer`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span
-                    className={`text-xs font-semibold ${priority.textClass} ${priority.badgeClass} px-2 py-1 rounded-full`}
-                  >
-                    {priority.label}
-                  </span>
-                  <span className="text-xs text-gray-500">{timeRemaining}</span>
-                </div>
-                <h4 className="font-bold text-gray-800 mb-1">{assignment.title}</h4>
-                <p className="text-sm text-gray-600">{classroomName}</p>
-              </div>
-            </Link>
+              id={assignment.id}
+              title={assignment.title}
+              classroomName={classroomName}
+              dueDate={assignment.dueDate}
+              priority={priority}
+            />
           );
         })}
       </div>
-    </div>
+    </SectionCard>
   );
 }
-  

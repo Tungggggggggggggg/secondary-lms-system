@@ -7,9 +7,16 @@ import MyChildren from "@/components/parent/MyChildren";
 import AcademicPerformance from "@/components/parent/AcademicPerformance";
 import UpcomingEvents from "@/components/parent/UpcomingEvents";
 import QuickActions from "@/components/parent/QuickActions";
-
+import { useSession } from "next-auth/react";
 
 export default function ParentDashboardPage() {
+  const { data: session } = useSession();
+  const user = session?.user as { fullname?: string; name?: string; email?: string } | undefined;
+  const displayName =
+    (user?.fullname && user.fullname.trim()) ||
+    (user?.name && user.name.trim()) ||
+    (user?.email ? user.email.split("@")[0] : "") ||
+    "bạn";
   const currentDate = new Date();
   const dateOptions: Intl.DateTimeFormatOptions = {
     weekday: "long",
@@ -22,7 +29,7 @@ export default function ParentDashboardPage() {
   return (
     <>
       <HeaderParent
-        title="Chào mừng trở lại, Phụ huynh 👨‍👩‍👧"
+        title={`Chào mừng trở lại, ${displayName} 👋`}
         subtitle={`Theo dõi tiến độ học tập của con bạn - Hôm nay là ${formattedDate}`}
       />
 

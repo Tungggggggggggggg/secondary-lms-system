@@ -2,10 +2,10 @@
 
 import useSWR from "swr";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, ArrowRight, User } from "lucide-react";
+import { Users, ArrowRight, User, ChevronRight } from "lucide-react";
 import type { ParentStudentRelationship } from "@/types/parent";
+import SectionCard from "@/components/shared/SectionCard";
 
 // types imported from shared module; SWR fetcher is provided globally
 
@@ -22,46 +22,38 @@ export default function MyChildren() {
 
   if (isLoading) {
     return (
-      <Card className="border-amber-100 bg-gradient-to-br from-amber-50/50 to-orange-50/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-900">
-            👨‍👩‍👧 Con của tôi
-          </CardTitle>
-          <CardDescription className="text-amber-700">Đang tải...</CardDescription>
-        </CardHeader>
-      </Card>
+      <SectionCard title={<span className="flex items-center gap-2 text-amber-700"><Users className="h-5 w-5" /> Con của tôi</span>} description="Đang tải..." className="parent-border">
+        <div className="space-y-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="h-12 rounded-lg bg-amber-100/40 animate-pulse" />
+          ))}
+        </div>
+      </SectionCard>
     );
   }
 
   if (error || !data?.success) {
     return (
-      <Card className="border-amber-100 bg-gradient-to-br from-amber-50/50 to-orange-50/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-900">
-            👨‍👩‍👧 Con của tôi
-          </CardTitle>
-          <CardDescription className="text-amber-700">Không thể tải dữ liệu</CardDescription>
-        </CardHeader>
-      </Card>
+      <SectionCard title={<span className="flex items-center gap-2 text-amber-700"><Users className="h-5 w-5" /> Con của tôi</span>} description="Không thể tải dữ liệu" className="parent-border">
+        <div className="text-center py-6 text-amber-700">Vui lòng thử lại sau.</div>
+      </SectionCard>
     );
   }
 
   return (
-    <Card className="border-amber-100 bg-gradient-to-br from-amber-50/50 to-orange-50/30 hover:border-amber-200 hover:shadow-lg transition-all duration-300">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-amber-900">
-          👨‍👩‍👧 Con của tôi
-        </CardTitle>
-        <CardDescription className="text-amber-700 font-medium">
-          {total === 0
-            ? "Chưa có học sinh nào được liên kết"
-            : `${total} ${total === 1 ? "học sinh" : "học sinh"} được liên kết`}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <SectionCard
+      className="parent-border"
+      title={<span className="flex items-center gap-2 text-amber-700"><Users className="h-5 w-5" /> Con của tôi</span>}
+      description={
+        total === 0
+          ? "Chưa có học sinh nào được liên kết"
+          : `${total} ${total === 1 ? "học sinh" : "học sinh"} được liên kết`
+      }
+      actions={<Link href="/dashboard/parent/children" className="text-sm font-semibold text-amber-600 hover:text-amber-700 inline-flex items-center">Xem tất cả <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" /></Link>}
+    >
         {children.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-5xl mb-4">👨‍👩‍👧</div>
+            <Users className="w-12 h-12 mx-auto mb-4 text-amber-600" />
             <p className="text-sm text-amber-700 font-medium mb-4">
               Hãy liên hệ với quản trị viên để được liên kết với tài khoản học sinh của con bạn.
             </p>
@@ -112,8 +104,7 @@ export default function MyChildren() {
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </SectionCard>
   );
 }
 

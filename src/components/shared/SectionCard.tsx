@@ -3,13 +3,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { cn } from "@/lib/utils";
 
 interface SectionCardProps {
-  title: string;
+  title: ReactNode;
   description?: string;
   children: ReactNode;
   className?: string;
+  actions?: ReactNode;
 }
 
-export default function SectionCard({ title, description, children, className }: SectionCardProps) {
+export default function SectionCard({ title, description, children, className, actions }: SectionCardProps) {
   return (
     <Card
       className={cn(
@@ -17,9 +18,14 @@ export default function SectionCard({ title, description, children, className }:
         className
       )}
     >
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+      <CardHeader className="p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <CardTitle>{title}</CardTitle>
+            {description && <CardDescription>{description}</CardDescription>}
+          </div>
+          {actions ? <div className="shrink-0">{actions}</div> : null}
+        </div>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>

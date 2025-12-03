@@ -1,37 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import SectionCard from "@/components/shared/SectionCard";
+import type { ReactNode } from "react";
 
 export interface ActivityItem {
   id: string | number;
   color: string; // tailwind gradient: from-... to-...
-  icon: string; // emoji hoặc chữ cái trong vòng tròn
+  icon: ReactNode; // Lucide icon
   primaryText: string;
-  secondaryText?: string;
+  secondaryText?: string | ReactNode;
   href?: string;
+  status?: "graded" | "submitted";
 }
 
 interface ActivityListProps {
-  title?: string;
+  title?: ReactNode;
   loading: boolean;
   error?: string | null;
   items: ActivityItem[];
   emptyMessage?: string;
+  actions?: ReactNode;
+  className?: string;
 }
 
 export default function ActivityList({
-  title = "🔔 Hoạt động gần đây",
+  title = "Hoạt động gần đây",
   loading,
   error,
   items,
   emptyMessage = "Chưa có hoạt động nào",
+  actions,
+  className,
 }: ActivityListProps) {
   if (loading) {
     return (
-      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          {title}
-        </h2>
+      <SectionCard className={className} title={title} actions={actions}>
         <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex gap-3 animate-pulse">
@@ -43,52 +47,52 @@ export default function ActivityList({
             </div>
           ))}
         </div>
-      </div>
+      </SectionCard>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          {title}
-        </h2>
-        <div className="text-red-500 text-center py-4">
-          Có lỗi xảy ra: {error}
-        </div>
-      </div>
+      <SectionCard className={className} title={title} actions={actions}>
+        <div className="text-red-500 text-center py-4">Có lỗi xảy ra: {error}</div>
+      </SectionCard>
     );
   }
 
   if (!items || items.length === 0) {
     return (
-      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
-        <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-          {title}
-        </h2>
+      <SectionCard className={className} title={title} actions={actions}>
         <div className="text-center py-8 text-gray-500">
           <p>{emptyMessage}</p>
         </div>
-      </div>
+      </SectionCard>
     );
   }
 
   return (
-    <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 sm:p-7">
-      <h2 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center gap-2">
-        {title}
-      </h2>
-      <div className="space-y-4">
-        {items.map((item) => {
+    <SectionCard className={className} title={title} actions={actions}>
+      <div className="space-y-3">
+        {items.map((item, index) => {
+          const isGraded = item.status ? item.status === "graded" : item.primaryText.includes("Nhận điểm");
+          const badgeColor = isGraded 
+            ? "bg-green-100 text-green-700 border-green-200" 
+            : "bg-emerald-100 text-emerald-700 border-emerald-200";
+          const badgeLabel = isGraded ? "Đã chấm" : "Đã nộp";
+
           const content = (
-            <div className="flex gap-3 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 hover:-translate-y-0.5">
+            <div className="flex gap-3 items-start transition-transform duration-200 ease-out group-hover:-translate-y-0.5 hover:-translate-y-0.5">
               <div
-                className={`w-10 h-10 bg-gradient-to-r ${item.color} rounded-full flex items-center justify-center text-white font-bold`}
+                className={`w-10 h-10 bg-gradient-to-r ${item.color} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 mt-0.5`}
               >
                 {item.icon}
               </div>
-              <div className="flex-1">
-                <p className="text-sm text-gray-800">{item.primaryText}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <p className="text-sm font-medium text-gray-800 line-clamp-2">{item.primaryText}</p>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold border whitespace-nowrap flex-shrink-0 ${badgeColor}`}>
+                    {badgeLabel}
+                  </span>
+                </div>
                 {item.secondaryText && (
                   <p className="text-xs text-gray-500">{item.secondaryText}</p>
                 )}
@@ -101,7 +105,7 @@ export default function ActivityList({
               <Link
                 key={item.id}
                 href={item.href}
-                className="group block hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+                className="group block hover:bg-green-50/40 rounded-lg p-3 -m-3 transition-all duration-200 border border-transparent hover:border-green-100"
               >
                 {content}
               </Link>
@@ -109,12 +113,12 @@ export default function ActivityList({
           }
 
           return (
-            <div key={item.id} className="group">
+            <div key={item.id} className="group p-3 -m-3 rounded-lg hover:bg-green-50/40 transition-all duration-200 border border-transparent hover:border-green-100">
               {content}
             </div>
           );
         })}
       </div>
-    </div>
+    </SectionCard>
   );
 }

@@ -1,3 +1,5 @@
+import { BarChart3, Star, TrendingUp, PencilLine } from "lucide-react";
+
 export default function GradesStats() {
   const stats = [
     {
@@ -5,7 +7,7 @@ export default function GradesStats() {
       value: "8.2",
       change: "+0.3",
       changeType: "increase",
-      icon: "📊",
+      icon: <BarChart3 className="h-5 w-5" />,
       color: "from-blue-500 to-blue-600"
     },
     {
@@ -13,7 +15,7 @@ export default function GradesStats() {
       value: "35%",
       change: "+5%",
       changeType: "increase",
-      icon: "🌟",
+      icon: <Star className="h-5 w-5" />,
       color: "from-yellow-500 to-yellow-600"
     },
     {
@@ -21,7 +23,7 @@ export default function GradesStats() {
       value: "12",
       change: "-3",
       changeType: "decrease",
-      icon: "📈",
+      icon: <TrendingUp className="h-5 w-5" />,
       color: "from-red-500 to-red-600"
     },
     {
@@ -29,7 +31,7 @@ export default function GradesStats() {
       value: "86%",
       change: "+4%",
       changeType: "increase",
-      icon: "✍️",
+      icon: <PencilLine className="h-5 w-5" />,
       color: "from-green-500 to-green-600"
     }
   ];

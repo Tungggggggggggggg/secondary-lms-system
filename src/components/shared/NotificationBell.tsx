@@ -12,12 +12,19 @@ interface NotificationItem {
   read?: boolean;
 }
 
+interface NotificationBellProps {
+  className?: string;
+  buttonClassName?: string;
+  panelClassName?: string;
+}
+
 const fetcher = (url: string) => fetch(url).then((r) => {
   if (!r.ok) throw new Error("fetch error");
   return r.json();
 });
 
-export default function NotificationBell() {
+export default function NotificationBell(props?: NotificationBellProps) {
+  const { className, buttonClassName, panelClassName } = props || {};
   const [open, setOpen] = useState(false);
   const [localItems, setLocalItems] = useState<NotificationItem[] | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -89,10 +96,10 @@ export default function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className={`relative ${className || ""}`} ref={panelRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+        className={`relative p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors ${buttonClassName || ""}`}
         aria-label="Thông báo"
       >
         <Bell className="h-5 w-5 text-gray-700" />
@@ -104,7 +111,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
+        <div className={`absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50 ${panelClassName || ""}`}>
           <div className="flex items-center justify-between px-4 py-2 border-b">
             <h4 className="text-sm font-semibold text-gray-800">Thông báo</h4>
             <button onClick={markAllAsRead} className="text-xs text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1">

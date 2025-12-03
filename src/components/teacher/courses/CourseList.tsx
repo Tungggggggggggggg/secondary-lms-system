@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { BookOpen, Users, Clock } from "lucide-react";
 
 export default function CourseList() {
   const router = useRouter();
@@ -53,8 +54,8 @@ export default function CourseList() {
           className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className={`w-14 h-14 bg-gradient-to-r ${course.color} rounded-xl flex items-center justify-center text-2xl`}>
-              {course.icon}
+            <div className={`w-14 h-14 bg-gradient-to-r ${course.color} rounded-xl flex items-center justify-center text-white`}>
+              <BookOpen className="h-6 w-6" />
             </div>
             <div className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
               {course.status}
@@ -63,10 +64,9 @@ export default function CourseList() {
 
           <h3 className="text-xl font-bold text-gray-800 mb-2">{course.name}</h3>
           
-          <div className="flex items-center gap-2 text-gray-600 mb-4">
-            <span className="text-sm">👥 {course.students} học sinh</span>
-            <span className="text-gray-300">•</span>
-            <span className="text-sm">🕒 {course.lastUpdated}</span>
+          <div className="flex items-center gap-4 text-gray-600 mb-4">
+            <span className="text-sm inline-flex items-center gap-1"><Users className="h-4 w-4" /> {course.students} học sinh</span>
+            <span className="text-sm inline-flex items-center gap-1"><Clock className="h-4 w-4" /> {course.lastUpdated}</span>
           </div>
 
           <div className="space-y-2">

@@ -6,43 +6,43 @@ import StatsOverview from "@/components/student/StatsOverview";
 import MyClasses from "@/components/student/MyClasses";
 import UpcomingAssignments from "@/components/student/UpcomingAssignments";
 import RecentActivity from "@/components/student/RecentActivity";
-
-import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
+import { useSession } from "next-auth/react";
 
 export default function StudentDashboardPage() {
-  // Breadcrumb items cho dashboard
-  const breadcrumbItems: BreadcrumbItem[] = [
-    { label: "Dashboard", href: "/dashboard/student/dashboard" },
-  ];
+  const { data: session } = useSession();
+  const user = session?.user as { fullname?: string; name?: string; email?: string } | undefined;
+  const displayName =
+    (user?.fullname && user.fullname.trim()) ||
+    (user?.name && user.name.trim()) ||
+    (user?.email ? user.email.split("@")[0] : "") ||
+    "bạn";
 
   // Lấy ngày hiện tại
   const today = new Date();
-  const dayNames = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-  const dayName = dayNames[today.getDay()];
-  const dateStr = today.toLocaleDateString("vi-VN", {
-    day: "numeric",
-    month: "long",
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    weekday: "long",
     year: "numeric",
-  });
+    month: "long",
+    day: "numeric",
+  };
+  const formattedDate = today.toLocaleDateString("vi-VN", dateOptions);
 
   return (
     <>
-      <Breadcrumb items={breadcrumbItems} className="mb-4" />
       <Header
-        title="Chào mừng trở lại! 👋"
-        subtitle={`Hôm nay là ${dayName}, ${dateStr}`}
+        title={`Chào mừng trở lại, ${displayName} 👋`}
+        subtitle={`Quản lý học tập của bạn - Hôm nay là ${formattedDate}`}
       />
+
       <StatsOverview />
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <MyClasses />
+          <RecentActivity />
         </div>
         <div className="space-y-8">
-          {/* <JoinClass /> */}
           <UpcomingAssignments />
-          <RecentActivity />
-       
         </div>
       </div>
     </>

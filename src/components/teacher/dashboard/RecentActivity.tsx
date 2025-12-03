@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
 import ActivityList, { type ActivityItem } from "@/components/shared/ActivityList";
+import { FileCheck, UserPlus, MessageSquare, Star, Bell } from "lucide-react";
 
 export default function RecentActivity() {
     const { activities, isLoading, error, fetchActivities } = useTeacherDashboard();
@@ -37,21 +38,20 @@ export default function RecentActivity() {
         }
     };
 
-    // Helper function để lấy icon theo type
+    // Helper function để lấy icon theo type (Lucide)
     const getTypeIcon = (type: string) => {
         switch (type) {
             case 'SUBMISSION':
-                return '📝';
+                return <FileCheck className="h-4 w-4" />;
             case 'JOIN':
-                return '👋';
+                return <UserPlus className="h-4 w-4" />;
             case 'COMMENT':
-                return '💬';
             case 'MESSAGE':
-                return '✉️';
+                return <MessageSquare className="h-4 w-4" />;
             case 'LIKE':
-                return '⭐';
+                return <Star className="h-4 w-4" />;
             default:
-                return '🔔';
+                return <Bell className="h-4 w-4" />;
         }
     };
 
@@ -91,8 +91,8 @@ export default function RecentActivity() {
                   return {
                       id: activity.id,
                       color: config.color,
-                      icon: config.short,
-                      primaryText: `${icon} ${activity.actorName} ${activity.action}`,
+                      icon,
+                      primaryText: `${activity.actorName} ${activity.action}`,
                       secondaryText: activity.detail,
                       href: getHrefForActivity(activity),
                   };
@@ -100,7 +100,7 @@ export default function RecentActivity() {
 
     return (
         <ActivityList
-            title="🔔 Hoạt động gần đây"
+            title="Hoạt động gần đây"
             loading={isLoading && !activities}
             error={error || null}
             items={items}

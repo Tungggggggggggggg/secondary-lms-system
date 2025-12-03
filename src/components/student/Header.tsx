@@ -7,5 +7,5 @@ interface HeaderProps {
 }
 
 export default function Header(props: HeaderProps) {
-  return <PageHeader {...props} />;
+  return <PageHeader {...props} role="student" />;
 }

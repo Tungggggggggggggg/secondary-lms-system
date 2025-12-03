@@ -296,4 +296,14 @@ a:focus-visible {
   .parent-border { @apply border-amber-200; }
   .parent-accent { @apply text-amber-700; }
   .parent-accent-strong { @apply text-amber-900; }
+  .student-surface { @apply bg-gradient-to-b from-green-50/60 to-emerald-50/40; }
+  .student-card { @apply border-green-100 bg-gradient-to-br from-green-50/40 to-emerald-50/20; }
+  .student-border { @apply border-green-200; }
+  .student-accent { @apply text-green-700; }
+  .student-accent-strong { @apply text-green-900; }
+  .teacher-surface { @apply bg-gradient-to-b from-blue-50/60 to-indigo-50/40; }
+  .teacher-card { @apply border-blue-100 bg-gradient-to-br from-blue-50/40 to-indigo-50/20; }
+  .teacher-border { @apply border-blue-200; }
+  .teacher-accent { @apply text-blue-700; }
+  .teacher-accent-strong { @apply text-blue-900; }
 }

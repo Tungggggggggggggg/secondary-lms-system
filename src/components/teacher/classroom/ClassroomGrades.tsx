@@ -29,6 +29,8 @@ import {
   MessageCircle,
   TrendingUp,
   TrendingDown,
+  FileText,
+  HelpCircle,
 } from "lucide-react";
 
 type Row = {
@@ -392,9 +394,12 @@ export default function ClassroomGrades() {
                               : "bg-pink-50 text-pink-700 border border-pink-100"
                           }`}
                         >
-                          {r.assignment.type === "ESSAY"
-                            ? "📝 Tự luận"
-                            : "❓ Trắc nghiệm"}
+                          {r.assignment.type === "ESSAY" ? (
+                            <FileText className="h-3.5 w-3.5" />
+                          ) : (
+                            <HelpCircle className="h-3.5 w-3.5" />
+                          )}
+                          <span>{r.assignment.type === "ESSAY" ? "Tự luận" : "Trắc nghiệm"}</span>
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">

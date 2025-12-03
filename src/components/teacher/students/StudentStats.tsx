@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react';
+import { Users, BarChart3, AlertTriangle, Target } from 'lucide-react';
+
 type Props = {
   totalStudents: number;
   avgParticipation: number; // 0 - 100
@@ -11,29 +14,29 @@ export default function StudentStats({
   needSupportCount,
   avgGrade,
 }: Props) {
-  const stats = [
+  const stats: { title: string; value: string; icon: ReactNode; color: string }[] = [
     {
       title: "Tổng số học sinh",
       value: totalStudents.toString(),
-      icon: "👥",
+      icon: <Users className="h-5 w-5" />,
       color: "from-blue-500 to-blue-600",
     },
     {
       title: "Tỷ lệ hoàn thành bài",
       value: `${Math.round(avgParticipation)}%`,
-      icon: "📊",
+      icon: <BarChart3 className="h-5 w-5" />,
       color: "from-green-500 to-green-600",
     },
     {
       title: "Cần hỗ trợ",
       value: needSupportCount.toString(),
-      icon: "⚠️",
+      icon: <AlertTriangle className="h-5 w-5" />,
       color: "from-yellow-500 to-yellow-600",
     },
     {
       title: "Điểm trung bình",
       value: avgGrade !== null ? avgGrade.toFixed(1) : "-",
-      icon: "🎯",
+      icon: <Target className="h-5 w-5" />,
       color: "from-purple-500 to-purple-600",
     },
   ];
