@@ -45,7 +45,7 @@ export default function PromptDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" onClose={() => onOpenChange(false)}>
         <DialogHeader>
           <DialogTitle className="text-lg">{title}</DialogTitle>
           {description && (

@@ -158,7 +158,7 @@ export default function SubmissionReview({
                 return (
                   <div key={question.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <div className="flex items-start gap-3 mb-3">
-                      <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                      <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
                         {index + 1}
                       </span>
                       <div className="flex-1">
@@ -169,16 +169,17 @@ export default function SubmissionReview({
                             if (!option) return null;
                             const isSelected = selectedOptionIds.includes(oid);
                             const isAnswer = correctMap?.get(question.id)?.has(oid) ?? false;
+                            const cls = isAnswer && isSelected
+                              ? "bg-green-50 border-green-500"
+                              : isAnswer
+                                ? "bg-green-50 border-green-400"
+                                : isSelected
+                                  ? "bg-rose-50 border-rose-400"
+                                  : "bg-white border-gray-200";
                             return (
                               <div
                                 key={oid}
-                                className={`flex items-start gap-3 p-3 rounded-lg border-2 ${
-                                  isSelected
-                                    ? "bg-indigo-50 border-indigo-500"
-                                    : isAnswer
-                                      ? "bg-green-50 border-green-400"
-                                      : "bg-white border-gray-200"
-                                }`}
+                                className={`flex items-start gap-3 p-3 rounded-lg border-2 ${cls}`}
                               >
                                 <input
                                   type={question.type === "SINGLE" || question.type === "TRUE_FALSE" ? "radio" : "checkbox"}
@@ -193,6 +194,12 @@ export default function SubmissionReview({
                                   <span className="text-gray-700">{option.content}</span>
                                   {isAnswer && (
                                     <span className="ml-2 inline-flex text-[11px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">Đáp án đúng</span>
+                                  )}
+                                  {isSelected && !isAnswer && (
+                                    <span className="ml-2 inline-flex text-[11px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200">Bạn chọn</span>
+                                  )}
+                                  {isSelected && isAnswer && (
+                                    <span className="ml-2 inline-flex text-[11px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">Bạn chọn</span>
                                   )}
                                 </div>
                               </div>

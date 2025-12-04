@@ -467,7 +467,7 @@ export default function ClassroomGrades() {
                 }
               }}
             >
-              <DialogContent>
+              <DialogContent onClose={() => setFeedbackOpen(false)}>
                 <DialogHeader>
                   <DialogTitle>Nhận xét cho học sinh</DialogTitle>
                   <DialogDescription>

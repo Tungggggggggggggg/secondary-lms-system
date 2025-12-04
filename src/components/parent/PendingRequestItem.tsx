@@ -41,7 +41,7 @@ export default function PendingRequestItem({
       <Button
         size="default"
         variant="outline"
-        color="violet"
+        color="amber"
         onClick={() => onCancel?.(request.id)}
         disabled={isLoading}
         className="!border-red-300 !text-red-600 hover:!bg-red-50 hover:!border-red-400"

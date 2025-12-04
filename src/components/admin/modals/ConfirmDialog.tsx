@@ -83,7 +83,7 @@ export default function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" onClose={() => handleCancel()}>
         <DialogHeader>
           <div className="flex items-start gap-4">
             <div className={`p-2 rounded-full ${style.iconBg}`}>

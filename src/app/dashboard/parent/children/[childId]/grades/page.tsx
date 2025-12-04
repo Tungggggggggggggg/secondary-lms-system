@@ -500,7 +500,7 @@ export default function ParentChildGradesPage() {
                 }
               }}
             >
-              <DialogContent>
+              <DialogContent onClose={() => setFeedbackOpen(false)}>
                 <DialogHeader>
                   <DialogTitle>Nhận xét của giáo viên</DialogTitle>
                   <DialogDescription>

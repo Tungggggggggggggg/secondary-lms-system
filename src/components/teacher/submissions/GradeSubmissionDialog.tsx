@@ -112,7 +112,7 @@ export default function GradeSubmissionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-2xl" onClose={() => onOpenChange(false)}>
         <div className="bg-gradient-to-r from-indigo-50 to-white px-6 pt-6 pb-4 border-b">
           <DialogHeader>
             <DialogTitle className="text-xl">Chấm bài tập</DialogTitle>

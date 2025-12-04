@@ -17,6 +17,7 @@ export interface BreadcrumbItem {
 interface BreadcrumbProps {
   items: BreadcrumbItem[];
   className?: string;
+  color?: "violet" | "amber" | "blue" | "green";
 }
 
 /**
@@ -24,7 +25,7 @@ interface BreadcrumbProps {
  * Hiển thị đường dẫn navigation dạng breadcrumb
  * Hỗ trợ click vào các item để navigate
  */
-export default function Breadcrumb({ items, className = "" }: BreadcrumbProps) {
+export default function Breadcrumb({ items, className = "", color = "blue" }: BreadcrumbProps) {
   const pathname = usePathname();
 
   // Không hiển thị nếu chỉ có 1 item hoặc không có item nào
@@ -32,9 +33,18 @@ export default function Breadcrumb({ items, className = "" }: BreadcrumbProps) {
     return null;
   }
 
+  const linkBase =
+    "rounded-lg px-2 py-1 -mx-1 -my-1 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2";
+  const linkStyles: Record<string, string> = {
+    violet: "hover:text-violet-600 hover:bg-violet-50 focus-visible:ring-violet-500",
+    amber: "hover:text-amber-700 hover:bg-amber-50 focus-visible:ring-amber-500",
+    blue: "hover:text-indigo-600 hover:bg-indigo-50 focus-visible:ring-indigo-500",
+    green: "hover:text-green-700 hover:bg-green-50 focus-visible:ring-green-500",
+  };
+
   return (
     <nav
-      className={`flex items-center gap-2 text-sm text-gray-600 mb-4 ${className}`}
+      className={`flex items-center gap-2 text-sm text-gray-600 mb-2 ${className}`}
       aria-label="Breadcrumb"
     >
       {items.map((item, index) => {
@@ -46,7 +56,7 @@ export default function Breadcrumb({ items, className = "" }: BreadcrumbProps) {
             {item.href && !isLast ? (
               <Link
                 href={item.href}
-                className="hover:text-indigo-600 transition-colors duration-200"
+                className={`${linkBase} ${linkStyles[color]}`}
               >
                 {item.label}
               </Link>
@@ -57,6 +67,7 @@ export default function Breadcrumb({ items, className = "" }: BreadcrumbProps) {
                     ? "text-gray-900 font-semibold"
                     : "text-gray-600"
                 }`}
+                aria-current={isLast ? "page" : undefined}
               >
                 {item.label}
               </span>

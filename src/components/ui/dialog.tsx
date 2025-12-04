@@ -1,5 +1,7 @@
 ﻿import * as React from "react";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
+import { useRoleTheme } from "@/components/providers/RoleThemeProvider";
 
 interface DialogProps {
   open: boolean;
@@ -9,6 +11,7 @@ interface DialogProps {
 
 interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
+  onClose?: () => void;
 }
 
 const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
@@ -36,18 +39,45 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
 };
 
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
-  ({ className, children, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col border border-gray-100",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </div>
-  )
+  ({ className, children, onClose, ...props }, ref) => {
+    const theme = useRoleTheme();
+    
+    // Xác định màu nút đóng theo role
+    const colorKey: "green" | "blue" | "amber" =
+      theme?.color === "green" ? "green" : theme?.color === "amber" ? "amber" : "blue";
+    const closeButtonColorClass = {
+      green: "text-green-600 hover:bg-green-50",
+      blue: "text-blue-600 hover:bg-blue-50",
+      amber: "text-amber-600 hover:bg-amber-50",
+    }[colorKey];
+    
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col border border-gray-100",
+          className
+        )}
+        {...props}
+      >
+        {/* Close button (X) */}
+        <button
+          onClick={onClose}
+          className={cn(
+            "absolute top-4 right-4 p-2 rounded-lg transition-colors z-10",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+            closeButtonColorClass,
+            "focus-visible:ring-current"
+          )}
+          aria-label="Đóng dialog"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        
+        {children}
+      </div>
+    );
+  }
 );
 DialogContent.displayName = "DialogContent";
 

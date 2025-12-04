@@ -6,6 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { useStudentGrades, GradeEntry } from "@/hooks/use-student-grades";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import PageHeader from "@/components/shared/PageHeader";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +17,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Award, CheckCircle2, Clock, ChevronDown, MessageCircle } from "lucide-react";
+import { Award, CheckCircle2, Clock, MessageCircle, Search, BookOpen, FileText, ListChecks, BarChart3 } from "lucide-react";
 
 /**
  * Trang điểm số của tôi (student view - tất cả classrooms)
@@ -195,11 +198,11 @@ export default function GradesPage() {
   if (error) {
     return (
       <div className="max-w-6xl mx-auto space-y-4">
-        <Breadcrumb items={breadcrumbItems} className="mb-2" />
+        <Breadcrumb items={breadcrumbItems} color="green" className="mb-2" />
         <div className="rounded-2xl border border-red-200 bg-red-50 p-5 sm:p-6 text-red-700">
           <h3 className="font-semibold mb-2">Lỗi tải danh sách điểm số</h3>
           <p className="text-sm mb-4">{error}</p>
-          <Button onClick={fetchAllGrades}>Thử lại</Button>
+          <Button onClick={fetchAllGrades} color="green">Thử lại</Button>
         </div>
       </div>
     );
@@ -207,24 +210,13 @@ export default function GradesPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <Breadcrumb items={breadcrumbItems} className="mb-2" />
+      <Breadcrumb items={breadcrumbItems} color="green" className="mb-2" />
 
-      {/* Header + Export */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight mb-1">
-            Điểm số của tôi
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600">
-            Tổng hợp điểm số từ tất cả lớp học bạn tham gia.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 justify-end">
-          <Button onClick={downloadCsv} className="rounded-full px-5">
-            Xuất CSV
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        role="student"
+        title="Điểm số của tôi"
+        subtitle="Tổng hợp điểm số từ tất cả lớp học bạn tham gia."
+      />
 
       {/* KPI Statistics */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -273,54 +265,65 @@ export default function GradesPage() {
         </div>
       </div>
 
-      {/* Filter và Search */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Sắp xếp theo
-          </span>
-          <div className="relative">
-            <select
-              value={sortBy}
-              onChange={(e) =>
-                setSortBy(
-                  e.target.value as
-                    | "newest"
-                    | "grade_desc"
-                    | "grade_asc"
-                    | "due_date"
-                    | "classroom"
-                )
-              }
-              className="appearance-none px-4 pr-9 py-2 bg-white/90 rounded-full border border-slate-200 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-            >
-              <option value="newest">Mới nhất</option>
-              <option value="grade_desc">Điểm cao nhất</option>
-              <option value="grade_asc">Điểm thấp nhất</option>
-              <option value="due_date">Hạn nộp</option>
-              <option value="classroom">Theo lớp học</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          </div>
+      {/* Toolbar: Search (left) + Sort & Export (right) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+        {/* Search */}
+        <div className="relative md:justify-self-start">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <Input
+            placeholder="Tìm kiếm bài tập hoặc lớp học..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            color="green"
+            className="pl-10 h-12 w-full md:w-96"
+            aria-label="Tìm kiếm điểm số"
+          />
         </div>
 
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Tìm kiếm bài tập hoặc lớp học..."
-          className="flex-1 px-4 py-2 bg-white/90 rounded-full border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-        />
+        {/* Controls: Sort + Export */}
+        <div className="flex items-center justify-start md:justify-end gap-2">
+          <Select
+            value={sortBy}
+            onChange={(e) =>
+              setSortBy(
+                e.target.value as
+                  | "newest"
+                  | "grade_desc"
+                  | "grade_asc"
+                  | "due_date"
+                  | "classroom"
+              )
+            }
+            color="green"
+            className="sm:w-56 h-12"
+            aria-label="Sắp xếp điểm số"
+          >
+            <option value="newest">Mới nhất</option>
+            <option value="grade_desc">Điểm cao nhất</option>
+            <option value="grade_asc">Điểm thấp nhất</option>
+            <option value="due_date">Hạn nộp</option>
+            <option value="classroom">Theo lớp học</option>
+          </Select>
+
+          <Button onClick={downloadCsv} color="green" className="rounded-xl h-12 px-5">
+            Xuất CSV
+          </Button>
+        </div>
       </div>
 
       {/* Grades Table */}
       {isLoading ? (
-        <div className="text-center py-12 text-gray-500 animate-pulse">
-          Đang tải danh sách điểm số...
+        <div className="space-y-3">
+          <div className="h-10 w-60 bg-slate-200 rounded-xl motion-safe:animate-pulse" />
+          <div className="h-8 w-full bg-slate-200 rounded-xl motion-safe:animate-pulse" />
+          <div className="h-64 w-full bg-slate-200 rounded-2xl motion-safe:animate-pulse" />
         </div>
       ) : filteredAndSortedGrades.length === 0 ? (
         <div className="bg-white/90 rounded-3xl p-10 text-center border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-          <div className="text-5xl mb-4">📊</div>
+          <div className="mb-4 flex justify-center">
+            <BarChart3 className="h-12 w-12 text-green-600" />
+          </div>
+
           <h3 className="text-xl font-semibold text-slate-900 mb-2">
             Chưa có điểm số nào
           </h3>
@@ -335,7 +338,7 @@ export default function GradesPage() {
           <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-indigo-50/60">
+                <TableRow className="bg-green-50/60">
                   <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Lớp học</TableHead>
                   <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Bài tập</TableHead>
                   <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Loại</TableHead>
@@ -351,12 +354,12 @@ export default function GradesPage() {
                   return (
                     <TableRow
                       key={grade.id}
-                      className="hover:bg-indigo-50/40 transition-colors"
+                      className="hover:bg-green-50/40 transition-colors"
                     >
                       <TableCell>
                         {grade.classroom ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">{grade.classroom.icon}</span>
+                            <BookOpen className="h-4 w-4 text-green-600" />
                             <span className="font-medium text-slate-900">
                               {grade.classroom.name}
                             </span>
@@ -372,13 +375,21 @@ export default function GradesPage() {
                         <span
                           className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
                             grade.assignmentType === "ESSAY"
-                              ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                              : "bg-pink-50 text-pink-700 border border-pink-100"
+                              ? "bg-green-50 text-green-700 border border-green-100"
+                              : "bg-amber-50 text-amber-700 border border-amber-100"
                           }`}
                         >
-                          {grade.assignmentType === "ESSAY"
-                            ? "📝 Tự luận"
-                            : "❓ Trắc nghiệm"}
+                          {grade.assignmentType === "ESSAY" ? (
+                            <>
+                              <FileText className="h-3.5 w-3.5" />
+                              <span>Tự luận</span>
+                            </>
+                          ) : (
+                            <>
+                              <ListChecks className="h-3.5 w-3.5" />
+                              <span>Trắc nghiệm</span>
+                            </>
+                          )}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -405,7 +416,7 @@ export default function GradesPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenFeedback(grade)}
-                            className="inline-flex items-center gap-1 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 hover:border-indigo-200 transition-colors shadow-sm"
+                            className="inline-flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-100 hover:border-green-200 transition-colors shadow-sm"
                           >
                             <MessageCircle className="h-4 w-4" />
                             <span>Xem</span>
@@ -414,6 +425,7 @@ export default function GradesPage() {
                           <span className="text-xs text-slate-400 italic">Không có</span>
                         )}
                       </TableCell>
+
                       <TableCell className="text-sm text-slate-600">
                         {grade.submittedAt ? formatDate(grade.submittedAt) : "Chưa nộp"}
                       </TableCell>
@@ -441,7 +453,7 @@ export default function GradesPage() {
                 }
               }}
             >
-              <DialogContent>
+              <DialogContent onClose={() => setFeedbackOpen(false)}>
                 <DialogHeader>
                   <DialogTitle>Nhận xét của giáo viên</DialogTitle>
                   <DialogDescription>

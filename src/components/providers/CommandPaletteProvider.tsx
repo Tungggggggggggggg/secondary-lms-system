@@ -111,7 +111,7 @@ export default function CommandPaletteProvider({ children }: { children: React.R
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl" onClose={() => setOpen(false)}>
           <div className="p-4 border-b">
             <Input placeholder="Tìm kiếm... (Ctrl+K)" value={query} onChange={(e: any) => setQuery(e.target.value)} />
           </div>

@@ -307,7 +307,7 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
 
             {/* Edit dialog - modern layout */}
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                <DialogContent className="md:max-w-3xl p-0 overflow-hidden rounded-2xl">
+                <DialogContent className="md:max-w-3xl p-0 overflow-hidden rounded-2xl" onClose={() => setEditOpen(false)}>
                     <div className="md:grid md:grid-cols-2">
                         {/* Preview */}
                         <div className="relative bg-gray-50 p-5 flex items-center justify-center">

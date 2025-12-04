@@ -7,6 +7,7 @@ import { useSidebarState } from "@/hooks/useSidebarState";
 import { isActivePath } from "@/utils/routing";
 import SidebarToggleButton from "@/components/shared/SidebarToggleButton";
 import { useUnreadTotal } from "@/hooks/use-chat";
+import { LogOut } from "lucide-react";
 import Tooltip from "@/components/ui/tooltip";
 import { AccordionItem } from "@/components/ui/accordion";
 import type { CSSProperties } from "react";
@@ -249,7 +250,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
             title={!expanded ? "Đăng xuất" : undefined}
             aria-label={!expanded ? "Đăng xuất" : undefined}
           >
-            <span className="text-xl">🚪</span>
+            <LogOut className="h-5 w-5" aria-hidden="true" />
             {expanded && <span>Đăng xuất</span>}
           </button>
         </div>

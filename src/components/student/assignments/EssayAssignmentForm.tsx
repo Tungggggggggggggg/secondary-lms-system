@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Clock, CheckCircle2 } from "lucide-react";
 
 interface EssayAssignmentFormProps {
   assignmentId: string;
@@ -165,7 +166,12 @@ export default function EssayAssignmentForm({
           Nội dung bài làm <span className="text-red-500">*</span>
         </Label>
         {countdownLabel && (
-          <div className="mb-2 text-sm text-blue-800" aria-live="polite">⏳ Thời gian còn lại: <span className="font-semibold">{countdownLabel}</span></div>
+          <div className="mb-2 text-sm text-green-800" aria-live="polite">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              Thời gian còn lại: <span className="font-semibold">{countdownLabel}</span>
+            </span>
+          </div>
         )}
         <Textarea
           id="content"
@@ -189,8 +195,8 @@ export default function EssayAssignmentForm({
         </div>
         <div className="flex items-center gap-3">
           {isSubmitted && (
-            <p className="text-sm text-green-600 font-medium">
-              ✓ Bài làm đã được lưu (chưa nộp)
+            <p className="text-sm text-green-600 font-medium inline-flex items-center gap-1">
+              <CheckCircle2 className="h-4 w-4" /> Bài làm đã được lưu (chưa nộp)
             </p>
           )}
           <Button

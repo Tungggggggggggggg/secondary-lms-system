@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 
+// Always compute fresh data; avoid any route caching
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * GET /api/students/dashboard/stats
  * Lấy thống kê tổng quan cho student dashboard
@@ -19,6 +23,7 @@ export async function GET(req: NextRequest) {
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
     // 1. Đếm số lớp học đã tham gia
     const totalClassrooms = await prisma.classroomStudent.count({
@@ -123,8 +128,8 @@ export async function GET(req: NextRequest) {
         studentId: user.id,
         grade: { not: null },
         submittedAt: {
-          gte: oneMonthAgo,
-          lt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+          gte: twoMonthsAgo,
+          lt: oneMonthAgo,
         },
       },
       select: { grade: true },

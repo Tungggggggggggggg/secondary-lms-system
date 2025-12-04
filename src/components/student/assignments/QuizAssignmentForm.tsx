@@ -8,6 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { StudentAssignmentDetail } from "@/hooks/use-student-assignments";
 import QuestionComments from "./QuestionComments";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import AttemptTimer from "./AttemptTimer";
+import AttemptProgressBar from "./AttemptProgressBar";
+import AttemptStatusBanner from "./AttemptStatusBanner";
 
 interface QuizAssignmentFormProps {
   assignment: StudentAssignmentDetail;
@@ -766,7 +770,7 @@ export default function QuizAssignmentForm({
       className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 relative"
     >
       <Dialog open={blockedByTeacher} onOpenChange={() => {}}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" onClose={() => {}}>
           <DialogHeader>
             <DialogTitle>
               {pausedByTeacher ? "Phiên thi đang tạm dừng" : "Phiên thi đã bị chấm dứt"}
@@ -779,10 +783,18 @@ export default function QuizAssignmentForm({
           </DialogHeader>
         </DialogContent>
       </Dialog>
+      {/* Status banner */}
+      {blockedByTeacher && (
+        <AttemptStatusBanner
+          status={pausedByTeacher ? "paused" : "terminated"}
+          description={pausedByTeacher ? "Giáo viên đang tạm dừng phiên thi của bạn. Vui lòng chờ tín hiệu tiếp tục." : "Phiên thi đã bị chấm dứt bởi giáo viên. Bài làm hiện tại sẽ được nộp tự động."}
+        />
+      )}
+
       {/* Progress indicator */}
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+      <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-semibold text-blue-800" aria-live="polite">
+          <span className="text-sm font-semibold text-green-800" aria-live="polite">
             Tiến độ: {answeredCount}/{totalQuestions} câu đã trả lời
           </span>
           <div className="flex items-center gap-3">
@@ -791,7 +803,7 @@ export default function QuizAssignmentForm({
                 Tới câu chưa trả lời
               </Button>
             )}
-            <span className="text-sm font-bold text-blue-600">
+            <span className="text-sm font-bold text-green-600">
               {Math.round((answeredCount / totalQuestions) * 100)}%
             </span>
           </div>
@@ -822,15 +834,10 @@ export default function QuizAssignmentForm({
           </div>
         </div>
       )}
-        <div className="w-full bg-blue-200 rounded-full h-2">
-          <div
-            className="bg-blue-600 h-2 rounded-full transition-all"
-            style={{ width: `${(answeredCount / totalQuestions) * 100}%` }}
-          />
-        </div>
-        {countdownLabel && (
-          <div className="mt-3 text-right text-sm text-blue-800" aria-live="polite">
-            ⏳ Thời gian còn lại: <span className="font-semibold">{countdownLabel}</span>
+        <AttemptProgressBar answered={answeredCount} total={totalQuestions} />
+        {remainingSec != null && (
+          <div className="mt-3 text-right text-sm">
+            <AttemptTimer remainingSec={remainingSec} />
           </div>
         )}
         {!singleQuestionMode && (
@@ -876,7 +883,7 @@ export default function QuizAssignmentForm({
                       const nextBtn = btns[nextIndex];
                       if (nextBtn && typeof nextBtn.focus === 'function') nextBtn.focus();
                     }}
-                    className={`min-w-11 h-11 px-3 rounded-md text-sm font-medium border ${ans ? 'bg-green-50 border-green-400 text-green-700' : 'bg-white border-gray-300 text-gray-700'} hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2`}
+                    className={`min-w-11 h-11 px-3 rounded-md text-sm font-medium border ${ans ? 'bg-green-50 border-green-400 text-green-700' : 'bg-white border-gray-300 text-gray-700'} hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2`}
                   >
                     {idx + 1}
                   </button>
@@ -917,7 +924,7 @@ export default function QuizAssignmentForm({
               className="p-5 bg-gray-50 rounded-xl border border-gray-200"
             >
               <div className="flex items-start gap-3 mb-4">
-                <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
                   {index + 1}
                 </span>
                 <div className="flex-1">
@@ -946,7 +953,7 @@ export default function QuizAssignmentForm({
                             e.stopPropagation();
                           }
                         }}
-                        className="w-full rounded-lg border-2 border-gray-200 p-3 h-12 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full rounded-lg border-2 border-gray-200 p-3 h-12 text-base focus:outline-none focus:ring-2 focus:ring-green-500"
                         placeholder="Nhập đáp án..."
                       />
                     </div>
@@ -966,10 +973,10 @@ export default function QuizAssignmentForm({
                         return (
                           <label
                             key={option.id}
-                            className={`flex items-start gap-3 p-3 min-h-[44px] rounded-lg border-2 cursor-pointer transition-all focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 ${
+                            className={`flex items-start gap-3 p-3 min-h-[44px] rounded-lg border-2 cursor-pointer transition-all focus-within:outline-none focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-offset-2 ${
                               isSelected
-                                ? "bg-indigo-50 border-indigo-500"
-                                : "bg-white border-gray-200 hover:border-indigo-300"
+                                ? "bg-green-50 border-green-500"
+                                : "bg-white border-gray-200 hover:border-green-300"
                             } ${isOverdue || isLoading || disabledMode || blockedByTeacher ? "opacity-60 cursor-not-allowed" : ""}`}
                           >
                             <input
@@ -1018,12 +1025,16 @@ export default function QuizAssignmentForm({
       >
         <div className="text-sm text-gray-600">
           {!allAnswered && (
-            <span className="text-orange-600 font-medium">
-              ⚠️ Còn {totalQuestions - answeredCount} câu chưa trả lời
+            <span className="text-amber-600 font-medium inline-flex items-center gap-1">
+              <AlertTriangle className="h-4 w-4" />
+              Còn {totalQuestions - answeredCount} câu chưa trả lời
             </span>
           )}
           {allAnswered && (
-            <span className="text-green-600 font-medium">✓ Đã trả lời tất cả câu hỏi</span>
+            <span className="text-green-600 font-medium inline-flex items-center gap-1">
+              <CheckCircle2 className="h-4 w-4" />
+              Đã trả lời tất cả câu hỏi
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2">

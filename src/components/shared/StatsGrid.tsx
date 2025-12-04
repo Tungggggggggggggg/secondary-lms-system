@@ -13,17 +13,21 @@ export interface StatItem {
 
 interface StatsGridProps {
   items: StatItem[];
+  onItemClick?: (item: StatItem, index: number) => void;
 }
 
-export default function StatsGrid({ items }: StatsGridProps) {
+export default function StatsGrid({ items, onItemClick }: StatsGridProps) {
   if (!items || items.length === 0) return null;
 
   return (
     <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
-      {items.map((item) => (
+      {items.map((item, idx) => (
         <div
           key={item.label}
-          className="relative overflow-hidden rounded-3xl bg-white/95 border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] px-5 py-5 sm:px-6 sm:py-6 transition-all duration-300 ease-out hover:scale-102 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(15,23,42,0.15)] hover:border-slate-200 group"
+          role={onItemClick ? "button" : undefined}
+          tabIndex={onItemClick ? 0 : -1}
+          onClick={onItemClick ? () => onItemClick(item, idx) : undefined}
+          className={`relative overflow-hidden rounded-3xl bg-white/95 border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] px-5 py-5 sm:px-6 sm:py-6 transition-all duration-300 ease-out hover:scale-102 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(15,23,42,0.15)] hover:border-slate-200 group ${onItemClick ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400" : ""}`}
         >
           <div
             className={`pointer-events-none absolute inset-0 opacity-40 bg-gradient-to-br ${item.color} group-hover:opacity-60 transition-opacity duration-300`}

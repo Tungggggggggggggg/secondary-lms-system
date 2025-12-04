@@ -208,7 +208,7 @@ export default function ParentChildrenPage() {
 
       {/* Accept Invitation Modal */}
       <Dialog open={showAcceptModal} onOpenChange={setShowAcceptModal}>
-        <DialogContent>
+        <DialogContent onClose={() => setShowAcceptModal(false)}>
           <DialogHeader variant="parent">
             <DialogTitle variant="parent">Nhập mã mời từ học sinh</DialogTitle>
             <DialogDescription variant="parent">
@@ -250,7 +250,7 @@ export default function ParentChildrenPage() {
 
       {/* Search Students Modal */}
       <Dialog open={showSearchModal} onOpenChange={setShowSearchModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" onClose={() => setShowSearchModal(false)}>
           <DialogHeader variant="parent">
             <DialogTitle variant="parent">Tìm kiếm học sinh</DialogTitle>
             <DialogDescription variant="parent">

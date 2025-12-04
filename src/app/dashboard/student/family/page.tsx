@@ -5,6 +5,11 @@ import useSWR from "swr";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
+import PageHeader from "@/components/shared/PageHeader";
+import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import PromptDialog from "@/components/admin/modals/PromptDialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Users, 
   Plus, 
@@ -46,6 +51,14 @@ export default function StudentFamilyPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const toastHook = useToast();
+  const [liveMessage, setLiveMessage] = useState("");
+
+  // Dialog states
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelInvitationId, setCancelInvitationId] = useState<string | null>(null);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectRequestId, setRejectRequestId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   // Initialize toast instance
   useEffect(() => {
@@ -70,6 +83,9 @@ export default function StudentFamilyPage() {
   const invitations: InvitationItem[] = (invitationsData?.items || []) as InvitationItem[];
   const requests: RequestItem[] = (requestsData?.items || []) as RequestItem[];
   const linkedParents: LinkedParentItem[] = (parentsData?.items || []) as LinkedParentItem[];
+  const loadingInv = invitationsData === undefined;
+  const loadingReq = requestsData === undefined;
+  const loadingParents = parentsData === undefined;
 
   // Create invitation
   const handleCreateInvitation = async () => {
@@ -102,6 +118,7 @@ export default function StudentFamilyPage() {
     setCopiedCode(code);
     toastHook.toast({ title: "Đã sao chép mã mời!", variant: "success" });
     setTimeout(() => setCopiedCode(null), 2000);
+    setLiveMessage("Đã sao chép mã mời vào bộ nhớ tạm.");
   };
 
   // Cancel invitation
@@ -139,10 +156,12 @@ export default function StudentFamilyPage() {
   };
 
   // Reject request
-  const handleRejectRequest = async (id: string) => {
+  const handleRejectRequest = async (id: string, reason?: string) => {
     try {
       const res = await fetch(`/api/student/link-requests/${id}/reject`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
       });
       
       if (res.ok) {
@@ -155,40 +174,42 @@ export default function StudentFamilyPage() {
     }
   };
 
+  const confirmReject = async () => {
+    if (!rejectRequestId) return;
+    await handleRejectRequest(rejectRequestId, rejectReason.trim() || undefined);
+    setShowRejectDialog(false);
+    setRejectReason("");
+    setRejectRequestId(null);
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header thumbnail */}
-      <div className="relative overflow-hidden rounded-3xl border border-indigo-50 bg-gradient-to-r from-indigo-50 via-sky-50 to-emerald-50 px-4 py-4 sm:px-6 sm:py-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-start gap-3 sm:gap-4">
-          <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl bg-white/80 shadow-sm">
-            <Users className="h-5 w-5 text-indigo-500" />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-900">
-              Kết nối với gia đình
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-xl">
-              Quản lý mã mời phụ huynh, yêu cầu liên kết và danh sách phụ huynh đã kết nối.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-end sm:items-center gap-3 sm:gap-4">
-          <div className="text-right">
-            <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
-              Phụ huynh đã liên kết
-            </p>
-            <p className="text-xl sm:text-2xl font-bold text-slate-900">
-              {linkedParents.length}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* a11y live region for copy */}
+      <p className="sr-only" aria-live="polite">{liveMessage}</p>
+
+      {/* Breadcrumb + PageHeader */}
+      {(() => {
+        const breadcrumbItems: BreadcrumbItem[] = [
+          { label: "Dashboard", href: "/dashboard/student/dashboard" },
+          { label: "Gia đình", href: "/dashboard/student/family" },
+        ];
+        return (
+          <>
+            <Breadcrumb items={breadcrumbItems} color="green" />
+            <PageHeader
+              role="student"
+              title="Kết nối với gia đình"
+              subtitle="Quản lý mã mời phụ huynh, yêu cầu liên kết và danh sách phụ huynh đã kết nối."
+            />
+          </>
+        );
+      })()}
 
       {/* Create Invitation */}
       <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base sm:text-lg text-slate-900 flex items-center gap-2">
-            <Users className="h-5 w-5 text-indigo-500" />
+            <Users className="h-5 w-5 text-green-600" />
             Mời phụ huynh
           </CardTitle>
           <CardDescription className="text-xs sm:text-sm text-slate-600">
@@ -202,7 +223,9 @@ export default function StudentFamilyPage() {
           <Button
             onClick={handleCreateInvitation}
             disabled={isCreating}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-4 sm:px-5 py-2 text-sm font-semibold text-white shadow-sm hover:shadow-md hover:from-indigo-600 hover:to-sky-600 disabled:opacity-60"
+            color="green"
+            className="gap-2 rounded-full"
+            aria-label="Tạo mã mời phụ huynh"
           >
             <Plus className="h-4 w-4" />
             Tạo mã mời mới
@@ -211,7 +234,19 @@ export default function StudentFamilyPage() {
       </Card>
 
       {/* Pending Invitations */}
-      {invitations.filter((inv) => inv.status === "PENDING").length > 0 && (
+      {loadingInv ? (
+        <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm p-5">
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-56" />
+            {[1,2].map(i => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-10 w-40 rounded-xl" />
+                <Skeleton className="h-9 w-24 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : invitations.filter((inv) => inv.status === "PENDING").length > 0 && (
         <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-base sm:text-lg text-slate-900">
@@ -233,8 +268,10 @@ export default function StudentFamilyPage() {
                       </code>
                       <Button
                         variant="ghost"
+                        color="green"
                         size="default"
                         onClick={() => handleCopyCode(invitation.code)}
+                        aria-label={`Sao chép mã mời ${invitation.code}`}
                       >
                         {copiedCode === invitation.code ? (
                           <Check className="h-4 w-4 text-green-600" />
@@ -250,9 +287,14 @@ export default function StudentFamilyPage() {
                   </div>
                   <Button
                     variant="outline"
+                    color="green"
                     size="sm"
                     className="rounded-full text-xs sm:text-sm"
-                    onClick={() => handleCancelInvitation(invitation.id)}
+                    onClick={() => {
+                      setCancelInvitationId(invitation.id);
+                      setShowCancelDialog(true);
+                    }}
+                    aria-label="Hủy mã mời"
                   >
                     Hủy
                   </Button>
@@ -263,7 +305,22 @@ export default function StudentFamilyPage() {
       )}
 
       {/* Pending Requests */}
-      {requests.length > 0 && (
+      {loadingReq ? (
+        <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm p-5">
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-56" />
+            {[1,2,3].map(i => (
+              <div key={i} className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-40 mb-2" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <Skeleton className="h-9 w-40" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : requests.length > 0 && (
         <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-base sm:text-lg text-slate-900">
@@ -300,15 +357,19 @@ export default function StudentFamilyPage() {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
+                    color="green"
                     onClick={() => handleApproveRequest(request.id)}
+                    aria-label={`Chấp nhận yêu cầu của ${request.parent.fullname}`}
                   >
                     <UserCheck className="h-4 w-4 mr-1" />
                     Chấp nhận
                   </Button>
                   <Button
                     variant="outline"
+                    color="green"
                     size="sm"
-                    onClick={() => handleRejectRequest(request.id)}
+                    onClick={() => { setRejectRequestId(request.id); setShowRejectDialog(true); }}
+                    aria-label={`Từ chối yêu cầu của ${request.parent.fullname}`}
                   >
                     <UserX className="h-4 w-4 mr-1" />
                     Từ chối
@@ -328,7 +389,19 @@ export default function StudentFamilyPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {linkedParents.length === 0 ? (
+          {loadingParents ? (
+            <div className="space-y-3 p-4">
+              {[1,2].map(i => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-48 mb-2" />
+                    <Skeleton className="h-3 w-60" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : linkedParents.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
               <Users className="h-12 w-12 mx-auto mb-3 text-slate-300" />
               <p className="text-sm sm:text-base font-medium text-slate-700">Chưa có phụ huynh nào được liên kết</p>
@@ -344,7 +417,7 @@ export default function StudentFamilyPage() {
                   className="p-4 sm:p-5 rounded-2xl border border-slate-100 bg-white/90 shadow-sm hover:border-slate-200 hover:shadow-md transition-all"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                       {link.parent.fullname?.charAt(0).toUpperCase() || "P"}
                     </div>
                     <div className="flex-1">
@@ -368,6 +441,36 @@ export default function StudentFamilyPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Cancel Invitation Confirm */}
+      <ConfirmDialog
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        onConfirm={async () => {
+          if (cancelInvitationId) await handleCancelInvitation(cancelInvitationId);
+          setShowCancelDialog(false);
+          setCancelInvitationId(null);
+        }}
+        title="Hủy mã mời"
+        description="Bạn có chắc chắn muốn hủy mã mời này? Hành động này không thể hoàn tác."
+        variant="warning"
+        confirmText="Hủy mã mời"
+        cancelText="Đóng"
+      />
+
+      {/* Reject Request Prompt */}
+      <PromptDialog
+        open={showRejectDialog}
+        onOpenChange={setShowRejectDialog}
+        title="Từ chối yêu cầu liên kết"
+        description="Bạn có thể nhập lý do (tùy chọn) để thông báo cho phụ huynh."
+        type="textarea"
+        placeholder="Nhập lý do từ chối (không bắt buộc)"
+        confirmText="Xác nhận từ chối"
+        cancelText="Hủy"
+        onChange={setRejectReason}
+        onConfirm={confirmReject}
+      />
     </div>
   );
 }

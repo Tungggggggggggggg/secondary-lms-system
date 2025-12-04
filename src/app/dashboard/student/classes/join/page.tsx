@@ -9,6 +9,8 @@ import { useClassroom } from "@/hooks/use-classroom";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import PageHeader from "@/components/shared/PageHeader";
+import { Hash } from "lucide-react";
 
 export default function JoinClassPage() {
     const { joinClassroom, isLoading } = useClassroom();
@@ -48,44 +50,55 @@ export default function JoinClassPage() {
     ];
 
     return (
-        <div className="max-w-md mx-auto p-6">
-            <div className="mb-4">
-                <Breadcrumb items={breadcrumbItems} />
-            </div>
-            <div className="mb-4 flex items-center justify-end">
-                <BackButton href="/dashboard/student/classes" />
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h1 className="text-2xl font-bold mb-6 text-center">
-                    Tham gia lớp học
-                </h1>
+        <div className="space-y-6">
+            <Breadcrumb items={breadcrumbItems} color="green" />
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
+            <PageHeader
+              role="student"
+              title="Tham gia lớp học"
+              subtitle="Nhập mã lớp do giáo viên cung cấp để tham gia lớp."
+              badge={<BackButton href="/dashboard/student/classes" />}
+            />
+
+            <div className="max-w-md mx-auto">
+              <div className="bg-white rounded-2xl shadow-[0_10px_30px_rgba(15,23,42,0.08)] p-6 border border-gray-100">
+                <form onSubmit={handleSubmit} className="space-y-4" aria-label="Biểu mẫu tham gia lớp học">
+                  <div>
                     <Label htmlFor="code">Mã lớp học</Label>
-                    <Input
+                    <div className="relative">
+                      <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+                      <Input
                         id="code"
-                        placeholder="Nhập mã lớp học"
-                        className="mt-1 uppercase"
+                        placeholder="VD: 12A2-DEMO"
+                        className="mt-1 uppercase pl-9 h-12"
+                        color="green"
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                         disabled={isLoading}
                         autoFocus
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                        Nhập mã lớp học mà giáo viên đã cung cấp
+                        autoComplete="off"
+                        inputMode="text"
+                        aria-describedby="code-help"
+                        pattern="[A-Za-z0-9-]{4,20}"
+                      />
+                    </div>
+                    <p id="code-help" className="text-xs text-gray-500 mt-1">
+                      Nhập mã lớp học mà giáo viên đã cung cấp (chữ hoa/số, có thể có dấu gạch nối).
                     </p>
-                </div>
+                  </div>
 
-                <Button
+                  <Button
                     type="submit"
-                    className="w-full bg-green-600 hover:bg-green-700"
+                    color="green"
+                    size="lg"
+                    className="w-full gap-2"
                     disabled={isLoading}
-                >
+                    aria-busy={isLoading}
+                  >
                     {isLoading ? "Đang xử lý..." : "Tham gia lớp"}
-                </Button>
-            </form>
+                  </Button>
+                </form>
+              </div>
             </div>
         </div>
     );

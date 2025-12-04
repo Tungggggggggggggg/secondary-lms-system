@@ -270,7 +270,7 @@ export default function StudentAssignmentDetailPage({
   if (isLoading && !assignment) {
     return (
       <div className="max-w-5xl mx-auto space-y-4">
-        <Breadcrumb items={breadcrumbItems} className="mb-2" />
+        <Breadcrumb items={breadcrumbItems} className="mb-2" color="green" />
         <div className="text-center py-12 text-slate-500 animate-pulse">
           Đang tải chi tiết bài tập...
         </div>
@@ -281,7 +281,7 @@ export default function StudentAssignmentDetailPage({
   if (error && !assignment) {
     return (
       <div className="max-w-5xl mx-auto space-y-4">
-        <Breadcrumb items={breadcrumbItems} className="mb-2" />
+        <Breadcrumb items={breadcrumbItems} className="mb-2" color="green" />
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6 text-rose-700">
           <h3 className="font-semibold mb-2">Lỗi tải chi tiết bài tập</h3>
           <p className="text-sm mb-4">{error}</p>
@@ -302,7 +302,7 @@ export default function StudentAssignmentDetailPage({
   if (!assignment) {
     return (
       <div className="max-w-5xl mx-auto space-y-4">
-        <Breadcrumb items={breadcrumbItems} className="mb-2" />
+        <Breadcrumb items={breadcrumbItems} className="mb-2" color="green" />
         <div className="text-center py-12 text-slate-400">
           Không tìm thấy bài tập
         </div>
@@ -324,7 +324,7 @@ export default function StudentAssignmentDetailPage({
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <Breadcrumb items={breadcrumbItems} />
+        <Breadcrumb items={breadcrumbItems} color="green" />
         <BackButton href="/dashboard/student/assignments" />
       </div>
 
@@ -375,18 +375,18 @@ export default function StudentAssignmentDetailPage({
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as "work" | "review")}
       >
-        <TabsList className="mb-6 inline-flex rounded-full bg-slate-100/80 px-1 py-1 border border-slate-200">
+        <TabsList className="mb-6 inline-flex rounded-full bg-green-100/60 px-1 py-1 border border-green-200 text-green-700">
           <TabsTrigger
             value="work"
             disabled={workDisabled}
-            className="px-4 py-1.5 text-xs sm:text-sm rounded-full data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+            className="px-4 py-1.5 text-xs sm:text-sm rounded-full focus-visible:ring-green-500 data-[state=active]:bg-white data-[state=active]:text-green-700 data-[state=active]:shadow-sm"
           >
             {hasSubmission && canEdit ? "Chỉnh sửa bài làm" : "Làm bài"}
           </TabsTrigger>
           {hasSubmission && (
             <TabsTrigger
               value="review"
-              className="px-4 py-1.5 text-xs sm:text-sm rounded-full data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+              className="px-4 py-1.5 text-xs sm:text-sm rounded-full focus-visible:ring-green-500 data-[state=active]:bg-white data-[state=active]:text-green-700 data-[state=active]:shadow-sm"
             >
               Xem bài nộp
             </TabsTrigger>

@@ -10,13 +10,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 type Props = {
+  color?: "green" | "blue" | "amber";
   conversationId?: string | null;
   onSent?: () => void;
   replyingTo?: MessageDTO | null;
   onCancelReply?: () => void;
 };
 
-export default function ChatComposer({ conversationId, onSent, replyingTo, onCancelReply }: Props) {
+export default function ChatComposer({ color = "amber", conversationId, onSent, replyingTo, onCancelReply }: Props) {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
   const ref = useRef<HTMLTextAreaElement | null>(null);
@@ -82,13 +83,25 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
     }
   };
 
+  const palette = {
+    border: color === "green" ? "border-green-200" : color === "blue" ? "border-blue-200" : "border-amber-200",
+    bgSoft: color === "green" ? "bg-green-50" : color === "blue" ? "bg-blue-50" : "bg-amber-50",
+    textSoft: color === "green" ? "text-green-700" : color === "blue" ? "text-blue-700" : "text-amber-700",
+    ring: color === "green" ? "focus:ring-green-500" : color === "blue" ? "focus:ring-blue-500" : "focus:ring-amber-500",
+    iconBtnBorder: color === "green" ? "border-green-200" : color === "blue" ? "border-blue-200" : "border-amber-200",
+    iconBtnText: color === "green" ? "text-green-600" : color === "blue" ? "text-blue-600" : "text-amber-600",
+    iconBtnHover: color === "green" ? "hover:bg-green-50" : color === "blue" ? "hover:bg-blue-50" : "hover:bg-amber-50",
+    closeHover: color === "green" ? "hover:bg-green-100" : color === "blue" ? "hover:bg-blue-100" : "hover:bg-amber-100",
+    sendBtn: color === "green" ? "bg-green-600 hover:bg-green-700" : color === "blue" ? "bg-blue-600 hover:bg-blue-700" : "bg-amber-600 hover:bg-amber-700",
+  };
+
   return (
-    <div className="border-t border-amber-200 p-3 bg-white">
+    <div className={`border-t ${palette.border} p-3 bg-white`}>
       {replyingTo && (
-        <div className="mb-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 relative">
+        <div className={`mb-2 p-2 rounded-lg ${palette.bgSoft} border ${palette.border} text-xs ${palette.textSoft} relative`}>
           <button
             onClick={onCancelReply}
-            className="absolute top-1 right-1 p-1 rounded-full hover:bg-amber-100 transition-colors"
+            className={`absolute top-1 right-1 p-1 rounded-full ${palette.closeHover} transition-colors`}
           >
             <X className="h-3 w-3" />
           </button>
@@ -108,13 +121,13 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
             }
           }}
           placeholder="Nhập tin nhắn..."
-          className="flex-1 resize-none rounded-xl border border-amber-200 p-3 pr-3 min-h-[44px] max-h-40 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-transparent transition-all duration-200"
+          className={`flex-1 resize-none rounded-xl border ${palette.border} p-3 pr-3 min-h-[44px] max-h-40 focus:outline-none focus:ring-2 ${palette.ring} bg-transparent transition-all duration-200`}
           rows={1}
         />
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
-              <button type="button" className="h-10 w-10 flex items-center justify-center rounded-full border border-amber-200 text-amber-600 hover:bg-amber-50 transition-colors" title="Chèn emoji">
+              <button type="button" className={`h-10 w-10 flex items-center justify-center rounded-full border ${palette.iconBtnBorder} ${palette.iconBtnText} ${palette.iconBtnHover} transition-colors`} title="Chèn emoji">
                 <Smile className="h-5 w-5" />
               </button>
             </PopoverTrigger>
@@ -128,7 +141,7 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
             type="button"
             onClick={handlePickFiles}
             disabled={!conversationId || sending}
-            className="h-10 w-10 flex items-center justify-center rounded-full border border-amber-200 text-amber-600 hover:bg-amber-50 disabled:opacity-50 transition-colors"
+            className={`h-10 w-10 flex items-center justify-center rounded-full border ${palette.iconBtnBorder} ${palette.iconBtnText} ${palette.iconBtnHover} disabled:opacity-50 transition-colors`}
             title="Đính kèm file"
           >
             <Paperclip className="h-4 w-4" />
@@ -137,7 +150,7 @@ export default function ChatComposer({ conversationId, onSent, replyingTo, onCan
             type="button"
             onClick={doSend}
             disabled={!value.trim() || !conversationId || sending}
-            className="h-11 px-4 rounded-xl bg-amber-600 text-white font-semibold shadow hover:bg-amber-700 disabled:opacity-50 transition-colors"
+            className={`h-11 px-4 rounded-xl text-white font-semibold shadow disabled:opacity-50 transition-colors ${palette.sendBtn}`}
           >
             {sending ? (
               <span className="inline-flex items-center gap-2">

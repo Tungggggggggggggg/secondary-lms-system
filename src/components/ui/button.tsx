@@ -44,7 +44,8 @@ const colorStyles = {
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ({ className, variant = "default", size = "default", color, asChild = false, children, ...props }, ref) => {
         const theme = useRoleTheme();
-        const effectiveColor = (color ?? theme?.color ?? "violet") as keyof typeof colorStyles;
+        // Bỏ violet làm mặc định: fallback về theme color, nếu không có thì dùng "blue" (teacher)
+        const effectiveColor = (color ?? theme?.color ?? "blue") as keyof typeof colorStyles;
         const Comp = asChild ? Slot : "button";
         return (
             <Comp

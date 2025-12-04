@@ -101,7 +101,7 @@ export default function ClassCard({
                 </span>
               )}
             </div>
-            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-green-600 group-hover:text-green-700">
+            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-green-600 group-hover:text-green-700 whitespace-nowrap shrink-0">
               Vào lớp
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </span>

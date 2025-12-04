@@ -306,7 +306,7 @@ export default function TeacherOverrideControls({
 
       {/* Extend Time Dialog */}
       <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
-        <DialogContent>
+        <DialogContent onClose={() => setShowExtendDialog(false)}>
           <DialogHeader>
             <DialogTitle>Gia hạn thời gian</DialogTitle>
             <DialogDescription>
@@ -354,7 +354,7 @@ export default function TeacherOverrideControls({
 
       {/* Grace Period Dialog */}
       <Dialog open={showGraceDialog} onOpenChange={setShowGraceDialog}>
-        <DialogContent>
+        <DialogContent onClose={() => setShowGraceDialog(false)}>
           <DialogHeader>
             <DialogTitle>Phê duyệt Grace Period</DialogTitle>
             <DialogDescription>
@@ -402,7 +402,7 @@ export default function TeacherOverrideControls({
 
       {/* Reset Dialog */}
       <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <DialogContent>
+        <DialogContent onClose={() => setShowResetDialog(false)}>
           <DialogHeader>
             <DialogTitle>Reset phiên thi</DialogTitle>
             <DialogDescription>
@@ -443,7 +443,7 @@ export default function TeacherOverrideControls({
 
       {/* Terminate Dialog */}
       <Dialog open={showTerminateDialog} onOpenChange={setShowTerminateDialog}>
-        <DialogContent>
+        <DialogContent onClose={() => setShowTerminateDialog(false)}>
           <DialogHeader>
             <DialogTitle>Chấm dứt phiên thi</DialogTitle>
             <DialogDescription>

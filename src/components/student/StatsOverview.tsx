@@ -4,27 +4,36 @@ import useSWR from "swr";
 import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, PencilLine, Star, Flame } from "lucide-react";
+import { useEffect, useState } from "react";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+type DashboardStats = {
+  totalClassrooms: number;
+  newClassroomsThisWeek: number;
+  totalAssignments: number;
+  submittedAssignments: number;
+  upcomingAssignments: number;
+  averageGrade: number;
+  gradeChange: number;
+  totalLessons: number;
+  newLessonsThisWeek: number;
+};
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" });
+  const json = await res.json().catch(() => ({ success: false }));
+  if (!res.ok || json?.success === false) {
+    const msg = json?.message || res.statusText || "Fetch error";
+    throw new Error(msg);
+  }
+  return json as { success: true; data: DashboardStats };
+};
 
 export default function StatsOverview() {
-  const { data, error, isLoading } = useSWR<{
-    success?: boolean;
-    data?: {
-      totalClassrooms: number;
-      newClassroomsThisWeek: number;
-      totalAssignments: number;
-      submittedAssignments: number;
-      upcomingAssignments: number;
-      averageGrade: number;
-      gradeChange: number;
-      totalLessons: number;
-      newLessonsThisWeek: number;
-    };
-  }>("/api/students/dashboard/stats", fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  });
+  const { data, error, isLoading, mutate } = useSWR<{ success: true; data: DashboardStats }>(
+    "/api/students/dashboard/stats",
+    fetcher,
+    { revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 30000 }
+  );
 
   const stats = data?.data;
 
@@ -42,41 +51,41 @@ export default function StatsOverview() {
     const errorItems: StatItem[] = [
       {
         icon: <BookOpen className="h-5 w-5" />,
-        color: "from-blue-500 to-blue-600",
+        color: "from-blue-300 to-indigo-200",
         label: "Bài học",
         value: "—",
         subtitle: "Lỗi tải dữ liệu",
       },
       {
         icon: <PencilLine className="h-5 w-5" />,
-        color: "from-green-500 to-green-600",
+        color: "from-emerald-300 to-green-200",
         label: "Bài tập",
         value: "—",
         subtitle: "Lỗi tải dữ liệu",
       },
       {
         icon: <Star className="h-5 w-5" />,
-        color: "from-pink-500 to-pink-600",
+        color: "from-pink-300 to-rose-200",
         label: "Điểm TB",
         value: "—",
         subtitle: "Lỗi tải dữ liệu",
       },
       {
         icon: <Flame className="h-5 w-5" />,
-        color: "from-yellow-500 to-orange-500",
+        color: "from-amber-300 to-orange-200",
         label: "Lớp học",
         value: "—",
         subtitle: "Lỗi tải dữ liệu",
       },
     ];
 
-    return <StatsGrid items={errorItems} />;
+    return <StatsGrid items={errorItems} onItemClick={() => mutate()} />;
   }
 
   const items: StatItem[] = [
     {
       icon: <BookOpen className="h-5 w-5" />,
-      color: "from-blue-500 to-blue-600",
+      color: "from-blue-300 to-indigo-200",
       label: "Bài học",
       value: stats.totalLessons.toString(),
       subtitle:
@@ -86,7 +95,7 @@ export default function StatsOverview() {
     },
     {
       icon: <PencilLine className="h-5 w-5" />,
-      color: "from-green-500 to-green-600",
+      color: "from-emerald-300 to-green-200",
       label: "Bài tập",
       value: stats.totalAssignments.toString(),
       subtitle: `${stats.submittedAssignments} đã nộp${
@@ -95,7 +104,7 @@ export default function StatsOverview() {
     },
     {
       icon: <Star className="h-5 w-5" />,
-      color: "from-pink-500 to-pink-600",
+      color: "from-pink-300 to-rose-200",
       label: "Điểm TB",
       value: stats.averageGrade > 0 ? stats.averageGrade.toFixed(1) : "—",
       subtitle:
@@ -107,7 +116,7 @@ export default function StatsOverview() {
     },
     {
       icon: <Flame className="h-5 w-5" />,
-      color: "from-yellow-500 to-orange-500",
+      color: "from-amber-300 to-orange-200",
       label: "Lớp học",
       value: stats.totalClassrooms.toString(),
       subtitle:

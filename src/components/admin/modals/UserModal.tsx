@@ -39,7 +39,7 @@ export default function UserModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" onClose={() => handleCancel()}>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Sửa người dùng" : "Tạo người dùng mới"}</DialogTitle>
         </DialogHeader>

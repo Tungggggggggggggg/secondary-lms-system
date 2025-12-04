@@ -559,7 +559,7 @@ export default function ExamInterface({
 
       {/* Submit Dialog */}
       <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
-        <DialogContent>
+        <DialogContent onClose={() => setShowSubmitDialog(false)}>
           <DialogHeader>
             <DialogTitle>Xác nhận nộp bài</DialogTitle>
             <DialogDescription>
@@ -607,7 +607,7 @@ export default function ExamInterface({
 
       {/* Warning Dialog */}
       <Dialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" onClose={() => setShowWarningDialog(false)}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-orange-500" />

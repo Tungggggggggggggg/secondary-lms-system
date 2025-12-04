@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssignmentComments, Comment } from "@/hooks/use-assignment-comments";
+import { MessageSquare } from "lucide-react";
 import { StudentAssignmentDetail } from "@/hooks/use-student-assignments";
 
 interface AssignmentCommentsProps {
@@ -100,7 +101,7 @@ export default function AssignmentComments({
               <select
                 value={selectedQuestionId || ""}
                 onChange={(e) => setSelectedQuestionId(e.target.value)}
-                className="w-full px-4 py-2 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full px-4 py-2 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
                 required
               >
                 <option value="">-- Chọn câu hỏi --</option>
@@ -161,7 +162,9 @@ export default function AssignmentComments({
         </div>
       ) : comments.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
-          <div className="text-4xl mb-2">💬</div>
+          <div className="flex justify-center mb-2">
+            <MessageSquare className="h-10 w-10 text-green-600" />
+          </div>
           <p>Chưa có bình luận nào</p>
           <p className="text-sm mt-1">Hãy là người đầu tiên bình luận!</p>
         </div>
@@ -174,7 +177,7 @@ export default function AssignmentComments({
                 className="p-4 bg-gray-50 rounded-xl border border-gray-200"
               >
                 <div className="flex items-start gap-3 mb-2">
-                  <div className="flex-shrink-0 w-8 h-8 bg-violet-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                  <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
                     {comment.user.fullname.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">
@@ -193,7 +196,7 @@ export default function AssignmentComments({
                       </span>
                     </div>
                     {comment.question && (
-                      <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+                      <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
                         <span className="font-semibold">Câu {comment.question.order}:</span>{" "}
                         {comment.question.content.substring(0, 100)}
                         {comment.question.content.length > 100 ? "..." : ""}

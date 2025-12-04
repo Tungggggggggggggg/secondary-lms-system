@@ -38,7 +38,7 @@ export default function OrganizationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" onClose={() => handleCancel()}>
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Sửa tổ chức" : "Tạo tổ chức mới"}
