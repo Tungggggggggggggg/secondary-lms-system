@@ -1,18 +1,26 @@
 "use client";
 
-
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClassroom } from "@/hooks/use-classroom";
 import { ClassroomResponse } from "@/types/classroom";
+import ClassroomListSkeleton from "@/components/teacher/classrooms/ClassroomListSkeleton";
+import EmptyState from "@/components/shared/EmptyState";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
+type ViewMode = "grid" | "list";
 
 export default function ClassroomList() {
   const router = useRouter();
   const { classrooms, isLoading, error, fetchClassrooms } = useClassroom();
+
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name" | "students">("newest");
   const [searchQuery, setSearchQuery] = useState("");
+  const [view, setView] = useState<ViewMode>("grid");
 
   // Khi component mount, tự động lấy danh sách lớp học
   // Lấy danh sách lớp học chỉ 1 lần khi component mount
@@ -80,132 +88,206 @@ export default function ClassroomList() {
   }, [classrooms, statusFilter, sortBy, searchQuery]);
 
   if (isLoading) {
-    return (
-      <div className="grid md:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="bg-white rounded-2xl shadow-lg p-6 animate-pulse"
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 bg-gray-200 rounded-xl"></div>
-              <div className="flex-1">
-                <div className="h-4 w-2/3 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="h-3 w-full bg-gray-200 rounded"></div>
-              <div className="h-3 w-4/5 bg-gray-200 rounded"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <ClassroomListSkeleton />;
   }
 
   if (error) {
     return (
-      <div className="text-red-600 font-semibold p-4 bg-red-50 rounded-xl mb-4">
-        Đã xảy ra lỗi khi tải danh sách lớp học: {error}
-      </div>
+      <Alert variant="destructive" className="mb-4">
+        <AlertTitle>Đã xảy ra lỗi khi tải danh sách lớp học</AlertTitle>
+        <AlertDescription>{String(error)}</AlertDescription>
+      </Alert>
     );
   }
 
   return (
     <>
       {/* Filter & Search */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <select
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center mb-8">
+        <div className="relative md:justify-self-start w-full">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+            🔍
+          </span>
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Tìm kiếm lớp học..."
+            className="pl-9 pr-3 h-12 bg-white border-gray-200 w-full md:w-80"
+            color="blue"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-start md:justify-end gap-2">
+          <Select
             value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(
-                e.target.value as "all" | "active" | "archived"
-              )
+            onChange={(event) =>
+              setStatusFilter(event.target.value as "all" | "active" | "archived")
             }
-            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+            className="min-w-[150px] h-12"
+            color="blue"
           >
             <option value="all">Tất cả lớp học</option>
             <option value="active">Đang hoạt động</option>
             <option value="archived">Đã lưu trữ</option>
-          </select>
-          <select
+          </Select>
+
+          <Select
             value={sortBy}
-            onChange={(e) =>
+            onChange={(event) =>
               setSortBy(
-                e.target.value as "newest" | "oldest" | "name" | "students"
+                event.target.value as "newest" | "oldest" | "name" | "students"
               )
             }
-            className="px-4 py-2 bg-white rounded-xl border border-gray-200"
+            className="min-w-[140px] h-12"
+            color="blue"
           >
             <option value="newest">Mới nhất</option>
             <option value="oldest">Cũ nhất</option>
             <option value="name">Theo tên</option>
             <option value="students">Số học sinh</option>
-          </select>
-        </div>
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm kiếm lớp học..."
-            className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64"
-          />
-          <span className="absolute left-3 top-2.5">🔍</span>
+          </Select>
+
+          <div className="flex h-12 items-center gap-2 border border-gray-200 rounded-xl p-1 bg-white">
+            <button
+              type="button"
+              onClick={() => setView("grid")}
+              className={`px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                view === "grid"
+                  ? "bg-blue-100 text-blue-700"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+              aria-label="Xem dạng lưới"
+              aria-pressed={view === "grid"}
+            >
+              🔲
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              className={`px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                view === "list"
+                  ? "bg-blue-100 text-blue-700"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+              aria-label="Xem dạng danh sách"
+              aria-pressed={view === "list"}
+            >
+              📋
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Create new classroom card */}
+      {filteredAndSortedClassrooms.length > 0 ? (
         <div
-          onClick={() => router.push("/dashboard/teacher/classrooms/new")}
-          className="bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl p-6 text-white hover:shadow-xl transition-all cursor-pointer hover:-translate-y-1"
+          className={
+            view === "grid"
+              ? "grid md:grid-cols-3 gap-6"
+              : "space-y-3"
+          }
         >
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="text-5xl mb-3">➕</div>
-              <h3 className="text-xl font-bold mb-2">Tạo lớp học mới</h3>
-              <p className="text-white/80">Tạo không gian học tập mới</p>
-            </div>
-          </div>
-        </div>
-
-        {filteredAndSortedClassrooms.length > 0 ? (
-          filteredAndSortedClassrooms.map((classroom: ClassroomResponse) => (
-          <div
-            key={classroom.id}
-            onClick={() => router.push(`/dashboard/teacher/classrooms/${classroom.id}`)}
-            className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer hover:-translate-y-1"
+          {/* Create new classroom card */}
+          <article
+            onClick={() => router.push("/dashboard/teacher/classrooms/new")}
+            className="rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 p-6 text-white flex items-center justify-center text-center cursor-pointer transition-all hover:-translate-y-1 hover:shadow-xl"
+            role="button"
+            tabIndex={0}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-14 h-14 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-xl flex items-center justify-center text-2xl">
-                {classroom.icon}
-              </div>
-              <div className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
-                {classroom.isActive ? 'Đang hoạt động' : 'Đã lưu trữ'}
-              </div>
+            <div>
+              <div className="mb-3 text-5xl flex justify-center">➕</div>
+              <h3 className="text-lg font-semibold mb-1">Tạo lớp học mới</h3>
+              <p className="text-sm text-white/80 max-w-xs mx-auto">
+                Tạo không gian học tập mới cho học sinh của bạn.
+              </p>
             </div>
+          </article>
 
-            <h3 className="text-xl font-bold text-gray-800 mb-2">{classroom.name}</h3>
-            <div className="text-sm text-gray-600 mb-4">
-              {classroom.description || "Không có mô tả"}
-            </div>
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>Mã lớp: {classroom.code}</span>
-              <span>{classroom._count?.students ?? 0} học sinh</span>
-            </div>
-          </div>
-          ))
-        ) : (
-          <div className="col-span-3 text-center text-gray-500 py-8">
-            {classrooms && classrooms.length > 0
-              ? "Không tìm thấy lớp học nào phù hợp với bộ lọc."
-              : "Không có lớp học nào."}
-          </div>
-        )}
-      </div>
+          {filteredAndSortedClassrooms.map((classroom: ClassroomResponse) => (
+            <article
+              key={classroom.id}
+              onClick={() =>
+                router.push(`/dashboard/teacher/classrooms/${classroom.id}`)
+              }
+              className="flex flex-col justify-between rounded-2xl bg-white/95 border border-slate-100 shadow-[0_8px_24px_rgba(15,23,42,0.06)] px-5 py-4 sm:px-6 sm:py-5 transition-all duration-200 ease-out cursor-pointer hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
+              role="button"
+              tabIndex={0}
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 via-emerald-400 to-teal-300 text-white shadow-sm">
+                    <span className="text-2xl">
+                      {classroom.icon || classroom.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 line-clamp-2">
+                      {classroom.name}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-500 line-clamp-2">
+                      {classroom.description || "Không có mô tả"}
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-100 whitespace-nowrap">
+                  {classroom.isActive ? "Đang hoạt động" : "Đã lưu trữ"}
+                </span>
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-3 text-[11px] sm:text-xs text-slate-600">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 border border-slate-200">
+                    <span className="text-xs">#</span>
+                    <span>Mã lớp: {classroom.code}</span>
+                  </span>
+                </div>
+                <span className="font-semibold text-emerald-700 whitespace-nowrap">
+                  {classroom._count?.students ?? 0} học sinh
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : classrooms && classrooms.length > 0 ? (
+        <EmptyState
+          variant="teacher"
+          icon="🔍"
+          title="Không tìm thấy lớp học nào phù hợp với bộ lọc"
+          description="Hãy thử thay đổi bộ lọc hoặc xoá từ khóa tìm kiếm."
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              color="blue"
+              onClick={() => {
+                setStatusFilter("all");
+                setSortBy("newest");
+                setSearchQuery("");
+              }}
+            >
+              Đặt lại bộ lọc
+            </Button>
+          }
+        />
+      ) : (
+        <EmptyState
+          variant="teacher"
+          icon="📚"
+          title="Bạn chưa có lớp học nào"
+          description="Bắt đầu bằng việc tạo lớp học mới cho học sinh của bạn."
+          action={
+            <Button
+              type="button"
+              color="blue"
+              onClick={() =>
+                router.push("/dashboard/teacher/classrooms/new")
+              }
+            >
+              Tạo lớp học đầu tiên
+            </Button>
+          }
+        />
+      )}
     </>
   );
 }

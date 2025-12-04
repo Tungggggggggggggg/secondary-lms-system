@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { teacherClassroomGradesPath } from "@/utils/routing";
 import { useClassroom } from "@/hooks/use-classroom";
 
-export default function GradesList() {
+interface GradesListProps {
+  search?: string;
+}
+
+export default function GradesList({ search = "" }: GradesListProps) {
   const router = useRouter();
   const { classrooms, isLoading, error, fetchClassrooms } = useClassroom();
 
@@ -24,6 +28,20 @@ export default function GradesList() {
         createdAt: c.createdAt,
       })),
     [classrooms]
+  );
+
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const visibleItems = useMemo(
+    () =>
+      !normalizedSearch
+        ? items
+        : items.filter(
+            (cls) =>
+              cls.name.toLowerCase().includes(normalizedSearch) ||
+              cls.code.toLowerCase().includes(normalizedSearch),
+          ),
+    [items, normalizedSearch]
   );
 
   if (isLoading) {
@@ -51,7 +69,7 @@ export default function GradesList() {
     );
   }
 
-  if (!items.length) {
+  if (!visibleItems.length) {
     return (
       <div className="bg-white rounded-2xl p-8 border border-gray-200 text-center text-gray-600">
         Chưa có lớp học nào để hiển thị điểm số.
@@ -61,7 +79,7 @@ export default function GradesList() {
 
   return (
     <div className="space-y-6">
-      {items.map((cls) => (
+      {visibleItems.map((cls) => (
         <div
           key={cls.classroomId}
           className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer"

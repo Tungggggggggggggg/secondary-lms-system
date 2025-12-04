@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createConversationFromTeacher } from "@/hooks/use-chat";
+import MessageStudentButton from "@/components/teacher/students/MessageStudentButton";
+import StudentStatusBadge from "@/components/teacher/students/StudentStatusBadge";
 
 export type StudentListItem = {
   id: string;
@@ -24,33 +24,6 @@ type Props = {
 
 export default function StudentList({ students }: Props) {
   const router = useRouter();
-  const [sendingId, setSendingId] = useState<string | null>(null);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-600";
-      case "warning":
-        return "bg-yellow-100 text-yellow-600";
-      case "inactive":
-        return "bg-red-100 text-red-600";
-      default:
-        return "bg-gray-100 text-gray-600";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "active":
-        return "Hoạt động tốt";
-      case "warning":
-        return "Cần chú ý";
-      case "inactive":
-        return "Không hoạt động";
-      default:
-        return status;
-    }
-  };
 
   const getPerformanceColor = (score: number | null) => {
     if (score === null) return "text-gray-500";
@@ -86,39 +59,13 @@ export default function StudentList({ students }: Props) {
                     <span>
                       Lớp {student.classroomCode} · {student.classroomName}
                     </span>
-                    <span className={`${getStatusColor(student.status)} px-3 py-1 rounded-full`}>
-                      {getStatusText(student.status)}
-                    </span>
+                    <StudentStatusBadge status={student.status} />
                   </div>
                 </div>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (sendingId) return;
-                    try {
-                      setSendingId(student.id);
-                      const res = await createConversationFromTeacher(
-                        student.id,
-                        true,
-                        student.classroomId
-                      );
-                      const id = res?.conversationId as string | undefined;
-                      if (id) {
-                        router.push(
-                          `/dashboard/teacher/messages?open=${encodeURIComponent(id)}`
-                        );
-                      }
-                    } catch (err) {
-                      console.error("[StudentList] createConversation error", err);
-                    } finally {
-                      setSendingId((current) => (current === student.id ? null : current));
-                    }
-                  }}
-                  disabled={sendingId === student.id}
-                  className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-all disabled:opacity-60"
-                >
-                  ✉️ {sendingId === student.id ? "Đang mở..." : "Nhắn tin"}
-                </button>
+                <MessageStudentButton
+                  studentId={student.id}
+                  classroomId={student.classroomId}
+                />
               </div>
 
               {/* Stats */}

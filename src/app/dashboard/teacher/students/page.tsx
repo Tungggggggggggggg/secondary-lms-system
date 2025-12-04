@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Users } from "lucide-react";
 import StudentList, { StudentListItem } from "@/components/teacher/students/StudentList";
 import StudentStats from "@/components/teacher/students/StudentStats";
+import StudentListSkeleton from "@/components/teacher/students/StudentListSkeleton";
+import StudentFiltersToolbar, {
+  type StudentSortKey,
+  type StudentStatusFilter,
+} from "@/components/teacher/students/StudentFiltersToolbar";
 import { useClassroom } from "@/hooks/use-classroom";
 import type { ClassroomStudent } from "@/hooks/use-classroom-students";
-import { Select } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import EmptyState from "@/components/shared/EmptyState";
-
+import PageHeader from "@/components/shared/PageHeader";
+import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
 export default function StudentsPage() {
   const { classrooms, fetchClassrooms, isLoading: loadingClassrooms, error: classroomError } =
     useClassroom();
@@ -18,8 +23,8 @@ export default function StudentsPage() {
   const [studentError, setStudentError] = useState<string | null>(null);
 
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortKey, setSortKey] = useState<string>("name");
+  const [statusFilter, setStatusFilter] = useState<StudentStatusFilter>("all");
+  const [sortKey, setSortKey] = useState<StudentSortKey>("name");
   const [search, setSearch] = useState<string>("");
 
   useEffect(() => {
@@ -163,19 +168,25 @@ export default function StudentsPage() {
       avgGrade,
     };
   }, [students]);
-
+ const breadcrumbItems: BreadcrumbItem[] = [
+    { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
+    { label: "Học sinh", href: "/dashboard/teacher/students" },
+  ];
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-800 mb-2">Quản lý học sinh</h1>
-          <p className="text-gray-600">Theo dõi và hỗ trợ học sinh của bạn</p>
-        </div>
-        <div className="flex items-center gap-3">
-         
-        </div>
-      </div>
+      <Breadcrumb items={breadcrumbItems} color="blue" className="mb-2" />
+      <PageHeader
+        title="Quản lý học sinh"
+        subtitle="Theo dõi và hỗ trợ học sinh trong các lớp của bạn"
+        role="teacher"
+        badge={
+          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm">
+            <Users className="mr-1 h-3.5 w-3.5" />
+            {overview.totalStudents} học sinh
+          </span>
+        }
+      />
 
       {/* Stats Overview */}
       <StudentStats
@@ -186,60 +197,59 @@ export default function StudentsPage() {
       />
 
       {/* Filter & Search */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Select
-            value={selectedClassId}
-            onChange={(e) => setSelectedClassId(e.target.value)}
-          >
-            <option value="all">Tất cả lớp</option>
-            {(classrooms || []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.code})
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="active">Hoạt động tốt</option>
-            <option value="warning">Cần chú ý</option>
-            <option value="inactive">Không hoạt động</option>
-          </Select>
-          <Select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value)}
-          >
-            <option value="name">Sắp xếp theo tên</option>
-            <option value="grade">Sắp xếp theo điểm</option>
-            <option value="attendance">Sắp xếp theo chuyên cần</option>
-          </Select>
-        </div>
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="Tìm kiếm học sinh..."
-            className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span className="absolute left-3 top-2.5">🔍</span>
-        </div>
-      </div>
+      <StudentFiltersToolbar
+        classrooms={(classrooms || []).map((classroom) => ({
+          id: classroom.id,
+          name: classroom.name,
+          code: classroom.code,
+        }))}
+        selectedClassId={selectedClassId}
+        onClassChange={(id) => setSelectedClassId(id)}
+        status={statusFilter}
+        onStatusChange={(status) => setStatusFilter(status)}
+        sortKey={sortKey}
+        onSortChange={(key) => setSortKey(key)}
+        search={search}
+        onSearchChange={(value) => setSearch(value)}
+      />
 
       {/* Student List */}
       {isLoading ? (
-        <div className="text-sm text-gray-500">Đang tải danh sách học sinh...</div>
+        <StudentListSkeleton />
       ) : error ? (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-4">
-          Đã xảy ra lỗi: {error}
-        </div>
+        <EmptyState
+          icon={<AlertTriangle className="h-10 w-10 text-red-500" />}
+          title="Đã xảy ra lỗi khi tải danh sách học sinh"
+          description={error}
+          variant="teacher"
+          action={
+            <button
+              type="button"
+              onClick={() => fetchClassrooms()}
+              className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              Thử lại
+            </button>
+          }
+        />
       ) : filteredStudents.length === 0 ? (
         <EmptyState
+          icon={<Users className="h-10 w-10 text-blue-500" />}
           title="Chưa có học sinh nào để hiển thị"
           description="Hãy kiểm tra bộ lọc hoặc thêm học sinh vào lớp học của bạn."
+          variant="teacher"
+          action={
+            <button
+              type="button"
+              onClick={() => {
+                // Điều hướng tới màn quản lý lớp nếu cần, tạm thời chỉ gọi lại fetch
+                fetchClassrooms();
+              }}
+              className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              Làm mới dữ liệu
+            </button>
+          }
         />
       ) : (
         <StudentList students={filteredStudents} />

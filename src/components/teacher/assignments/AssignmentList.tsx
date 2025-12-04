@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAssignments, type AssignmentT } from "@/hooks/use-assignments";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import EmptyState from "@/components/shared/EmptyState";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import AssignmentTypeBadge from "./AssignmentTypeBadge";
+import AssignmentStatusBadge from "./AssignmentStatusBadge";
+import AssignmentListSkeleton from "./AssignmentListSkeleton";
 import ClassroomBadges from "./ClassroomBadges";
+import { CalendarDays, FileText, Inbox, Eye, Pencil, Trash2 } from "lucide-react";
 
 export default function AssignmentList({
     items,
@@ -30,6 +38,7 @@ export default function AssignmentList({
     const doRefresh = onRefresh ?? refresh;
     const { toast } = useToast(); // Hook toast
     const [confirmAssignmentId, setConfirmAssignmentId] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     // Trigger toast when error changes (must be before any early returns to keep hook order stable)
     useEffect(() => {
@@ -43,74 +52,71 @@ export default function AssignmentList({
         }
     }, [error, toast]);
 
-    // Helper lấy màu sắc status (không cần loại bài)
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "Đang diễn ra":
-            case "IN_PROGRESS":
-                return "bg-green-100 text-green-600";
-            case "Đã hết hạn":
-            case "COMPLETED":
-                return "bg-red-100 text-red-600";
-            default:
-                return "bg-gray-100 text-gray-600";
+    const handleConfirmDelete = async () => {
+        if (!confirmAssignmentId) return;
+        const id = confirmAssignmentId;
+        try {
+            setDeleting(true);
+            const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                toast({
+                    title: "Xoá bài tập thất bại",
+                    description: (data as any)?.message,
+                    variant: "destructive",
+                });
+                return;
+            }
+            toast({ title: "Đã xoá bài tập", variant: "success" });
+            setConfirmAssignmentId(null);
+            doRefresh();
+        } catch (err) {
+            console.error("[DELETE ASSIGNMENT]", err);
+            toast({ title: "Có lỗi xảy ra", variant: "destructive" });
+        } finally {
+            setDeleting(false);
         }
     };
 
-    // Thêm Chip hiển thị loại bài tập
-    function AssignmentTypeChip({ type }: { type?: string }) {
-        if (!type) return null;
-        const PROPS = {
-            ESSAY: {
-                className:
-                    "bg-indigo-50 text-indigo-700 border border-indigo-200",
-                icon: "📝",
-                label: "Tự luận",
-            },
-            QUIZ: {
-                className: "bg-pink-50 text-pink-700 border border-pink-200",
-                icon: "❓",
-                label: "Trắc nghiệm",
-            },
-        };
-        const props = PROPS[type as keyof typeof PROPS] ?? PROPS.ESSAY;
-        return (
-            <span
-                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${props.className}`}
-            >
-                <span>{props.icon}</span>
-                <span>{props.label}</span>
-            </span>
-        );
-    }
-
     // Hiển thị trạng thái loading/error rõ ràng
     if (loading) {
-        return (
-            <div className="text-center text-sm py-8 text-gray-500 animate-pulse">
-                Đang tải danh sách bài tập...
-            </div>
-        );
+        return <AssignmentListSkeleton />;
     }
     if (error) {
         return (
-            <div className="text-center text-red-500 py-8">
-                Đã xảy ra lỗi khi lấy danh sách bài tập: {error}
-                <button
-                    className="mt-4 px-4 py-2 bg-gray-200 rounded-lg"
-                    onClick={doRefresh}
-                >
-                    Thử lại
-                </button>
+            <div className="py-6">
+                <Alert variant="destructive">
+                    <AlertTitle>Lỗi tải danh sách bài tập</AlertTitle>
+                    <AlertDescription className="flex items-center justify-between gap-4">
+                        <span>{error}</span>
+                        <Button variant="outline" onClick={doRefresh}>
+                            Thử lại
+                        </Button>
+                    </AlertDescription>
+                </Alert>
             </div>
         );
     }
 
     if (assignments.length === 0) {
         return (
-            <div className="text-center text-gray-400 py-10 italic">
-                Hiện chưa có bài tập nào. Hãy tạo bài tập mới cho học sinh của
-                bạn.
+            <div className="py-8">
+                <EmptyState
+                    variant="teacher"
+                    title="Chưa có bài tập nào"
+                    description="Hãy tạo bài tập đầu tiên để giao cho học sinh."
+                    icon={<FileText className="h-12 w-12 text-blue-500" />}
+                    action={
+                        <Button
+                            size="lg"
+                            onClick={() =>
+                                router.push("/dashboard/teacher/assignments/new")
+                            }
+                        >
+                            Tạo bài tập mới
+                        </Button>
+                    }
+                />
             </div>
         );
     }
@@ -136,15 +142,8 @@ export default function AssignmentList({
                             </h3>
                         </div>
                         <div className="flex items-center gap-3">
-                            <AssignmentTypeChip type={assignment.type} />
-                            <span
-                                className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                                    "IN_PROGRESS"
-                                )}`}
-                            >
-                                {/* Backend nên trả về trạng thái assignment, tạm thời mặc định */}
-                                Đang diễn ra
-                            </span>
+                            <AssignmentTypeBadge type={assignment.type} />
+                            <AssignmentStatusBadge status="IN_PROGRESS" />
                         </div>
                     </div>
 
@@ -155,8 +154,9 @@ export default function AssignmentList({
 
                     <div className="mt-4 flex items-center justify-between text-sm">
                         <div className="flex items-center gap-4">
-                            <span className="flex items-center gap-1">
-                                <span className="text-gray-600">📅 Hạn nộp:</span>
+                            <span className="flex items-center gap-1.5">
+                                <CalendarDays className="h-4 w-4 text-gray-500" />
+                                <span className="text-gray-600">Hạn nộp:</span>
                                 <span className="font-medium text-gray-800">
                                     {(() => {
                                         const effective = assignment.type === "QUIZ"
@@ -168,9 +168,10 @@ export default function AssignmentList({
                                     })()}
                                 </span>
                             </span>
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1.5">
+                                <Inbox className="h-4 w-4 text-gray-500" />
                                 <span className="text-gray-600">
-                                    📥 Đã nộp:
+                                    Đã nộp:
                                 </span>
                                 <span className="font-medium text-gray-800">
                                     {assignment._count?.submissions ?? 0}
@@ -179,49 +180,61 @@ export default function AssignmentList({
                         </div>
                         <div className="flex items-center gap-2">
                             {assignment.type === "QUIZ" && (
-                                <button
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="text-emerald-600 hover:bg-emerald-50"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         router.push(
                                             `/dashboard/teacher/exams/monitor?assignmentId=${assignment.id}`
                                         );
                                     }}
-                                    className="px-4 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
                                 >
-                                    👁 Giám sát thi
-                                </button>
+                                    <Eye className="h-4 w-4 mr-1.5" />
+                                    Giám sát thi
+                                </Button>
                             )}
-                            <button
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="text-purple-600 hover:bg-purple-50"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     router.push(
                                         `/dashboard/teacher/assignments/${assignment.id}/edit`
                                     );
                                 }}
-                                className="px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
                             >
-                                ✏️ Chỉnh sửa
-                            </button>
-                            <button
+                                <Pencil className="h-4 w-4 mr-1.5" />
+                                Chỉnh sửa
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="text-blue-600 hover:bg-blue-50"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     router.push(
                                         `/dashboard/teacher/assignments/${assignment.id}/submissions`
                                     );
                                 }}
-                                className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                             >
+                                <Eye className="h-4 w-4 mr-1.5" />
                                 Xem bài nộp
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="text-red-600 hover:bg-red-50"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setConfirmAssignmentId(assignment.id);
                                 }}
-                                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-all"
                             >
-                                🗑️ Xoá
-                            </button>
+                                <Trash2 className="h-4 w-4 mr-1.5" />
+                                Xoá
+                            </Button>
                         </div>
                     </div>
 
@@ -244,45 +257,21 @@ export default function AssignmentList({
                 </div>
             ))}
             {/* Modal xác nhận xoá */}
-            {confirmAssignmentId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmAssignmentId(null)} />
-                    <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md border">
-                        <h3 className="text-lg font-semibold mb-2">Xác nhận xoá bài tập</h3>
-                        <p className="text-sm text-gray-600 mb-4">Hành động này không thể hoàn tác. Bạn chắc chắn muốn xoá?</p>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                className="px-4 py-2 rounded-xl border text-gray-700 hover:bg-gray-50"
-                                onClick={() => setConfirmAssignmentId(null)}
-                            >
-                                Huỷ
-                            </button>
-                            <button
-                                className="px-4 py-2 rounded-xl bg-red-600 text-white hover:brightness-110"
-                                onClick={async () => {
-                                    const id = confirmAssignmentId;
-                                    try {
-                                        const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
-                                        const data = await res.json().catch(() => ({}));
-                                        if (!res.ok) {
-                                            toast({ title: "Xoá bài tập thất bại", description: (data as any)?.message, variant: "destructive" });
-                                            return;
-                                        }
-                                        toast({ title: "Đã xoá bài tập", variant: "success" });
-                                        setConfirmAssignmentId(null);
-                                        doRefresh();
-                                    } catch (err) {
-                                        console.error("[DELETE ASSIGNMENT]", err);
-                                        toast({ title: "Có lỗi xảy ra", variant: "destructive" });
-                                    }
-                                }}
-                            >
-                                Xoá
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmDialog
+                open={!!confirmAssignmentId}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setConfirmAssignmentId(null);
+                    }
+                }}
+                onConfirm={handleConfirmDelete}
+                title="Xác nhận xoá bài tập"
+                description="Hành động này không thể hoàn tác. Bạn chắc chắn muốn xoá?"
+                variant="danger"
+                confirmText="Xoá"
+                cancelText="Huỷ"
+                loading={deleting}
+            />
         </div>
     );
 }

@@ -3,6 +3,7 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Search } from "lucide-react";
 
 interface Value {
   status: "all" | "pending" | "submitted" | "overdue";
@@ -28,18 +29,22 @@ export default function AssignmentFilters({ value, onChange }: Props) {
         </TabsList>
       </Tabs>
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <Input
-          type="text"
-          value={value.query}
-          onChange={(e) => onChange({ ...value, query: e.target.value })}
-          placeholder="Tìm kiếm bài tập..."
-          className="flex-1"
-          color="green"
-        />
+        <div className="relative flex-1">
+          <Input
+            type="text"
+            value={value.query}
+            onChange={(e) => onChange({ ...value, query: e.target.value })}
+            placeholder="Tìm kiếm bài tập..."
+            className="pl-10 rounded-full border-2 bg-white shadow-sm"
+            color="green"
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-400" />
+        </div>
         <Select
           value={value.sort}
           onChange={(e) => onChange({ ...value, sort: e.target.value as Value["sort"] })}
           color="green"
+          className="min-w-[170px] rounded-full border-2 bg-white shadow-sm hover:shadow-md"
         >
           <option value="due_asc">Sắp hết hạn</option>
           <option value="recent">Mới nhất</option>
