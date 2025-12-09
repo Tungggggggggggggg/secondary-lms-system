@@ -3,8 +3,8 @@
 import { useStudentAssignments } from "@/hooks/use-student-assignments";
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import ActivityList, { type ActivityItem } from "@/components/shared/ActivityList";
-import TimeAgo from "@/components/shared/TimeAgo";
+import { ActivityList, type ActivityItem } from "@/components/shared";
+import { TimeAgo } from "@/components/shared";
 import { Star, CheckCircle, Bell } from "lucide-react";
 
 export default function RecentActivity() {

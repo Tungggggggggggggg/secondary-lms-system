@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { isStaffRole, isSuperAdminRole } from "@/lib/rbac/role-utils";
+import { isStaffRole, isSuperAdminRole } from "@/lib/rbac";
 
 type OrgItem = { id: string; name: string };
 

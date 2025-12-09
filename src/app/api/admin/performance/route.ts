@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
-import { isStaffRole } from '@/lib/rbac/role-utils'
+import { isStaffRole } from "@/lib/rbac"
 import { getCachedUser, getCacheStats } from '@/lib/user-cache'
 import { getPerformanceStats } from '@/lib/performance-monitor'
 

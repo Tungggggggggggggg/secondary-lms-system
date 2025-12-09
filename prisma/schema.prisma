@@ -328,6 +328,7 @@ model Announcement {
   updatedAt        DateTime                 @updatedAt
   classroomId      String
   authorId         String
+  pinnedAt         DateTime?
   moderatedAt      DateTime?
   moderatedById    String?
   moderationReason String?
@@ -340,7 +341,7 @@ model Announcement {
   classroom        Classroom                @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   organization     Organization?            @relation(fields: [organizationId], references: [id])
 
-  @@index([classroomId, createdAt])
+  @@index([classroomId, pinnedAt, createdAt])
   @@index([authorId])
   @@index([status, createdAt])
   @@index([organizationId, createdAt])

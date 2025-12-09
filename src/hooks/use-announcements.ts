@@ -6,6 +6,7 @@ export interface AnnouncementItem {
   content: string;
   createdAt: string;
   updatedAt: string;
+  pinnedAt?: string | null;
   author?: { id: string; fullname: string; email: string };
   attachments?: Array<{
     id: string;
@@ -67,11 +68,20 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
   const [commentsFetched, setCommentsFetched] = useState<Record<string, boolean>>({});
 
   const fetchAnnouncements = useCallback(
-    async (classroomId: string, page = 1, pageSize = 10): Promise<void> => {
+    async (
+      classroomId: string,
+      page = 1,
+      pageSize = 10,
+      filters?: { q?: string; sort?: "new" | "comments" | "attachments"; hasAttachment?: boolean }
+    ): Promise<void> => {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await fetch(`/api/classrooms/${classroomId}/announcements?page=${page}&pageSize=${pageSize}`, { cache: "no-store" });
+        const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+        if (filters?.q) params.set("q", filters.q);
+        if (filters?.sort) params.set("sort", filters.sort);
+        if (typeof filters?.hasAttachment !== "undefined") params.set("hasAttachment", String(!!filters.hasAttachment));
+        const res = await fetch(`/api/classrooms/${classroomId}/announcements?${params.toString()}`, { cache: "no-store" });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.message || "Không thể tải thông báo");
         setAnnouncements(json.data || []);

@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, Clock, AlertCircle, FileText, ClipboardList, Pin } from "lucide-react";
-import SectionCard from "@/components/shared/SectionCard";
+import { SectionCard } from "@/components/shared";
 
 interface UpcomingEvent {
   id: string;

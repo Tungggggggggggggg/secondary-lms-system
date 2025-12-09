@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useSession } from "next-auth/react";
-import HeaderParent from "@/components/parent/Header";
+import HeaderParent from "@/components/parent/ParentHeader";
 import ParentProfileForm from "@/components/parent/ParentProfileForm";
 
 export default function ParentProfilePage() {
@@ -15,8 +15,8 @@ export default function ParentProfilePage() {
   return (
     <>
       <HeaderParent
-        title="Hồ sơ phụ huynh"
-        subtitle="Cập nhật thông tin cá nhân và bảo mật tài khoản"
+        title="Há»“ sÆ¡ phá»¥ huynh"
+        subtitle="Cáº­p nháº­t thÃ´ng tin cÃ¡ nhÃ¢n vÃ  báº£o máº­t tÃ i khoáº£n"
       />
 
       {/* User Avatar Card */}
@@ -27,9 +27,9 @@ export default function ParentProfilePage() {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 group-hover:text-amber-800 transition-colors duration-300">
-              {(session?.user as any)?.fullname || session?.user?.name || "Phụ huynh"}
+              {(session?.user as any)?.fullname || session?.user?.name || "Phá»¥ huynh"}
             </h2>
-            <p className="text-amber-700 mt-1 font-medium">{session?.user?.email} • Phụ huynh</p>
+            <p className="text-amber-700 mt-1 font-medium">{session?.user?.email} â€¢ Phá»¥ huynh</p>
           </div>
         </div>
       </div>
@@ -38,5 +38,7 @@ export default function ParentProfilePage() {
     </>
   );
 }
+
+
 
 

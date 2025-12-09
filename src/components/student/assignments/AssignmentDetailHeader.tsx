@@ -3,7 +3,7 @@
 import Badge from "@/components/ui/badge";
 import { StudentAssignmentDetail } from "@/hooks/use-student-assignments";
 import { BookOpen, ArrowRight, CheckCircle2, BadgeCheck } from "lucide-react";
-import AssignmentTypeBadge from "@/components/student/AssignmentTypeBadge";
+import { AssignmentTypeBadge } from "@/components/shared";
 import DueCountdownChip from "@/components/student/DueCountdownChip";
 
 interface AssignmentDetailHeaderProps {
@@ -37,7 +37,7 @@ export default function AssignmentDetailHeader({
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
-            <AssignmentTypeBadge type={assignment.type as any} />
+            <AssignmentTypeBadge type={assignment.type as any} variant="student" />
             {submission && (
               <Badge className="bg-green-600 text-white shadow-sm ring-1 ring-green-600/15 inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5" />

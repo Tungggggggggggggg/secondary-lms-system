@@ -145,7 +145,7 @@ export function useTeacherSubmissions() {
         console.log(`[fetchSubmissions] URL: ${url}`);
         console.log(`[fetchSubmissions] Options:`, options);
 
-        const response = await fetch(url);
+        const response = await fetch(url, { cache: "no-store" });
         const result = await response.json();
 
         console.log(`[fetchSubmissions] Response status: ${response.status}`);
@@ -207,7 +207,8 @@ export function useTeacherSubmissions() {
         );
 
         const response = await fetch(
-          `/api/assignments/${assignmentId}/submissions/${submissionId}`
+          `/api/assignments/${assignmentId}/submissions/${submissionId}`,
+          { cache: "no-store" }
         );
         const result = await response.json();
 

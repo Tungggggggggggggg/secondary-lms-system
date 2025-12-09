@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 // src/app/parent/layout.tsx
 import SidebarParent from "@/components/parent/Sidebar";
@@ -26,3 +26,4 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
         </ProtectedRoute>
     );
 }
+

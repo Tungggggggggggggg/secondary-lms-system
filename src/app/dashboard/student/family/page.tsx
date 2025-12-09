@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
-import PageHeader from "@/components/shared/PageHeader";
-import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import { PageHeader } from "@/components/shared";
+import { ConfirmDialog } from "@/components/shared";
 import PromptDialog from "@/components/admin/modals/PromptDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 

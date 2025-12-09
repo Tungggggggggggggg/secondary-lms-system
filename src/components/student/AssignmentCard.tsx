@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import PriorityBadge, { type PriorityLevel } from "@/components/shared/PriorityBadge";
-import TimeAgo from "@/components/shared/TimeAgo";
+import { PriorityBadge, type PriorityLevel } from "@/components/shared";
+import { TimeAgo } from "@/components/shared";
 
 interface AssignmentCardProps {
   id: string;

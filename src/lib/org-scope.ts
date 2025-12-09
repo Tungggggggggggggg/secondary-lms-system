@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
-import { isStaffRole } from "@/lib/rbac/role-utils";
+import { isStaffRole } from "@/lib/rbac";
 
 // Helper: lấy orgId từ query/header; ưu tiên query -> header -> null
 export function resolveOrgId(req: NextRequest): string | null {

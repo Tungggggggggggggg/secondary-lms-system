@@ -25,7 +25,6 @@ type Props = {
 export default function ChatThread({ color = "amber", messages, participants, onReply, selfUserId }: Props) {
   const { data: session } = useSession();
   const me = (selfUserId || (session?.user as any)?.id) as string | undefined;
-  const currentRole = (session?.user as any)?.role as string | undefined;
   const endRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -61,7 +60,7 @@ export default function ChatThread({ color = "amber", messages, participants, on
   return (
     <div className={cn("flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-2 scrollbar-stable overscroll-contain min-w-0", palette.threadBg)}>
       {messages.map((m, index) => {
-        const mine = (!!me && m.sender.id === me) || (!!currentRole && m.sender.role === currentRole);
+        const mine = !!me && m.sender.id === me;
         const sender = !mine ? m.sender : undefined;
         const createdAt = new Date(m.createdAt);
 

@@ -397,3 +397,21 @@ export async function totalUnreadCount(userId: string): Promise<number> {
   }
   return total;
 }
+
+export async function getMessageConversationId(messageId: string): Promise<string | null> {
+  const prismaAny = prisma as any;
+  const msg = await prismaAny.message.findUnique({ where: { id: messageId }, select: { conversationId: true } });
+  return msg?.conversationId ?? null;
+}
+
+export async function addReaction(messageId: string, userId: string, emoji: string): Promise<void> {
+  const prismaAny = prisma as any;
+  try {
+    await prismaAny.messageReaction.create({ data: { messageId, userId, emoji } });
+  } catch {}
+}
+
+export async function removeReaction(messageId: string, userId: string, emoji: string): Promise<void> {
+  const prismaAny = prisma as any;
+  await prismaAny.messageReaction.deleteMany({ where: { messageId, userId, emoji } });
+}

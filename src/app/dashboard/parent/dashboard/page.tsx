@@ -1,7 +1,7 @@
-// src/app/parent/dashboard/page.tsx
+﻿// src/app/parent/dashboard/page.tsx
 "use client";
 
-import HeaderParent from "@/components/parent/Header";
+import HeaderParent from "@/components/parent/ParentHeader";
 import QuickStats from "@/components/parent/QuickStats";
 import MyChildren from "@/components/parent/MyChildren";
 import AcademicPerformance from "@/components/parent/AcademicPerformance";
@@ -16,7 +16,7 @@ export default function ParentDashboardPage() {
     (user?.fullname && user.fullname.trim()) ||
     (user?.name && user.name.trim()) ||
     (user?.email ? user.email.split("@")[0] : "") ||
-    "bạn";
+    "báº¡n";
   const currentDate = new Date();
   const dateOptions: Intl.DateTimeFormatOptions = {
     weekday: "long",
@@ -29,8 +29,8 @@ export default function ParentDashboardPage() {
   return (
     <>
       <HeaderParent
-        title={`Chào mừng trở lại, ${displayName} 👋`}
-        subtitle={`Theo dõi tiến độ học tập của con bạn - Hôm nay là ${formattedDate}`}
+        title={`ChÃ o má»«ng trá»Ÿ láº¡i, ${displayName} ðŸ‘‹`}
+        subtitle={`Theo dÃµi tiáº¿n Ä‘á»™ há»c táº­p cá»§a con báº¡n - HÃ´m nay lÃ  ${formattedDate}`}
       />
 
       <QuickStats />
@@ -48,3 +48,4 @@ export default function ParentDashboardPage() {
     </>
   );
 }
+

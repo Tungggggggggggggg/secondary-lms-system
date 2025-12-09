@@ -1,7 +1,7 @@
 "use client";
 
-import NotificationBell from "@/components/shared/NotificationBell";
-import TopbarBreadcrumbs from "@/components/shared/TopbarBreadcrumbs";
+import { NotificationBell } from "@/components/shared";
+import { TopbarBreadcrumbs } from "@/components/shared";
 
 export default function Header() {
   return (

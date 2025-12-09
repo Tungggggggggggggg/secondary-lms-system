@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import { StatsGrid, type StatItem } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, PencilLine, Star, Flame } from "lucide-react";
 import { useEffect, useState } from "react";

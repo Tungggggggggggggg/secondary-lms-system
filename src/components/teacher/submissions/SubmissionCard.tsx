@@ -48,7 +48,7 @@ export default function SubmissionCard({
         </div>
         {isGraded && (
           <div className="text-right">
-            <div className="text-2xl font-bold text-indigo-600">
+            <div className="text-2xl font-bold text-blue-600">
               {submission.grade?.toFixed(1)}
             </div>
             <div className="text-xs text-gray-500">điểm</div>

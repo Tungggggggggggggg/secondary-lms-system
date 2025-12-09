@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, Save, AlertCircle, Plus, Trash2 } from "lucide-react";
-import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import { ConfirmDialog } from "@/components/shared";
 import { usePrompt } from "@/components/providers/PromptProvider";
 
 /**

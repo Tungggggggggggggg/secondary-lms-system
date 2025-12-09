@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Users } from "lucide-react";
+import { AlertTriangle, Users, BarChart3, Target, LayoutList, LayoutGrid } from "lucide-react";
 import StudentList, { StudentListItem } from "@/components/teacher/students/StudentList";
-import StudentStats from "@/components/teacher/students/StudentStats";
 import StudentListSkeleton from "@/components/teacher/students/StudentListSkeleton";
 import StudentFiltersToolbar, {
   type StudentSortKey,
@@ -11,9 +10,11 @@ import StudentFiltersToolbar, {
 } from "@/components/teacher/students/StudentFiltersToolbar";
 import { useClassroom } from "@/hooks/use-classroom";
 import type { ClassroomStudent } from "@/hooks/use-classroom-students";
-import EmptyState from "@/components/shared/EmptyState";
-import PageHeader from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared";
+import { PageHeader } from "@/components/shared";
 import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
+import { StatsGrid } from "@/components/shared";
+import StudentsTable from "@/components/teacher/students/StudentsTable";
 export default function StudentsPage() {
   const { classrooms, fetchClassrooms, isLoading: loadingClassrooms, error: classroomError } =
     useClassroom();
@@ -40,42 +41,44 @@ export default function StudentsPage() {
       try {
         setLoadingStudents(true);
         setStudentError(null);
-        const all: StudentListItem[] = [];
-
-        for (const c of classrooms) {
-          const res = await fetch(`/api/classrooms/${c.id}/students`);
-          const json = await res.json();
-          if (!res.ok || json?.success === false) {
-            console.error("[StudentsPage] load students error", json?.message || res.statusText);
-            continue;
-          }
-          const items = (json.data || []) as ClassroomStudent[];
-          items.forEach((s) => {
-            const totalAssignments = s.stats.totalAssignments;
-            const submitted = s.stats.submittedCount;
-            const submissionRate =
-              totalAssignments > 0 ? (submitted / totalAssignments) * 100 : 0;
-            let status: "active" | "warning" | "inactive" = "active";
-            if (submissionRate < 50) status = "inactive";
-            else if (submissionRate < 80) status = "warning";
-
-            all.push({
-              id: s.id,
-              fullname: s.fullname,
-              avatarInitial: s.fullname.charAt(0).toUpperCase(),
-              classroomId: c.id,
-              classroomName: c.name,
-              classroomCode: c.code,
-              averageGrade: s.stats.averageGrade,
-              submissionRate,
-              submittedCount: submitted,
-              totalAssignments,
-              status,
-            });
-          });
-        }
-
-        setStudents(all);
+        const parallel = await Promise.all(
+          classrooms.map(async (c) => {
+            try {
+              const res = await fetch(`/api/classrooms/${c.id}/students`, { cache: "no-store" });
+              const json = await res.json();
+              if (!res.ok || json?.success === false) {
+                console.error("[StudentsPage] load students error", json?.message || res.statusText);
+                return [] as StudentListItem[];
+              }
+              const items = (json.data || []) as ClassroomStudent[];
+              return items.map((s) => {
+                const totalAssignments = s.stats.totalAssignments;
+                const submitted = s.stats.submittedCount;
+                const submissionRate = totalAssignments > 0 ? (submitted / totalAssignments) * 100 : 0;
+                let status: "active" | "warning" | "inactive" = "active";
+                if (submissionRate < 50) status = "inactive";
+                else if (submissionRate < 80) status = "warning";
+                return {
+                  id: s.id,
+                  fullname: s.fullname,
+                  avatarInitial: s.fullname.charAt(0).toUpperCase(),
+                  classroomId: c.id,
+                  classroomName: c.name,
+                  classroomCode: c.code,
+                  averageGrade: s.stats.averageGrade,
+                  submissionRate,
+                  submittedCount: submitted,
+                  totalAssignments,
+                  status,
+                } as StudentListItem;
+              });
+            } catch (err) {
+              console.error("[StudentsPage] load students error", err);
+              return [] as StudentListItem[];
+            }
+          })
+        );
+        setStudents(parallel.flat());
       } catch (e) {
         console.error("[StudentsPage] load students error", e);
         setStudentError(
@@ -168,6 +171,51 @@ export default function StudentsPage() {
       avgGrade,
     };
   }, [students]);
+
+  // View toggle
+  const [view, setView] = useState<"list" | "table">(() => {
+    if (typeof window === "undefined") return "table";
+    return (window.localStorage.getItem("teacher:students:view") as "list" | "table") || "table";
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem("teacher:students:view", view); } catch {}
+  }, [view]);
+
+  // Export CSV theo bộ lọc hiện tại
+  const onExportFiltered = () => {
+    const header = [
+      "id",
+      "fullname",
+      "classroomId",
+      "classroomName",
+      "classroomCode",
+      "averageGrade",
+      "submissionRate",
+      "submittedCount",
+      "totalAssignments",
+      "status",
+    ];
+    const rows = filteredStudents.map((s) => [
+      s.id,
+      s.fullname,
+      s.classroomId,
+      s.classroomName,
+      s.classroomCode,
+      s.averageGrade ?? "",
+      Math.round(s.submissionRate),
+      s.submittedCount,
+      s.totalAssignments,
+      s.status,
+    ]);
+    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `students-${rows.length}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
  const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
     { label: "Học sinh", href: "/dashboard/teacher/students" },
@@ -188,12 +236,20 @@ export default function StudentsPage() {
         }
       />
 
-      {/* Stats Overview */}
-      <StudentStats
-        totalStudents={overview.totalStudents}
-        avgParticipation={overview.avgParticipation}
-        needSupportCount={overview.needSupportCount}
-        avgGrade={overview.avgGrade}
+      {/* Stats Overview (StatsGrid) */}
+      <StatsGrid
+        items={[
+          { icon: <Users className="h-5 w-5" />, color: "from-blue-300 to-indigo-200", label: "Tổng học sinh", value: overview.totalStudents.toString(), subtitle: "Tất cả học sinh trong các lớp của bạn" },
+          { icon: <BarChart3 className="h-5 w-5" />, color: "from-green-300 to-emerald-200", label: "Tỷ lệ hoàn thành", value: `${Math.round(overview.avgParticipation)}%`, subtitle: "Trung bình chuyên cần toàn lớp" },
+          { icon: <AlertTriangle className="h-5 w-5" />, color: "from-amber-300 to-orange-200", label: "Cần hỗ trợ", value: overview.needSupportCount.toString(), subtitle: "HS có chuyên cần thấp" },
+          { icon: <Target className="h-5 w-5" />, color: "from-blue-200 to-indigo-100", label: "Điểm trung bình", value: overview.avgGrade !== null ? overview.avgGrade.toFixed(1) : "-", subtitle: "TB các học sinh có điểm" },
+        ]}
+        onItemClick={(_, idx) => {
+          if (idx === 0) setStatusFilter("all");
+          if (idx === 1) setSortKey("attendance");
+          if (idx === 2) setStatusFilter("warning");
+          if (idx === 3) setSortKey("grade");
+        }}
       />
 
       {/* Filter & Search */}
@@ -211,7 +267,48 @@ export default function StudentsPage() {
         onSortChange={(key) => setSortKey(key)}
         search={search}
         onSearchChange={(value) => setSearch(value)}
+        onReset={() => {
+          setSelectedClassId("all");
+          setStatusFilter("all");
+          setSortKey("name");
+          setSearch("");
+        }}
       />
+
+      {/* Hành động chung */}
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="text-xs font-semibold text-blue-700">Chế độ xem:</div>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onExportFiltered}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+            aria-label="Xuất CSV theo bộ lọc"
+          >
+            Export CSV
+          </button>
+          {/* View toggle */}
+          <div className="inline-flex rounded-xl border border-blue-200 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm ${view === "list" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}
+              aria-pressed={view === "list"}
+            >
+              <LayoutList className="h-4 w-4" /> Danh sách
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("table")}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm border-l border-blue-200 ${view === "table" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}
+              aria-pressed={view === "table"}
+            >
+              <LayoutGrid className="h-4 w-4" /> Bảng
+            </button>
+          </div>
+        </div>
+      </div>
+      
 
       {/* Student List */}
       {isLoading ? (
@@ -252,7 +349,13 @@ export default function StudentsPage() {
           }
         />
       ) : (
-        <StudentList students={filteredStudents} />
+        <>
+          {view === "list" ? (
+            <StudentList students={filteredStudents} />
+          ) : (
+            <StudentsTable students={filteredStudents} selectable={false} />
+          )}
+        </>
       )}
     </div>
   );

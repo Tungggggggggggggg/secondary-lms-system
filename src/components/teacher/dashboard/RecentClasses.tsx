@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useClassroom } from "@/hooks/use-classroom";
 import { ClassroomResponse } from "@/types/classroom";
-import SectionCard from "@/components/shared/SectionCard";
+import { SectionCard } from "@/components/shared";
 import { BookOpen, Calendar, FileText, ChevronRight } from "lucide-react";
 
 export default function RecentClasses() {

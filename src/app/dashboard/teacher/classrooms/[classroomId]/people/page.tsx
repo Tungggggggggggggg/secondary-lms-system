@@ -1,4 +1,4 @@
-import ClassroomPeople from "@/components/teacher/classroom/ClassroomPeople";
+import ClassroomPeople from "@/components/teacher/classrooms/people/ClassroomPeople";
 
 export default function ClassroomPeoplePage() {
     return <ClassroomPeople />;

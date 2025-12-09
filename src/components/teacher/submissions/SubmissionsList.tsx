@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -11,6 +10,10 @@ import {
 import SubmissionCard from "./SubmissionCard";
 import GradeSubmissionDialog from "./GradeSubmissionDialog";
 import { SubmissionDetail } from "@/hooks/use-teacher-submissions";
+import { StatsGrid } from "@/components/shared";
+import { FilterBar } from "@/components/shared";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Inbox, CheckCircle2, Clock, Award } from "lucide-react";
 
 interface SubmissionsListProps {
   assignmentId: string;
@@ -62,10 +65,11 @@ export default function SubmissionsList({
     });
   }, [assignmentId, statusFilter, searchQuery, fetchSubmissions]);
 
-  // Handle search
-  const handleSearch = () => {
-    setSearchQuery(searchInput.trim());
-  };
+  // Debounce tìm kiếm 300ms
+  useEffect(() => {
+    const t = setTimeout(() => setSearchQuery(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // Handle grade button click
   const handleGrade = async (submission: TeacherSubmission) => {
@@ -142,65 +146,31 @@ export default function SubmissionsList({
   return (
     <div className="space-y-6">
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg p-4 shadow">
-          <p className="text-sm text-gray-600">Tổng số bài nộp</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
-        </div>
-        <div className="bg-white rounded-lg p-4 shadow">
-          <p className="text-sm text-gray-600">Đã chấm</p>
-          <p className="text-2xl font-bold text-green-600">{stats.graded}</p>
-        </div>
-        <div className="bg-white rounded-lg p-4 shadow">
-          <p className="text-sm text-gray-600">Chưa chấm</p>
-          <p className="text-2xl font-bold text-yellow-600">{stats.ungraded}</p>
-        </div>
-        <div className="bg-white rounded-lg p-4 shadow">
-          <p className="text-sm text-gray-600">Điểm trung bình</p>
-          <p className="text-2xl font-bold text-indigo-600">
-            {stats.averageGrade?.toFixed(1) || "-"}
-          </p>
-        </div>
-      </div>
+      <StatsGrid
+        items={[
+          { icon: <Inbox className="h-5 w-5" />, color: "from-blue-200 to-sky-200", label: "Bài nộp", value: String(stats.total) },
+          { icon: <CheckCircle2 className="h-5 w-5" />, color: "from-green-200 to-emerald-200", label: "Đã chấm", value: String(stats.graded) },
+          { icon: <Clock className="h-5 w-5" />, color: "from-amber-200 to-orange-200", label: "Chưa chấm", value: String(stats.ungraded) },
+          { icon: <Award className="h-5 w-5" />, color: "from-blue-200 to-sky-200", label: "Điểm TB", value: stats.averageGrade != null ? stats.averageGrade.toFixed(1) : "-" },
+        ]}
+      />
 
       {/* Filters và Search */}
-      <div className="bg-white rounded-lg p-4 shadow flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Tìm kiếm theo tên học sinh..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSearch();
-              }
-            }}
-          />
-        </div>
-        <Button onClick={handleSearch} variant="outline">
-          Tìm kiếm
-        </Button>
-        <div className="flex gap-2">
-          <Button
-            variant={statusFilter === "all" ? "default" : "outline"}
-            onClick={() => setStatusFilter("all")}
-          >
-            Tất cả
-          </Button>
-          <Button
-            variant={statusFilter === "graded" ? "default" : "outline"}
-            onClick={() => setStatusFilter("graded")}
-          >
-            Đã chấm
-          </Button>
-          <Button
-            variant={statusFilter === "ungraded" ? "default" : "outline"}
-            onClick={() => setStatusFilter("ungraded")}
-          >
-            Chưa chấm
-          </Button>
-        </div>
-      </div>
+      <FilterBar
+        search={searchInput}
+        onSearchChange={setSearchInput}
+        color="blue"
+        placeholder="Tìm kiếm theo tên học sinh..."
+        bottom={
+          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <TabsList className="grid w-full grid-cols-3 rounded-xl bg-blue-100/60 text-blue-700">
+              <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-blue-900">Tất cả</TabsTrigger>
+              <TabsTrigger value="graded" className="data-[state=active]:bg-white data-[state=active]:text-blue-900">Đã chấm</TabsTrigger>
+              <TabsTrigger value="ungraded" className="data-[state=active]:bg-white data-[state=active]:text-blue-900">Chưa chấm</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        }
+      />
 
       {/* Submissions List */}
       {isLoading ? (

@@ -24,7 +24,7 @@ export function AccordionItem({ title, defaultOpen = true, children, className, 
         <span className="uppercase tracking-wide">{title}</span>
         <ChevronDown className={`h-4 w-4 transition-transform duration-200 ease-out ${open ? "rotate-180" : "rotate-0"}`} />
       </button>
-      <div className={`overflow-hidden transition-[max-height] duration-300 ease-out ${open ? "max-h-[1000px]" : "max-h-0"}`}>
+      <div className={`transition-[max-height] duration-300 ease-out ${open ? "max-h-[1000px] overflow-visible" : "max-h-0 overflow-hidden"}`}>
         <div className={`mt-1 space-y-1 ${contentClassName ?? ""}`}>{children}</div>
       </div>
     </div>

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { StudentAssignment } from "@/hooks/use-student-assignments";
 import AssignmentStatusBadge from "@/components/student/AssignmentStatusBadge";
-import AssignmentTypeBadge from "@/components/student/AssignmentTypeBadge";
+import { AssignmentTypeBadge } from "@/components/shared";
 import DueCountdownChip from "@/components/student/DueCountdownChip";
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
@@ -96,7 +96,7 @@ export default function StudentAssignmentCard({ assignment, onOpen }: Props) {
         </div>
 
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <AssignmentTypeBadge type={assignment.type as any} />
+          <AssignmentTypeBadge type={assignment.type as any} variant="student" />
           <AssignmentStatusBadge status={assignment.status} />
         </div>
 

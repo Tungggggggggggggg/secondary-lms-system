@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useClassroom } from "@/hooks/use-classroom";
 import Link from "next/link";
-import SectionCard from "@/components/shared/SectionCard";
+import { SectionCard } from "@/components/shared";
 import ClassCard from "@/components/student/ClassCard";
 import { BookOpen, ChevronRight } from "lucide-react";
 

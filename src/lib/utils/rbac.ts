@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { isAdminRole as isAdmin, isSuperAdminRole as isSuperAdmin } from "@/lib/rbac/role-utils";
+import { isAdminRole as isAdmin, isSuperAdminRole as isSuperAdmin } from "@/lib/rbac";
 // Các helper RBAC cơ bản cho vai trò hệ thống (đồng bộ với rbac/policy)
 
 export { isAdmin, isSuperAdmin };

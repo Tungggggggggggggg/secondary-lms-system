@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { isActivePath } from "@/utils/routing";
-import SidebarToggleButton from "@/components/shared/SidebarToggleButton";
+import { SidebarToggleButton } from "@/components/shared";
 import { useUnreadTotal } from "@/hooks/use-chat";
 import { LogOut } from "lucide-react";
 import Tooltip from "@/components/ui/tooltip";
 import { AccordionItem } from "@/components/ui/accordion";
 import type { CSSProperties } from "react";
 import { sidebarConfig } from "@/constants/sidebar.config";
-import NotificationBell from "@/components/shared/NotificationBell";
+import { NotificationBell } from "@/components/shared";
 
 type DashboardRole = "teacher" | "student" | "parent";
 

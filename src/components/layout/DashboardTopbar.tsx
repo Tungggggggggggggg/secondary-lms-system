@@ -1,7 +1,7 @@
 "use client";
 
-import TopbarBreadcrumbs from "@/components/shared/TopbarBreadcrumbs";
-import NotificationBell from "@/components/shared/NotificationBell";
+import { TopbarBreadcrumbs } from "@/components/shared";
+import { NotificationBell } from "@/components/shared";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { Menu } from "lucide-react";
 

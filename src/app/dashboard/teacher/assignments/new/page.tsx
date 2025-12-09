@@ -1,7 +1,7 @@
 "use client"
 
-import NewAssignmentBuilder from '@/components/teacher/assignments/NewAssignmentBuilder'
+import AssignmentWizard from '@/components/teacher/assignments/AssignmentWizard'
 
 export default function NewAssignmentPage() {
-  return <NewAssignmentBuilder />
+  return <AssignmentWizard mode="create" />
 }

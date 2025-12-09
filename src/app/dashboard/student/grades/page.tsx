@@ -8,7 +8,7 @@ import { useStudentGrades, GradeEntry } from "@/hooks/use-student-grades";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import PageHeader from "@/components/shared/PageHeader";
+import { PageHeader } from "@/components/shared";
 import {
   Dialog,
   DialogContent,

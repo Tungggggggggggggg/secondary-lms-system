@@ -4,8 +4,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
-import EmptyState from "@/components/shared/EmptyState";
-import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import { EmptyState } from "@/components/shared";
+import { StatsGrid, type StatItem } from "@/components/shared";
 import { useStudentAssignments } from "@/hooks/use-student-assignments";
 import { FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import StudentAssignmentCard from "@/components/student/StudentAssignmentCard";

@@ -6,7 +6,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import AnimatedSection from "@/components/admin/AnimatedSection";
 import DataTable from "@/components/admin/data-table/DataTable";
 import OrganizationModal from "@/components/admin/modals/OrganizationModal";
-import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import { ConfirmDialog } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import StatsCard from "@/components/admin/stats/StatsCard";
 import { AdminOrganization, TableColumn } from "@/types/admin";

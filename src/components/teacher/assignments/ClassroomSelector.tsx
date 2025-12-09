@@ -3,16 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Users, 
-  CheckCircle, 
-  AlertCircle,
   Search,
   BookOpen
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useDebounce } from '@/hooks/use-debounce';
+import ClassTile from './class-picker/ClassTile';
 
 interface Classroom {
   id: string;
@@ -35,6 +32,7 @@ export function ClassroomSelector({
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   // Fetch classrooms
   useEffect(() => {
@@ -74,7 +72,7 @@ export function ClassroomSelector({
 
   // Filter classrooms based on search
   const filteredClassrooms = classrooms.filter(classroom =>
-    classroom.name.toLowerCase().includes(searchTerm.toLowerCase())
+    classroom.name.toLowerCase().includes((debouncedSearch || '').toLowerCase())
   );
 
   const handleClassroomToggle = (classroomId: string) => {
@@ -92,6 +90,21 @@ export function ClassroomSelector({
   const clearAll = () => {
     onClassroomsChange([]);
   };
+
+  // Ctrl+A để chọn tất cả danh sách đã lọc (khi không focus input/textarea)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (document.activeElement?.tagName || '').toLowerCase();
+      if (e.ctrlKey && (e.key === 'a' || e.key === 'A')) {
+        if (tag !== 'input' && tag !== 'textarea') {
+          e.preventDefault();
+          onClassroomsChange(filteredClassrooms.map(c => c.id));
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [filteredClassrooms, onClassroomsChange]);
 
   if (loading) {
     return (
@@ -121,50 +134,19 @@ export function ClassroomSelector({
           </p>
         </div>
 
-        {/* Selection Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Lớp học đã chọn ({selectedClassrooms.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {selectedClassrooms.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {selectedClassrooms.map(classroomId => {
-                  const classroom = classrooms.find(c => c.id === classroomId);
-                  return classroom ? (
-                    <Badge key={classroomId} variant="outline" className="bg-blue-100 text-blue-800">
-                      {classroom.name} ({classroom.studentCount} học sinh)
-                    </Badge>
-                  ) : null;
-                })}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-gray-500">
-                <AlertCircle className="h-4 w-4" />
-                <span>Chưa chọn lớp học nào</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        
 
         {/* Classroom List */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="w-5 h-5" />
                 Danh sách lớp học
               </CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={selectAll}>
-                  Chọn tất cả
-                </Button>
-                <Button variant="outline" onClick={clearAll}>
-                  Bỏ chọn
-                </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={clearAll}>Bỏ chọn</Button>
+                <Button onClick={selectAll}>Chọn tất cả</Button>
               </div>
             </div>
           </CardHeader>
@@ -183,52 +165,17 @@ export function ClassroomSelector({
             {/* Classroom Grid */}
             {filteredClassrooms.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredClassrooms.map((classroom) => {
-                  const isSelected = selectedClassrooms.includes(classroom.id);
-                  
-                  return (
-                    <div
-                      key={classroom.id}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                        isSelected 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                      }`}
-                      onClick={() => handleClassroomToggle(classroom.id)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Checkbox 
-                              checked={isSelected}
-                              onChange={() => {}} // Handled by parent click
-                            />
-                            <h4 className="font-semibold text-gray-800">
-                              {classroom.name}
-                            </h4>
-                          </div>
-                          
-                          <div className="space-y-1 text-sm text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              <span>{classroom.studentCount} học sinh</span>
-                            </div>
-                            {classroom.subject && (
-                              <div className="flex items-center gap-1">
-                                <BookOpen className="h-3 w-3" />
-                                <span>{classroom.subject}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {isSelected && (
-                          <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {filteredClassrooms.map((c) => (
+                  <ClassTile
+                    key={c.id}
+                    id={c.id}
+                    name={c.name}
+                    studentsCount={c.studentCount}
+                    subject={c.subject}
+                    checked={selectedClassrooms.includes(c.id)}
+                    onToggle={handleClassroomToggle}
+                  />
+                ))}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
@@ -241,23 +188,7 @@ export function ClassroomSelector({
           </CardContent>
         </Card>
 
-        {/* Selection Info */}
-        {selectedClassrooms.length > 0 && (
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-green-700">
-                <CheckCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  Đã chọn {selectedClassrooms.length} lớp học với tổng cộng{' '}
-                  {selectedClassrooms.reduce((total, id) => {
-                    const classroom = classrooms.find(c => c.id === id);
-                    return total + (classroom?.studentCount || 0);
-                  }, 0)} học sinh
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { TableColumn, TableSort, SortDirection } from "@/types/admin";
-import { exportToCSV, generateFilename } from "@/lib/admin/export-csv";
+import { exportToCSV, generateFilename } from "@/lib/csv";
 import { formatDate } from "@/lib/admin/format-date";
 
 /**

@@ -161,7 +161,7 @@ export default function AdminAuditPage() {
       "User Agent": log.userAgent || "-",
     }));
 
-    import("@/lib/admin/export-csv").then(({ exportToCSV, generateFilename }) => {
+    import("@/lib/csv").then(({ exportToCSV, generateFilename }) => {
       exportToCSV(csvData, generateFilename("audit-logs", "csv"));
     });
   };

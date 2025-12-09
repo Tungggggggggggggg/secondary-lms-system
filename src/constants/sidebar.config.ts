@@ -49,7 +49,6 @@ export const sidebarConfig: SidebarConfig = {
       items: [
         { icon: MessagesSquare, label: "Tin nhắn", href: "/dashboard/teacher/messages" },
         { icon: Users, label: "Học sinh", href: "/dashboard/teacher/students" },
-        { icon: BarChart3, label: "Điểm số", href: "/dashboard/teacher/grades" },
       ],
     },
     {

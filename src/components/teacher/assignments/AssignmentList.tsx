@@ -6,24 +6,26 @@ import { useAssignments, type AssignmentT } from "@/hooks/use-assignments";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import EmptyState from "@/components/shared/EmptyState";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import AssignmentTypeBadge from "./AssignmentTypeBadge";
+import { EmptyState } from "@/components/shared";
+import { ConfirmDialog } from "@/components/shared";
+import { AssignmentTypeBadge } from "@/components/shared";
 import AssignmentStatusBadge from "./AssignmentStatusBadge";
 import AssignmentListSkeleton from "./AssignmentListSkeleton";
 import ClassroomBadges from "./ClassroomBadges";
-import { CalendarDays, FileText, Inbox, Eye, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, FileText, Inbox, Eye, Pencil, Trash2, Copy } from "lucide-react";
 
 export default function AssignmentList({
     items,
     loading: loadingProp,
     error: errorProp,
     onRefresh,
+    onDuplicate,
 }: {
     items?: AssignmentT[];
     loading?: boolean;
     error?: string | null;
     onRefresh?: () => void;
+    onDuplicate?: (id: string) => void;
 }) {
     const router = useRouter();
     const {
@@ -142,7 +144,7 @@ export default function AssignmentList({
                             </h3>
                         </div>
                         <div className="flex items-center gap-3">
-                            <AssignmentTypeBadge type={assignment.type} />
+                            <AssignmentTypeBadge type={assignment.type} variant="teacher" />
                             <AssignmentStatusBadge status="IN_PROGRESS" />
                         </div>
                     </div>
@@ -195,10 +197,24 @@ export default function AssignmentList({
                                     Giám sát thi
                                 </Button>
                             )}
+                            {onDuplicate && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="text-blue-700 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDuplicate(assignment.id);
+                                    }}
+                                >
+                                    <Copy className="h-4 w-4 mr-1.5" />
+                                    Nhân bản
+                                </Button>
+                            )}
                             <Button
                                 type="button"
                                 variant="ghost"
-                                className="text-purple-600 hover:bg-purple-50"
+                                className="text-blue-700 hover:bg-blue-50"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     router.push(

@@ -3,10 +3,10 @@
 import { useStudentAssignments } from "@/hooks/use-student-assignments";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import SectionCard from "@/components/shared/SectionCard";
-import TabsButton, { type TabOption } from "@/components/shared/TabsButton";
+import { SectionCard } from "@/components/shared";
+import { TabsButton, type TabOption } from "@/components/shared";
 import AssignmentCard from "@/components/student/AssignmentCard";
-import type { PriorityLevel } from "@/components/shared/PriorityBadge";
+import type { PriorityLevel } from "@/components/shared";
 import { ClipboardList } from "lucide-react";
 
 export default function UpcomingAssignments() {

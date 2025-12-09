@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminMainContainer from "@/components/admin/AdminMainContainer";
 import { prisma } from "@/lib/prisma";
-import { isStaffRole, isSuperAdminRole } from "@/lib/rbac/role-utils";
+import { isStaffRole, isSuperAdminRole } from "@/lib/rbac";
 
 /**
  * Layout component cho Admin Dashboard

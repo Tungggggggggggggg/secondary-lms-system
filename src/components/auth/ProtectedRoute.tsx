@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import LoadingSpinner from '@/components/shared/LoadingSpinner'; // Đảm bảo đường dẫn đúng
+import { LoadingSpinner } from "@/components/shared"; // Đảm bảo đường dẫn đúng
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

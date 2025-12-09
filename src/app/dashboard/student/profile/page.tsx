@@ -4,7 +4,7 @@
 import { useSession } from "next-auth/react";
 import StudentProfileForm from "@/components/student/StudentProfileForm";
 import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
-import PageHeader from "@/components/shared/PageHeader";
+import { PageHeader } from "@/components/shared";
 
 export default function StudentProfilePage() {
   const { data: session } = useSession();

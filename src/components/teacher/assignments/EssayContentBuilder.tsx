@@ -5,23 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { DateTimePicker } from '@/components/ui/datetime-picker';
-import { 
-  Upload, 
-  FileText, 
-  Image as ImageIcon, 
-  Video,
-  X,
-  Calendar,
-  AlertCircle,
-  CheckCircle,
-  ClipboardList,
-  AlertTriangle
-} from 'lucide-react';
+import { Upload, FileText, Image as ImageIcon, Video, X, Calendar, CheckCircle, ClipboardList } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Import Types
 import { SubmissionFormat } from '@/types/assignment-builder';
+import { SubmissionFormatSelector } from "@/components/shared";
+import { EssayScheduleSection } from "@/components/shared";
+import { UploadArea } from "@/components/shared";
+import { EssayQuestionEditor } from "@/components/shared";
 
 interface EssayContent {
   question: string;
@@ -241,21 +233,12 @@ export default function EssayContentBuilder({ content, onContentChange, assignme
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="question" className="text-base font-medium">
-              Nội dung câu hỏi <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              id="question"
-              value={currentContent.question}
-              onChange={(e) => updateQuestion(e.target.value)}
-              placeholder="Nhập câu hỏi tự luận cho học sinh..."
-              className="mt-2 min-h-[120px] text-base"
-            />
-            <p className="text-sm text-gray-500 mt-2">
-              Hỗ trợ formatting cơ bản. Học sinh sẽ thấy câu hỏi này khi làm bài.
-            </p>
-          </div>
+          <EssayQuestionEditor
+            value={currentContent.question}
+            onChange={updateQuestion}
+            minChars={5}
+            maxChars={5000}
+          />
         </CardContent>
       </Card>
 
@@ -335,70 +318,11 @@ export default function EssayContentBuilder({ content, onContentChange, assignme
               Đính kèm tài liệu (tùy chọn)
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Upload Area */}
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragActive 
-                  ? 'border-blue-500 bg-blue-50' 
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Kéo thả file hoặc click để chọn
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Hỗ trợ: PDF, DOC, DOCX, JPG, PNG, GIF, MP4 (tối đa 10MB/file)
-              </p>
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.mp4"
-                onChange={(e) => handleFileSelect(e.target.files)}
-                className="hidden"
-                id="file-upload"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('file-upload')?.click()}
-              >
-                Chọn file
-              </Button>
-            </div>
-
-            {/* File List */}
-            {currentContent.attachments && currentContent.attachments.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-gray-900">File đã chọn:</h4>
-                {currentContent.attachments.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      {getFileIcon(file)}
-                      <div>
-                        <p className="font-medium text-sm">{file.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      onClick={() => removeFile(index)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+          <CardContent>
+            <UploadArea
+              value={currentContent.attachments || []}
+              onChange={(files) => onContentChange({ ...currentContent, attachments: files })}
+            />
           </CardContent>
         </Card>
       )}
@@ -412,26 +336,10 @@ export default function EssayContentBuilder({ content, onContentChange, assignme
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { value: 'TEXT' as SubmissionFormat, label: 'Chỉ văn bản', desc: 'Học sinh nhập trực tiếp' },
-              { value: 'FILE' as SubmissionFormat, label: 'Chỉ file', desc: 'Học sinh upload file' },
-              { value: 'BOTH' as SubmissionFormat, label: 'Cả hai', desc: 'Linh hoạt nhất' }
-            ].map((option) => (
-              <div
-                key={option.value}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  currentContent.submissionFormat === option.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => updateSubmissionFormat(option.value)}
-              >
-                <h4 className="font-medium text-gray-900 mb-1">{option.label}</h4>
-                <p className="text-sm text-gray-600">{option.desc}</p>
-              </div>
-            ))}
-          </div>
+          <SubmissionFormatSelector
+            value={currentContent.submissionFormat}
+            onChange={updateSubmissionFormat}
+          />
         </CardContent>
       </Card>
 
@@ -444,38 +352,17 @@ export default function EssayContentBuilder({ content, onContentChange, assignme
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <DateTimePicker
-                label="Thời gian mở bài"
-                value={currentContent.openAt}
-                onChange={(date) => updateTiming('openAt', date)}
-                placeholder="Chọn thời gian mở bài"
-                required
-              />
-            </div>
-
-            <div>
-              <DateTimePicker
-                label="Hạn nộp bài"
-                value={currentContent.dueDate}
-                onChange={(date) => updateTiming('dueDate', date)}
-                placeholder="Chọn hạn nộp bài"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Validation Warning */}
-          {currentContent.openAt && currentContent.dueDate && 
-           currentContent.openAt >= currentContent.dueDate && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">
-                Thời gian mở bài phải trước hạn nộp bài
-              </span>
-            </div>
-          )}
+          <EssayScheduleSection
+            openAt={currentContent.openAt}
+            dueDate={currentContent.dueDate}
+            onChange={(next) => {
+              onContentChange({
+                ...currentContent,
+                openAt: next.openAt,
+                dueDate: next.dueDate,
+              });
+            }}
+          />
         </CardContent>
       </Card>
 

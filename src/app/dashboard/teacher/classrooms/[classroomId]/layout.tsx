@@ -1,7 +1,6 @@
-import ClassroomTabs from "@/components/teacher/classroom/ClassroomTabs";
-import ClassroomHeader from "@/components/teacher/classroom/ClassroomHeader";
+import ClassroomTabs from "@/components/teacher/classrooms/shared/ClassroomTabs";
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
-import BackButton from "@/components/ui/back-button";
+import { PageHeader } from "@/components/shared";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
@@ -62,12 +61,21 @@ export default async function ClassroomLayout({ children, params }: Props) {
     ];
 
     return (
-        <div className="px-6 py-4">
+        <div className="px-6 py-4 overflow-x-hidden">
             <div className="mb-4 flex items-center justify-between">
                 <Breadcrumb items={breadcrumbItems} />
-                <BackButton href="/dashboard/teacher/classrooms" />
+                <a
+                    href="/dashboard/teacher/classrooms"
+                    className="inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all border-2 border-blue-500 text-blue-600 hover:bg-blue-50 h-10 px-4 py-2"
+                >
+                    ← Quay lại
+                </a>
             </div>
-            <ClassroomHeader classroom={classroomData} />
+            <PageHeader
+                role="teacher"
+                title={classroom.name}
+                subtitle={`GV: ${classroom.teacher?.fullname ?? "Giáo viên"} • Mã lớp: ${classroom.code}`}
+            />
             <ClassroomTabs classroomId={classroomId} />
             <div className="mt-6">{children}</div>
         </div>

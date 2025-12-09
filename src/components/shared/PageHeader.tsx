@@ -8,15 +8,17 @@ interface PageHeaderProps {
   subtitle?: string;
   role?: PageRole;
   badge?: ReactNode;
+  size?: "sm" | "md";
+  actions?: ReactNode;
 }
 
 const roleStyles = {
   teacher: {
-    gradient: "from-blue-100 via-indigo-50 to-purple-100",
+    gradient: "from-blue-100 via-sky-50 to-blue-100",
     border: "border-blue-200",
     label: "text-blue-600",
-    accentFrom: "from-blue-300 to-indigo-400",
-    accentTo: "from-purple-200 to-purple-400",
+    accentFrom: "from-blue-300 to-sky-400",
+    accentTo: "from-sky-200 to-sky-400",
     icon: Briefcase,
   },
   student: {
@@ -37,13 +39,16 @@ const roleStyles = {
   },
 };
 
-export default function PageHeader({ title, subtitle, role = "teacher", badge }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, role = "teacher", badge, size = "md", actions }: PageHeaderProps) {
   const style = roleStyles[role];
   const Icon = style.icon;
+  const pad = size === "sm" ? "px-5 py-4 sm:px-6 sm:py-5" : "px-6 py-6 sm:px-8 sm:py-7";
+  const iconBox = size === "sm" ? "w-14 h-14 sm:w-16 sm:h-16" : "w-16 h-16 sm:w-20 sm:h-20";
+  const iconSize = size === "sm" ? "w-7 h-7 sm:w-8 sm:h-8" : "w-8 h-8 sm:w-10 sm:h-10";
 
   return (
     <header className="mb-6 animate-fade-in">
-      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${style.gradient} shadow-[0_18px_40px_rgba(15,23,42,0.12)] px-6 py-6 sm:px-8 sm:py-7 transition-all duration-300`}>
+      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${style.gradient} shadow-[0_18px_40px_rgba(15,23,42,0.12)] ${pad} transition-all duration-300`}>
         <div className="flex items-center justify-between gap-6">
           <div className="space-y-2 flex-1">
             <p className={`text-[11px] font-semibold tracking-[0.16em] ${style.label} uppercase`}>
@@ -65,9 +70,10 @@ export default function PageHeader({ title, subtitle, role = "teacher", badge }:
                 {badge}
               </div>
             )}
+            {actions}
             <div className="relative">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/80 backdrop-blur flex items-center justify-center shadow-[0_10px_30px_rgba(15,23,42,0.12)] transition-transform duration-300 hover:scale-110">
-                <Icon className="w-8 h-8 sm:w-10 sm:h-10 text-slate-700" />
+              <div className={`${iconBox} rounded-2xl bg-white/80 backdrop-blur flex items-center justify-center shadow-[0_10px_30px_rgba(15,23,42,0.12)] transition-transform duration-300 hover:scale-110`}>
+                <Icon className={`${iconSize} text-slate-700`} />
               </div>
               <div className={`pointer-events-none absolute -bottom-3 -left-4 h-10 w-10 rounded-2xl bg-gradient-to-br ${style.accentFrom} opacity-60 blur-[2px]`} />
               <div className={`pointer-events-none absolute -top-4 -right-6 h-12 w-12 rounded-full bg-gradient-to-br ${style.accentTo} opacity-40 blur-sm`} />

@@ -5,20 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { ScheduleSection } from "@/components/shared";
+import { FormSwitchRow } from "@/components/shared";
+import { AccordionItem } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
 import { 
-  Plus, 
-  Trash2, 
-  Calendar,
-  Shield,
-  AlertCircle,
+  Plus,
   Brain,
   Timer,
-  Copy,
-  GripVertical,
   ClipboardList
 } from 'lucide-react';
 
@@ -28,6 +22,7 @@ import { AntiCheatConfig } from '@/types/exam-system';
 
 // Import Components
 import QuestionTemplates from './QuestionTemplates';
+import QuestionItem from './QuestionItem';
 
 interface QuizContent {
   questions: QuizQuestion[];
@@ -289,21 +284,60 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
   }, [currentContent.questions.length, duplicateQuestion]);
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+    <div className="space-y-6 max-w-3xl mx-auto">
+      <div className="text-center mb-4">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1.5">
           Nội Dung Bài Tập Trắc Nghiệm
         </h2>
-        <p className="text-gray-600">
+        <p className="text-gray-600 text-sm">
           Tạo câu hỏi và cài đặt thời gian, bảo mật
         </p>
       </div>
 
-      {/* Question Templates */}
+      {/* Question Templates (Top) */}
       <QuestionTemplates 
         onAddQuestion={addQuestionFromTemplate}
-        className="mb-8"
+        className="mb-4"
       />
+
+      {/* Questions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Brain className="w-5 h-5" />
+              Câu hỏi ({currentContent.questions.length})
+            </div>
+            <Button onClick={addQuestion} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Thêm câu hỏi
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {currentContent.questions.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              <Brain className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>Chưa có câu hỏi nào. Nhấn &quot;Thêm câu hỏi&quot; để bắt đầu.</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {currentContent.questions.map((question, qIndex) => (
+                <QuestionItem
+                  key={question.id}
+                  question={question}
+                  index={qIndex}
+                  onUpdateQuestion={updateQuestion}
+                  onUpdateOption={updateOption}
+                  onToggleCorrect={toggleCorrect}
+                  onDuplicate={duplicateQuestion}
+                  onRemove={removeQuestion}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Time Settings */}
       <Card>
@@ -377,112 +411,36 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
         </CardContent>
       </Card>
 
-      {/* Schedule Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Lịch trình thi
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <DateTimePicker
-                label="Thời gian mở bài"
-                value={currentContent.openAt}
-                onChange={(date) => updateTiming('openAt', date)}
-                placeholder="Chọn thời gian mở bài"
+      
+
+      {/* Security Settings (Collapsible) */}
+      <AccordionItem title="Cài đặt bảo mật" defaultOpen={false} className="bg-white border rounded-lg">
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <FormSwitchRow
+                label="Xáo thứ tự câu hỏi"
+                description="Mỗi học sinh có thứ tự khác nhau"
+                checked={currentContent.antiCheatConfig?.shuffleQuestions || false}
+                onChange={(checked) => updateAntiCheat('shuffleQuestions', checked)}
               />
-            </div>
-
-            <div>
-              <DateTimePicker
-                label="Thời gian đóng bài"
-                value={currentContent.lockAt}
-                onChange={(date) => updateTiming('lockAt', date)}
-                placeholder="Chọn thời gian đóng bài"
-                required
+              <FormSwitchRow
+                label="Xáo thứ tự đáp án"
+                description="A, B, C, D sẽ khác nhau"
+                checked={currentContent.antiCheatConfig?.shuffleOptions || false}
+                onChange={(checked) => updateAntiCheat('shuffleOptions', checked)}
               />
-            </div>
-          </div>
-
-          <div className="max-w-xs">
-            <Label htmlFor="maxAttempts" className="text-base font-medium">
-              Số lần làm bài tối đa
-            </Label>
-            <Input
-              id="maxAttempts"
-              type="number"
-              min="1"
-              max="10"
-              value={currentContent.maxAttempts}
-              onChange={(e) => updateMaxAttempts(parseInt(e.target.value) || 1)}
-              className="mt-2"
-            />
-          </div>
-
-          {/* Validation Warning */}
-          {currentContent.openAt && currentContent.lockAt && 
-           currentContent.openAt >= currentContent.lockAt && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">
-                Thời gian mở bài phải trước thời gian đóng bài
-              </span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Security Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Cài đặt bảo mật
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-medium">Xáo thứ tự câu hỏi</Label>
-                  <p className="text-sm text-gray-600">Mỗi học sinh có thứ tự khác nhau</p>
-                </div>
-                <Switch
-                  checked={currentContent.antiCheatConfig?.shuffleQuestions || false}
-                  onCheckedChange={(checked) => updateAntiCheat('shuffleQuestions', checked)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-medium">Xáo thứ tự đáp án</Label>
-                  <p className="text-sm text-gray-600">A, B, C, D sẽ khác nhau</p>
-                </div>
-                <Switch
-                  checked={currentContent.antiCheatConfig?.shuffleOptions || false}
-                  onCheckedChange={(checked) => updateAntiCheat('shuffleOptions', checked)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-medium">Hiển thị từng câu</Label>
-                  <p className="text-sm text-gray-600">Không cho quay lại câu trước</p>
-                </div>
-                <Switch
-                  checked={currentContent.antiCheatConfig?.singleQuestionMode || false}
-                  onCheckedChange={(checked) => updateAntiCheat('singleQuestionMode', checked)}
-                />
-              </div>
+              <FormSwitchRow
+                label="Hiển thị từng câu"
+                description="Không cho quay lại câu trước"
+                checked={currentContent.antiCheatConfig?.singleQuestionMode || false}
+                onChange={(checked) => updateAntiCheat('singleQuestionMode', checked)}
+              />
 
               {/* Chính sách hiển thị đáp án đúng */}
               <div>
-                <Label className="text-base font-medium">Hiển thị đáp án đúng cho học sinh</Label>
-                <p className="text-sm text-gray-600">Chọn thời điểm cho phép hiển thị đáp án đúng</p>
+                <Label className="text-sm font-medium">Hiển thị đáp án đúng cho học sinh</Label>
+                <p className="text-xs text-gray-600">Chọn thời điểm cho phép hiển thị đáp án đúng</p>
                 <div className="mt-2">
                   <select
                     className="w-full border rounded-md px-3 py-2 text-sm"
@@ -498,54 +456,36 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
 
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-medium">Bắt buộc fullscreen</Label>
-                  <p className="text-sm text-gray-600">Phải làm bài toàn màn hình</p>
-                </div>
-                <Switch
-                  checked={currentContent.antiCheatConfig?.requireFullscreen || false}
-                  onCheckedChange={(checked) => updateAntiCheat('requireFullscreen', checked)}
-                />
-              </div>
+            <div className="space-y-3">
+              <FormSwitchRow
+                label="Bắt buộc fullscreen"
+                description="Phải làm bài toàn màn hình"
+                checked={currentContent.antiCheatConfig?.requireFullscreen || false}
+                onChange={(checked) => updateAntiCheat('requireFullscreen', checked)}
+              />
+              <FormSwitchRow
+                label="Phát hiện chuyển tab"
+                description="Cảnh báo khi rời khỏi trang"
+                checked={currentContent.antiCheatConfig?.detectTabSwitch || false}
+                onChange={(checked) => updateAntiCheat('detectTabSwitch', checked)}
+              />
+              <FormSwitchRow
+                label="Vô hiệu hóa copy/paste"
+                description="Không cho sao chép dán"
+                checked={currentContent.antiCheatConfig?.disableCopyPaste || false}
+                onChange={(checked) => updateAntiCheat('disableCopyPaste', checked)}
+              />
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-medium">Phát hiện chuyển tab</Label>
-                  <p className="text-sm text-gray-600">Cảnh báo khi rời khỏi trang</p>
-                </div>
-                <Switch
-                  checked={currentContent.antiCheatConfig?.detectTabSwitch || false}
-                  onCheckedChange={(checked) => updateAntiCheat('detectTabSwitch', checked)}
+              <div className="border-t pt-3 space-y-2.5">
+                <FormSwitchRow
+                  label="Fuzzy match cho FILL_BLANK"
+                  description="Chấp nhận câu trả lời gần đúng theo ngưỡng"
+                  checked={currentContent.antiCheatConfig?.enableFuzzyFillBlank || false}
+                  onChange={(checked) => updateAntiCheat('enableFuzzyFillBlank', checked)}
                 />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base font-medium">Vô hiệu hóa copy/paste</Label>
-                  <p className="text-sm text-gray-600">Không cho sao chép dán</p>
-                </div>
-                <Switch
-                  checked={currentContent.antiCheatConfig?.disableCopyPaste || false}
-                  onCheckedChange={(checked) => updateAntiCheat('disableCopyPaste', checked)}
-                />
-              </div>
-
-              <div className="border-t pt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Fuzzy match cho FILL_BLANK</Label>
-                    <p className="text-sm text-gray-600">Chấp nhận câu trả lời gần đúng theo ngưỡng</p>
-                  </div>
-                  <Switch
-                    checked={currentContent.antiCheatConfig?.enableFuzzyFillBlank || false}
-                    onCheckedChange={(checked) => updateAntiCheat('enableFuzzyFillBlank', checked)}
-                  />
-                </div>
                 {(currentContent.antiCheatConfig?.enableFuzzyFillBlank) && (
                   <div>
-                    <Label htmlFor="fuzzy-threshold" className="text-sm">Ngưỡng sai lệch (0 → 0.5)</Label>
+                    <Label htmlFor="fuzzy-threshold" className="text-xs">Ngưỡng sai lệch (0 → 0.5)</Label>
                     <Input
                       id="fuzzy-threshold"
                       type="number"
@@ -554,138 +494,50 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                       step={0.05}
                       value={typeof currentContent.antiCheatConfig?.fuzzyThreshold === 'number' ? currentContent.antiCheatConfig?.fuzzyThreshold : 0.2}
                       onChange={(e) => updateAntiCheat('fuzzyThreshold', Math.max(0, Math.min(0.5, parseFloat(e.target.value) || 0)) as any)}
-                      className="mt-2 max-w-[160px]"
+                      className="mt-2 max-w-[160px] h-9 text-sm"
                     />
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </AccordionItem>
 
-      {/* Questions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Brain className="w-5 h-5" />
-              Câu hỏi ({currentContent.questions.length})
-            </div>
-            <Button onClick={addQuestion} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Thêm câu hỏi
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {currentContent.questions.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Brain className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>Chưa có câu hỏi nào. Nhấn &quot;Thêm câu hỏi&quot; để bắt đầu.</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {currentContent.questions.map((question, qIndex) => (
-                <div key={question.id} className="border-2 rounded-lg p-6 bg-white shadow-sm hover:shadow-md transition-all duration-200">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      {/* Drag Handle */}
-                      <div className="cursor-move text-gray-400 hover:text-gray-600">
-                        <GripVertical className="w-5 h-5" />
-                      </div>
-                      <h4 className="font-semibold text-lg text-gray-800">
-                        Câu {qIndex + 1}
-                      </h4>
-                      <Badge variant="outline" className="text-xs">
-                        {question.type}
-                      </Badge>
-                    </div>
-                    
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        onClick={() => duplicateQuestion(qIndex)}
-                        className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                        title="Duplicate (Ctrl+D)"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => removeQuestion(qIndex)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Nội dung câu hỏi</Label>
-                      <Textarea
-                        value={question.content}
-                        onChange={(e) => updateQuestion(qIndex, 'content', e.target.value)}
-                        placeholder="Nhập câu hỏi..."
-                        className="mt-2"
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label>
-                        Đáp án {
-                          question.type === 'FILL_BLANK'
-                            ? '(danh sách đáp án chấp nhận)'
-                            : (question.type === 'MULTIPLE' ? '(có thể nhiều đáp án đúng)' : '(chỉ 1 đáp án đúng)')
-                        }
-                      </Label>
-                      {question.options.map((option, oIndex) => (
-                        <div key={oIndex} className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-medium text-blue-700">
-                            {option.label}
-                          </div>
-                          <Input
-                            value={option.content}
-                            onChange={(e) => updateOption(qIndex, oIndex, 'content', e.target.value)}
-                            placeholder={`Đáp án ${option.label}...`}
-                            className="flex-1"
-                          />
-                          {question.type === 'SINGLE' || question.type === 'TRUE_FALSE' ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name={`correct-${question.id}`}
-                                checked={option.isCorrect}
-                                onChange={() => toggleCorrect(qIndex, oIndex, true)}
-                                className="h-4 w-4 text-violet-600 focus:ring-violet-500"
-                              />
-                              <Label className="text-sm">Đúng</Label>
-                            </div>
-                          ) : question.type === 'MULTIPLE' ? (
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={option.isCorrect}
-                                onCheckedChange={(checked) => toggleCorrect(qIndex, oIndex, checked)}
-                              />
-                              <Label className="text-sm">Đúng</Label>
-                            </div>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Schedule Settings (Collapsible) */}
+      <AccordionItem title="Lịch trình thi" defaultOpen={false} className="bg-white border rounded-lg">
+        <div className="p-4 space-y-4">
+          <ScheduleSection
+            openAt={currentContent.openAt}
+            lockAt={currentContent.lockAt}
+            timeLimitMinutes={currentContent.timeLimitMinutes}
+            onChange={(next) => {
+              onContentChange({
+                ...currentContent,
+                openAt: next.openAt,
+                lockAt: next.lockAt,
+              });
+            }}
+          />
+          <div className="max-w-xs">
+            <Label htmlFor="maxAttempts" className="text-sm font-medium">
+              Số lần làm bài tối đa
+            </Label>
+            <Input
+              id="maxAttempts"
+              type="number"
+              min="1"
+              max="10"
+              value={currentContent.maxAttempts}
+              onChange={(e) => updateMaxAttempts(parseInt(e.target.value) || 1)}
+              className="mt-2 h-9 text-sm text-center"
+            />
+          </div>
+        </div>
+      </AccordionItem>
 
       {/* Summary */}
-      <div className="bg-blue-50 p-6 rounded-lg">
+      <div className="bg-blue-50 p-4 rounded-lg">
         <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
           <ClipboardList className="h-4 w-4" />
           <span>Tóm tắt bài thi</span>

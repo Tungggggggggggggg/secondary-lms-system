@@ -9,7 +9,7 @@ import { useClassroom } from "@/hooks/use-classroom";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import PageHeader from "@/components/shared/PageHeader";
+import { PageHeader } from "@/components/shared";
 import { Hash } from "lucide-react";
 
 export default function JoinClassPage() {

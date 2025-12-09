@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AnimatedSection from "@/components/admin/AnimatedSection";
-import ConfirmDialog from "@/components/admin/modals/ConfirmDialog";
+import { ConfirmDialog } from "@/components/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

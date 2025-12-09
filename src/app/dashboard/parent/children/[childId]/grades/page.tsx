@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -22,7 +22,7 @@ import type { ParentStudentRelationship } from "@/types/parent";
 // types imported from shared module; SWR fetcher is provided globally
 
 /**
- * Trang điểm số của con (parent view)
+ * Trang Ä‘iá»ƒm sá»‘ cá»§a con (parent view)
  */
 export default function ParentChildGradesPage() {
   const params = useParams();
@@ -40,7 +40,7 @@ export default function ParentChildGradesPage() {
     { assignmentTitle: string; feedback: string } | null
   >(null);
 
-  // Lấy thông tin con để hiển thị tên
+  // Láº¥y thÃ´ng tin con Ä‘á»ƒ hiá»ƒn thá»‹ tÃªn
   const { data: childrenData, error: childrenError, isLoading: childrenLoading } = useSWR<{
     success?: boolean;
     items?: ParentStudentRelationship[];
@@ -58,7 +58,7 @@ export default function ParentChildGradesPage() {
     }
   }, [childId, fetchChildGrades]);
 
-  // Filter và sort grades
+  // Filter vÃ  sort grades
   const filteredAndSortedGrades = useMemo(() => {
     let filtered = [...grades];
 
@@ -79,21 +79,21 @@ export default function ParentChildGradesPage() {
         filtered.sort((a, b) => {
           const gradeA = a.grade ?? 0;
           const gradeB = b.grade ?? 0;
-          return gradeB - gradeA; // Điểm cao nhất trước
+          return gradeB - gradeA; // Äiá»ƒm cao nháº¥t trÆ°á»›c
         });
         break;
       case "grade_asc":
         filtered.sort((a, b) => {
           const gradeA = a.grade ?? 0;
           const gradeB = b.grade ?? 0;
-          return gradeA - gradeB; // Điểm thấp nhất trước
+          return gradeA - gradeB; // Äiá»ƒm tháº¥p nháº¥t trÆ°á»›c
         });
         break;
       case "due_date":
         filtered.sort((a, b) => {
           const timeA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
           const timeB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-          return timeA - timeB; // Gần hạn nộp trước
+          return timeA - timeB; // Gáº§n háº¡n ná»™p trÆ°á»›c
         });
         break;
       case "classroom":
@@ -121,7 +121,7 @@ export default function ParentChildGradesPage() {
   }, [grades, sortBy, searchQuery]);
 
   const formatDate = (value: string | null | undefined) => {
-    if (!value) return "—";
+    if (!value) return "â€”";
     return new Date(value).toLocaleDateString("vi-VN", {
       day: "2-digit",
       month: "2-digit",
@@ -143,18 +143,18 @@ export default function ParentChildGradesPage() {
     switch (status) {
       case "graded":
         return {
-          label: "Đã chấm",
+          label: "ÄÃ£ cháº¥m",
           className:
             "bg-emerald-50 text-emerald-700 border border-emerald-100",
         };
       case "submitted":
         return {
-          label: "Chờ chấm",
+          label: "Chá» cháº¥m",
           className: "bg-amber-50 text-amber-700 border border-amber-100",
         };
       default:
         return {
-          label: "Chưa nộp",
+          label: "ChÆ°a ná»™p",
           className: "bg-slate-50 text-slate-700 border border-slate-200",
         };
     }
@@ -179,12 +179,12 @@ export default function ParentChildGradesPage() {
   function downloadCsv() {
     const rows: string[] = [];
     rows.push([
-      "Lớp học",
-      "Bài tập",
-      "Loại",
-      "Điểm",
-      "Nhận xét",
-      "Ngày nộp",
+      "Lá»›p há»c",
+      "BÃ i táº­p",
+      "Loáº¡i",
+      "Äiá»ƒm",
+      "Nháº­n xÃ©t",
+      "NgÃ y ná»™p",
     ].map(toCsvValue).join(","));
 
     for (const g of filteredAndSortedGrades) {
@@ -214,7 +214,7 @@ export default function ParentChildGradesPage() {
     return (
       <div className="p-6">
         <div className="text-center py-12">
-          <p className="text-gray-500">Đang tải...</p>
+          <p className="text-gray-500">Äang táº£i...</p>
         </div>
       </div>
     );
@@ -224,10 +224,10 @@ export default function ParentChildGradesPage() {
     return (
       <div className="p-6">
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
-          <h3 className="font-semibold mb-2">Không tìm thấy thông tin học sinh</h3>
-          <p className="text-sm mb-4">Vui lòng quay lại danh sách con.</p>
+          <h3 className="font-semibold mb-2">KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin há»c sinh</h3>
+          <p className="text-sm mb-4">Vui lÃ²ng quay láº¡i danh sÃ¡ch con.</p>
           <Link href="/dashboard/parent/children">
-            <Button>Quay lại</Button>
+            <Button>Quay láº¡i</Button>
           </Link>
         </div>
       </div>
@@ -243,14 +243,14 @@ export default function ParentChildGradesPage() {
           <Link href={`/dashboard/parent/children/${childId}`}>
             <Button variant="ghost">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Quay lại
+              Quay láº¡i
             </Button>
           </Link>
         </div>
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
-          <h3 className="font-semibold mb-2">Lỗi tải danh sách điểm số</h3>
+          <h3 className="font-semibold mb-2">Lá»—i táº£i danh sÃ¡ch Ä‘iá»ƒm sá»‘</h3>
           <p className="text-sm mb-4">{error}</p>
-          <Button onClick={() => fetchChildGrades(childId)}>Thử lại</Button>
+          <Button onClick={() => fetchChildGrades(childId)}>Thá»­ láº¡i</Button>
         </div>
       </div>
     );
@@ -263,7 +263,7 @@ export default function ParentChildGradesPage() {
         <Link href={`/dashboard/parent/children/${childId}`}>
           <Button variant="ghost" className="mb-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại
+            Quay láº¡i
           </Button>
         </Link>
       </div>
@@ -272,15 +272,15 @@ export default function ParentChildGradesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight mb-1">
-            Điểm số của {student.fullname}
+            Äiá»ƒm sá»‘ cá»§a {student.fullname}
           </h1>
           <p className="text-sm sm:text-base text-slate-600">
-            Tổng hợp kết quả học tập của con bạn ở tất cả lớp học.
+            Tá»•ng há»£p káº¿t quáº£ há»c táº­p cá»§a con báº¡n á»Ÿ táº¥t cáº£ lá»›p há»c.
           </p>
         </div>
         <div className="flex items-center gap-3 justify-end">
           <Button onClick={downloadCsv} className="rounded-full px-5">
-            Xuất CSV
+            Xuáº¥t CSV
           </Button>
         </div>
       </div>
@@ -293,7 +293,7 @@ export default function ParentChildGradesPage() {
           </div>
           <div className="space-y-1">
             <div className="text-xs font-semibold tracking-wide text-emerald-700/80 uppercase">
-              Điểm trung bình
+              Äiá»ƒm trung bÃ¬nh
             </div>
             <div className="text-2xl font-semibold text-slate-900">
               {statistics.averageGrade > 0
@@ -309,7 +309,7 @@ export default function ParentChildGradesPage() {
           </div>
           <div className="space-y-1">
             <div className="text-xs font-semibold tracking-wide text-sky-700/80 uppercase">
-              Đã chấm
+              ÄÃ£ cháº¥m
             </div>
             <div className="text-2xl font-semibold text-slate-900">
               {statistics.totalGraded ?? 0}
@@ -323,7 +323,7 @@ export default function ParentChildGradesPage() {
           </div>
           <div className="space-y-1">
             <div className="text-xs font-semibold tracking-wide text-amber-700/80 uppercase">
-              Chưa chấm
+              ChÆ°a cháº¥m
             </div>
             <div className="text-2xl font-semibold text-slate-900">
               {statistics.totalPending ?? 0}
@@ -332,11 +332,11 @@ export default function ParentChildGradesPage() {
         </div>
       </div>
 
-      {/* Filter và Search */}
+      {/* Filter vÃ  Search */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Sắp xếp theo
+            Sáº¯p xáº¿p theo
           </span>
           <div className="relative">
             <select
@@ -353,11 +353,11 @@ export default function ParentChildGradesPage() {
               }
               className="appearance-none px-4 pr-9 py-2 bg-white/90 rounded-full border border-amber-200 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
             >
-              <option value="newest">Mới nhất</option>
-              <option value="grade_desc">Điểm cao nhất</option>
-              <option value="grade_asc">Điểm thấp nhất</option>
-              <option value="due_date">Hạn nộp</option>
-              <option value="classroom">Theo lớp học</option>
+              <option value="newest">Má»›i nháº¥t</option>
+              <option value="grade_desc">Äiá»ƒm cao nháº¥t</option>
+              <option value="grade_asc">Äiá»ƒm tháº¥p nháº¥t</option>
+              <option value="due_date">Háº¡n ná»™p</option>
+              <option value="classroom">Theo lá»›p há»c</option>
             </select>
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500/70" />
           </div>
@@ -367,7 +367,7 @@ export default function ParentChildGradesPage() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Tìm kiếm bài tập hoặc lớp học..."
+          placeholder="TÃ¬m kiáº¿m bÃ i táº­p hoáº·c lá»›p há»c..."
           className="flex-1 px-4 py-2 bg-white/90 rounded-full border border-amber-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm"
         />
       </div>
@@ -375,18 +375,18 @@ export default function ParentChildGradesPage() {
       {/* Grades Table */}
       {isLoading ? (
         <div className="text-center py-12 text-gray-500 animate-pulse">
-          Đang tải danh sách điểm số...
+          Äang táº£i danh sÃ¡ch Ä‘iá»ƒm sá»‘...
         </div>
       ) : filteredAndSortedGrades.length === 0 ? (
         <div className="bg-white/90 rounded-3xl p-10 text-center border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-          <div className="text-5xl mb-4">📊</div>
+          <div className="text-5xl mb-4">ðŸ“Š</div>
           <h3 className="text-xl font-semibold text-slate-900 mb-2">
-            Chưa có điểm số nào
+            ChÆ°a cÃ³ Ä‘iá»ƒm sá»‘ nÃ o
           </h3>
           <p className="text-slate-600">
             {grades.length === 0
-              ? "Con bạn chưa có bài nộp nào được chấm điểm"
-              : "Không tìm thấy điểm số nào phù hợp với bộ lọc"}
+              ? "Con báº¡n chÆ°a cÃ³ bÃ i ná»™p nÃ o Ä‘Æ°á»£c cháº¥m Ä‘iá»ƒm"
+              : "KhÃ´ng tÃ¬m tháº¥y Ä‘iá»ƒm sá»‘ nÃ o phÃ¹ há»£p vá»›i bá»™ lá»c"}
           </p>
         </div>
       ) : (
@@ -395,13 +395,13 @@ export default function ParentChildGradesPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-amber-50/60">
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Lớp học</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Bài tập</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Loại</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Điểm</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Nhận xét</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Ngày nộp</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Trạng thái</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Lá»›p há»c</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">BÃ i táº­p</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Loáº¡i</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Äiá»ƒm</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Nháº­n xÃ©t</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">NgÃ y ná»™p</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Tráº¡ng thÃ¡i</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -436,8 +436,8 @@ export default function ParentChildGradesPage() {
                           }`}
                         >
                           {grade.assignmentType === "ESSAY"
-                            ? "📝 Tự luận"
-                            : "❓ Trắc nghiệm"}
+                            ? "ðŸ“ Tá»± luáº­n"
+                            : "â“ Tráº¯c nghiá»‡m"}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -455,7 +455,7 @@ export default function ParentChildGradesPage() {
                               null,
                             )}`}
                           >
-                            Chưa chấm
+                            ChÆ°a cháº¥m
                           </span>
                         )}
                       </TableCell>
@@ -470,11 +470,11 @@ export default function ParentChildGradesPage() {
                             <span>Xem</span>
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Không có</span>
+                          <span className="text-xs text-slate-400 italic">KhÃ´ng cÃ³</span>
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
-                        {grade.submittedAt ? formatDate(grade.submittedAt) : "Chưa nộp"}
+                        {grade.submittedAt ? formatDate(grade.submittedAt) : "ChÆ°a ná»™p"}
                       </TableCell>
                       <TableCell>
                         <span
@@ -502,16 +502,16 @@ export default function ParentChildGradesPage() {
             >
               <DialogContent onClose={() => setFeedbackOpen(false)}>
                 <DialogHeader>
-                  <DialogTitle>Nhận xét của giáo viên</DialogTitle>
+                  <DialogTitle>Nháº­n xÃ©t cá»§a giÃ¡o viÃªn</DialogTitle>
                   <DialogDescription>
-                    Bài tập: <span className="font-medium">{selectedFeedback.assignmentTitle}</span>
+                    BÃ i táº­p: <span className="font-medium">{selectedFeedback.assignmentTitle}</span>
                   </DialogDescription>
                 </DialogHeader>
                 <div className="px-6 py-4 text-sm text-slate-800 whitespace-pre-line max-h-[50vh] overflow-y-auto">
                   {selectedFeedback.feedback}
                 </div>
                 <DialogFooter>
-                  <Button onClick={() => setFeedbackOpen(false)}>Đóng</Button>
+                  <Button onClick={() => setFeedbackOpen(false)}>ÄÃ³ng</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -521,4 +521,6 @@ export default function ParentChildGradesPage() {
     </div>
   );
 }
+
+
 

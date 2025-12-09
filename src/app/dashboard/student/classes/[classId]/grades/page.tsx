@@ -14,8 +14,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Award, CheckCircle2, Clock, ChevronDown, MessageCircle, AlertCircle, BarChart3 } from "lucide-react";
-import SectionHeader from "@/components/shared/SectionHeader";
-import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import { SectionHeader } from "@/components/shared";
+import { StatsGrid, type StatItem } from "@/components/shared";
 import GradeStatusBadge from "@/components/student/grades/GradeStatusBadge";
 import AssignmentTypeBadge from "@/components/student/AssignmentTypeBadge";
 

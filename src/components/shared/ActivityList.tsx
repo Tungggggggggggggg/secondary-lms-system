@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import SectionCard from "@/components/shared/SectionCard";
+import { SectionCard } from "@/components/shared";
 import type { ReactNode } from "react";
 
 export interface ActivityItem {

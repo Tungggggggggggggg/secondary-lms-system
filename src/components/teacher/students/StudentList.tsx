@@ -44,7 +44,7 @@ export default function StudentList({ students }: Props) {
         >
           <div className="flex items-center gap-6">
             {/* Avatar */}
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center text-2xl text-white font-bold">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center text-2xl text-white font-bold">
               {student.avatarInitial}
             </div>
 
@@ -84,7 +84,7 @@ export default function StudentList({ students }: Props) {
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <div className="text-sm text-gray-600 mb-1">Hoàn thành bài tập</div>
-                  <div className="text-lg font-bold text-purple-600">
+                  <div className="text-lg font-bold text-blue-700">
                     {student.submittedCount}/{student.totalAssignments}
                   </div>
                 </div>

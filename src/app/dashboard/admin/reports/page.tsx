@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useAdminReports } from "@/hooks/admin/use-admin-reports";
 import { Users, MessageSquare, AlertCircle, EyeOff, Lock, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/admin/format-date";
-import { exportToCSV, generateFilename } from "@/lib/admin/export-csv";
+import { exportToCSV, generateFilename } from "@/lib/csv";
 import { Download } from "lucide-react";
 
 /**

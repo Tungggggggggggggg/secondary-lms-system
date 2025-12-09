@@ -10,7 +10,7 @@ import { ADMIN_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS, ROLE_LABELS } from "@/lib/admin
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { useSidebarState } from "@/hooks/useSidebarState";
-import SidebarToggleButton from "@/components/shared/SidebarToggleButton";
+import { SidebarToggleButton } from "@/components/shared";
 import Tooltip from "@/components/ui/tooltip";
 import { AccordionItem } from "@/components/ui/accordion";
 

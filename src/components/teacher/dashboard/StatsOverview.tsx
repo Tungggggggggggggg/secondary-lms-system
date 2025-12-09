@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
-import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import { StatsGrid, type StatItem } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Layers, BookOpen, ClipboardList } from "lucide-react";
 

@@ -113,7 +113,7 @@ export default function GradeSubmissionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-2xl" onClose={() => onOpenChange(false)}>
-        <div className="bg-gradient-to-r from-indigo-50 to-white px-6 pt-6 pb-4 border-b">
+        <div className="bg-gradient-to-r from-blue-50 to-white px-6 pt-6 pb-4 border-b">
           <DialogHeader>
             <DialogTitle className="text-xl">Chấm bài tập</DialogTitle>
             <DialogDescription className="text-gray-600">
@@ -126,7 +126,7 @@ export default function GradeSubmissionDialog({
           {/* Thông tin học sinh */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold">
+              <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
                 {submission.student.fullname?.charAt(0) || "S"}
               </div>
               <div>

@@ -121,14 +121,28 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     }
     
     const totalTime = Date.now() - startTime
-    // Chỉ log nếu response chậm (> 2s)
     if (totalTime > 2000) {
       console.log(`[ASSIGNMENT GET ${requestId}] Slow response - Total time: ${totalTime}ms`)
     }
+
+    const normalized = (() => {
+      const a: any = assignment as any
+      if (a?.type === 'QUIZ') {
+        const timeLimit = a.timeLimitMinutes ?? 30
+        const lockAt = a.lockAt ?? a.dueDate ?? null
+        let openAt = a.openAt ?? null
+        if (!openAt && lockAt) {
+          const lock = new Date(lockAt)
+          openAt = new Date(lock.getTime() - (timeLimit + 5) * 60_000)
+        }
+        return { ...a, lockAt, openAt }
+      }
+      return a
+    })()
     
     return NextResponse.json({ 
       success: true, 
-      data: assignment,
+      data: normalized,
       meta: {
         requestId,
         responseTime: `${totalTime}ms`

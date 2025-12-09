@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
 import gsap from "gsap";
-import SectionCard from "@/components/shared/SectionCard";
+import { SectionCard } from "@/components/shared";
 import { BarChart3, BookOpen } from "lucide-react";
 
 export default function PerformanceChart() {

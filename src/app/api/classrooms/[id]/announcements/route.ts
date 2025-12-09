@@ -31,9 +31,11 @@ export async function GET(
     }
 
     // Quyền xem: giáo viên sở hữu lớp hoặc học sinh thuộc lớp
-    const canView =
-      (user.role === "TEACHER" && (await isTeacherOfClassroom(user.id, classroomId))) ||
-      (user.role === "STUDENT" && (await isStudentInClassroom(user.id, classroomId)));
+    const isTeacherOwner =
+      user.role === "TEACHER" && (await isTeacherOfClassroom(user.id, classroomId));
+    const isStudentMember =
+      user.role === "STUDENT" && (await isStudentInClassroom(user.id, classroomId));
+    const canView = isTeacherOwner || isStudentMember;
 
     if (!canView) {
       return NextResponse.json(
@@ -46,10 +48,39 @@ export async function GET(
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get("pageSize") || "10", 10)));
 
+    // Optional filters
+    const q = (searchParams.get("q") || "").trim();
+    const sort = (searchParams.get("sort") || "new") as "new" | "comments" | "attachments";
+    const hasAttachment = searchParams.get("hasAttachment");
+
+    const where: any = { classroomId };
+    // Giáo viên sở hữu lớp nhìn thấy mọi trạng thái; học sinh chỉ thấy APPROVED
+    if (!isTeacherOwner) {
+      where.status = "APPROVED" as any;
+    }
+    if (q) {
+      where.OR = [
+        { content: { contains: q, mode: "insensitive" } },
+        { author: { is: { fullname: { contains: q, mode: "insensitive" } } } },
+      ];
+    }
+    if (hasAttachment != null) {
+      const flag = hasAttachment === "true";
+      if (flag) where.attachments = { some: {} };
+    }
+
+    const secondaryOrder: any =
+      sort === "comments"
+        ? { comments: { _count: "desc" } }
+        : sort === "attachments"
+        ? { attachments: { _count: "desc" } }
+        : { createdAt: "desc" };
+    const orderBy: any[] = [{ pinnedAt: "desc" }, secondaryOrder];
+
     const [items, total] = await Promise.all([
       prisma.announcement.findMany({
-        where: { classroomId, status: "APPROVED" as any },
-        orderBy: { createdAt: "desc" },
+        where,
+        orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
         select: {
@@ -57,6 +88,7 @@ export async function GET(
           content: true,
           createdAt: true,
           updatedAt: true,
+          pinnedAt: true,
           author: { select: { id: true, fullname: true, email: true } },
           attachments: {
             select: {
@@ -69,10 +101,10 @@ export async function GET(
             },
             orderBy: { createdAt: "asc" },
           },
-          _count: { select: { comments: true } },
+          _count: { select: { comments: true, attachments: true } },
         },
       }),
-      prisma.announcement.count({ where: { classroomId, status: "APPROVED" as any } }),
+      prisma.announcement.count({ where }),
     ]);
 
     const res = NextResponse.json(

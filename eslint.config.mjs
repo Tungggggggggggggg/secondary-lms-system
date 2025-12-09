@@ -20,6 +20,13 @@ export default defineConfig([
       '@next/next/no-img-element': 'off',
       'prefer-spread': 'off',
       'prefer-const': 'off',
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['**/New[A-Z]*', '**/*New[A-Z]*'], message: 'Tránh dùng prefix mơ hồ "New" cho component. Đặt tên rõ ràng theo chức năng.' },
+          { group: ['**/V[0-9]*', '**/*V[0-9]*'], message: 'Tránh đặt tên version (V2/V3...) trong path component. Dùng tên mô tả thay vì version.' },
+          { group: ['**/Temp[A-Z]*', '**/*Temp[A-Z]*'], message: 'Tránh dùng "Temp" cho component. Nếu cần thử nghiệm, dùng feature flag/nhánh riêng.' },
+        ],
+      }],
     },
   },
   // Ignores (có thể tuỳ chỉnh thêm nếu cần)

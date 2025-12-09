@@ -20,7 +20,16 @@ export default function StatsGrid({ items, onItemClick }: StatsGridProps) {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
+    <div
+      className={
+        // Ép 5 thẻ trên một hàng khi có ≥5 items
+        `grid gap-5 xl:gap-6 mb-8 ${
+          items.length >= 5
+            ? "grid-cols-1 sm:grid-cols-5"
+            : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+        }`
+      }
+    >
       {items.map((item, idx) => (
         <div
           key={item.label}

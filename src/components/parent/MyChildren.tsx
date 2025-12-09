@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Users, ArrowRight, User, ChevronRight } from "lucide-react";
 import type { ParentStudentRelationship } from "@/types/parent";
-import SectionCard from "@/components/shared/SectionCard";
+import { SectionCard } from "@/components/shared";
 
 // types imported from shared module; SWR fetcher is provided globally
 

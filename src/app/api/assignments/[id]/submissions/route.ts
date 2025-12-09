@@ -39,13 +39,27 @@ export async function GET(
       );
     }
 
-    // Kiểm tra teacher có sở hữu assignment không
-    console.log(`[${requestId}] Checking if teacher owns assignment...`);
+    // Kiểm tra quyền: giáo viên là tác giả HOẶC là giáo viên của lớp đã gán assignment
+    console.log(`[${requestId}] Checking assignment ownership/association...`);
     const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
-    console.log(`[${requestId}] Teacher owns assignment: ${isOwner}`);
-    
+    let isClassTeacher = false;
     if (!isOwner) {
-      console.log(`[${requestId}] Forbidden - Teacher ${user.id} does not own assignment ${assignmentId}`);
+      try {
+        const ac = await prisma.assignmentClassroom.findFirst({
+          where: { assignmentId, classroom: { teacherId: user.id } },
+          select: { classroomId: true },
+        });
+        isClassTeacher = !!ac;
+      } catch (e) {
+        console.error(`[${requestId}] Error checking classroom ownership`, e);
+      }
+    }
+    console.log(`[${requestId}] isOwner=${isOwner}, isClassTeacher=${isClassTeacher}`);
+
+    if (!isOwner && !isClassTeacher) {
+      console.log(
+        `[${requestId}] Forbidden - Teacher ${user.id} is neither author nor class owner for assignment ${assignmentId}`
+      );
       return NextResponse.json(
         { success: false, message: "Forbidden - Not your assignment" },
         { status: 403 }

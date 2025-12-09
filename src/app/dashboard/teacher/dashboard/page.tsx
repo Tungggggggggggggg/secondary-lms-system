@@ -4,7 +4,7 @@ import StatsOverview from "@/components/teacher/dashboard/StatsOverview";
 import RecentClasses from "@/components/teacher/dashboard/RecentClasses";
 import PerformanceChart from "@/components/teacher/dashboard/PerformanceChart";
 import RecentActivity from "@/components/teacher/dashboard/RecentActivity";
-import PageHeader from "@/components/shared/PageHeader";
+import { PageHeader } from "@/components/shared";
 import { useSession } from "next-auth/react";
 
 export default function DashboardPage() {

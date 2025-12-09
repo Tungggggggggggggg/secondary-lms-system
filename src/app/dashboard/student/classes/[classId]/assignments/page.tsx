@@ -7,8 +7,8 @@ import { useStudentAssignments } from "@/hooks/use-student-assignments";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, FileText } from "lucide-react";
 import StudentAssignmentCard from "@/components/student/StudentAssignmentCard";
-import EmptyState from "@/components/shared/EmptyState";
-import SectionHeader from "@/components/shared/SectionHeader";
+import { EmptyState } from "@/components/shared";
+import { SectionHeader } from "@/components/shared";
 import AssignmentFilters from "@/components/student/AssignmentFilters";
 
 /**

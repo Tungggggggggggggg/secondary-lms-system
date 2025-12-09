@@ -38,7 +38,7 @@ export default function Breadcrumb({ items, className = "", color = "blue" }: Br
   const linkStyles: Record<string, string> = {
     violet: "hover:text-violet-600 hover:bg-violet-50 focus-visible:ring-violet-500",
     amber: "hover:text-amber-700 hover:bg-amber-50 focus-visible:ring-amber-500",
-    blue: "hover:text-indigo-600 hover:bg-indigo-50 focus-visible:ring-indigo-500",
+    blue: "hover:text-blue-600 hover:bg-blue-50 focus-visible:ring-blue-500",
     green: "hover:text-green-700 hover:bg-green-50 focus-visible:ring-green-500",
   };
 

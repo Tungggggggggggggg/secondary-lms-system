@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
-import ActivityList, { type ActivityItem } from "@/components/shared/ActivityList";
+import { ActivityList, type ActivityItem } from "@/components/shared";
 import { FileCheck, UserPlus, MessageSquare, Star, Bell } from "lucide-react";
 
 export default function RecentActivity() {

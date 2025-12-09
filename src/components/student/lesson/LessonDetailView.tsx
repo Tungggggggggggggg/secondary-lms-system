@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
-import PageHeader from "@/components/shared/PageHeader";
-import EmptyState from "@/components/shared/EmptyState";
+import { PageHeader } from "@/components/shared";
+import { EmptyState } from "@/components/shared";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getChatFileUrl } from "@/lib/supabase-upload";
 import { FileText, Link as LinkIcon, File, CheckCircle2, ArrowLeft, ArrowRight, User } from "lucide-react";

@@ -52,7 +52,6 @@ export default function CommandPaletteProvider({ children }: { children: React.R
         { label: "Bài tập", href: "/dashboard/teacher/assignments" },
         { label: "Giám sát thi", href: "/dashboard/teacher/exams/monitor" },
         { label: "Học sinh", href: "/dashboard/teacher/students" },
-        { label: "Điểm số", href: "/dashboard/teacher/grades" },
         { label: "Hồ sơ", href: "/dashboard/teacher/profile" },
       ],
       "Giáo viên"

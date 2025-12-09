@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MessageSquare, BarChart3, Users, Settings } from "lucide-react";
-import SectionCard from "@/components/shared/SectionCard";
+import { SectionCard } from "@/components/shared";
 
 interface QuickAction {
   icon: React.ReactNode;

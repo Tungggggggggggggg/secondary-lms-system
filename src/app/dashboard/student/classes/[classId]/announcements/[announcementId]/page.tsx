@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import AnnouncementDetail from "@/components/newsfeed/AnnouncementDetail";
+import AnnouncementDetail from "@/components/classroom/newsfeed/AnnouncementDetail";
 
 /**
  * Trang chi tiết thông báo cho học sinh

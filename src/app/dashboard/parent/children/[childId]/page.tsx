@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
@@ -17,7 +17,7 @@ export default function ParentChildDetailPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  // Lấy danh sách con để tìm con được chọn
+  // Láº¥y danh sÃ¡ch con Ä‘á»ƒ tÃ¬m con Ä‘Æ°á»£c chá»n
   const { data: childrenData, error: childrenError, isLoading: childrenLoading } = useSWR<{
     success?: boolean;
     items?: ParentStudentRelationship[];
@@ -32,7 +32,7 @@ export default function ParentChildDetailPage() {
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
-          <p className="text-amber-700">Đang tải...</p>
+          <p className="text-amber-700">Äang táº£i...</p>
         </div>
       </div>
     );
@@ -43,9 +43,9 @@ export default function ParentChildDetailPage() {
       <div className="space-y-6">
         <Card className="border-red-200 bg-red-50">
           <CardContent className="py-12 text-center">
-            <p className="text-red-600">Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại sau.</p>
+            <p className="text-red-600">CÃ³ lá»—i xáº£y ra khi táº£i dá»¯ liá»‡u. Vui lÃ²ng thá»­ láº¡i sau.</p>
             <Link href="/dashboard/parent/children">
-              <Button color="amber" className="mt-4">Quay lại</Button>
+              <Button color="amber" className="mt-4">Quay láº¡i</Button>
             </Link>
           </CardContent>
         </Card>
@@ -58,9 +58,9 @@ export default function ParentChildDetailPage() {
       <div className="space-y-6">
         <Card className="border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/20">
           <CardContent className="py-12 text-center">
-            <p className="text-amber-700 mb-4">Không tìm thấy thông tin học sinh này.</p>
+            <p className="text-amber-700 mb-4">KhÃ´ng tÃ¬m tháº¥y thÃ´ng tin há»c sinh nÃ y.</p>
             <Link href="/dashboard/parent/children">
-              <Button color="amber">Quay lại danh sách</Button>
+              <Button color="amber">Quay láº¡i danh sÃ¡ch</Button>
             </Link>
           </CardContent>
         </Card>
@@ -78,11 +78,11 @@ export default function ParentChildDetailPage() {
           <Link href="/dashboard/parent/children">
             <Button variant="ghost" size="default" color="amber" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Quay lại
+              Quay láº¡i
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-amber-900">{student.fullname || "Học sinh"}</h1>
-          <p className="text-amber-700 mt-2">Thông tin chi tiết về học sinh</p>
+          <h1 className="text-3xl font-bold text-amber-900">{student.fullname || "Há»c sinh"}</h1>
+          <p className="text-amber-700 mt-2">ThÃ´ng tin chi tiáº¿t vá» há»c sinh</p>
         </div>
       </div>
 
@@ -92,13 +92,13 @@ export default function ParentChildDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-900">
               <User className="h-5 w-5 text-amber-600" />
-              Thông tin cơ bản
+              ThÃ´ng tin cÆ¡ báº£n
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-amber-700">Họ và tên</label>
-              <p className="text-lg font-semibold text-gray-900">{student.fullname || "Không có"}</p>
+              <label className="text-sm font-medium text-amber-700">Há» vÃ  tÃªn</label>
+              <p className="text-lg font-semibold text-gray-900">{student.fullname || "KhÃ´ng cÃ³"}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-amber-700 flex items-center gap-1">
@@ -110,14 +110,14 @@ export default function ParentChildDetailPage() {
             <div>
               <label className="text-sm font-medium text-amber-700 flex items-center gap-1">
                 <GraduationCap className="h-4 w-4" />
-                Vai trò
+                Vai trÃ²
               </label>
-              <p className="text-lg text-gray-900">Học sinh</p>
+              <p className="text-lg text-gray-900">Há»c sinh</p>
             </div>
             <div>
               <label className="text-sm font-medium text-amber-700 flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                Ngày liên kết
+                NgÃ y liÃªn káº¿t
               </label>
               <p className="text-lg text-gray-900">
                 {new Date(selectedChild.createdAt).toLocaleDateString("vi-VN", {
@@ -134,14 +134,14 @@ export default function ParentChildDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-900">
               <BookOpen className="h-5 w-5 text-amber-600" />
-              Học tập
+              Há»c táº­p
             </CardTitle>
-            <CardDescription className="text-amber-700">Thông tin về học tập (Sắp ra mắt)</CardDescription>
+            <CardDescription className="text-amber-700">ThÃ´ng tin vá» há»c táº­p (Sáº¯p ra máº¯t)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8 text-amber-700">
               <Award className="h-12 w-12 mx-auto mb-3 text-amber-400" />
-              <p className="text-sm">Tính năng đang được phát triển</p>
+              <p className="text-sm">TÃ­nh nÄƒng Ä‘ang Ä‘Æ°á»£c phÃ¡t triá»ƒn</p>
             </div>
           </CardContent>
         </Card>
@@ -151,28 +151,28 @@ export default function ParentChildDetailPage() {
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/20">
           <CardHeader>
-            <CardTitle className="text-amber-900">Bài tập</CardTitle>
-            <CardDescription className="text-amber-700">Danh sách bài tập (Sắp ra mắt)</CardDescription>
+            <CardTitle className="text-amber-900">BÃ i táº­p</CardTitle>
+            <CardDescription className="text-amber-700">Danh sÃ¡ch bÃ i táº­p (Sáº¯p ra máº¯t)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8 text-amber-700">
-              <p className="text-sm">Tính năng đang được phát triển</p>
+              <p className="text-sm">TÃ­nh nÄƒng Ä‘ang Ä‘Æ°á»£c phÃ¡t triá»ƒn</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/20">
           <CardHeader>
-            <CardTitle className="text-amber-900">Điểm số</CardTitle>
-            <CardDescription className="text-amber-700">Xem bảng điểm và kết quả học tập</CardDescription>
+            <CardTitle className="text-amber-900">Äiá»ƒm sá»‘</CardTitle>
+            <CardDescription className="text-amber-700">Xem báº£ng Ä‘iá»ƒm vÃ  káº¿t quáº£ há»c táº­p</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
               <Award className="h-12 w-12 mx-auto mb-3 text-amber-500" />
-              <p className="text-sm text-amber-700 mb-4">Xem tất cả điểm số và kết quả học tập của con</p>
+              <p className="text-sm text-amber-700 mb-4">Xem táº¥t cáº£ Ä‘iá»ƒm sá»‘ vÃ  káº¿t quáº£ há»c táº­p cá»§a con</p>
               <Link href={`/dashboard/parent/children/${childId}/grades`}>
                 <Button color="amber" className="w-full">
-                  Xem điểm số
+                  Xem Ä‘iá»ƒm sá»‘
                 </Button>
               </Link>
             </div>
@@ -182,4 +182,6 @@ export default function ParentChildDetailPage() {
     </div>
   );
 }
+
+
 

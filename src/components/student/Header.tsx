@@ -1,5 +1,5 @@
 // src/components/student/Header.tsx
-import PageHeader from "@/components/shared/PageHeader";
+import { PageHeader } from "@/components/shared";
 
 interface HeaderProps {
   title: string;

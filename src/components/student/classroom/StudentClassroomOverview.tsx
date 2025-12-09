@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import AnnouncementsFeed from "@/components/newsfeed/AnnouncementsFeed";
-import SectionHeader from "@/components/shared/SectionHeader";
-import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import AnnouncementsFeed from "@/components/classroom/newsfeed/AnnouncementsFeed";
+import { SectionHeader } from "@/components/shared";
+import { StatsGrid, type StatItem } from "@/components/shared";
 import StudentAssignmentListItem from "@/components/student/assignments/StudentAssignmentListItem";
-import SkeletonList from "@/components/shared/SkeletonList";
-import EmptyState from "@/components/shared/EmptyState";
+import { SkeletonList } from "@/components/shared";
+import { EmptyState } from "@/components/shared";
 import { useStudentAssignments } from "@/hooks/use-student-assignments";
 import { CalendarClock, ClipboardList, CheckCheck, AlertTriangle } from "lucide-react";
 

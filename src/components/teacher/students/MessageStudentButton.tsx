@@ -45,7 +45,7 @@ export default function MessageStudentButton({
       onClick={handleClick}
       disabled={sending}
       className={cn(
-        "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-purple-600 hover:bg-purple-50 transition-all disabled:opacity-60",
+        "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 transition-all disabled:opacity-60",
         className
       )}
       aria-label="Nhắn tin cho học sinh"
@@ -55,3 +55,4 @@ export default function MessageStudentButton({
     </button>
   );
 }
+

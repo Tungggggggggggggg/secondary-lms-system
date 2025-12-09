@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import NotificationBell from "@/components/shared/NotificationBell";
+import { NotificationBell } from "@/components/shared";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import OrgContextSwitcher from "@/components/admin/OrgContextSwitcher";
 

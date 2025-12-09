@@ -1,6 +1,6 @@
 "use client";
 
-import BaseProfileSettings from "@/components/shared/BaseProfileSettings";
+import { BaseProfileSettings } from "@/components/shared";
 
 // Profile Info Section
 // Password Section

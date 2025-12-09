@@ -3,7 +3,7 @@
 import useSWR from "swr";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import SectionCard from "@/components/shared/SectionCard";
+import { SectionCard } from "@/components/shared";
 import { BarChart3, BookOpen, Star, ThumbsUp, TrendingUp, AlertTriangle, ChevronRight } from "lucide-react";
 
 interface GradeEntry {

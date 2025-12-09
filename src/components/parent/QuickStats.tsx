@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import StatsGrid, { type StatItem } from "@/components/shared/StatsGrid";
+import { StatsGrid, type StatItem } from "@/components/shared";
 import { Users, CheckCircle, Star, BarChart3 } from "lucide-react";
 
 export default function QuickStats() {
