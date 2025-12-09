@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -10,31 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AssignmentCommentsView from "@/components/teacher/comments/AssignmentCommentsView";
 import type { AssignmentDetail } from "@/types/api";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { AssignmentTypeBadge, EmptyState, PageHeader } from "@/components/shared";
+import { AlertTriangle, Loader2, Trash2, PenLine, FileText, Paperclip, Image as ImageIcon, Video as VideoIcon, Clock } from "lucide-react";
 
 // Helper hiển thị Chip loại bài tập
 function AssignmentTypeChip({ type }: { type?: string }) {
     if (!type) return null;
-    const PROPS = {
-        ESSAY: {
-            className: "bg-indigo-50 text-indigo-700 border border-indigo-200",
-            icon: "📝",
-            label: "Tự luận",
-        },
-        QUIZ: {
-            className: "bg-pink-50 text-pink-700 border border-pink-200",
-            icon: "❓",
-            label: "Trắc nghiệm",
-        },
-    };
-    const props = PROPS[type as keyof typeof PROPS] ?? PROPS.ESSAY;
-    return (
-        <span
-            className={`inline-flex items-center gap-1 px-4 py-1 rounded-full text-sm font-semibold ${props.className}`}
-        >
-            <span>{props.icon}</span>
-            <span>{props.label}</span>
-        </span>
-    );
+    return <AssignmentTypeBadge type={type} variant="teacher" />;
+}
+
+function stripHtml(value?: string | null) {
+    if (!value) return "";
+    return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 export default function AssignmentDetailPage() {
@@ -174,7 +162,7 @@ export default function AssignmentDetailPage() {
                 <div className="max-w-5xl mx-auto">
                     <div className="bg-white rounded-2xl shadow-lg p-8">
                         <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                            <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
                             <div className="text-gray-700 font-semibold text-lg">Đang tải chi tiết bài tập...</div>
                             <div className="text-sm text-gray-500">Vui lòng chờ trong giây lát</div>
                         </div>
@@ -184,38 +172,42 @@ export default function AssignmentDetailPage() {
         );
     if (error)
         return (
-            <div className="px-6 py-4">
-                <div className="max-w-5xl mx-auto">
-                    <div className="bg-red-50 border border-red-200 rounded-2xl p-8">
-                        <div className="flex flex-col items-center text-center space-y-4">
-                            <span className="text-4xl">❗</span>
-                            <h2 className="text-xl font-semibold text-red-800">Không thể tải chi tiết bài tập</h2>
-                            <p className="text-red-600 max-w-md">{error}</p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => window.location.reload()}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                                >
-                                    🔄 Thử lại
-                                </button>
-                                <button
-                                    onClick={() => router.push('/dashboard/teacher/assignments')}
-                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                                >
-                                    ← Quay lại danh sách
-                                </button>
-                            </div>
-                        </div>
+            <EmptyState
+                variant="teacher"
+                icon={<AlertTriangle className="h-10 w-10 text-red-500" />}
+                title="Không thể tải chi tiết bài tập"
+                description={error}
+                action={
+                    <div className="flex justify-center gap-3">
+                        <Button variant="outline" onClick={() => window.location.reload()}>
+                            Thử lại
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => router.push("/dashboard/teacher/assignments")}
+                        >
+                            Quay lại danh sách
+                        </Button>
                     </div>
-                </div>
-            </div>
+                }
+            />
         );
     if (!detail)
         return (
-            <div className="py-20 flex flex-col items-center text-gray-400">
-                <span className="text-4xl mb-3">😵‍💫</span>
-                Không tìm thấy bài tập.
-            </div>
+            <EmptyState
+                variant="teacher"
+                icon={<AlertTriangle className="h-10 w-10 text-blue-500" />}
+                title="Không tìm thấy bài tập"
+                description="Bài tập có thể đã bị xoá hoặc bạn không có quyền truy cập."
+                action={
+                    <Button
+                        variant="outline"
+                        onClick={() => router.push("/dashboard/teacher/assignments")}
+                    >
+                        Quay lại danh sách
+                    </Button>
+                }
+            />
         );
 
     const breadcrumbItems: BreadcrumbItem[] = [
@@ -225,78 +217,77 @@ export default function AssignmentDetailPage() {
     ];
 
     return (
-        <div className="px-6 py-4">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="px-6 py-4 max-w-6xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
                 <Breadcrumb items={breadcrumbItems} />
                 <BackButton href="/dashboard/teacher/assignments" />
             </div>
 
-            <div className="max-w-5xl mx-auto">
-                {/* Header assignment */}
-                <div className="bg-white shadow rounded-2xl p-8 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-6 border">
-                    <div className="flex-1">
-                        <h1 className="text-2xl font-bold text-gray-800 mb-1">
-                            {detail.title}
-                        </h1>
-                        <p className="text-gray-600 mt-1">
-                            {detail.description || (
-                                <span className="italic">(Không có mô tả)</span>
-                            )}
-                        </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                        <AssignmentTypeChip type={detail.type} />
-                        <div className="text-xs text-gray-500 mt-2 space-y-1 text-right">
-                            <div>
-                                <span className="font-semibold">Hạn nộp: </span>
-                                {(() => {
-                                    const effective = detail.type === "QUIZ"
-                                        ? ((detail as any).lockAt || detail.dueDate)
-                                        : detail.dueDate;
-                                    return effective
-                                        ? new Date(effective as any).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                                        : "Không rõ";
-                                })()}
-                            </div>
-                            {((detail as any).openAt || (detail as any).lockAt) && (
-                                <div className="text-[11px] text-gray-400">
-                                    ⏱️ Lịch: { (detail as any).openAt ? new Date((detail as any).openAt).toLocaleString("vi-VN") : "Hiện tại" } → { (detail as any).lockAt ? new Date((detail as any).lockAt).toLocaleString("vi-VN") : (detail.dueDate ? new Date(detail.dueDate).toLocaleString("vi-VN") : "Không giới hạn") }
-                                </div>
-                            )}
+            <PageHeader
+                role="teacher"
+                title={detail.title}
+                subtitle={detail.description || "Chi tiết bài tập cho lớp học của bạn."}
+                actions={
+                    <div className="flex flex-col items-end gap-2 text-xs text-slate-700">
+                        <div>
+                            <span className="font-semibold">Hạn nộp: </span>
+                            {(() => {
+                                const effective = detail.type === "QUIZ"
+                                    ? ((detail as any).lockAt || detail.dueDate)
+                                    : detail.dueDate;
+                                return effective
+                                    ? new Date(effective as any).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                    : "Không rõ";
+                            })()}
                         </div>
-                        <Button
-                            variant="outline"
-                            onClick={async () => {
-                                const ok = await confirm({
-                                    title: "Xoá bài tập",
-                                    description: "Bạn muốn xoá bài tập này? Hành động không thể hoàn tác.",
-                                    variant: "danger",
-                                    confirmText: "Xoá",
-                                    cancelText: "Hủy",
-                                });
-                                if (!ok) return;
-                                try {
-                                    const res = await fetch(`/api/assignments/${assignmentId}`, { method: "DELETE" });
-                                    const data = await res.json().catch(() => ({}));
-                                    if (!res.ok) {
-                                        toast({ title: "Xoá bài tập thất bại", description: (data as any)?.message, variant: "destructive" });
-                                        return;
+                        {((detail as any).openAt || (detail as any).lockAt) && (
+                            <div className="text-[11px] text-gray-500 flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>
+                                    Lịch: { (detail as any).openAt ? new Date((detail as any).openAt).toLocaleString("vi-VN") : "Hiện tại" } → { (detail as any).lockAt ? new Date((detail as any).lockAt).toLocaleString("vi-VN") : (detail.dueDate ? new Date(detail.dueDate).toLocaleString("vi-VN") : "Không giới hạn") }
+                                </span>
+                            </div>
+                        )}
+                        <div className="mt-1 flex items-center gap-3">
+                            <AssignmentTypeChip type={detail.type} />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="inline-flex items-center gap-2"
+                                onClick={async () => {
+                                    const ok = await confirm({
+                                        title: "Xoá bài tập",
+                                        description: "Bạn muốn xoá bài tập này? Hành động không thể hoàn tác.",
+                                        variant: "danger",
+                                        confirmText: "Xoá",
+                                        cancelText: "Hủy",
+                                    });
+                                    if (!ok) return;
+                                    try {
+                                        const res = await fetch(`/api/assignments/${assignmentId}`, { method: "DELETE" });
+                                        const data = await res.json().catch(() => ({}));
+                                        if (!res.ok) {
+                                            toast({ title: "Xoá bài tập thất bại", description: (data as any)?.message, variant: "destructive" });
+                                            return;
+                                        }
+                                        toast({ title: "Đã xoá bài tập", variant: "success" });
+                                        router.push("/dashboard/teacher/assignments");
+                                    } catch (err) {
+                                        console.error("[AssignmentDetail] Xoá thất bại:", err);
+                                        toast({ title: "Có lỗi xảy ra", variant: "destructive" });
                                     }
-                                    toast({ title: "Đã xoá bài tập", variant: "success" });
-                                    router.push("/dashboard/teacher/assignments");
-                                } catch (err) {
-                                    console.error("[AssignmentDetail] Xoá thất bại:", err);
-                                    toast({ title: "Có lỗi xảy ra", variant: "destructive" });
-                                }
-                            }}
-                        >
-                            🗑️ Xoá bài tập
-                        </Button>
+                                }}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Xoá bài tập
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                }
+            />
 
-                {/* Tabs: Questions và Discussions */}
-                <Tabs defaultValue="questions" className="mt-6">
+            {/* Tabs: Questions và Discussions */}
+            <Tabs defaultValue="questions" className="mt-2">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="questions">Câu hỏi</TabsTrigger>
                         <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
@@ -306,7 +297,8 @@ export default function AssignmentDetailPage() {
                         {/* Danh sách câu hỏi */}
                         <div className="bg-white rounded-2xl p-6 shadow border">
                             <h2 className="text-lg font-bold mb-4 text-indigo-700 flex items-center gap-2">
-                                <span>📄</span> Danh sách câu hỏi
+                                <FileText className="h-5 w-5" />
+                                Danh sách câu hỏi
                             </h2>
 
                             {/* File đính kèm */}
@@ -315,7 +307,8 @@ export default function AssignmentDetailPage() {
                             ) : attachments.length > 0 ? (
                                 <div className="mb-6">
                                     <h3 className="text-md font-semibold mb-3 text-gray-700 flex items-center gap-2">
-                                        <span>📎</span> File đính kèm
+                                        <Paperclip className="h-4 w-4" />
+                                        File đính kèm
                                     </h3>
                                     <div className="space-y-2">
                                         {attachments.map((file) => {
@@ -324,14 +317,31 @@ export default function AssignmentDetailPage() {
                                             const isVid = file.mimeType?.startsWith('video/');
                                             return (
                                                 <div key={file.id} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-2xl">{isImg ? '🖼️' : isVid ? '🎥' : '📄'}</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-sm">
+                                                            {isImg ? (
+                                                                <ImageIcon className="h-5 w-5 text-sky-500" />
+                                                            ) : isVid ? (
+                                                                <VideoIcon className="h-5 w-5 text-violet-500" />
+                                                            ) : (
+                                                                <FileText className="h-5 w-5 text-slate-500" />
+                                                            )}
+                                                        </div>
                                                         <div>
                                                             <p className="font-medium text-sm">{file.name}</p>
-                                                            <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB • {file.mimeType}</p>
+                                                            <p className="text-xs text-gray-500">
+                                                                {(file.size / 1024 / 1024).toFixed(2)} MB • {file.mimeType}
+                                                            </p>
                                                         </div>
                                                     </div>
-                                                    <a href={href} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">Tải xuống</a>
+                                                    <a
+                                                        href={href}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-sm text-blue-600 hover:underline"
+                                                    >
+                                                        Tải xuống
+                                                    </a>
                                                 </div>
                                             );
                                         })}
@@ -371,12 +381,9 @@ export default function AssignmentDetailPage() {
                                                         Trắc nghiệm
                                                     </span>
                                                 )}
-                                                <span className="ml-auto text-xs text-gray-400 font-mono">
-                                                    #{q.id}
-                                                </span>
                                             </div>
                                             <div className="text-gray-700 text-base mb-1 whitespace-pre-line">
-                                                {q.content}
+                                                {stripHtml(q.content)}
                                             </div>
                                             {/* Hiển thị options nếu là trắc nghiệm */}
                                             {q.type !== "ESSAY" &&
@@ -411,7 +418,7 @@ export default function AssignmentDetailPage() {
                                                                                 : "text-gray-700"
                                                                         )}
                                                                     >
-                                                                        {opt.content}
+                                                                        {stripHtml(opt.content)}
                                                                     </span>
                                                                     {opt.isCorrect && (
                                                                         <span className="ml-2 text-xs text-green-700 bg-green-100 rounded-full px-2">
@@ -425,8 +432,8 @@ export default function AssignmentDetailPage() {
                                             {/* Nếu là tự luận, note rõ cho UI sinh động */}
                                             {q.type === "ESSAY" && (
                                                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl px-6 py-3 text-indigo-700 text-sm italic flex items-center gap-2 mt-2">
-                                                    <span className="text-2xl">📝</span>(Câu
-                                                    hỏi tự luận)
+                                                    <FileText className="h-4 w-4" />
+                                                    <span>(Câu hỏi tự luận)</span>
                                                 </div>
                                             )}
                                         </li>
@@ -440,15 +447,16 @@ export default function AssignmentDetailPage() {
                     </TabsContent>
                 </Tabs>
 
-                {/* Quick Actions */}
-                <div className="mt-6 flex justify-end">
-                    <Button
-                        onClick={() => router.push(`/dashboard/teacher/assignments/${assignmentId}/submissions`)}
-                        size="lg"
-                    >
-                        📝 Chấm bài tập
-                    </Button>
-                </div>
+            {/* Quick Actions */}
+            <div className="mt-6 flex justify-end">
+                <Button
+                    onClick={() => router.push(`/dashboard/teacher/assignments/${assignmentId}/submissions`)}
+                    size="lg"
+                    className="inline-flex items-center gap-2"
+                >
+                    <PenLine className="h-4 w-4" />
+                    Chấm bài tập
+                </Button>
             </div>
         </div>
     );

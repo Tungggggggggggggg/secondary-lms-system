@@ -258,7 +258,10 @@ export default function DateTimePopover({ label, value, onChange, required, clas
         <>
           {TriggerButton}
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="md:w-[880px] w-[420px] max-h-[85vh] p-0" onClose={() => setIsOpen(false)}>
+            <DialogContent
+              className="w-full sm:max-w-[560px] md:max-w-[760px] lg:max-w-[980px] max-h-[85vh] p-0"
+              onClose={() => setIsOpen(false)}
+            >
               {PickerBody}
             </DialogContent>
           </Dialog>
@@ -270,7 +273,7 @@ export default function DateTimePopover({ label, value, onChange, required, clas
             side="bottom"
             align="start"
             collisionPadding={16}
-            className="md:w-[880px] w-[420px] max-h-[80vh] p-0 border-2 border-blue-200 rounded-xl shadow-xl z-[60]"
+            className="w-[420px] sm:w-[520px] md:w-[720px] lg:w-[980px] max-h-[80vh] p-0 border-2 border-blue-200 rounded-xl shadow-xl z-[60]"
           >
             {PickerBody}
           </PopoverContent>

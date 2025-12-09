@@ -54,10 +54,6 @@ export async function GET(
     const hasAttachment = searchParams.get("hasAttachment");
 
     const where: any = { classroomId };
-    // Giáo viên sở hữu lớp nhìn thấy mọi trạng thái; học sinh chỉ thấy APPROVED
-    if (!isTeacherOwner) {
-      where.status = "APPROVED" as any;
-    }
     if (q) {
       where.OR = [
         { content: { contains: q, mode: "insensitive" } },

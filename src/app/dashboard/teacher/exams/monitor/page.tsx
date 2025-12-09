@@ -26,6 +26,11 @@ import {
   WifiOff,
   BarChart3
 } from "lucide-react";
+import { PageHeader } from "@/components/shared";
+import ExamStatsOverview from "@/components/teacher/exam/ExamStatsOverview";
+import ExamMonitoringList from "@/components/teacher/exam/ExamMonitoringList";
+import ExamLogsFilters from "@/components/teacher/exam/ExamLogsFilters";
+import ExamLogsTables from "@/components/teacher/exam/ExamLogsTables";
 
 // Mock data đơn giản cho UI (để trống, chỉ dùng cho demo nếu cần)
 const mockStudentSessions: Array<{
@@ -565,90 +570,35 @@ export default function ExamMonitorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                <Monitor className="w-8 h-8 text-blue-600" />
-                Giám Sát Thi Trực Tuyến
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Theo dõi và quản lý các phiên thi đang diễn ra
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <PageHeader
+          role="teacher"
+          title="Giám sát thi trực tuyến"
+          subtitle="Theo dõi và quản lý các phiên thi đang diễn ra"
+          actions={
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 onClick={() => window.location.reload()}
-                className="flex items-center gap-2"
+                className="inline-flex items-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
                 Làm mới
               </Button>
-              
-              <Button className="flex items-center gap-2">
+              <Button className="inline-flex items-center gap-2">
                 <Settings className="w-4 h-4" />
                 Cài đặt
               </Button>
             </div>
-          </div>
-        </div>
-      </div>
+          }
+        />
 
-      {/* Stats Overview */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Đang thi</p>
-                  <p className="text-2xl font-bold text-green-600">{activeCount}</p>
-                </div>
-                <Users className="w-8 h-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Tạm dừng</p>
-                  <p className="text-2xl font-bold text-yellow-600">{pausedCount}</p>
-                </div>
-                <Clock className="w-8 h-8 text-yellow-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Hoạt động đáng ngờ</p>
-                  <p className="text-2xl font-bold text-red-600">{totalSuspicious}</p>
-                </div>
-                <AlertTriangle className="w-8 h-8 text-red-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Tổng phiên</p>
-                  <p className="text-2xl font-bold text-blue-600">{monitorSessions.length}</p>
-                </div>
-                <Shield className="w-8 h-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <ExamStatsOverview
+          active={activeCount}
+          paused={pausedCount}
+          suspicious={totalSuspicious}
+          total={monitorSessions.length}
+        />
 
         {/* Main Content */}
         <Tabs defaultValue="monitoring" className="space-y-6">
@@ -669,83 +619,12 @@ export default function ExamMonitorPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {monitorSessions.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-gray-500">
-                    Chưa có dữ liệu phiên thi real-time để hiển thị.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {monitorSessions.map((session) => {
-                      const isSelected = selectedStudent === session.id;
-                      return (
-                        <div
-                          key={session.id}
-                          className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
-                            isSelected ? "bg-blue-50 border-blue-500 shadow-sm" : "bg-white hover:bg-gray-50"
-                          }`}
-                          onClick={() => setSelectedStudent(session.id)}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              {session.isOnline ? (
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                              ) : (
-                                <WifiOff className="w-5 h-5 text-red-500" />
-                              )}
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-medium">{session.studentName}</h3>
-                                  {isSelected && (
-                                    <Badge variant="outline" className="text-xs border-blue-500 text-blue-700 bg-blue-50">
-                                      Đang điều khiển
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-600">{session.assignmentTitle}</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-6">
-                            <div className="text-center">
-                              <p className="text-sm text-gray-600">Tiến độ</p>
-                              <div className="flex items-center gap-2">
-                                <div className="w-20 bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-blue-600 h-2 rounded-full"
-                                    style={{ width: `${session.progress}%` }}
-                                  />
-                                </div>
-                                <span className="text-sm font-medium">{session.progress}%</span>
-                              </div>
-                            </div>
-
-                            <div className="text-center">
-                              <p className="text-sm text-gray-600">Thời gian còn lại</p>
-                              <p className="font-medium">{session.timeRemaining}</p>
-                            </div>
-
-                            <div className="text-center">
-                              <p className="text-sm text-gray-600">Câu hỏi</p>
-                              <p className="font-medium">
-                                {session.currentQuestion}/{session.totalQuestions}
-                              </p>
-                            </div>
-
-                            <div className="text-center">
-                              <p className="text-sm text-gray-600">Cảnh báo</p>
-                              <Badge variant={session.suspiciousActivities > 0 ? "destructive" : "outline"}>
-                                {session.suspiciousActivities}
-                              </Badge>
-                            </div>
-
-                            <div>{getStatusBadge(session.status)}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <ExamMonitoringList
+                  sessions={monitorSessions}
+                  selectedId={selectedStudent}
+                  onSelect={setSelectedStudent}
+                  renderStatusBadge={getStatusBadge}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -757,144 +636,32 @@ export default function ExamMonitorPage() {
                 <CardTitle>Logs chống gian lận theo bài</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                  <div className="md:col-span-3">
-                    <Label htmlFor="assignmentId">Assignment ID</Label>
-                    <Input id="assignmentId" placeholder="assignment id" value={assignmentIdInput} onChange={(e) => setAssignmentIdInput(e.target.value)} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="studentId">Student ID (tuỳ chọn)</Label>
-                    <Input id="studentId" placeholder="student id" value={studentIdInput} onChange={(e) => setStudentIdInput(e.target.value)} />
-                  </div>
-                  <div className="md:col-span-1">
-                    <Label htmlFor="attempt">Attempt (tuỳ chọn)</Label>
-                    <Input id="attempt" placeholder="VD: 1" value={attemptInput} onChange={(e) => setAttemptInput(e.target.value)} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="from">Từ thời điểm (tuỳ chọn)</Label>
-                    <Input id="from" type="datetime-local" value={fromInput} onChange={(e) => setFromInput(e.target.value)} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="to">Đến thời điểm (tuỳ chọn)</Label>
-                    <Input id="to" type="datetime-local" value={toInput} onChange={(e) => setToInput(e.target.value)} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="limit">Số dòng tối đa</Label>
-                    <Input id="limit" type="number" min={1} max={500} value={limitInput} onChange={(e) => setLimitInput(e.target.value)} />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => fetchEvents()}
-                    disabled={!assignmentIdInput.trim() || loadingEvents}
-                  >
-                    {loadingEvents ? "Đang tải..." : "Tải logs"}
-                  </Button>
-                  <Button variant="outline" onClick={() => { setEvents([]); }}>Xoá kết quả</Button>
-                </div>
+                <ExamLogsFilters
+                  assignmentId={assignmentIdInput}
+                  studentId={studentIdInput}
+                  attempt={attemptInput}
+                  from={fromInput}
+                  to={toInput}
+                  limit={limitInput}
+                  loading={loadingEvents}
+                  canSubmit={Boolean(assignmentIdInput.trim())}
+                  onAssignmentIdChange={setAssignmentIdInput}
+                  onStudentIdChange={setStudentIdInput}
+                  onAttemptChange={setAttemptInput}
+                  onFromChange={setFromInput}
+                  onToChange={setToInput}
+                  onLimitChange={setLimitInput}
+                  onSubmit={() => fetchEvents()}
+                  onClear={() => {
+                    setEvents([]);
+                  }}
+                />
 
-                {events.length > 0 && (
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Tổng hợp theo loại sự kiện</h4>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                          <thead>
-                            <tr className="text-left border-b">
-                              <th className="py-2 pr-4">Loại</th>
-                              <th className="py-2 pr-4">Mức độ</th>
-                              <th className="py-2 pr-4">Số sự kiện</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {summaryByType.map((row) => (
-                              <tr key={row.type} className="border-b">
-                                <td className="py-2 pr-4">{row.type}</td>
-                                <td className="py-2 pr-4">
-                                  {row.severity === 'high' ? (
-                                    <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" /> Cao</Badge>
-                                  ) : row.severity === 'medium' ? (
-                                    <Badge variant="warning">Trung bình</Badge>
-                                  ) : row.severity === 'info' ? (
-                                    <Badge>Thông tin</Badge>
-                                  ) : (
-                                    <Badge variant="outline">Thấp</Badge>
-                                  )}
-                                </td>
-                                <td className="py-2 pr-4">{row.count}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-2">Tổng hợp theo học sinh/attempt</h4>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                          <thead>
-                            <tr className="text-left border-b">
-                              <th className="py-2 pr-4">Học sinh</th>
-                              <th className="py-2 pr-4">Attempt</th>
-                              <th className="py-2 pr-4">Số sự kiện</th>
-                              <th className="py-2 pr-4">Cảnh báo</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {summaryByStudentAttempt.map((row) => {
-                              const flagged = row.high >= 1 || (row.high + row.medium) >= 3;
-                              return (
-                                <tr
-                                  key={`${row.studentId}|${row.attempt}`}
-                                  className={`border-b ${flagged ? 'bg-red-50' : ''}`}
-                                >
-                                  <td className="py-2 pr-4">{row.fullname} <span className="text-gray-500 text-xs">({row.studentId})</span></td>
-                                  <td className="py-2 pr-4">{row.attempt ?? '-'}</td>
-                                  <td className="py-2 pr-4">{row.count}</td>
-                                  <td className="py-2 pr-4">
-                                    {flagged ? (
-                                      <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" /> Nghi ngờ cao</Badge>
-                                    ) : (
-                                      <Badge variant="outline">-</Badge>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-medium mb-2">Chi tiết sự kiện</h4>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                          <thead>
-                            <tr className="text-left border-b">
-                              <th className="py-2 pr-4">Thời gian</th>
-                              <th className="py-2 pr-4">Học sinh</th>
-                              <th className="py-2 pr-4">Attempt</th>
-                              <th className="py-2 pr-4">Sự kiện</th>
-                              <th className="py-2 pr-4">Metadata</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {events.map((ev) => (
-                              <tr key={ev.id} className="border-b align-top">
-                                <td className="py-2 pr-4 whitespace-nowrap">{new Date(ev.createdAt).toLocaleString()}</td>
-                                <td className="py-2 pr-4">{ev.student?.fullname || ev.studentId} <span className="text-gray-500 text-xs">({ev.studentId})</span></td>
-                                <td className="py-2 pr-4">{ev.attempt ?? '-'}</td>
-                                <td className="py-2 pr-4">{ev.eventType}</td>
-                                <td className="py-2 pr-4 max-w-[360px] whitespace-pre-wrap break-words text-xs">{ev.metadata ? JSON.stringify(ev.metadata) : '-'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <ExamLogsTables
+                  events={events}
+                  summaryByType={summaryByType}
+                  summaryByStudentAttempt={summaryByStudentAttempt}
+                />
               </CardContent>
             </Card>
           </TabsContent>

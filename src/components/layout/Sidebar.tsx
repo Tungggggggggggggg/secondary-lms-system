@@ -212,29 +212,32 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
             flatItems.map((item) => {
               const active = isActive(item.href);
               const Icon = item.icon;
+              const isMessages = messageHref === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   role="menuitem"
                   aria-label={item.label}
-                  className={`relative group flex items-center gap-3 px-2 py-2.5 rounded-lg transition-all border ${
+                  className={`relative group flex items-center justify-center px-2 py-2.5 rounded-lg transition-all border ${
                     active ? `${accent.activeBg} ${accent.activeBorder}` : `border-transparent ${accent.hover} ${accent.hoverBorder}`
                   }`}
                 >
                   {active && (
                     <span className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full ${accent.indicator}`} aria-hidden="true" />
                   )}
-                  <Tooltip content={item.label}>
-                    <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
-                  </Tooltip>
+                  <div className="relative flex items-center justify-center">
+                    <Tooltip content={item.label}>
+                      <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
+                    </Tooltip>
+                    {isMessages && unreadBadge && (
+                      <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
+                        {unreadBadge}
+                      </span>
+                    )}
+                  </div>
                   {active && (
                     <span className="sr-only" aria-current="page">Trang hiện tại</span>
-                  )}
-                  {messageHref === item.href && unreadBadge && (
-                    <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
-                      {unreadBadge}
-                    </span>
                   )}
                 </Link>
               );

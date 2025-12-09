@@ -28,7 +28,7 @@ export default function SidebarToggleButton({ expanded, onToggle, ariaControls, 
         aria-label={label}
         aria-expanded={expanded}
         aria-controls={ariaControls}
-        className={`mb-4 inline-flex items-center justify-center ${sizeCls} cursor-pointer focus:outline-none focus-visible:ring-2 transition-transform ${btnClass}`}
+        className={`inline-flex items-center justify-center ${sizeCls} cursor-pointer focus:outline-none focus-visible:ring-2 transition-transform ${btnClass}`}
       >
         {expanded ? (
           <ChevronLeft className={`h-5 w-5 ${iconClass}`} aria-hidden />

@@ -31,7 +31,7 @@ export default function SectionCard({ title, description, children, className, a
           {actions ? <div className="shrink-0">{actions}</div> : null}
         </div>
       </CardHeader>
-      <div className="border-l-4 border-l-blue-500 rounded-bl-2xl rounded-tl-2xl">
+      <div className="border-l-4 border-l-blue-500 rounded-bl-2xl">
         <CardContent className={contentPadding}>
           {children}
         </CardContent>
