@@ -2,8 +2,6 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
 export type GlobalUserRole =
-  | "SUPER_ADMIN"
-  | "STAFF"
   | "TEACHER"
   | "STUDENT"
   | "PARENT";
@@ -73,7 +71,6 @@ export const userRepo = {
       if (organizationId) {
         const mappedOrgRole = ((): any => {
           const r = (globalRole || 'STUDENT') as any;
-          if (r === 'STAFF') return 'ADMIN';
           return ['TEACHER','STUDENT','PARENT','ADMIN'].includes(r) ? r : 'STUDENT';
         })();
         await tx.organizationMember.upsert({

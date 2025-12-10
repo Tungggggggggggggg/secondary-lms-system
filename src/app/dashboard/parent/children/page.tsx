@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Users, Search, KeyRound, Loader2 } from "lucide-react";
-import { formatDate } from "@/lib/admin/format-date";
+import { formatDate } from "@/lib/date";
 import { toast } from "sonner";
 import HeaderParent from "@/components/parent/ParentHeader";
 import StudentCard from "@/components/parent/StudentCard";

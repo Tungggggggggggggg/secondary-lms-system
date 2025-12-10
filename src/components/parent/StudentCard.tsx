@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Mail, ArrowRight, GraduationCap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/admin/format-date";
+import { formatDate } from "@/lib/date";
 
 interface StudentCardProps {
   student: {

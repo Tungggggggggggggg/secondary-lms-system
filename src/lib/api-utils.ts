@@ -5,8 +5,6 @@ import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 const USER_ROLES = [
-  "SUPER_ADMIN",
-  "STAFF",
   "TEACHER",
   "STUDENT",
   "PARENT",

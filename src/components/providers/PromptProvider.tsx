@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import PromptDialog from "@/components/admin/modals/PromptDialog";
+import PromptDialog from "@/components/shared/PromptDialog";
 
 type PromptOptions = {
   title: string;

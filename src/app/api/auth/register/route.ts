@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 const ALLOWED_USER_ROLES = [
-  'SUPER_ADMIN',
-  'STAFF',
   'TEACHER',
   'STUDENT',
   'PARENT',

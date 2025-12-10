@@ -2,10 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
-import { ADMIN_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/admin/admin-constants";
 
 interface Props {
-  role: "admin" | "teacher" | "student" | "parent";
+  role: "teacher" | "student" | "parent";
   className?: string;
 }
 
@@ -45,13 +44,12 @@ export default function TopbarBreadcrumbs({ role, className }: Props) {
   if (!pathname) return null;
 
   const parts = pathname.split("/").filter(Boolean);
-  const roleIndex = parts.findIndex((p) => ["admin", "teacher", "student", "parent"].includes(p));
+  const roleIndex = parts.findIndex((p) => ["teacher", "student", "parent"].includes(p));
   if (roleIndex === -1) return null;
 
   const items: BreadcrumbItem[] = [];
   const baseHref = "/" + parts.slice(0, roleIndex + 2).join("/");
   const roleLabel: Record<Props["role"], string> = {
-    admin: "Admin",
     teacher: "Giáo viên",
     student: "Học sinh",
     parent: "Phụ huynh",
@@ -60,18 +58,6 @@ export default function TopbarBreadcrumbs({ role, className }: Props) {
 
   const rest = parts.slice(roleIndex + 2);
   let accPath = baseHref;
-
-  if (role === "admin") {
-    const all = [...SUPER_ADMIN_NAV_ITEMS, ...ADMIN_NAV_ITEMS];
-    const active = all.find((it) => (it.href === "/dashboard/admin/overview" ? pathname === it.href : pathname.startsWith(it.href)));
-    if (active && active.href !== "/dashboard/admin/overview") {
-      items.push({ label: active.label, href: active.href });
-      const sub = parts.slice(active.href.split("/").filter(Boolean).length);
-      if (sub.length) items.push({ label: mapLabel(role, sub[sub.length - 1]) });
-      return <Breadcrumb items={items} className={className} />;
-    }
-  }
-
   rest.forEach((seg, idx) => {
     accPath += "/" + seg;
     const isLast = idx === rest.length - 1;

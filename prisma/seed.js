@@ -56,8 +56,8 @@ async function main() {
   }
 
   // Only create default users if they don't exist (Gmail + tên Việt)
-  const superAdmin = await upsertUser('superadmin.nguyenhoangnam@gmail.com', 'Nguyễn Hoàng Nam', 'SUPER_ADMIN');
-  const admin = await upsertUser('admin.tranthilan@gmail.com', 'Trần Thị Lan', 'STAFF');
+  const superAdmin = await upsertUser('superadmin.nguyenhoangnam@gmail.com', 'Nguyễn Hoàng Nam', 'TEACHER');
+  const admin = await upsertUser('admin.tranthilan@gmail.com', 'Trần Thị Lan', 'TEACHER');
   const teacher = await upsertUser('giaovien.thanhha@gmail.com', 'Nguyễn Thị Thanh Hà', 'TEACHER');
   
   // Organization default

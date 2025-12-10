@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { PageHeader } from "@/components/shared";
 import { ConfirmDialog } from "@/components/shared";
-import PromptDialog from "@/components/admin/modals/PromptDialog";
+import PromptDialog from "@/components/shared/PromptDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Users, 
@@ -21,7 +21,7 @@ import {
   Mail,
   Calendar
 } from "lucide-react";
-import { formatDate } from "@/lib/admin/format-date";
+import { formatDate } from "@/lib/date";
 import { useToast } from "@/hooks/use-toast";
 import { setToastInstance } from "@/lib/toast";
 

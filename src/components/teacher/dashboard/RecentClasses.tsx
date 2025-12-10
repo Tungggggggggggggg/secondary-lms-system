@@ -45,7 +45,7 @@ export default function RecentClasses() {
         return (
             <SectionCard
                 title={<div className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-indigo-600" /><span>Lớp học gần đây</span></div>}
-                actions={<a href="/dashboard/teacher/classrooms" className="text-sm font-semibold text-purple-600 hover:text-purple-700 inline-flex items-center">Xem tất cả <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" /></a>}
+                actions={<a href="/dashboard/teacher/classrooms" className="text-sm font-semibold text-green-600 hover:text-green-700 inline-flex items-center">Xem tất cả <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" /></a>}
             >
                 <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
@@ -59,7 +59,7 @@ export default function RecentClasses() {
     return (
         <SectionCard
             title={<div className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-indigo-600" /><span>Lớp học gần đây</span></div>}
-            actions={<a href="/dashboard/teacher/classrooms" className="text-sm font-semibold text-purple-600 hover:text-purple-700 inline-flex items-center">Xem tất cả <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" /></a>}
+            actions={<a href="/dashboard/teacher/classrooms" className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-indigo-700 group-hover:text-indigo-700">Xem tất cả <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" /></a>}
         >
             <div className="space-y-4">
                 {recentClasses.length > 0 ? (

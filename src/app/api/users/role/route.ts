@@ -5,8 +5,6 @@ import prisma from '@/lib/prisma';
 import { writeAudit } from '@/lib/logging/audit';
 
 const ALLOWED_USER_ROLES = [
-  'SUPER_ADMIN',
-  'STAFF',
   'TEACHER',
   'STUDENT',
   'PARENT',

@@ -618,11 +618,9 @@ enum ConversationType {
 }
 
 enum UserRole {
-  STAFF
   TEACHER
   STUDENT
   PARENT
-  SUPER_ADMIN
 }
 
 enum OrgRole {

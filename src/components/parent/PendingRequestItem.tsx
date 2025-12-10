@@ -2,7 +2,7 @@
 
 import { Mail, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/admin/format-date";
+import { formatDate } from "@/lib/date";
 
 interface PendingRequestItemProps {
   request: {

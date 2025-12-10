@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import Input from "@/components/ui/input";
-import { ADMIN_NAV_ITEMS, SUPER_ADMIN_NAV_ITEMS } from "@/lib/admin/admin-constants";
 
 interface CommandItem {
   id: string;
@@ -81,22 +80,17 @@ export default function CommandPaletteProvider({ children }: { children: React.R
       "Phụ huynh"
     );
 
-    // Admin commands theo vai trò
-    const adminItems = role === "SUPER_ADMIN" ? SUPER_ADMIN_NAV_ITEMS : role === "STAFF" ? ADMIN_NAV_ITEMS.filter((i) => i.id !== 'audit') : [];
-    adminItems.forEach((x) => cmds.push({ id: `Admin:${x.href}`, label: x.label, href: x.href, section: "Admin" }));
-
     return cmds;
   }, [role]);
 
   const commands = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filterByRole = (item: CommandItem) => {
-      if (!role) return true;
-      if (role === "SUPER_ADMIN" || role === "STAFF") return item.section === "Admin";
+      if (!role) return item.section !== "Admin";
       if (role === "TEACHER") return item.section === "Giáo viên";
       if (role === "STUDENT") return item.section === "Học sinh";
       if (role === "PARENT") return item.section === "Phụ huynh";
-      return true;
+      return false;
     };
     return allCommands.filter(filterByRole).filter((c) => !q || c.label.toLowerCase().includes(q) || c.href.toLowerCase().includes(q));
   }, [allCommands, query, role]);
