@@ -6,7 +6,7 @@ import { useSidebarState } from "@/hooks/useSidebarState";
 import DashboardTopbar from "@/components/layout/DashboardTopbar";
 import type { CSSProperties } from "react";
 
-type DashboardRole = "teacher" | "student" | "parent";
+type DashboardRole = "teacher" | "student" | "parent" | "admin";
 
 interface DashboardLayoutProps {
   role: DashboardRole;

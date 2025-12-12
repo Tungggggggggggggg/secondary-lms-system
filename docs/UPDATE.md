@@ -44,12 +44,13 @@ Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase
 ### 3.2. Tạo đề thi tự động từ tài liệu (AI Quiz Generator)
 *Giải quyết bài toán: Soạn đề thi mất thời gian.*
 
-- **Mô tả:** Giáo viên upload tài liệu (PDF bài giảng/Word) hoặc paste nội dung bài học.
-- **Cơ chế hoạt động:**
-    1. Server parse nội dung văn bản từ file.
-    2. Gửi Prompt tới Gemini: *"Dựa trên nội dung này, hãy tạo 10 câu hỏi trắc nghiệm độ khó trung bình..."*.
-    3. Gemini trả về mảng JSON các câu hỏi (Question + Options + Correct Answer).
-    4. Hệ thống map dữ liệu này vào bảng `Question` trong Database thông qua Prisma.
+- **Mô tả:** Giáo viên **paste nội dung bài học** (đã triển khai) hoặc trong tương lai có thể upload tài liệu (PDF bài giảng/Word).
+- **Cơ chế hoạt động (bản triển khai hiện tại):**
+    1. UI cho phép giáo viên dán nội dung văn bản bài học và chọn số lượng câu hỏi.
+    2. Server gửi prompt tới Gemini (`gemini-2.5-flash`) nhiều lượt (multi-call) để sinh đủ số câu hỏi trắc nghiệm, tránh trùng lặp.
+    3. Gemini trả về danh sách câu hỏi + đáp án, hệ thống parse và chuẩn hoá, đánh dấu đáp án đúng/sai.
+    4. Hệ thống map dữ liệu này vào bảng `Question`/`Option` trong Database thông qua Prisma.
+    5. Từ đó giáo viên có thể chỉnh sửa lại nội dung câu hỏi trước khi lưu.
 
 ### 3.3. Chatbot Gia sư thông minh (RAG Tutor)
 *Giải quyết bài toán: Hỗ trợ học sinh 24/7.*
@@ -75,10 +76,10 @@ Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase
 
 ### Giai đoạn 1: AI Automation (Ưu tiên cao - Dễ Demo)
 *Mục tiêu: Hoàn thiện tính năng hỗ trợ giáo viên.*
-- [ ] Đăng ký Google AI Studio API Key.
-- [ ] Cài đặt `google-generative-ai` SDK.
+- [x] Đăng ký Google AI Studio API Key và cấu hình biến môi trường `GEMINI_API_KEY`.
+- [x] Cài đặt `@google/generative-ai` SDK và tích hợp vào lớp AI Layer.
 - [ ] Triển khai API route `/api/ai/grade` (Chấm bài).
-- [ ] Triển khai API route `/api/ai/quiz` (Tạo đề từ text).
+- [x] Triển khai API route `/api/ai/quiz` (Tạo đề từ **text** + tích hợp UI cho giáo viên).
 
 ### Giai đoạn 2: Intelligent Data (Độ khó cao)
 *Mục tiêu: Triển khai Chatbot RAG.*

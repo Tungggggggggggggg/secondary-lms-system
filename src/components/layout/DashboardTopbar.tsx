@@ -5,7 +5,7 @@ import { NotificationBell } from "@/components/shared";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { Menu } from "lucide-react";
 
-type DashboardTopbarRole = "teacher" | "student" | "parent";
+type DashboardTopbarRole = "teacher" | "student" | "parent" | "admin";
 
 interface DashboardTopbarProps {
   role: DashboardTopbarRole;

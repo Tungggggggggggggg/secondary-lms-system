@@ -65,9 +65,12 @@
 
 ### 2.4. NextAuth + middleware hiện tại
 - NextAuth đang đưa `role` vào `token` và `session`.
-- `middleware.ts` đang điều hướng/chặn theo `UserRole` gồm: `TEACHER`, `STUDENT`, `PARENT`.
 - Đã bổ sung `roleSelectedAt` vào JWT/session để phục vụ onboarding bắt buộc chọn vai trò.
-- **Chưa có role `ADMIN` trong `enum UserRole`**.
+- Đã bổ sung role `ADMIN` trong `enum UserRole` (Prisma) và đưa vào JWT/session.
+- `middleware.ts` đang điều hướng/chặn theo `UserRole` gồm: `TEACHER`, `STUDENT`, `PARENT`, `ADMIN` và:
+  - Bảo vệ `/dashboard/admin/*` chỉ cho phép `ADMIN`.
+  - Bảo vệ `/api/admin/*` chỉ cho phép `ADMIN`.
+  - Chuẩn hoá truy cập `/dashboard/admin` → `/dashboard/admin/dashboard`.
 
 ---
 
@@ -78,44 +81,43 @@
 ### A1) Bảo vệ route admin
 **Mục tiêu:** chỉ Admin mới vào được `/dashboard/admin/*` và `/api/admin/*`.
 
-- **Cần làm (bắt buộc):**
-  - Thêm `ADMIN` vào `enum UserRole`.
-  - Cập nhật `middleware.ts`:
-    - mapping `ADMIN -> /dashboard/admin/dashboard`
-    - chặn cross-role khi vào `/dashboard/admin/*`.
-- **Khả thi:** Cao.
-- **Rủi ro:** nếu lọc role không kỹ có thể mở lộ admin routes.
+**Trạng thái triển khai:**
+- ĐÃ bổ sung `ADMIN` vào `enum UserRole` trong Prisma.
+- ĐÃ cập nhật `middleware.ts` để:
+  - Map `ADMIN -> /dashboard/admin/dashboard`.
+  - Chặn cross-role khi truy cập `/dashboard/admin/*` và `/api/admin/*`.
 
 ### A2) Dashboard overview (stats)
 **Mục tiêu:** thống kê tổng quan (users/classes/storage…)
 
-- **Nền đã có:** `src/lib/repositories/reports-repo.ts`.
-- **Cần làm:** tạo API `/api/admin/stats` + trang admin dashboard.
-- **Khả thi:** Cao.
+**Trạng thái triển khai:**
+- ĐÃ sử dụng `src/lib/repositories/reports-repo.ts` để xây dựng API `GET /api/admin/stats`.
+- ĐÃ có trang `/dashboard/admin/dashboard` hiển thị tổng users, lớp học, bài tập, tổ chức và số tài khoản bị khoá.
 
 ### A3) User Management
 **Mục tiêu:** list/filter/paginate + ban/unban + create teacher + reset password.
 
+**Trạng thái triển khai:**
 - **List/filter/paginate:**
-  - Nền đã có: `userRepo.listByOrganization()` (hiện theo org) → khi Global Admin, cần bổ sung list toàn hệ thống hoặc cho phép bỏ filter org.
-  - **Khả thi:** Cao.
+  - ĐÃ có `GET /api/admin/users` liệt kê user toàn hệ thống với phân trang, lọc theo `role` và tìm kiếm theo email/họ tên.
+  - Trang `/dashboard/admin/users` hiển thị bảng người dùng, filter theo vai trò, search, phân trang.
 
 - **Ban/Unban:**
-  - Tài liệu đề xuất `User.active`, nhưng hệ thống hiện dùng `SystemSetting.disabled_users`.
-  - **Quick win khuyến nghị:**
-    - Ban: thêm `userId` vào `SystemSetting(key=disabled_users)`.
-    - Unban: xoá khỏi danh sách.
-    - Ghi audit `USER_BAN/USER_UNBAN`.
-  - **Khả thi:** Cao.
-  - **Rủi ro:** list JSON lớn (chấp nhận được với quy mô đồ án).
+  - ĐÃ triển khai `POST /api/admin/users/[id]/status` sử dụng `SystemSetting.disabled_users` để khoá/mở khoá tài khoản.
+  - Ghi `AuditLog` với action `USER_BAN` / `USER_UNBAN`.
+  - NextAuth + `getAuthenticatedUser()` chặn đăng nhập và API cho user bị disabled.
 
 - **Create Teacher:**
-  - Có `userRepo.createUser()` nhưng có dấu hiệu mapping role chưa đúng (đang hard-code `User.role` thành `STUDENT`).
-  - **Khả thi:** Trung bình → Cao (cần sửa mapping role).
+  - ĐÃ sửa `userRepo.createUser()` để dùng `globalRole` (không còn hard-code `STUDENT`).
+  - ĐÃ có `POST /api/admin/users` cho phép Admin tạo nhanh giáo viên mới (họ tên, email, mật khẩu), role = `TEACHER`.
+  - UI `/dashboard/admin/users` có form "Tạo giáo viên mới".
+
+- **Bulk Create Teacher:**
+  - ĐÃ bổ sung `POST /api/admin/users/bulk` để tạo hàng loạt giáo viên từ danh sách/CSV.
+  - UI hỗ trợ nhập danh sách text và kéo‑thả file CSV xuất từ Excel.
 
 - **Reset password:**
-  - Có model `PasswordReset` + `nodemailer`.
-  - **Khả thi:** Cao (cần quy trình token/hạn dùng/audit).
+  - Model `PasswordReset` + `nodemailer` đã có, luồng reset password cho Admin vẫn là hạng mục tiếp theo (chưa triển khai).
 
 ### A4) Classroom Management (archive/force delete)
 - Archive tận dụng `Classroom.isActive`.
@@ -149,10 +151,12 @@
 
 ### B2) AI Quiz Generator
 - **Từ text (paste):**
-  - **Khả thi:** Cao (nên làm trước).
+  - **Trạng thái:** ĐÃ TRIỂN KHAI.
+  - API `POST /api/ai/quiz` sử dụng Gemini (`gemini-2.5-flash`) để sinh bộ câu hỏi trắc nghiệm từ nội dung bài học (paste text), có multi-call đảm bảo đủ số lượng câu hỏi, tránh trùng lặp.
+  - UI cho giáo viên đã tích hợp nút "Tạo câu hỏi bằng AI" trong phần tạo bài Quiz.
 - **Từ PDF/Word (upload):**
   - **Khả thi:** Trung bình (Vercel serverless dễ timeout).
-  - **Khuyến nghị:** 2 bước: upload → extract text giới hạn → generate.
+  - **Trạng thái:** CHƯA TRIỂN KHAI, giữ nguyên khuyến nghị 2 bước: upload → extract text giới hạn → generate.
 
 ### B3) RAG Tutor (pgvector + embeddings)
 - **Khả thi:** Trung bình → Thấp nếu thời gian ít.
@@ -175,18 +179,18 @@
 ## 4. Các thay đổi kỹ thuật bắt buộc (Global Admin)
 
 ### 4.1 Prisma
-- Thêm `ADMIN` vào `enum UserRole`.
+- ĐÃ thêm `ADMIN` vào `enum UserRole`.
 
 ### 4.2 NextAuth
 - Đảm bảo `ADMIN` đi qua `jwt/session callbacks` (đang có sẵn luồng gán role).
 - Nếu có file type augmentation cho NextAuth, cập nhật type để nhận `ADMIN`.
 
 ### 4.3 Middleware
-- Bảo vệ `/dashboard/admin/*`.
-- Thêm redirect normalize `/dashboard/admin` → `/dashboard/admin/dashboard`.
+- ĐÃ bảo vệ `/dashboard/admin/*` và `/api/admin/*` chỉ cho phép `ADMIN`.
+- ĐÃ thêm redirect normalize `/dashboard/admin` → `/dashboard/admin/dashboard`.
 
 ### 4.4 Ngăn leo thang quyền
-- Endpoint đổi role (`/api/users/role`) tuyệt đối **không cho phép set `ADMIN`**.
+- Endpoint đổi role (`/api/users/role`) tuyệt đối **không cho phép set `ADMIN`** (đã kiểm tra logic hiện tại).
 
 ### 4.5 Khởi tạo Admin
 - Khuyến nghị: tạo admin qua seed hoặc SQL manual (không hardcode password trong repo).
@@ -196,14 +200,14 @@
 ## 5. Roadmap triển khai khuyến nghị (phù hợp Vercel + demo đồ án)
 
 ### Giai đoạn 1 (ưu tiên cao, nhanh ra kết quả)
-1) Global Admin foundation (Prisma + middleware + route guard).
-2) Admin Stats + Audit logs + User list.
-3) Ban/Unban bằng `SystemSetting.disabled_users`.
-4) AI Quiz Generator từ text.
-5) AI Auto-grading (gợi ý chấm tự luận, teacher approve).
+1) Global Admin foundation (Prisma + middleware + route guard). **→ ĐÃ HOÀN THÀNH**
+2) Admin Stats + Audit logs + User list. **→ ĐÃ HOÀN THÀNH**
+3) Ban/Unban bằng `SystemSetting.disabled_users`. **→ ĐÃ HOÀN THÀNH**
+4) AI Quiz Generator từ text. **→ ĐÃ HOÀN THÀNH**
+5) AI Auto-grading (gợi ý chấm tự luận, teacher approve). **→ ĐANG THỰC HIỆN (chưa code)**
 
 ### Giai đoạn 2
-1) Create teacher đúng mapping role.
+1) Create teacher đúng mapping role. **→ ĐÃ HOÀN THÀNH (sửa `userRepo.createUser` + API/Admin UI)**
 2) Reset password + audit.
 3) Smart summary on-demand cho phụ huynh.
 
@@ -243,14 +247,14 @@ Khuyến nghị: bắt đầu từ (A) vì tạo nền phân quyền/quản tr�
 
 ## 8. Danh sách hạng mục còn lại cần triển khai (Backlog)
 
-### 8.1. Ưu tiên rất cao (nên làm trước)
+### 8.1. Các hạng mục rất cao đã hoàn thành
 - Global Admin (`ADMIN`) theo `docs/ADMIN.md`:
-  - Prisma: thêm `ADMIN` vào `enum UserRole`.
-  - Middleware: bảo vệ `/dashboard/admin/*`, `/api/admin/*`.
-  - Admin pages + APIs: stats, audit logs, user list.
+  - Prisma: đã thêm `ADMIN` vào `enum UserRole`.
+  - Middleware: đã bảo vệ `/dashboard/admin/*`, `/api/admin/*`.
+  - Admin pages + APIs: đã có stats, audit logs, user list.
 - User Management:
-  - Sửa `userRepo.createUser()` để tạo Teacher đúng role (tránh hard-code `STUDENT`).
-  - Ban/Unban dùng `SystemSetting.disabled_users` + ghi audit `USER_BAN/USER_UNBAN`.
+  - Đã sửa `userRepo.createUser()` để tạo Teacher đúng role (không còn hard-code `STUDENT`).
+  - Đã triển khai Ban/Unban dùng `SystemSetting.disabled_users` + ghi audit `USER_BAN/USER_UNBAN`.
 
 ### 8.2. Ưu tiên cao
 - Reset password end-to-end:

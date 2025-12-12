@@ -13,7 +13,7 @@ import {
   UserSquare2,
 } from "lucide-react";
 
-export type DashboardRole = "teacher" | "student" | "parent";
+export type DashboardRole = "teacher" | "student" | "parent" | "admin";
 
 export interface SidebarItemConfig {
   icon: LucideIcon;
@@ -112,6 +112,28 @@ export const sidebarConfig: SidebarConfig = {
       title: "Tài khoản",
       items: [
         { icon: Settings, label: "Hồ sơ", href: "/dashboard/parent/profile" },
+      ],
+    },
+  ],
+  admin: [
+    {
+      title: "Tổng quan",
+      items: [
+        { icon: LayoutDashboard, label: "Overview", href: "/dashboard/admin/dashboard" },
+      ],
+    },
+    {
+      title: "Người dùng & Lớp học",
+      items: [
+        { icon: Users, label: "Users", href: "/dashboard/admin/users" },
+        { icon: School, label: "Classes", href: "/dashboard/admin/classrooms" },
+      ],
+    },
+    {
+      title: "Giám sát & Cấu hình",
+      items: [
+        { icon: BarChart3, label: "Audit Logs", href: "/dashboard/admin/audit-logs" },
+        { icon: Settings, label: "System Settings", href: "/dashboard/admin/settings" },
       ],
     },
   ],

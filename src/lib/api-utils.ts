@@ -8,6 +8,7 @@ const USER_ROLES = [
   "TEACHER",
   "STUDENT",
   "PARENT",
+  "ADMIN",
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
@@ -81,12 +82,29 @@ export async function getAuthenticatedUser(
       return null;
     }
 
-    // Chặn người dùng bị khoá theo system settings
+    // Chặn người dùng bị khoá theo system settings (disabled_users)
     if (user) {
       try {
         const row = await prisma.systemSetting.findUnique({ where: { key: "disabled_users" } });
-        const list = Array.isArray(row?.value) ? (row!.value as any) : [];
-        if (Array.isArray(list) && list.includes(user.id)) {
+        let isDisabled = false;
+        if (Array.isArray(row?.value)) {
+          for (const item of row!.value as any[]) {
+            if (typeof item === "string" && item === user.id) {
+              isDisabled = true;
+              break;
+            }
+            if (
+              item &&
+              typeof item === "object" &&
+              typeof (item as any).id === "string" &&
+              (item as any).id === user.id
+            ) {
+              isDisabled = true;
+              break;
+            }
+          }
+        }
+        if (isDisabled) {
           userCache.set(req, null);
           return null;
         }

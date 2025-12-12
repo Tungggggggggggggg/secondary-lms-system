@@ -14,7 +14,7 @@ import type { CSSProperties } from "react";
 import { sidebarConfig } from "@/constants/sidebar.config";
 import { NotificationBell } from "@/components/shared";
 
-type DashboardRole = "teacher" | "student" | "parent";
+type DashboardRole = "teacher" | "student" | "parent" | "admin";
 
 interface DashboardSidebarProps {
   role: DashboardRole;
@@ -41,9 +41,25 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
 
   const userAny = session?.user as { fullname?: string; name?: string } | undefined;
   const displayName =
-    userAny?.fullname || userAny?.name || (role === "teacher" ? "Giáo viên" : role === "student" ? "Học sinh" : "Phụ huynh");
-  const defaultInitial = role === "teacher" ? "GV" : role === "student" ? "HS" : "PH";
-  const roleLabel = role === "teacher" ? "Giáo viên" : role === "student" ? "Học sinh" : "Phụ huynh";
+    userAny?.fullname ||
+    userAny?.name ||
+    (role === "teacher"
+      ? "Giáo viên"
+      : role === "student"
+      ? "Học sinh"
+      : role === "parent"
+      ? "Phụ huynh"
+      : "Quản trị viên");
+  const defaultInitial =
+    role === "teacher" ? "GV" : role === "student" ? "HS" : role === "parent" ? "PH" : "AD";
+  const roleLabel =
+    role === "teacher"
+      ? "Giáo viên"
+      : role === "student"
+      ? "Học sinh"
+      : role === "parent"
+      ? "Phụ huynh"
+      : "Quản trị viên";
 
   const accent = {
     teacher: {
@@ -85,6 +101,19 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
       labelBase: "text-slate-700 group-hover:text-amber-800",
       labelActive: "text-amber-800 font-semibold",
     },
+    admin: {
+      hover: "hover:bg-gradient-to-r hover:from-slate-800/60 hover:to-slate-900/60",
+      activeBg: "bg-gradient-to-r from-slate-800 to-slate-900",
+      indicator: "bg-emerald-400",
+      ring: "focus-visible:ring-emerald-400/50",
+      textAccent: "text-slate-100",
+      hoverBorder: "hover:border-slate-700/80",
+      activeBorder: "border-slate-700",
+      iconBase: "text-slate-200 group-hover:text-emerald-300",
+      iconActive: "text-emerald-300 font-semibold",
+      labelBase: "text-slate-100 group-hover:text-emerald-200",
+      labelActive: "text-emerald-200 font-semibold",
+    },
   }[role];
 
   const rolePalette = {
@@ -99,6 +128,10 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
     parent: {
       bg: "rgba(255, 214, 165, 0.22)",
       border: "rgba(255, 214, 165, 0.35)",
+    },
+    admin: {
+      bg: "rgba(15, 23, 42, 0.96)",
+      border: "rgba(148, 163, 184, 0.55)",
     },
   }[role];
 

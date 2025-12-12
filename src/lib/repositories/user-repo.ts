@@ -65,7 +65,7 @@ export const userRepo = {
     const { email, fullname, passwordHash, globalRole, organizationId } = params;
     return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.user.create({
-        data: { email, fullname, password: passwordHash, role: 'STUDENT' as any },
+        data: { email, fullname, password: passwordHash, role: globalRole },
         select: { id: true, email: true, fullname: true, role: true, createdAt: true },
       });
       if (organizationId) {

@@ -53,6 +53,10 @@ const TIME_PRESETS = [
  */
 export default function QuizContentBuilder({ content, onContentChange }: QuizContentBuilderProps) {
   const [customTime, setCustomTime] = useState(false);
+  const [aiSourceText, setAiSourceText] = useState("");
+  const [aiNumQuestions, setAiNumQuestions] = useState(10);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const currentContent: QuizContent = useMemo(() => (
     content ?? {
@@ -293,6 +297,109 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
           Tạo câu hỏi và cài đặt thời gian, bảo mật
         </p>
       </div>
+
+      {/* AI Quiz Generator */}
+      <Card className="border-dashed border-blue-200 bg-blue-50/60">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-blue-800">
+              <Brain className="w-5 h-5" />
+              <span>AI Quiz Generator</span>
+            </div>
+            <span className="text-[11px] text-blue-700 font-medium">
+              Dán nội dung bài học → để AI gợi ý câu hỏi trắc nghiệm
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Label className="text-xs font-semibold text-slate-700">
+            Nội dung bài học / tài liệu
+          </Label>
+          <textarea
+            value={aiSourceText}
+            onChange={(e) => setAiSourceText(e.target.value)}
+            placeholder="Dán nội dung bài giảng, đoạn văn, ghi chú... (Tiếng Việt)"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs min-h-[96px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+          />
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-2 text-[11px] text-slate-600">
+              <Label htmlFor="aiNumQuestions" className="font-semibold">
+                Số câu hỏi mong muốn
+              </Label>
+              <Input
+                id="aiNumQuestions"
+                type="number"
+                min={1}
+                max={60}
+                value={aiNumQuestions}
+                onChange={(e) => setAiNumQuestions(parseInt(e.target.value) || 1)}
+                className="w-20 h-8 text-xs"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="text-[11px]"
+                disabled={aiLoading}
+                onClick={() => {
+                  setAiSourceText("");
+                  setAiError(null);
+                }}
+              >
+                Xoá nội dung
+              </Button>
+              <Button
+                type="button"
+                className="bg-blue-600 hover:bg-blue-700 text-[11px]"
+                disabled={aiLoading || !aiSourceText.trim()}
+                onClick={async () => {
+                  if (!aiSourceText.trim()) return;
+                  try {
+                    setAiLoading(true);
+                    setAiError(null);
+                    const res = await fetch("/api/ai/quiz", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        sourceText: aiSourceText,
+                        numQuestions: aiNumQuestions,
+                      }),
+                    });
+                    const json = await res.json();
+                    if (!res.ok || json?.success === false) {
+                      throw new Error(json?.message || "Không thể sinh câu hỏi bằng AI");
+                    }
+                    const aiQuestions = (json.data?.questions || []) as QuizQuestion[];
+                    if (!aiQuestions.length) {
+                      setAiError("AI không tạo được câu hỏi phù hợp. Hãy thử rút gọn hoặc làm rõ nội dung.");
+                      return;
+                    }
+                    onContentChange({
+                      ...currentContent,
+                      questions: [...currentContent.questions, ...aiQuestions],
+                    });
+                  } catch (e) {
+                    console.error("[QuizContentBuilder] AI quiz error", e);
+                    setAiError(
+                      e instanceof Error
+                        ? e.message
+                        : "Có lỗi xảy ra khi gọi AI. Vui lòng thử lại."
+                    );
+                  } finally {
+                    setAiLoading(false);
+                  }
+                }}
+              >
+                {aiLoading ? "Đang sinh câu hỏi..." : "Tạo câu hỏi bằng AI"}
+              </Button>
+            </div>
+          </div>
+          {aiError && (
+            <p className="text-[11px] text-red-600 mt-1">{aiError}</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Question Templates (Top) */}
       <QuestionTemplates 

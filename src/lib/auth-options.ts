@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import prisma from './prisma';
+import { settingsRepo } from '@/lib/repositories/settings-repo';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 
@@ -24,7 +25,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
+        const user = (await prisma.user.findUnique({
           where: { email: credentials.email },
           select: {
             id: true,
@@ -33,8 +34,8 @@ export const authOptions: NextAuthOptions = {
             fullname: true,
             role: true,
             roleSelectedAt: true,
-          },
-        });
+          } as any,
+        })) as any;
 
         if (!user || !user.password) {
           return null;
@@ -44,6 +45,35 @@ export const authOptions: NextAuthOptions = {
 
         if (!isPasswordValid) {
           return null;
+        }
+
+        // Chặn đăng nhập nếu tài khoản đã bị khoá qua SystemSetting.disabled_users
+        try {
+          const disabledSetting = await settingsRepo.get('disabled_users');
+          let isDisabled = false;
+          if (Array.isArray(disabledSetting)) {
+            for (const item of disabledSetting as any[]) {
+              if (typeof item === 'string' && item === user.id) {
+                isDisabled = true;
+                break;
+              }
+              if (
+                item &&
+                typeof item === 'object' &&
+                typeof (item as any).id === 'string' &&
+                (item as any).id === user.id
+              ) {
+                isDisabled = true;
+                break;
+              }
+            }
+          }
+          if (isDisabled) {
+            // Trả về null để NextAuth coi là đăng nhập thất bại
+            return null;
+          }
+        } catch (e) {
+          console.error('[Auth] Lỗi khi kiểm tra disabled_users', e);
         }
 
         // Trả về user nếu xác thực thành công
@@ -87,10 +117,15 @@ export const authOptions: NextAuthOptions = {
       if (shouldRefresh) {
         try {
           const userId = (user?.id || (token.id as string)) as string;
-          const freshUser = await prisma.user.findUnique({
+          const freshUser = (await prisma.user.findUnique({
             where: { id: userId },
-            select: { email: true, fullname: true, role: true, roleSelectedAt: true },
-          });
+            select: {
+              email: true,
+              fullname: true,
+              role: true,
+              roleSelectedAt: true,
+            } as any,
+          })) as any;
 
           if (freshUser) {
             token.email = freshUser.email;

@@ -16,7 +16,7 @@ Hệ thống cung cấp các chức năng cốt lõi như: quản lý lớp họ
 - Hỗ trợ phụ huynh liên kết với học sinh để theo dõi kết quả và trao đổi.
 
 ### 2.2. Phạm vi triển khai hiện tại (theo codebase)
-- **Phân quyền theo vai trò** và điều hướng dashboard theo vai trò.
+- **Phân quyền theo vai trò** và điều hướng dashboard theo vai trò (Teacher/Student/Parent/Admin).
 - **Lớp học**: tạo lớp, tham gia lớp bằng mã, danh sách lớp theo giáo viên/học sinh.
 - **Bài tập**: tạo bài (Essay/Quiz), quản lý bài theo lớp, làm bài/nộp bài.
 - **Nộp bài file-based**: upload file lên Supabase Storage, lưu metadata trong DB, tải xuống bằng signed URL.
@@ -24,6 +24,12 @@ Hệ thống cung cấp các chức năng cốt lõi như: quản lý lớp họ
 - **Tài khoản**: đăng nhập/đăng ký/đổi mật khẩu, cập nhật profile, chọn vai trò.
 - **Liên kết phụ huynh – học sinh**: invitation/link-request/quan hệ.
 - **Theo dõi**: audit log, exam events (ghi nhận sự kiện thi/quiz), notifications.
+- **Admin Portal (Global Admin)**:
+  - Dashboard tổng quan (thống kê users/lớp/bài tập/tổ chức, số tài khoản bị khoá).
+  - Quản lý người dùng: danh sách, lọc, tìm kiếm, Ban/Unban tài khoản.
+  - Tạo giáo viên mới (Create Teacher) và tạo **hàng loạt giáo viên** từ danh sách/CSV.
+  - Xem Audit Logs hệ thống.
+- **AI Quiz Generator**: sinh câu hỏi trắc nghiệm từ nội dung bài học (paste text) bằng Google Gemini.
 
 ## 3. Công nghệ sử dụng (Tech stack)
 ### 3.1. Frontend
@@ -267,6 +273,8 @@ Bạn có thể bổ sung thêm các mục sau (nếu dùng cho luận văn/đ�
 - Assignment Essay/Quiz, có mô hình question/option.
 - Nộp bài bằng file qua Supabase Storage.
 - Chat và announcement.
+- Phân hệ **Admin Portal** với role `ADMIN`, dashboard thống kê, quản lý user (ban/unban, tạo giáo viên, bulk import CSV) và xem Audit Logs.
+- Tính năng **AI Quiz Generator** từ nội dung bài học (paste text) sử dụng Google Gemini API.
 
 ### 12.2. Hướng phát triển gợi ý
 - Chuẩn hóa format lỗi API (đồng nhất `error/message/details`).

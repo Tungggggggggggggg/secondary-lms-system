@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
 
 interface Props {
-  role: "teacher" | "student" | "parent";
+  role: "teacher" | "student" | "parent" | "admin";
   className?: string;
 }
 
@@ -44,7 +44,7 @@ export default function TopbarBreadcrumbs({ role, className }: Props) {
   if (!pathname) return null;
 
   const parts = pathname.split("/").filter(Boolean);
-  const roleIndex = parts.findIndex((p) => ["teacher", "student", "parent"].includes(p));
+  const roleIndex = parts.findIndex((p) => ["teacher", "student", "parent", "admin"].includes(p));
   if (roleIndex === -1) return null;
 
   const items: BreadcrumbItem[] = [];
@@ -53,6 +53,7 @@ export default function TopbarBreadcrumbs({ role, className }: Props) {
     teacher: "Giáo viên",
     student: "Học sinh",
     parent: "Phụ huynh",
+    admin: "Quản trị viên",
   };
   items.push({ label: roleLabel[role], href: baseHref });
 

@@ -48,12 +48,42 @@ export default function LoginForm() {
 
             if (result?.error) {
                 console.error("Login error", result.error);
-                toast({
-                    title: "❌ Đăng nhập thất bại!",
-                    description:
-                        result.error || "Email hoặc mật khẩu không đúng.",
-                    variant: "destructive",
-                });
+
+                // Kiểm tra xem tài khoản có đang bị khoá hay không
+                try {
+                    const res = await fetch("/api/auth/check-locked", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email }),
+                    });
+                    const json = await res.json();
+                    if (res.ok && json?.locked) {
+                        const reason = typeof json.reason === "string" && json.reason.trim().length > 0
+                            ? json.reason.trim()
+                            : null;
+                        toast({
+                            title: "❌ Tài khoản đã bị khoá",
+                            description:
+                                reason
+                                    ? `Tài khoản của bạn đã bị khoá. Lý do: ${reason}`
+                                    : "Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.",
+                            variant: "destructive",
+                        });
+                    } else {
+                        toast({
+                            title: "❌ Đăng nhập thất bại!",
+                            description: "Email hoặc mật khẩu không đúng.",
+                            variant: "destructive",
+                        });
+                    }
+                } catch (err) {
+                    console.error("check-locked error", err);
+                    toast({
+                        title: "❌ Đăng nhập thất bại!",
+                        description: "Email hoặc mật khẩu không đúng.",
+                        variant: "destructive",
+                    });
+                }
                 return;
             }
 
@@ -71,7 +101,9 @@ export default function LoginForm() {
                 }
 
                 const role = session?.user?.role?.toString().toUpperCase();
-                if (role === "TEACHER") {
+                if (role === "ADMIN") {
+                    router.push("/dashboard/admin/dashboard");
+                } else if (role === "TEACHER") {
                     router.push("/dashboard/teacher/dashboard");
                 } else if (role === "PARENT") {
                     router.push("/dashboard/parent/dashboard");

@@ -12,6 +12,21 @@ Admin Portal là khu vực dành riêng cho quản trị viên hệ thống. Kh�
 2.  **Tính minh bạch (Auditability):** Mọi hành động nhạy cảm của Admin phải được ghi log.
 3.  **Giao diện tách biệt:** Sử dụng Layout riêng để tránh nhầm lẫn với các vai trò khác.
 
+### 1.1. Trạng thái triển khai hiện tại
+
+- Đã bổ sung role `ADMIN` vào `enum UserRole` trong Prisma và đưa vào JWT/session của NextAuth.
+- `middleware.ts` đã bảo vệ đầy đủ:
+  - Chỉ `ADMIN` được truy cập `/dashboard/admin/*` và `/api/admin/*`.
+  - Chuẩn hoá redirect `/dashboard/admin` → `/dashboard/admin/dashboard`.
+- **Admin Layout** (`src/app/dashboard/admin/layout.tsx`) đã tách sidebar riêng với chế độ quản trị.
+- Đã triển khai các màn hình và API chính cho Admin:
+  - `/dashboard/admin/dashboard` + `GET /api/admin/stats`: thống kê tổng quan users/lớp/bài tập/tổ chức và số tài khoản bị khoá.
+  - `/dashboard/admin/users` + `GET /api/admin/users`: danh sách user với phân trang, lọc theo vai trò, tìm kiếm.
+  - `POST /api/admin/users/[id]/status`: Ban/Unban user qua `SystemSetting.disabled_users` và ghi `AuditLog`.
+  - `POST /api/admin/users`: form tạo nhanh giáo viên (Create Teacher) với họ tên, email, mật khẩu.
+  - `POST /api/admin/users/bulk`: tạo **hàng loạt** giáo viên từ danh sách text hoặc file CSV (kéo‑thả trong UI).
+  - `/dashboard/admin/audit-logs` + `GET /api/admin/audit-logs`: xem nhật ký hệ thống với phân trang theo cursor.
+
 ---
 
 ## 2. Kiến trúc dữ liệu (Database Schema Update)
