@@ -26,6 +26,14 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            password: true,
+            fullname: true,
+            role: true,
+            roleSelectedAt: true,
+          },
         });
 
         if (!user || !user.password) {
@@ -46,6 +54,7 @@ export const authOptions: NextAuthOptions = {
           name: user.fullname,
           fullname: user.fullname, // Also include fullname explicitly
           role: user.role,
+          roleSelectedAt: user.roleSelectedAt ? user.roleSelectedAt.toISOString() : null,
         };
       },
     }),
@@ -70,24 +79,25 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.email = user.email;
-        token.name = (user as any).fullname || user.name || null;
-        token.fullname = (user as any).fullname || null;
-        token.role = user.role;
       }
       
       // Khi session.update() được gọi, fetch lại role mới từ database
       // Điều này xảy ra khi user chọn role trong RoleSelector
-      if (trigger === 'update' && token.id) {
+      const shouldRefresh = (!!user && !!user.id) || (trigger === 'update' && !!token.id);
+      if (shouldRefresh) {
         try {
+          const userId = (user?.id || (token.id as string)) as string;
           const freshUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { id: true, email: true, fullname: true, role: true },
+            where: { id: userId },
+            select: { email: true, fullname: true, role: true, roleSelectedAt: true },
           });
-          
+
           if (freshUser) {
-            token.role = freshUser.role;
+            token.email = freshUser.email;
             token.fullname = freshUser.fullname;
             token.name = freshUser.fullname;
+            token.role = freshUser.role;
+            token.roleSelectedAt = freshUser.roleSelectedAt ? freshUser.roleSelectedAt.toISOString() : null;
           }
         } catch (error) {
           console.error('[JWT Callback] Error fetching fresh user data:', error);
@@ -101,13 +111,14 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = (token.name as string) || '';
-        session.user.fullname = (token as any).fullname || '';
+        session.user.fullname = token.fullname || '';
         session.user.role = token.role;
+        session.user.roleSelectedAt = token.roleSelectedAt || null;
       }
       try {
         const cookieStore = cookies();
         const orgId = cookieStore.get('x-org-id')?.value || null;
-        (session as any).orgId = orgId;
+        (session as unknown as { orgId?: string | null }).orgId = orgId;
       } catch {}
       return session;
     },

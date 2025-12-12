@@ -35,6 +35,13 @@ const config: Config = {
                 input: "hsl(var(--input))",
                 ring: "hsl(var(--ring))",
                 radius: "var(--radius)",
+                coolors: {
+                    ink: "#264653",
+                    primary: "#2A9D8F",
+                    highlight: "#E9C46A",
+                    accent: "#F4A261",
+                    secondary: "#E76F51",
+                },
             },
             fontFamily: {
                 roboto: ["var(--font-roboto)"],

@@ -63,25 +63,21 @@ export default function LoginForm() {
             });
 
             try {
-                const justRegistered =
-                    typeof window !== "undefined"
-                        ? localStorage.getItem("justRegistered")
-                        : null;
-                if (justRegistered) {
-                    localStorage.removeItem("justRegistered");
+                const session = await getSession();
+                const roleSelectedAt = session?.user?.roleSelectedAt;
+                if (!roleSelectedAt) {
                     router.push("/auth/select-role");
+                    return;
+                }
+
+                const role = session?.user?.role?.toString().toUpperCase();
+                if (role === "TEACHER") {
+                    router.push("/dashboard/teacher/dashboard");
+                } else if (role === "PARENT") {
+                    router.push("/dashboard/parent/dashboard");
                 } else {
-                    // Điều hướng theo vai trò
-                    const session = await getSession();
-                    const role = session?.user?.role?.toString().toUpperCase();
-                    if (role === "TEACHER") {
-                        router.push("/dashboard/teacher/dashboard");
-                    } else if (role === "PARENT") {
-                        router.push("/dashboard/parent/dashboard");
-                    } else {
-                        // Mặc định STUDENT
-                        router.push("/dashboard/student/dashboard");
-                    }
+                    // Mặc định STUDENT
+                    router.push("/dashboard/student/dashboard");
                 }
             } catch (err) {
                 console.warn(

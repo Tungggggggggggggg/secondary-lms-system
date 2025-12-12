@@ -52,9 +52,9 @@ export async function PUT(req: Request) {
     console.log('[API Update Role] Updating user role in database', { userId: session.user.id, newRole: normalized });
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
-      data: { role: normalized as UserRoleString },
+      data: { role: normalized as UserRoleString, roleSelectedAt: new Date() },
       // Chỉ chọn các trường hiện có trong schema Prisma tối giản
-      select: { id: true, email: true, fullname: true, role: true, createdAt: true, updatedAt: true },
+      select: { id: true, email: true, fullname: true, role: true, roleSelectedAt: true, createdAt: true, updatedAt: true },
     });
 
     try {

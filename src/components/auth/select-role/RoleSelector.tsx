@@ -81,7 +81,7 @@ export default function RoleSelector() {
 
     toast({ title: '🔙 Đang quay lại trang trước...', variant: 'default' });
 
-    if (session?.user?.id && selectedRole) {
+    if (session?.user?.id) {
       try {
         await signOut({ redirect: false });
       } catch (err) {
@@ -152,10 +152,8 @@ export default function RoleSelector() {
         });
       }
 
-      // Bước 3: Đợi một chút để đảm bảo session được cập nhật hoàn toàn
-      // Tránh race condition với middleware
-      console.log('[RoleSelector] Waiting for session to propagate...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Bước 3: Không dùng delay nữa, vì API đã set roleSelectedAt và middleware chỉ dựa trên JWT
+      // Không cần chờ đợi, có thể chuyển hướng ngay lập tức
 
       const roleMessages: Record<RoleType, string> = {
         teacher: '👨‍🏫 Chào mừng Giáo viên! Đang chuyển đến trang quản lý...',
@@ -167,7 +165,7 @@ export default function RoleSelector() {
 
       // Bước 4: Chuyển hướng đến dashboard tương ứng
       console.log('[RoleSelector] Redirecting to dashboard', { role: selectedRole });
-      router.push(`/dashboard/${selectedRole}`);
+      router.push(`/dashboard/${selectedRole}/dashboard`);
     } catch (error) {
       console.error('[RoleSelector] Error updating role:', error);
       toast({

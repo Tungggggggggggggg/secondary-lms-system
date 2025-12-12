@@ -10,6 +10,7 @@ interface PageHeaderProps {
   badge?: ReactNode;
   size?: "sm" | "md";
   actions?: ReactNode;
+  label?: string;
 }
 
 const roleStyles = {
@@ -39,7 +40,7 @@ const roleStyles = {
   },
 };
 
-export default function PageHeader({ title, subtitle, role = "teacher", badge, size = "md", actions }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, role = "teacher", badge, size = "md", actions, label }: PageHeaderProps) {
   const style = roleStyles[role];
   const Icon = style.icon;
   const pad = size === "sm" ? "px-5 py-4 sm:px-6 sm:py-5" : "px-6 py-6 sm:px-8 sm:py-7";
@@ -52,7 +53,7 @@ export default function PageHeader({ title, subtitle, role = "teacher", badge, s
         <div className="flex items-center justify-between gap-6">
           <div className="space-y-2 flex-1">
             <p className={`text-[11px] font-semibold tracking-[0.16em] ${style.label} uppercase`}>
-              Bảng điều khiển học tập
+              {label ?? "Bảng điều khiển học tập"}
             </p>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900">
               {title}

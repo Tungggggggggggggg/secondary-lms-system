@@ -14,18 +14,33 @@ export async function middleware(req: NextRequest) {
     // Lấy token nếu có để biết vai trò người dùng
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     const role = (token?.role as string | undefined) ?? undefined;
+    const roleSelectedAt = (token?.roleSelectedAt as string | undefined) ?? undefined;
     
     // Logging để debug
     console.log('[Middleware]', {
         pathname,
         hasToken: !!token,
         role: role || 'none',
+        roleSelectedAt: roleSelectedAt || 'none',
         userId: token?.id || 'none'
     });
 
+    if (token && !roleSelectedAt && !pathname.startsWith('/auth/select-role')) {
+        console.log('[Middleware] Role not selected yet, redirecting to select-role');
+        return NextResponse.redirect(new URL('/auth/select-role', url));
+    }
+
+    if (token && roleSelectedAt && pathname.startsWith('/auth/select-role')) {
+        const target = role ? roleToDashboard[role] : "/";
+        if (target && pathname !== target) {
+            console.log('[Middleware] Role already selected, redirecting to dashboard', { role, target });
+            return NextResponse.redirect(new URL(target, url));
+        }
+    }
+
     // Nếu đã đăng nhập và đang vào trang login, chuyển hướng về dashboard theo vai trò
     if (token && pathname.startsWith("/auth/login")) {
-        const target = role ? roleToDashboard[role] : "/";
+        const target = roleSelectedAt ? (role ? roleToDashboard[role] : "/") : "/auth/select-role";
         if (target && pathname !== target) {
             console.log('[Middleware] Redirecting from login to dashboard', { role, target });
             return NextResponse.redirect(new URL(target, url));
@@ -34,7 +49,7 @@ export async function middleware(req: NextRequest) {
 
     // Điều hướng trang gốc hoặc '/dashboard' đến dashboard theo vai trò nếu đã đăng nhập
     if (token && (pathname === "/" || pathname === "/dashboard")) {
-        const target = role ? roleToDashboard[role] : "/";
+        const target = roleSelectedAt ? (role ? roleToDashboard[role] : "/") : "/auth/select-role";
         if (target && pathname !== target) {
             console.log('[Middleware] Redirecting from root to dashboard', { role, target });
             return NextResponse.redirect(new URL(target, url));
@@ -61,6 +76,11 @@ export async function middleware(req: NextRequest) {
     // Nếu chưa đăng nhập mà truy cập vùng dashboard -> chuyển login
     if (!token && pathname.startsWith('/dashboard')) {
         console.log('[Middleware] Unauthenticated access to dashboard, redirecting to login');
+        return NextResponse.redirect(new URL('/auth/login', url));
+    }
+
+    if (!token && pathname.startsWith('/auth/select-role')) {
+        console.log('[Middleware] Unauthenticated access to select-role, redirecting to login');
         return NextResponse.redirect(new URL('/auth/login', url));
     }
 
