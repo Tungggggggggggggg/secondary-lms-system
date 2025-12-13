@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/shared/PageHeader";
 import { usePrompt } from "@/components/providers/PromptProvider";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 type AdminUserItem = {
   id: string;
@@ -30,6 +32,7 @@ const ROLE_OPTIONS: { label: string; value: "" | AdminUserItem["role"]; badgeCla
 ];
 
 export default function AdminUsersPage() {
+  const { toast } = useToast();
   const [items, setItems] = useState<AdminUserItem[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
@@ -40,11 +43,15 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [banLoadingId, setBanLoadingId] = useState<string | null>(null);
   const [resetLoadingId, setResetLoadingId] = useState<string | null>(null);
+
+  const [createOpen, setCreateOpen] = useState(false);
   const [createFullname, setCreateFullname] = useState("");
   const [createEmail, setCreateEmail] = useState("");
   const [createPassword, setCreatePassword] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [bulkDefaultPassword, setBulkDefaultPassword] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -119,10 +126,18 @@ export default function AdminUsersPage() {
       if (!res.ok || json?.success === false) {
         throw new Error(json?.message || "Không thể gửi mã reset password");
       }
-      alert(`Đã gửi mã reset password tới ${user.email}`);
+      toast({
+        title: "Đã gửi mã reset",
+        description: `Đã gửi mã reset password tới ${user.email}`,
+        variant: "success",
+      });
     } catch (e) {
       console.error("[AdminUsersPage] resetPassword error", e);
-      alert(e instanceof Error ? e.message : "Có lỗi xảy ra khi reset mật khẩu");
+      toast({
+        title: "Không thể gửi mã reset",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi reset mật khẩu",
+        variant: "destructive",
+      });
     } finally {
       setResetLoadingId(null);
     }
@@ -198,7 +213,11 @@ export default function AdminUsersPage() {
       );
     } catch (e) {
       console.error("[AdminUsersPage] toggleBan error", e);
-      alert(e instanceof Error ? e.message : "Có lỗi xảy ra khi cập nhật trạng thái");
+      toast({
+        title: "Không thể cập nhật trạng thái",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi cập nhật trạng thái",
+        variant: "destructive",
+      });
     } finally {
       setBanLoadingId(null);
     }
@@ -230,10 +249,22 @@ export default function AdminUsersPage() {
 
       setRoleFilter("TEACHER");
       await fetchUsers(1, "TEACHER", search);
+
+      setCreateOpen(false);
+      toast({
+        title: "Tạo giáo viên thành công",
+        description: createEmail.trim() ? `Đã tạo tài khoản: ${createEmail.trim()}` : "Đã tạo tài khoản giáo viên.",
+        variant: "success",
+      });
     } catch (e) {
       setCreateError(
         e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo giáo viên mới"
       );
+      toast({
+        title: "Không thể tạo giáo viên",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo giáo viên mới",
+        variant: "destructive",
+      });
     } finally {
       setCreateLoading(false);
     }
@@ -284,10 +315,25 @@ export default function AdminUsersPage() {
 
       setRoleFilter("TEACHER");
       await fetchUsers(1, "TEACHER", search);
+
+      setBulkOpen(false);
+
+      toast({
+        title: "Đã xử lý danh sách giáo viên",
+        description: `Tạo thành công ${Array.isArray(data?.created) ? data.created.length : 0} giáo viên, ${
+          Array.isArray(data?.failed) ? data.failed.length : 0
+        } dòng lỗi.`,
+        variant: "success",
+      });
     } catch (e) {
       setBulkError(
         e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo giáo viên hàng loạt"
       );
+      toast({
+        title: "Không thể tạo giáo viên hàng loạt",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo giáo viên hàng loạt",
+        variant: "destructive",
+      });
     } finally {
       setBulkLoading(false);
     }
@@ -353,140 +399,35 @@ export default function AdminUsersPage() {
         subtitle="Tìm kiếm, lọc và thao tác trên tài khoản trong toàn hệ thống"
       />
 
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-        <h2 className="text-sm font-semibold text-slate-800">Tạo giáo viên mới</h2>
-        {createError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-            {createError}
+      <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-[11px] text-slate-600">
+            Tạo nhanh tài khoản giáo viên (1 người hoặc hàng loạt) rồi quay lại danh sách để quản lý.
           </div>
-        )}
-        <form
-          onSubmit={handleCreateTeacher}
-          className="grid gap-3 md:grid-cols-4 items-end"
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-slate-600">Họ và tên</label>
-            <input
-              type="text"
-              value={createFullname}
-              onChange={(e) => setCreateFullname(e.target.value)}
-              placeholder="VD: Nguyễn Văn A"
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-slate-600">Email</label>
-            <input
-              type="email"
-              value={createEmail}
-              onChange={(e) => setCreateEmail(e.target.value)}
-              placeholder="giaovien@example.com"
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-slate-600">Mật khẩu mặc định</label>
-            <input
-              type="password"
-              value={createPassword}
-              onChange={(e) => setCreatePassword(e.target.value)}
-              placeholder="Tối thiểu 6 ký tự"
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-              required
-            />
-          </div>
-          <div className="flex gap-2 justify-end">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
             <button
-              type="submit"
-              disabled={createLoading}
-              className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+              type="button"
+              onClick={() => {
+                setCreateError(null);
+                setCreateOpen(true);
+              }}
+              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800"
             >
-              {createLoading ? "Đang tạo..." : "Tạo giáo viên"}
+              Tạo giáo viên
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setBulkError(null);
+                setBulkResult(null);
+                setBulkOpen(true);
+              }}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+            >
+              Tạo giáo viên hàng loạt
             </button>
           </div>
-        </form>
-      </div>
-
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-        <h2 className="text-sm font-semibold text-slate-800">Tạo giáo viên hàng loạt</h2>
-        <p className="text-[11px] text-slate-500">
-          Mỗi dòng một giáo viên theo định dạng: <span className="font-semibold">Họ tên, email[, mật khẩu]</span>. Nếu
-          không nhập mật khẩu ở từng dòng, hệ thống sẽ dùng mật khẩu mặc định bên dưới.
-        </p>
-        {bulkError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-            {bulkError}
-          </div>
-        )}
-        {bulkResult && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
-            Đã tạo {bulkResult.created} giáo viên, {bulkResult.failed} dòng lỗi.
-          </div>
-        )}
-        <form
-          onSubmit={handleBulkCreateTeachers}
-          className="space-y-3"
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-slate-600">Danh sách giáo viên</label>
-            <textarea
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              rows={5}
-              placeholder={"VD:\nNguyễn Văn A, a@example.com\nTrần Thị B, b@example.com, MatKhau123"}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 resize-y"
-            />
-          </div>
-          <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-            <div
-              className={`flex flex-col gap-1 rounded-xl border-2 border-dashed px-3 py-3 transition-colors cursor-pointer ${
-                bulkDragOver
-                  ? "border-slate-900 bg-slate-50"
-                  : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
-              }`}
-              onDragOver={handleBulkDragOver}
-              onDragLeave={handleBulkDragLeave}
-              onDrop={handleBulkDrop}
-            >
-              <label className="text-[11px] font-semibold text-slate-700">
-                Kéo & thả file CSV vào đây (hoặc chọn tệp)
-              </label>
-              <input
-                type="file"
-                accept=".csv,text/csv"
-                onChange={handleBulkFileChange}
-                className="text-[11px] text-slate-700"
-              />
-              {bulkFileName && (
-                <span className="text-[10px] text-slate-500">Đã chọn file: {bulkFileName}</span>
-              )}
-            </div>
-            <p className="text-[10px] text-slate-500 md:text-right mt-2 md:mt-0">
-              Gợi ý: xuất danh sách giáo viên từ Excel dưới dạng CSV với cột Họ tên, Email, (Mật khẩu).
-            </p>
-          </div>
-          <div className="flex flex-col gap-1 max-w-xs">
-            <label className="text-[11px] font-semibold text-slate-600">Mật khẩu mặc định (tùy chọn)</label>
-            <input
-              type="password"
-              value={bulkDefaultPassword}
-              onChange={(e) => setBulkDefaultPassword(e.target.value)}
-              placeholder="Dùng cho các dòng không có mật khẩu riêng"
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-            />
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button
-              type="submit"
-              disabled={bulkLoading}
-              className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {bulkLoading ? "Đang xử lý..." : "Tạo hàng loạt"}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
 
       <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
@@ -677,6 +618,202 @@ export default function AdminUsersPage() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) {
+            setCreateError(null);
+            setCreateFullname("");
+            setCreateEmail("");
+            setCreatePassword("");
+          }
+        }}
+      >
+        <DialogContent
+          className="w-[min(92vw,48rem)] max-w-2xl max-h-[90vh]"
+          onClose={() => setCreateOpen(false)}
+        >
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Tạo giáo viên mới</DialogTitle>
+            <DialogDescription>
+              Nhập thông tin cơ bản để tạo tài khoản giáo viên. Mật khẩu tối thiểu 6 ký tự.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            {createError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                {createError}
+              </div>
+            )}
+            <form id="create-teacher-form" onSubmit={handleCreateTeacher} className="grid gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-semibold text-slate-600">Họ và tên</label>
+                <input
+                  type="text"
+                  value={createFullname}
+                  onChange={(e) => setCreateFullname(e.target.value)}
+                  placeholder="VD: Nguyễn Văn A"
+                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-semibold text-slate-600">Email</label>
+                <input
+                  type="email"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                  placeholder="giaovien@example.com"
+                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1 md:col-span-2">
+                <label className="text-[11px] font-semibold text-slate-600">Mật khẩu</label>
+                <input
+                  type="password"
+                  value={createPassword}
+                  onChange={(e) => setCreatePassword(e.target.value)}
+                  placeholder="Tối thiểu 6 ký tự"
+                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  required
+                />
+              </div>
+            </form>
+          </div>
+          <DialogFooter className="shrink-0">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(false)}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Hủy
+            </button>
+            <button
+              form="create-teacher-form"
+              type="submit"
+              disabled={createLoading}
+              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {createLoading ? "Đang tạo..." : "Tạo giáo viên"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkOpen}
+        onOpenChange={(open) => {
+          setBulkOpen(open);
+          if (!open) {
+            setBulkDragOver(false);
+            setBulkError(null);
+            setBulkResult(null);
+            setBulkFileName(null);
+            setBulkText("");
+            setBulkDefaultPassword("");
+          }
+        }}
+      >
+        <DialogContent
+          className="w-[min(92vw,64rem)] max-w-4xl max-h-[90vh]"
+          onClose={() => setBulkOpen(false)}
+        >
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Tạo giáo viên hàng loạt</DialogTitle>
+            <DialogDescription>
+              Mỗi dòng một giáo viên theo định dạng: Họ tên, email[, mật khẩu]. Nếu không có mật khẩu riêng, hệ thống
+              dùng mật khẩu mặc định.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            {bulkError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                {bulkError}
+              </div>
+            )}
+            {bulkResult && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
+                Đã tạo {bulkResult.created} giáo viên, {bulkResult.failed} dòng lỗi.
+              </div>
+            )}
+
+            <form id="bulk-create-teachers-form" onSubmit={handleBulkCreateTeachers} className="grid gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2 flex flex-col gap-1">
+                <label className="text-[11px] font-semibold text-slate-600">Danh sách giáo viên</label>
+                <textarea
+                  value={bulkText}
+                  onChange={(e) => setBulkText(e.target.value)}
+                  rows={12}
+                  placeholder={"VD:\nNguyễn Văn A, a@example.com\nTrần Thị B, b@example.com, MatKhau123"}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 resize-y"
+                />
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div
+                  className={`flex flex-col gap-2 rounded-xl border-2 border-dashed px-3 py-3 transition-colors cursor-pointer ${
+                    bulkDragOver
+                      ? "border-slate-900 bg-slate-50"
+                      : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+                  }`}
+                  onDragOver={handleBulkDragOver}
+                  onDragLeave={handleBulkDragLeave}
+                  onDrop={handleBulkDrop}
+                >
+                  <div className="text-[11px] font-semibold text-slate-700">
+                    Kéo & thả file CSV vào đây (hoặc chọn tệp)
+                  </div>
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={handleBulkFileChange}
+                    className="text-[11px] text-slate-700"
+                  />
+                  {bulkFileName && (
+                    <span className="text-[10px] text-slate-500">Đã chọn file: {bulkFileName}</span>
+                  )}
+                  <div className="text-[10px] text-slate-500">
+                    Gợi ý: xuất từ Excel dạng CSV với cột Họ tên, Email, (Mật khẩu).
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-600">Mật khẩu mặc định (tùy chọn)</label>
+                  <input
+                    type="password"
+                    value={bulkDefaultPassword}
+                    onChange={(e) => setBulkDefaultPassword(e.target.value)}
+                    placeholder="Dùng cho các dòng không có mật khẩu riêng"
+                    className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  />
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <DialogFooter className="shrink-0">
+            <button
+              type="button"
+              onClick={() => setBulkOpen(false)}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Đóng
+            </button>
+            <button
+              form="bulk-create-teachers-form"
+              type="submit"
+              disabled={bulkLoading}
+              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {bulkLoading ? "Đang xử lý..." : "Tạo hàng loạt"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

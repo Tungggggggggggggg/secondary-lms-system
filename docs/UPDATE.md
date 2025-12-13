@@ -78,7 +78,7 @@ Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase
 *Mục tiêu: Hoàn thiện tính năng hỗ trợ giáo viên.*
 - [x] Đăng ký Google AI Studio API Key và cấu hình biến môi trường `GEMINI_API_KEY`.
 - [x] Cài đặt `@google/generative-ai` SDK và tích hợp vào lớp AI Layer.
-- [ ] Triển khai API route `/api/ai/grade` (Chấm bài).
+- [x] Triển khai API route `/api/ai/grade` (Chấm bài).
 - [x] Triển khai API route `/api/ai/quiz` (Tạo đề từ **text** + tích hợp UI cho giáo viên).
 
 ### Giai đoạn 2: Intelligent Data (Độ khó cao)
@@ -90,7 +90,8 @@ Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase
 ### Giai đoạn 3: Analytics & UX (Hoàn thiện)
 *Mục tiêu: Báo cáo và Giám sát.*
 - [ ] Xây dựng hook `useAntiCheat` trên React.
-- [ ] Triển khai API tổng hợp báo cáo tuần cho phụ huynh.
+- [x] Triển khai API tóm tắt học tập **on-demand** cho phụ huynh: `POST /api/ai/parent/summary`.
+- [ ] Triển khai báo cáo tuần tự động cho phụ huynh (Cron).
 
 ---
 

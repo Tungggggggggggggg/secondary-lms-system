@@ -23,11 +23,22 @@ Admin Portal là khu vực dành riêng cho quản trị viên hệ thống. Kh�
   - `/dashboard/admin/dashboard` + `GET /api/admin/stats`: thống kê tổng quan users/lớp/bài tập/tổ chức và số tài khoản bị khoá.
   - `/dashboard/admin/users` + `GET /api/admin/users`: danh sách user với phân trang, lọc theo vai trò, tìm kiếm.
   - `POST /api/admin/users/[id]/status`: Ban/Unban user qua `SystemSetting.disabled_users` và ghi `AuditLog`.
-  - `POST /api/admin/users`: form tạo nhanh giáo viên (Create Teacher) với họ tên, email, mật khẩu.
-  - `POST /api/admin/users/bulk`: tạo **hàng loạt** giáo viên từ danh sách text hoặc file CSV (kéo‑thả trong UI).
+  - `POST /api/admin/users`: tạo nhanh giáo viên (Create Teacher) với họ tên, email, mật khẩu (**UI dạng dialog**).
+  - `POST /api/admin/users/bulk`: tạo **hàng loạt** giáo viên từ danh sách text hoặc file CSV (**UI dạng dialog**, hỗ trợ kéo‑thả).
+  - `/dashboard/admin/classrooms` + `GET /api/admin/classrooms`: quản lý lớp học toàn hệ thống (lọc trạng thái, tìm kiếm, phân trang).
+  - `/dashboard/admin/classrooms/[id]` + `GET /api/admin/classrooms/[id]`: trang chi tiết lớp (overview + actions) và quản lý học sinh.
+  - `PATCH /api/admin/classrooms/[id]`: chỉnh sửa lớp (name/code/maxStudents) + validate + check code unique.
+  - `POST /api/admin/classrooms/[id]/teacher`: đổi giáo viên (admin-only) + audit.
+  - `POST /api/admin/classrooms/[id]/students/bulk`: thêm học sinh hàng loạt (text/CSV `fullname,email`), tuỳ chọn tự tạo tài khoản nếu email chưa có.
+  - `GET /api/admin/classrooms/[id]/students/export`: export CSV danh sách học sinh.
+  - `DELETE /api/admin/classrooms/[id]/students/[studentId]`: xoá học sinh khỏi lớp (có guard lớp lưu trữ).
+  - `POST /api/admin/classrooms/[id]/status`: lưu trữ/khôi phục lớp (archive/unarchive) + audit.
+  - Quy tắc lớp lưu trữ: khoá thao tác thay đổi (UI disable + API guard) và chỉ cho xem/export/khôi phục.
+  - Bulk remove học sinh (multi-select) ở trang chi tiết lớp.
+  - Khi thêm học sinh hàng loạt có dòng không thêm được: hiển thị dialog liệt kê email + lý do.
   - `/dashboard/admin/audit-logs` + `GET /api/admin/audit-logs`: xem nhật ký hệ thống với phân trang theo cursor.
 
----
+-----
 
 ## 2. Kiến trúc dữ liệu (Database Schema Update)
 Cần bổ sung các Model sau vào `prisma/schema.prisma` để phục vụ chức năng Admin.
@@ -50,7 +61,7 @@ model AuditLog {
   @@index([actorId])
   @@index([createdAt])
 }
-````
+```
 
 ### 2.2. System Settings (Cấu hình động)
 
@@ -80,7 +91,9 @@ Cấu trúc URL: `/dashboard/admin/*`
       * User Detail (Xem profile, lịch sử hoạt động, Action: Reset Password / Ban).
 3.  **Classroom Management (`/classrooms`):**
       * Danh sách toàn bộ lớp học trong hệ thống.
-      * Action: Archive lớp (Lưu trữ), Force Delete (Xóa lớp vi phạm).
+      * Điều hướng sang trang chi tiết lớp `/dashboard/admin/classrooms/[id]`.
+      * Action: Archive lớp (Lưu trữ) / Unarchive (Khôi phục).
+      * (Tuỳ chọn mở rộng) Force Delete (Xóa lớp vi phạm).
 4.  **System Settings (`/settings`):**
       * Bật/Tắt chế độ bảo trì.
       * Cấu hình thông báo toàn hệ thống (Global Announcement).

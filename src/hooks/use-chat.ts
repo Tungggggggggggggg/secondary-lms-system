@@ -86,8 +86,8 @@ export async function markRead(conversationId: string) {
 
 export function useUnreadTotal() {
   const { data } = useSWR("/api/chat/unread-total", fetcher, {
-    refreshInterval: 15000,
-    dedupingInterval: 10000,
+    refreshInterval: 60000,
+    dedupingInterval: 45000,
     revalidateOnFocus: true,
   });
   return (data?.total as number) || 0;

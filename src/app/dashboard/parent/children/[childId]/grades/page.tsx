@@ -27,7 +27,7 @@ export default function ParentChildGradesPage() {
   const params = useParams();
   const childId = params.childId as string;
 
-  const { grades, statistics, isLoading, error, fetchChildGrades } = useParentGrades();
+  const { grades, statistics, isLoading, isLoadingMore, hasMore, loadMore, error, fetchChildGrades } = useParentGrades();
   const [sortBy, setSortBy] = useState<
     "newest" | "grade_desc" | "grade_asc" | "due_date" | "classroom"
   >("newest");
@@ -70,12 +70,12 @@ export default function ParentChildGradesPage() {
   const children = (childrenData?.success && childrenData?.items) ? childrenData.items : [];
   const selectedChild = children.find((rel) => rel.student.id === childId || rel.studentId === childId);
 
-  // Load grades khi component mount
+  // Load grades khi component mount và khi thay đổi khoảng thời gian
   useEffect(() => {
     if (childId) {
-      fetchChildGrades(childId);
+      fetchChildGrades(childId, summaryWindowDays);
     }
-  }, [childId, fetchChildGrades]);
+  }, [childId, fetchChildGrades, summaryWindowDays]);
 
   // Filter vÃ  sort grades
   const filteredAndSortedGrades = useMemo(() => {
@@ -310,7 +310,7 @@ export default function ParentChildGradesPage() {
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
           <h3 className="font-semibold mb-2">Lỗi tải danh sách điểm số</h3>
           <p className="text-sm mb-4">{error}</p>
-          <Button onClick={() => fetchChildGrades(childId)}>Thử lại</Button>
+          <Button onClick={() => fetchChildGrades(childId, summaryWindowDays)}>Thử lại</Button>
         </div>
       </div>
     );
@@ -584,6 +584,19 @@ export default function ParentChildGradesPage() {
               </TableBody>
             </Table>
           </div>
+
+          {hasMore && (
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                onClick={() => loadMore()}
+                disabled={isLoadingMore || isLoading}
+                className="rounded-full px-6"
+              >
+                {isLoadingMore ? "Đang tải..." : "Tải thêm"}
+              </Button>
+            </div>
+          )}
 
           {selectedFeedback && (
             <Dialog

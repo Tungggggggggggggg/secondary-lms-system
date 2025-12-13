@@ -15,10 +15,12 @@ interface ParentChildAssignmentRow {
   title: string;
   type: string;
   dueDate: Date | null;
+  createdAt: Date;
 }
 
 interface ParentChildAssignmentClassroomRow {
   assignmentId: string;
+  assignment: ParentChildAssignmentRow;
   classroom: {
     id: string;
     name: string;
@@ -46,6 +48,29 @@ export const GET = withApiLogging(async (
     if (!childId) {
       return errorResponse(400, "childId is required");
     }
+
+    const windowDaysParam = req.nextUrl.searchParams.get("windowDays");
+    let windowDays: number | null = null;
+    if (windowDaysParam !== null && windowDaysParam !== undefined && windowDaysParam !== "") {
+      const parsed = Number(windowDaysParam);
+      if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+        return errorResponse(400, "windowDays không hợp lệ");
+      }
+      // clamp để tránh query quá nặng
+      windowDays = Math.min(Math.max(parsed, 1), 365);
+    }
+
+    const limitParam = req.nextUrl.searchParams.get("limit");
+    let limit: number | null = null;
+    if (limitParam !== null && limitParam !== undefined && limitParam !== "") {
+      const parsed = Number(limitParam);
+      if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+        return errorResponse(400, "limit không hợp lệ");
+      }
+      limit = Math.min(Math.max(parsed, 1), 200);
+    }
+
+    const cursor = req.nextUrl.searchParams.get("cursor") || null;
 
     // Xác thực user và kiểm tra role
     const authUser = await getAuthenticatedUser(req);
@@ -112,63 +137,126 @@ export const GET = withApiLogging(async (
       );
     }
 
-    // Lấy tất cả assignments của các classroom này
-    const assignmentLinks = await prisma.assignmentClassroom.findMany({
-      where: {
-        classroomId: { in: classroomIds },
+    const now = new Date();
+    const fromDate = windowDays ? new Date(now.getTime() - windowDays * 86400000) : null;
+
+    const assignmentWhere = {
+      classrooms: { some: { classroomId: { in: classroomIds } } },
+      ...(fromDate
+        ? {
+            OR: [
+              { dueDate: { gte: fromDate } },
+              { dueDate: null, createdAt: { gte: fromDate } },
+              {
+                submissions: {
+                  some: {
+                    studentId: childId,
+                    submittedAt: { gte: fromDate },
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const take = limit ? limit + 1 : undefined;
+
+    const assignmentsPage = (await prisma.assignment.findMany({
+      where: assignmentWhere,
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        dueDate: true,
+        createdAt: true,
       },
-      select: { assignmentId: true },
-    });
+      orderBy: { id: "desc" },
+      take,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+    })) as unknown as ParentChildAssignmentRow[];
 
-    const assignmentIdList: string[] = Array.from(
-      new Set<string>(
-        assignmentLinks.map(
-          (al: { assignmentId: string }) => al.assignmentId,
-        ),
-      ),
-    );
+    let nextCursor: string | null = null;
+    let hasMore = false;
 
-    if (assignmentIdList.length === 0) {
+    let assignments = assignmentsPage;
+    if (limit && assignmentsPage.length > limit) {
+      assignmentsPage.pop();
+      assignments = assignmentsPage;
+      if (assignments.length > 0) {
+        nextCursor = assignments[assignments.length - 1]!.id;
+        hasMore = true;
+      }
+    }
+
+    if (assignments.length === 0) {
+      const [totalSubmissions, totalGraded, avgGrade] = await Promise.all([
+        prisma.assignmentSubmission.count({
+          where: {
+            studentId: childId,
+            ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
+            assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
+          },
+        }),
+        prisma.assignmentSubmission.count({
+          where: {
+            studentId: childId,
+            grade: { not: null },
+            ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
+            assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
+          },
+        }),
+        prisma.assignmentSubmission.aggregate({
+          where: {
+            studentId: childId,
+            grade: { not: null },
+            ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
+            assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
+          },
+          _avg: { grade: true },
+        }),
+      ]);
+
       return NextResponse.json(
         {
           success: true,
           data: [],
           statistics: {
-            totalSubmissions: 0,
-            totalGraded: 0,
-            totalPending: 0,
-            averageGrade: 0,
+            totalSubmissions,
+            totalGraded,
+            totalPending: totalSubmissions - totalGraded,
+            averageGrade: Math.round(((avgGrade._avg.grade ?? 0) as number) * 10) / 10,
+          },
+          pageInfo: {
+            nextCursor: null,
+            hasMore: false,
+            limit: limit ?? null,
           },
         },
         { status: 200 }
       );
     }
 
-    const [submissions, assignments, assignmentClassrooms] = await Promise.all([
-      prisma.assignmentSubmission.findMany({
+    const assignmentIdList = assignments.map((a) => a.id);
+
+    const [assignmentClassrooms, submissions, totalSubmissions, totalGraded, avgGrade] = await Promise.all([
+      (await prisma.assignmentClassroom.findMany({
         where: {
-          studentId: childId,
+          classroomId: { in: classroomIds },
           assignmentId: { in: assignmentIdList },
         },
         select: {
-          id: true,
           assignmentId: true,
-          grade: true,
-          feedback: true,
-          submittedAt: true,
-        },
-        orderBy: { submittedAt: "desc" },
-      }) as unknown as ParentChildSubmissionRow[],
-
-      prisma.assignment.findMany({
-        where: { id: { in: assignmentIdList } },
-        select: { id: true, title: true, type: true, dueDate: true },
-      }) as unknown as ParentChildAssignmentRow[],
-
-      prisma.assignmentClassroom.findMany({
-        where: { assignmentId: { in: assignmentIdList } },
-        select: {
-          assignmentId: true,
+          assignment: {
+            select: {
+              id: true,
+              title: true,
+              type: true,
+              dueDate: true,
+              createdAt: true,
+            },
+          },
           classroom: {
             select: {
               id: true,
@@ -180,11 +268,52 @@ export const GET = withApiLogging(async (
           },
         },
         orderBy: { addedAt: "desc" },
-      }) as unknown as ParentChildAssignmentClassroomRow[],
+      })) as unknown as ParentChildAssignmentClassroomRow[],
+
+      (await prisma.assignmentSubmission.findMany({
+        where: {
+          studentId: childId,
+          assignmentId: { in: assignmentIdList },
+          ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
+        },
+        select: {
+          id: true,
+          assignmentId: true,
+          grade: true,
+          feedback: true,
+          submittedAt: true,
+        },
+        orderBy: { submittedAt: "desc" },
+      })) as unknown as ParentChildSubmissionRow[],
+
+      prisma.assignmentSubmission.count({
+        where: {
+          studentId: childId,
+          ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
+          assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
+        },
+      }),
+      prisma.assignmentSubmission.count({
+        where: {
+          studentId: childId,
+          grade: { not: null },
+          ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
+          assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
+        },
+      }),
+      prisma.assignmentSubmission.aggregate({
+        where: {
+          studentId: childId,
+          grade: { not: null },
+          ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
+          assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
+        },
+        _avg: { grade: true },
+      }),
     ]);
 
     const assignmentById = new Map<string, ParentChildAssignmentRow>(
-      assignments.map((a: ParentChildAssignmentRow) => [a.id, a])
+      assignments.map((a) => [a.id, a])
     );
 
     const classroomByAssignmentId = new Map<string, ParentChildAssignmentClassroomRow["classroom"]>();
@@ -228,8 +357,6 @@ export const GET = withApiLogging(async (
     const submittedAssignmentIds = new Set<string>(submissions.map((sub) => sub.assignmentId));
     const missingAssignmentIds = assignmentIdList.filter((id: string) => !submittedAssignmentIds.has(id));
 
-    const now = new Date();
-
     // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
     const missingGrades = missingAssignmentIds
       .map((assignmentId: string) => {
@@ -263,16 +390,8 @@ export const GET = withApiLogging(async (
 
     const grades = [...submissionGrades, ...missingGrades];
 
-    // Tính thống kê dựa trên submissions thật
-    const totalSubmissions = submissions.length;
-    const gradedSubmissions = submissions.filter((sub: ParentChildSubmissionRow) => sub.grade !== null);
-    const totalGraded = gradedSubmissions.length;
     const totalPending = totalSubmissions - totalGraded;
-
-    const averageGrade =
-      totalGraded > 0
-        ? gradedSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) / totalGraded
-        : 0;
+    const averageGrade = (avgGrade._avg.grade ?? 0) as number;
 
     console.log(
       `[INFO] [GET] /api/parent/children/${childId}/grades - Found ${grades.length} grade entries for student: ${childId}`
@@ -287,6 +406,11 @@ export const GET = withApiLogging(async (
           totalGraded,
           totalPending,
           averageGrade: Math.round(averageGrade * 10) / 10, // Làm tròn 1 chữ số thập phân
+        },
+        pageInfo: {
+          nextCursor: limit ? nextCursor : null,
+          hasMore: limit ? hasMore : false,
+          limit: limit ?? null,
         },
       },
       { status: 200 }

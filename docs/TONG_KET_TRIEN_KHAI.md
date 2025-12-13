@@ -63,6 +63,15 @@ Việc cần làm ngay nếu muốn demo Admin portal:
 
 - **Onboarding bắt buộc chọn role**: redirect `/auth/select-role` theo `roleSelectedAt`.
 - **Admin portal (global)**: route guard + stats + users + audit logs + ban/unban.
+- **Admin classroom management (global)**:
+  - Danh sách lớp `/dashboard/admin/classrooms` (lọc active/archived, tìm kiếm, phân trang) + Archive/Unarchive.
+  - Trang chi tiết lớp `/dashboard/admin/classrooms/[id]` (overview + actions + quản lý học sinh).
+  - Chỉnh sửa lớp (name/code/maxStudents) + validate + check code unique.
+  - Đổi giáo viên phụ trách.
+  - Thêm học sinh hàng loạt (text/CSV `fullname,email`) + tuỳ chọn tự tạo tài khoản nếu email chưa có.
+  - Export CSV danh sách học sinh.
+  - Xóa học sinh (single + bulk multi-select) và hiển thị dialog chi tiết các dòng không thêm được (email + lý do).
+  - Quy tắc lớp lưu trữ: khoá thao tác thay đổi (UI disable + API guard), chỉ cho phép xem/export/khôi phục.
 - **System settings**: maintenance mode + global announcement.
 - **Notifications (MVP)**: API + UI bell.
 - **AI (Gemini)**:
@@ -97,6 +106,18 @@ Việc cần làm ngay nếu muốn demo Admin portal:
 
 - Chuẩn hoá seed để có ít nhất 1 user `ADMIN` (hoặc hướng dẫn tạo ADMIN rõ ràng).
 - Tối ưu endpoint điểm số phụ huynh (`/api/parent/children/[childId]/grades`) nếu gặp SLOW QUERY.
+
+### 7.1b. Checklist trạng thái triển khai (Admin)
+
+- [x] Admin Users: list/filter/search/paginate.
+- [x] Admin Users: Ban/Unban.
+- [x] Admin Users: Reset password (API + UI).
+- [x] Admin Users: Create Teacher + Bulk Create Teacher (UI dạng dialog).
+- [x] Admin Classrooms: list + archive/unarchive.
+- [x] Admin Classrooms: detail page + edit classroom + change teacher.
+- [x] Admin Classrooms: bulk add students (CSV fullname,email) + export CSV.
+- [x] Admin Classrooms: remove students (single + bulk multi-select).
+- [ ] Admin Classrooms: Force delete classroom (chưa triển khai).
 
 ### 7.2. P1 (nên làm sớm)
 
@@ -306,17 +327,20 @@ Việc cần làm ngay nếu muốn demo Admin portal:
 
 - **Bulk Create Teacher:**
   - ĐÃ bổ sung `POST /api/admin/users/bulk` để tạo hàng loạt giáo viên từ danh sách/CSV.
-  - UI hỗ trợ nhập danh sách text và kéo‑thả file CSV xuất từ Excel.
+  - UI hỗ trợ nhập danh sách text và kéo‑thả file CSV xuất từ Excel (**UI dạng dialog**).
 
 - **Reset password:**
-  - Model `PasswordReset` + `nodemailer` đã có, luồng reset password cho Admin vẫn là hạng mục tiếp theo (chưa triển khai).
+  - ĐÃ triển khai API `POST /api/admin/users/[id]/reset-password` (admin-only) để tạo mã reset và gửi email.
+  - ĐÃ tích hợp UI nút "Reset mật khẩu" trong `/dashboard/admin/users`.
 
 ### A4) Classroom Management (archive/force delete)
 - Archive tận dụng `Classroom.isActive`.
   - **Khả thi:** Cao.
+  - **Trạng thái:** ĐÃ TRIỂN KHAI (UI + API guard + audit).
 - Force delete:
   - **Khả thi:** Trung bình.
   - **Rủi ro:** cascade/quan hệ phức tạp, cần transaction + audit.
+  - **Trạng thái:** CHƯA TRIỂN KHAI.
 
 ### A5) Audit logs UI
 - Nền DB + repo đã có.

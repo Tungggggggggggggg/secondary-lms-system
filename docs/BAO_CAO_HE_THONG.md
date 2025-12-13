@@ -27,7 +27,11 @@ Hệ thống cung cấp các chức năng cốt lõi như: quản lý lớp họ
 - **Admin Portal (Global Admin)**:
   - Dashboard tổng quan (thống kê users/lớp/bài tập/tổ chức, số tài khoản bị khoá).
   - Quản lý người dùng: danh sách, lọc, tìm kiếm, Ban/Unban tài khoản.
-  - Tạo giáo viên mới (Create Teacher) và tạo **hàng loạt giáo viên** từ danh sách/CSV.
+  - Tạo giáo viên mới (Create Teacher) và tạo **hàng loạt giáo viên** từ danh sách/CSV (UI dạng dialog).
+  - Quản lý lớp học toàn hệ thống: danh sách, lọc trạng thái (active/archived), tìm kiếm.
+  - Trang chi tiết lớp `/dashboard/admin/classrooms/[id]`: overview + quản lý học sinh.
+  - Thao tác lớp: chỉnh sửa lớp (name/code/maxStudents), đổi giáo viên, lưu trữ/khôi phục.
+  - Học sinh theo lớp: thêm hàng loạt (text/CSV `fullname,email`), tự tạo tài khoản học sinh nếu email chưa có, export CSV, xoá học sinh (single/bulk).
   - Xem Audit Logs hệ thống.
 - **AI Quiz Generator**: sinh câu hỏi trắc nghiệm từ nội dung bài học (paste text) bằng Google Gemini.
 
@@ -190,7 +194,7 @@ Các bảng/chính thể nổi bật (trích từ `prisma/schema.prisma`):
 - `ParentStudent`, `ParentStudentInvitation`, `ParentStudentLinkRequest`
 
 Ghi chú:
-- Module **Notifications** hiện có endpoint API để UI hoạt động, tuy nhiên theo code hiện tại đang trả danh sách rỗng và một số route còn `Not implemented`.
+- Module **Notifications** hiện có endpoint API để UI hoạt động, tuy nhiên theo code hiện tại đang trả danh sách rỗng và một số route còn `Not implemented` (MVP).
 
 ## 9. Các API chính (điểm danh theo nhóm)
 > Ghi chú: API được tổ chức theo thư mục trong `src/app/api/`.
@@ -274,6 +278,7 @@ Bạn có thể bổ sung thêm các mục sau (nếu dùng cho luận văn/đ�
 - Nộp bài bằng file qua Supabase Storage.
 - Chat và announcement.
 - Phân hệ **Admin Portal** với role `ADMIN`, dashboard thống kê, quản lý user (ban/unban, tạo giáo viên, bulk import CSV) và xem Audit Logs.
+- Phân hệ **Admin Classroom Management**: trang danh sách + trang chi tiết lớp, chỉnh sửa lớp, đổi giáo viên, lưu trữ/khôi phục, import CSV học sinh có fullname, export CSV, xoá học sinh (single/bulk) và quy tắc khoá thao tác khi lớp lưu trữ.
 - Tính năng **AI Quiz Generator** từ nội dung bài học (paste text) sử dụng Google Gemini API.
 
 ### 12.2. Hướng phát triển gợi ý

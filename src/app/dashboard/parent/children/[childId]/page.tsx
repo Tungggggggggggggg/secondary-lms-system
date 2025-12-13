@@ -131,36 +131,12 @@ export default function ParentChildDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-900">
-              <BookOpen className="h-5 w-5 text-amber-600" />
-              Học tập
-            </CardTitle>
-            <CardDescription className="text-amber-700">Thông tin về học tập (Sắp ra mắt)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-amber-700">
-              <Award className="h-12 w-12 mx-auto mb-3 text-amber-400" />
-              <p className="text-sm">Tính năng đang được phát triển</p>
-            </div>
-          </CardContent>
-        </Card>
+       
       </div>
 
       {/* Additional Info Cards */}
       <div className="grid md:grid-cols-2 gap-6">
-        <Card className="border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/20">
-          <CardHeader>
-            <CardTitle className="text-amber-900">Bài tập</CardTitle>
-            <CardDescription className="text-amber-700">Danh sách bài tập (Sắp ra mắt)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-amber-700">
-              <p className="text-sm">Tính năng đang được phát triển</p>
-            </div>
-          </CardContent>
-        </Card>
+     
 
         <Card className="border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/20">
           <CardHeader>

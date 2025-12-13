@@ -61,36 +61,6 @@ export default function NotificationBell(props?: NotificationBellProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  useEffect(() => {
-    let es: EventSource | null = null;
-    const enableSSE = (typeof process !== "undefined" && (process as any).env?.NEXT_PUBLIC_NOTIF_SSE === "1") ||
-      (typeof window !== "undefined" && (window as any).ENABLE_NOTIF_SSE === true);
-    if (enableSSE && typeof window !== "undefined" && (window as any).EventSource) {
-      try {
-        es = new EventSource("/api/notifications/stream");
-        es.onmessage = (ev) => {
-          try {
-            const payload = JSON.parse(ev.data);
-            if (Array.isArray(payload)) {
-              setLocalItems(payload as NotificationItem[]);
-            } else if (payload && payload.id) {
-              setLocalItems((prev) => {
-                const base = prev ?? [];
-                const exists = base.some((i) => i.id === payload.id);
-                return exists ? base.map((i) => (i.id === payload.id ? payload : i)) : [payload, ...base];
-              });
-            }
-          } catch {}
-        };
-      } catch {}
-    }
-    return () => {
-      try {
-        es?.close();
-      } catch {}
-    };
-  }, []);
-
   const markAllAsRead = async () => {
     setLocalItems((prev) => {
       const base = prev ?? items;

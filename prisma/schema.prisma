@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL")
 }
 
 model User {
@@ -258,6 +258,7 @@ model AssignmentSubmission {
   @@index([assignmentId, studentId])
   @@index([assignmentId, grade])
   @@index([studentId, submittedAt])
+  @@index([studentId, assignmentId, submittedAt])
   @@map("assignment_submissions")
 }
 

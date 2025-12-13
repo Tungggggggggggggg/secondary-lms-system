@@ -45,14 +45,17 @@ export default function PromptDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" onClose={() => onOpenChange(false)}>
+      <DialogContent
+        className="w-[min(640px,calc(100vw-2rem))] max-w-none max-h-[75vh]"
+        onClose={() => onOpenChange(false)}
+      >
         <DialogHeader>
           <DialogTitle className="text-lg">{title}</DialogTitle>
           {description && (
             <DialogDescription className="text-gray-600">{description}</DialogDescription>
           )}
         </DialogHeader>
-        <div className="px-6 py-2 space-y-2">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-2 space-y-2">
           {type === "textarea" ? (
             <Textarea
               value={value}
