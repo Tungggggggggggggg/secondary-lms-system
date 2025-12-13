@@ -1,17 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
+import { useTeacherDashboardStats } from "@/hooks/use-teacher-dashboard";
 import { StatsGrid, type StatItem } from "@/components/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Layers, BookOpen, ClipboardList } from "lucide-react";
 
 export default function StatsOverview() {
-    const { stats, isLoading, error, fetchStats } = useTeacherDashboard();
-
-    useEffect(() => {
-        fetchStats();
-    }, [fetchStats]);
+    const { stats, isLoading, error } = useTeacherDashboardStats();
 
     // Cấu hình hiển thị cho từng stat
     const statsConfig = [

@@ -49,8 +49,9 @@ export function shuffleWithSeed<T>(array: T[], seed: string): T[] {
     const randomIndex = Math.floor(seededRandom() * currentIndex)
     currentIndex--
     
-    [shuffled[currentIndex], shuffled[randomIndex]] = 
-    [shuffled[randomIndex], shuffled[currentIndex]]
+    const tmp = shuffled[currentIndex]
+    shuffled[currentIndex] = shuffled[randomIndex]
+    shuffled[randomIndex] = tmp
   }
   
   return shuffled

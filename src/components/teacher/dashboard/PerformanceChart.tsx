@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
+import { useTeacherDashboardPerformance } from "@/hooks/use-teacher-dashboard";
 import gsap from "gsap";
 import { SectionCard } from "@/components/shared";
 import { BarChart3, BookOpen } from "lucide-react";
 
 export default function PerformanceChart() {
-  const { performance, isLoading, error, fetchPerformance } = useTeacherDashboard();
-
-  useEffect(() => {
-    fetchPerformance();
-  }, [fetchPerformance]);
+  const { performance, isLoading, error } = useTeacherDashboardPerformance();
 
   useEffect(() => {
     if (performance && performance.length > 0) {

@@ -81,10 +81,22 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
         if (filters?.q) params.set("q", filters.q);
         if (filters?.sort) params.set("sort", filters.sort);
         if (typeof filters?.hasAttachment !== "undefined") params.set("hasAttachment", String(!!filters.hasAttachment));
-        const res = await fetch(`/api/classrooms/${classroomId}/announcements?${params.toString()}`, { cache: "no-store" });
+        const res = await fetch(`/api/classrooms/${classroomId}/announcements?${params.toString()}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json?.message || "Không thể tải thông báo");
-        setAnnouncements(json.data || []);
+        const nextItems = (json.data || []) as AnnouncementItem[];
+
+        setAnnouncements((prev) => {
+          if (enableCreate) return nextItems;
+          if (page <= 1) return nextItems;
+          const merged = [...prev, ...nextItems];
+          const seen = new Set<string>();
+          return merged.filter((item) => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+          });
+        });
         setPagination(json.pagination || null);
       } catch (e: any) {
         const msg = e?.message || "Có lỗi xảy ra";

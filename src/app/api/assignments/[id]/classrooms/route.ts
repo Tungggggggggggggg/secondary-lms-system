@@ -60,14 +60,15 @@ export async function GET(
       where: {
         assignmentId: params.id
       },
-      include: {
+      select: {
+        addedAt: true,
         classroom: {
-          include: {
-            _count: {
-              select: { 
-                students: true
-              }
-            }
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            icon: true,
+            _count: { select: { students: true } },
           }
         }
       },
@@ -94,59 +95,20 @@ export async function GET(
       (ac: AssignmentClassroomRow) => ac.classroom.id
     );
 
-    // Lấy danh sách students trong các classrooms này
-    const classroomStudents = await prisma.classroomStudent.findMany({
-      where: {
-        classroomId: { in: classroomIds }
-      },
-      select: {
-        classroomId: true,
-        studentId: true
-      }
-    });
+    // Đếm số học sinh đã nộp theo từng classroom (1 query aggregate)
+    const submissionCounts = classroomIds.length
+      ? await prisma.$queryRaw<Array<{ classroomId: string; cnt: bigint }>>`
+          SELECT cs."classroomId" as "classroomId", COUNT(DISTINCT s."studentId")::bigint as cnt
+          FROM "classroom_students" cs
+          JOIN "assignment_submissions" s
+            ON s."studentId" = cs."studentId" AND s."assignmentId" = ${params.id}
+          WHERE cs."classroomId" = ANY(${classroomIds}::text[])
+          GROUP BY cs."classroomId";
+        `
+      : [];
 
-    interface ClassroomStudentRow {
-      classroomId: string;
-      studentId: string;
-    }
-
-    // Lấy submissions của assignment này
-    const submissions = await prisma.assignmentSubmission.findMany({
-      where: {
-        assignmentId: params.id,
-        studentId: {
-          in: classroomStudents.map(
-            (cs: ClassroomStudentRow) => cs.studentId
-          ),
-        },
-      },
-      select: {
-        studentId: true
-      }
-    });
-
-    interface AssignmentSubmissionRow {
-      studentId: string;
-    }
-
-    // Tạo map: studentId -> hasSubmitted
-    const submissionMap = new Set(
-      submissions.map((s: AssignmentSubmissionRow) => s.studentId)
-    );
-
-    // Tạo map: classroomId -> studentIds
-    const classroomStudentMap = classroomStudents.reduce(
-      (
-        map: Map<string, string[]>,
-        cs: ClassroomStudentRow
-      ) => {
-        if (!map.has(cs.classroomId)) {
-          map.set(cs.classroomId, []);
-        }
-        map.get(cs.classroomId)!.push(cs.studentId);
-        return map;
-      },
-      new Map<string, string[]>()
+    const submissionCountByClassroomId = new Map<string, number>(
+      submissionCounts.map((r: { classroomId: string; cnt: bigint }) => [r.classroomId, Number(r.cnt)])
     );
 
     interface AssignmentClassroomSummary {
@@ -165,12 +127,7 @@ export async function GET(
       (ac: AssignmentClassroomRow) => {
         const classroomId = ac.classroom.id;
         const totalStudents = ac.classroom._count.students;
-        const studentIds = classroomStudentMap.get(classroomId) || [];
-
-        // Tính số bài nộp thực tế cho classroom này
-        const submissionCount = studentIds.filter(
-          (studentId: string) => submissionMap.has(studentId)
-        ).length;
+        const submissionCount = submissionCountByClassroomId.get(classroomId) || 0;
 
         return {
           classroomId: ac.classroom.id,

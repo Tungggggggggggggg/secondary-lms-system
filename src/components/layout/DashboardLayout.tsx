@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import DashboardTopbar from "@/components/layout/DashboardTopbar";
 import type { CSSProperties } from "react";
+import SystemStatusGate from "@/components/shared/SystemStatusGate";
 
 type DashboardRole = "teacher" | "student" | "parent" | "admin";
 
@@ -62,9 +63,7 @@ export default function DashboardLayout({
         } flex flex-col ${lockContentScroll ? "h-screen overflow-hidden" : "min-h-screen"}`}
       >
         <DashboardTopbar role={role} />
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {children}
-        </div>
+        <SystemStatusGate role={role}>{children}</SystemStatusGate>
       </main>
       {rightAside}
     </div>

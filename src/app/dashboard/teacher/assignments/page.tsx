@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function AssignmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { classrooms, fetchClassrooms } = useClassroom();
+  const { classrooms } = useClassroom();
   const [preview, setPreview] = useState<AssignmentT | null>(null);
   const { toast } = useToast();
   const [dupTarget, setDupTarget] = useState<AssignmentT | null>(null);
@@ -43,8 +43,6 @@ export default function AssignmentsPage() {
   useEffect(() => {
     try { window.localStorage.setItem("teacher:assignments:view", view); } catch {}
   }, [view]);
-
-  useEffect(() => { fetchClassrooms(); }, [fetchClassrooms]);
 
   const [sortKey, setSortKey] = useState<"createdAt" | "dueDate" | "lockAt" | "title">(
     (searchParams.get("sortKey") as any) || "createdAt"

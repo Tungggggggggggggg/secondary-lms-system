@@ -20,7 +20,7 @@ export default function ClassroomPeople() {
     const params = useParams();
     const classroomId = params.classroomId as string;
     const router = useRouter();
-    const { students, isLoading, error, fetchClassroomStudents, getStatistics, searchStudents } = useClassroomStudents();
+    const { students, isLoading, error, refresh, getStatistics, searchStudents } = useClassroomStudents(classroomId);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchInput, setSearchInput] = useState("");
     const [sortKey, setSortKey] = useState<"name" | "submitted" | "grade">("name");
@@ -33,12 +33,6 @@ export default function ClassroomPeople() {
         try { window.localStorage.setItem("teacher:people:view", view); } catch {}
     }, [view]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-    useEffect(() => {
-        if (classroomId) {
-            fetchClassroomStudents(classroomId);
-        }
-    }, [classroomId, fetchClassroomStudents]);
 
     useEffect(() => {
         if (!rootRef.current) return;
@@ -197,7 +191,7 @@ export default function ClassroomPeople() {
                     <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
                         <h3 className="font-semibold mb-2">Lỗi tải danh sách học sinh</h3>
                         <p className="text-sm mb-4">{error}</p>
-                        <Button onClick={() => fetchClassroomStudents(classroomId)}>Thử lại</Button>
+                        <Button onClick={() => refresh()}>Thử lại</Button>
                     </div>
                 ) : isLoading ? (
                     <div className="space-y-4">

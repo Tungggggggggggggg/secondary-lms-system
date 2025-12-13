@@ -69,79 +69,78 @@ export async function GET(req: NextRequest) {
       take: 5, // Lấy top 5 lớp mới nhất
     })) as TeacherPerformanceClassroomRow[];
 
-    // Tính toán hiệu suất cho từng lớp
-    const performanceData = await Promise.all(
-      classrooms.map(async (classroom: TeacherPerformanceClassroomRow) => {
-        // Lấy tất cả bài tập của lớp này
-        const assignments = await prisma.assignmentClassroom.findMany({
-          where: {
-            classroomId: classroom.id,
-          },
-          select: {
-            assignmentId: true,
-          },
-        });
+    const classroomIds = classrooms.map((c) => c.id);
+    const baseline = classrooms.map((classroom: TeacherPerformanceClassroomRow) => ({
+      classroomId: classroom.id,
+      classroomName: classroom.name,
+      icon: classroom.icon,
+      averageGrade: 0,
+      totalStudents: classroom._count.students,
+      submittedCount: 0,
+      color: getColorForIcon(classroom.icon),
+    }));
 
-        const assignmentIds = assignments.map(
-          (a: { assignmentId: string }) => a.assignmentId,
-        );
+    if (classroomIds.length === 0) {
+      return NextResponse.json({ success: true, data: [] });
+    }
 
-        if (assignmentIds.length === 0) {
-          // Không có bài tập nào
-          return {
-            classroomId: classroom.id,
-            classroomName: classroom.name,
-            icon: classroom.icon,
-            averageGrade: 0,
-            totalStudents: classroom._count.students,
-            submittedCount: 0,
-            color: getColorForIcon(classroom.icon),
-          };
-        }
+    // Tối ưu: gom query thay vì N+1 theo từng classroom
+    const assignmentClassrooms = await prisma.assignmentClassroom.findMany({
+      where: { classroomId: { in: classroomIds } },
+      select: { classroomId: true, assignmentId: true },
+    });
 
-        // Lấy tất cả submissions đã được chấm điểm
-        const submissions = await prisma.assignmentSubmission.findMany({
-          where: {
-            assignmentId: {
-              in: assignmentIds,
-            },
-            grade: {
-              not: null,
-            },
-          },
-          select: {
-            grade: true,
-            studentId: true,
-          },
-        });
+    const assignmentIdToClassroomIds = new Map<string, string[]>();
+    for (const row of assignmentClassrooms) {
+      const list = assignmentIdToClassroomIds.get(row.assignmentId) ?? [];
+      list.push(row.classroomId);
+      assignmentIdToClassroomIds.set(row.assignmentId, list);
+    }
 
-        // Tính điểm trung bình
-        const totalGrade = submissions.reduce(
-          (sum: number, sub: { grade: number | null }) =>
-            sum + (sub.grade || 0),
-          0,
-        );
-        const averageGrade = submissions.length > 0 
-          ? Math.round((totalGrade / submissions.length) * 100) / 100
-          : 0;
+    const assignmentIds = Array.from(assignmentIdToClassroomIds.keys());
+    if (assignmentIds.length === 0) {
+      return NextResponse.json({ success: true, data: baseline });
+    }
 
-        // Đếm số học sinh đã nộp bài (unique)
-        const uniqueStudents = new Set(
-          submissions.map((s: { studentId: string }) => s.studentId),
-        );
-        const submittedCount = uniqueStudents.size;
+    const statsByClassroom = new Map<
+      string,
+      { gradeSum: number; gradeCount: number; studentIds: Set<string> }
+    >();
+    for (const id of classroomIds) {
+      statsByClassroom.set(id, { gradeSum: 0, gradeCount: 0, studentIds: new Set() });
+    }
 
-        return {
-          classroomId: classroom.id,
-          classroomName: classroom.name,
-          icon: classroom.icon,
-          averageGrade: Math.round(averageGrade), // Làm tròn thành số nguyên
-          totalStudents: classroom._count.students,
-          submittedCount,
-          color: getColorForIcon(classroom.icon),
-        };
-      })
-    );
+    const submissions = await prisma.assignmentSubmission.findMany({
+      where: {
+        assignmentId: { in: assignmentIds },
+        grade: { not: null },
+      },
+      select: { assignmentId: true, grade: true, studentId: true },
+    });
+
+    for (const sub of submissions) {
+      const grade = sub.grade;
+      if (grade === null) continue;
+      const mappedClassrooms = assignmentIdToClassroomIds.get(sub.assignmentId) ?? [];
+      for (const classroomId of mappedClassrooms) {
+        const st = statsByClassroom.get(classroomId);
+        if (!st) continue;
+        st.gradeSum += grade;
+        st.gradeCount += 1;
+        st.studentIds.add(sub.studentId);
+      }
+    }
+
+    const performanceData = baseline.map((row) => {
+      const st = statsByClassroom.get(row.classroomId);
+      if (!st || st.gradeCount === 0) return row;
+      const averageGrade = st.gradeSum / st.gradeCount;
+      return {
+        ...row,
+        averageGrade: Math.round(averageGrade),
+        submittedCount: st.studentIds.size,
+      };
+    });
 
     // Sắp xếp theo điểm trung bình giảm dần
     performanceData.sort((a, b) => b.averageGrade - a.averageGrade);

@@ -32,7 +32,13 @@ export default function NotificationBell(props?: NotificationBellProps) {
   const { data, error, isLoading, mutate } = useSWR(
     "/api/notifications",
     fetcher,
-    { shouldRetryOnError: false, revalidateOnFocus: true, revalidateOnReconnect: true, refreshInterval: 15000 }
+    {
+      shouldRetryOnError: false,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: open ? 15000 : 0,
+      dedupingInterval: 10000,
+    }
   );
 
   const items: NotificationItem[] = useMemo(() => {
@@ -85,11 +91,19 @@ export default function NotificationBell(props?: NotificationBellProps) {
     };
   }, []);
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setLocalItems((prev) => {
       const base = prev ?? items;
       return base.map((i) => ({ ...i, read: true }));
     });
+
+    try {
+      await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch {}
+
     try {
       mutate();
     } catch {}

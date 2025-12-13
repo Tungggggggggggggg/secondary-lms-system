@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 /**
  * Interface cho Grade entry (tương tự use-student-grades.ts)
@@ -47,41 +47,75 @@ export function useParentGrades() {
     averageGrade: 0,
   });
 
+  const REQUEST_TIMEOUT_MS = 20_000;
+
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
+
   /**
    * Lấy danh sách grades của một con từ tất cả classrooms
    */
   const fetchChildGrades = useCallback(async (childId: string): Promise<void> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log(`[fetchChildGrades] Bắt đầu lấy danh sách điểm số cho con: ${childId}`);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-      const response = await fetch(`/api/parent/children/${childId}/grades`);
+    let didTimeout = false;
+    const timeoutId = setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
+
+    try {
+      if (mountedRef.current) {
+        setIsLoading(true);
+        setError(null);
+      }
+
+      const response = await fetch(`/api/parent/children/${childId}/grades`, {
+        signal: controller.signal,
+      });
       const result = await response.json();
 
       if (!response.ok) {
-        console.error(
-          "[fetchChildGrades] Lỗi response:",
-          result?.message || response.statusText
-        );
         throw new Error(
           result?.message || "Có lỗi xảy ra khi lấy danh sách điểm số"
         );
       }
 
+      if (!mountedRef.current) return;
+
       setGrades(result.data ?? []);
       setStatistics(result.statistics ?? { averageGrade: 0 });
-      console.log(
-        "[fetchChildGrades] Lấy danh sách điểm số thành công:",
-        result.data
-      );
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        if (!didTimeout) return;
+        const msg = "Tải danh sách điểm số quá lâu. Vui lòng thử lại.";
+        if (!mountedRef.current) return;
+        setError(msg);
+        setGrades([]);
+        return;
+      }
       const msg = err instanceof Error ? err.message : "Có lỗi xảy ra";
+      if (!mountedRef.current) return;
+
       setError(msg);
       setGrades([]);
-      console.error("[fetchChildGrades] Lỗi:", msg);
     } finally {
-      setIsLoading(false);
+      clearTimeout(timeoutId);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -90,41 +124,60 @@ export function useParentGrades() {
    */
   const fetchChildClassroomGrades = useCallback(
     async (childId: string, classroomId: string): Promise<void> => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      let didTimeout = false;
+      const timeoutId = setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
+
       try {
-        setIsLoading(true);
-        setError(null);
-        console.log(
-          `[fetchChildClassroomGrades] Bắt đầu lấy danh sách điểm số cho con: ${childId} trong lớp: ${classroomId}`
-        );
+        if (mountedRef.current) {
+          setIsLoading(true);
+          setError(null);
+        }
 
         const response = await fetch(
-          `/api/parent/children/${childId}/classrooms/${classroomId}/grades`
+          `/api/parent/children/${childId}/classrooms/${classroomId}/grades`,
+          { signal: controller.signal }
         );
         const result = await response.json();
 
         if (!response.ok) {
-          console.error(
-            "[fetchChildClassroomGrades] Lỗi response:",
-            result?.message || response.statusText
-          );
           throw new Error(
             result?.message || "Có lỗi xảy ra khi lấy danh sách điểm số"
           );
         }
 
+        if (!mountedRef.current) return;
+
         setGrades(result.data ?? []);
         setStatistics(result.statistics ?? { averageGrade: 0 });
-        console.log(
-          "[fetchChildClassroomGrades] Lấy danh sách điểm số thành công:",
-          result.data
-        );
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          if (!didTimeout) return;
+          const msg = "Tải danh sách điểm số quá lâu. Vui lòng thử lại.";
+          if (!mountedRef.current) return;
+          setError(msg);
+          setGrades([]);
+          return;
+        }
         const msg = err instanceof Error ? err.message : "Có lỗi xảy ra";
+        if (!mountedRef.current) return;
+
         setError(msg);
         setGrades([]);
-        console.error("[fetchChildClassroomGrades] Lỗi:", msg);
       } finally {
-        setIsLoading(false);
+        clearTimeout(timeoutId);
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
+        if (mountedRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     []

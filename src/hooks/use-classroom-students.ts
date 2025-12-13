@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
+import useSWR from "swr";
 
 /**
  * Interface cho Student trong classroom với thống kê
@@ -24,52 +25,27 @@ export interface ClassroomStudent {
 /**
  * Hook quản lý danh sách học sinh trong classroom
  */
-export function useClassroomStudents() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [students, setStudents] = useState<ClassroomStudent[]>([]);
+export function useClassroomStudents(classroomId?: string) {
+  type ApiResponse = { success?: boolean; data?: ClassroomStudent[]; message?: string };
 
-  /**
-   * Lấy danh sách học sinh trong classroom
-   */
-  const fetchClassroomStudents = useCallback(
-    async (classroomId: string): Promise<void> => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        console.log(
-          `[fetchClassroomStudents] Bắt đầu lấy danh sách học sinh cho classroom: ${classroomId}`
-        );
+  const fetcher = useCallback(async (url: string): Promise<ClassroomStudent[]> => {
+    const res = await fetch(url, { cache: "no-store" });
+    const json = (await res.json()) as ApiResponse;
+    if (!res.ok || json?.success === false) {
+      const msg = json?.message || res.statusText || "Có lỗi xảy ra khi lấy danh sách học sinh";
+      throw new Error(msg);
+    }
+    return Array.isArray(json?.data) ? json.data : [];
+  }, []);
 
-        const response = await fetch(`/api/classrooms/${classroomId}/students`);
-        const result = await response.json();
+  const key = classroomId ? `/api/classrooms/${encodeURIComponent(classroomId)}/students` : null;
+  const { data, error, isLoading, mutate } = useSWR<ClassroomStudent[]>(key, fetcher, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+    dedupingInterval: 15000,
+  });
 
-        if (!response.ok) {
-          console.error(
-            "[fetchClassroomStudents] Lỗi response:",
-            result?.message || response.statusText
-          );
-          throw new Error(
-            result?.message || "Có lỗi xảy ra khi lấy danh sách học sinh"
-          );
-        }
-
-        setStudents(result.data ?? []);
-        console.log(
-          "[fetchClassroomStudents] Lấy danh sách học sinh thành công:",
-          result.data
-        );
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Có lỗi xảy ra";
-        setError(msg);
-        setStudents([]);
-        console.error("[fetchClassroomStudents] Lỗi:", msg);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
+  const students = data ?? [];
 
   /**
    * Tính toán thống kê tổng quan
@@ -158,8 +134,10 @@ export function useClassroomStudents() {
   return {
     students,
     isLoading,
-    error,
-    fetchClassroomStudents,
+    error: error ? String(error) : null,
+    refresh: async () => {
+      await mutate();
+    },
     getStatistics,
     searchStudents,
     filterStudents,

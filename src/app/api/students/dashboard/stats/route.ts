@@ -12,11 +12,18 @@ export const revalidate = 0;
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req, "STUDENT");
+    const user = await getAuthenticatedUser(req);
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    if (user.role !== "STUDENT") {
+      return NextResponse.json(
+        { success: false, message: "Forbidden - Student role required" },
+        { status: 403 }
       );
     }
 
@@ -25,28 +32,55 @@ export async function GET(req: NextRequest) {
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    // 1. Đếm số lớp học đã tham gia
-    const totalClassrooms = await prisma.classroomStudent.count({
-      where: { studentId: user.id },
-    });
+    const [
+      totalClassrooms,
+      newClassroomsThisWeek,
+      studentClassrooms,
+      gradedAgg,
+      lastMonthAgg,
+    ] = await Promise.all([
+      // 1. Đếm số lớp học đã tham gia
+      prisma.classroomStudent.count({ where: { studentId: user.id } }),
 
-    // 2. Đếm số lớp mới trong tuần này
-    const newClassroomsThisWeek = await prisma.classroomStudent.count({
-      where: {
-        studentId: user.id,
-        joinedAt: { gte: oneWeekAgo },
-      },
-    });
+      // 2. Đếm số lớp mới trong tuần này
+      prisma.classroomStudent.count({
+        where: {
+          studentId: user.id,
+          joinedAt: { gte: oneWeekAgo },
+        },
+      }),
 
-    // 3. Lấy tất cả assignments từ các lớp đã tham gia
-    const studentClassrooms = await prisma.classroomStudent.findMany({
-      where: { studentId: user.id },
-      select: { classroomId: true },
-    });
+      // 3. Lấy classroomIds đã tham gia
+      prisma.classroomStudent.findMany({
+        where: { studentId: user.id },
+        select: { classroomId: true },
+      }),
 
-    const classroomIds = studentClassrooms.map(
-      (sc: { classroomId: string }) => sc.classroomId,
-    );
+      // 4. Tính điểm trung bình từ các submissions đã được chấm (aggregate để giảm dữ liệu)
+      prisma.assignmentSubmission.aggregate({
+        where: {
+          studentId: user.id,
+          grade: { not: null },
+        },
+        _avg: { grade: true },
+        _count: { _all: true },
+      }),
+
+      // 5. Tính điểm trung bình tháng trước để so sánh (aggregate)
+      prisma.assignmentSubmission.aggregate({
+        where: {
+          studentId: user.id,
+          grade: { not: null },
+          submittedAt: {
+            gte: twoMonthsAgo,
+            lt: oneMonthAgo,
+          },
+        },
+        _avg: { grade: true },
+      }),
+    ]);
+
+    const classroomIds = studentClassrooms.map((sc: { classroomId: string }) => sc.classroomId);
 
     let totalAssignments = 0;
     let submittedAssignments = 0;
@@ -104,45 +138,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 4. Tính điểm trung bình từ các submissions đã được chấm
-    const gradedSubmissions = await prisma.assignmentSubmission.findMany({
-      where: {
-        studentId: user.id,
-        grade: { not: null },
-      },
-      select: { grade: true },
-    });
-
-    const averageGrade =
-      gradedSubmissions.length > 0
-        ? gradedSubmissions.reduce(
-            (sum: number, sub: { grade: number | null }) =>
-              sum + (sub.grade || 0),
-            0,
-          ) / gradedSubmissions.length
-        : 0;
-
-    // 5. Tính điểm trung bình tháng trước để so sánh
-    const lastMonthGradedSubmissions = await prisma.assignmentSubmission.findMany({
-      where: {
-        studentId: user.id,
-        grade: { not: null },
-        submittedAt: {
-          gte: twoMonthsAgo,
-          lt: oneMonthAgo,
-        },
-      },
-      select: { grade: true },
-    });
-
-    const lastMonthAverage =
-      lastMonthGradedSubmissions.length > 0
-        ? lastMonthGradedSubmissions.reduce(
-            (sum: number, sub: { grade: number | null }) =>
-              sum + (sub.grade || 0),
-            0,
-          ) / lastMonthGradedSubmissions.length
-        : 0;
+    const averageGrade = gradedAgg._count._all > 0 ? Number(gradedAgg._avg.grade ?? 0) : 0;
+    const lastMonthAverage = Number(lastMonthAgg._avg.grade ?? 0);
 
     const gradeChange = averageGrade - lastMonthAverage;
 
@@ -152,26 +149,19 @@ export async function GET(req: NextRequest) {
       select: { courseId: true },
     });
 
-    const courseIds = coursesInClassrooms.map(
-      (cc: { courseId: string }) => cc.courseId,
-    );
-    const totalLessons =
+    const courseIds = coursesInClassrooms.map((cc: { courseId: string }) => cc.courseId);
+    const [totalLessons, newLessonsThisWeek] =
       courseIds.length > 0
-        ? await prisma.lesson.count({
-            where: { courseId: { in: courseIds } },
-          })
-        : 0;
-
-    // 7. Đếm số bài học mới trong tuần này
-    const newLessonsThisWeek =
-      courseIds.length > 0
-        ? await prisma.lesson.count({
-            where: {
-              courseId: { in: courseIds },
-              createdAt: { gte: oneWeekAgo },
-            },
-          })
-        : 0;
+        ? await Promise.all([
+            prisma.lesson.count({ where: { courseId: { in: courseIds } } }),
+            prisma.lesson.count({
+              where: {
+                courseId: { in: courseIds },
+                createdAt: { gte: oneWeekAgo },
+              },
+            }),
+          ])
+        : [0, 0];
 
     return NextResponse.json({
       success: true,

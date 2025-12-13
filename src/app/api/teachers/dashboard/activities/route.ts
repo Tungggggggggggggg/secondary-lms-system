@@ -87,44 +87,69 @@ export async function GET(req: NextRequest) {
 
     const activities: any[] = [];
 
-    // 1. Lấy submissions mới nhất (học sinh nộp bài)
-    const recentSubmissions = (await prisma.assignmentSubmission.findMany({
-      where: {
-        assignment: {
-          authorId: userId,
+    const [recentSubmissions, newStudents, recentComments] = await Promise.all([
+      // 1. Lấy submissions mới nhất (học sinh nộp bài)
+      prisma.assignmentSubmission.findMany({
+        where: {
+          assignment: { authorId: userId },
         },
-      },
-      select: {
-        id: true,
-        assignmentId: true,
-        submittedAt: true,
-        student: {
-          select: {
-            fullname: true,
-          },
-        },
-        assignment: {
-          select: {
-            title: true,
-            classrooms: {
-              select: {
-                classroomId: true,
-                classroom: {
-                  select: {
-                    name: true,
-                  },
+        select: {
+          id: true,
+          assignmentId: true,
+          submittedAt: true,
+          student: { select: { fullname: true } },
+          assignment: {
+            select: {
+              title: true,
+              classrooms: {
+                select: {
+                  classroomId: true,
+                  classroom: { select: { name: true } },
                 },
+                take: 1,
               },
-              take: 1,
             },
           },
         },
-      },
-      orderBy: {
-        submittedAt: 'desc',
-      },
-      take: 3,
-    })) as TeacherDashboardSubmissionActivityRow[];
+        orderBy: { submittedAt: 'desc' },
+        take: 3,
+      }) as unknown as Promise<TeacherDashboardSubmissionActivityRow[]>,
+
+      // 2. Lấy học sinh mới tham gia lớp
+      prisma.classroomStudent.findMany({
+        where: {
+          classroom: { teacherId: userId },
+        },
+        select: {
+          id: true,
+          joinedAt: true,
+          student: { select: { fullname: true } },
+          classroom: { select: { id: true, name: true } },
+        },
+        orderBy: { joinedAt: 'desc' },
+        take: 2,
+      }) as unknown as Promise<TeacherDashboardNewStudentRow[]>,
+
+      // 3. Lấy bình luận mới trong các thông báo của lớp
+      prisma.announcementComment.findMany({
+        where: {
+          announcement: { classroom: { teacherId: userId } },
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          author: { select: { fullname: true, role: true } },
+          announcement: {
+            select: {
+              id: true,
+              classroom: { select: { id: true, name: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 2,
+      }) as unknown as Promise<TeacherDashboardAnnouncementCommentRow[]>,
+    ]);
 
     recentSubmissions.forEach((submission: TeacherDashboardSubmissionActivityRow) => {
       const firstClassroom = submission.assignment.classrooms[0];
@@ -145,34 +170,6 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    // 2. Lấy học sinh mới tham gia lớp
-    const newStudents = (await prisma.classroomStudent.findMany({
-      where: {
-        classroom: {
-          teacherId: userId,
-        },
-      },
-      select: {
-        id: true,
-        joinedAt: true,
-        student: {
-          select: {
-            fullname: true,
-          },
-        },
-        classroom: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        joinedAt: 'desc',
-      },
-      take: 2,
-    })) as TeacherDashboardNewStudentRow[];
-
     newStudents.forEach((student: TeacherDashboardNewStudentRow) => {
       const timeAgo = getTimeAgo(new Date(student.joinedAt));
 
@@ -188,42 +185,6 @@ export async function GET(req: NextRequest) {
         classroomId: student.classroom.id,
       });
     });
-
-    // 3. Lấy bình luận mới trong các thông báo của lớp
-    const recentComments = (await prisma.announcementComment.findMany({
-      where: {
-        announcement: {
-          classroom: {
-            teacherId: userId,
-          },
-        },
-      },
-      select: {
-        id: true,
-        createdAt: true,
-        author: {
-          select: {
-            fullname: true,
-            role: true,
-          },
-        },
-        announcement: {
-          select: {
-            id: true,
-            classroom: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 2,
-    })) as TeacherDashboardAnnouncementCommentRow[];
 
     recentComments.forEach((comment: TeacherDashboardAnnouncementCommentRow) => {
       const timeAgo = getTimeAgo(new Date(comment.createdAt));

@@ -2,21 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
 import bcrypt from "bcryptjs";
 import { userRepo } from "@/lib/repositories/user-repo";
+import { errorResponse } from "@/lib/api-utils";
 
 const ALLOWED_ROLES = ["TEACHER", "STUDENT", "PARENT", "ADMIN"] as const;
+
+function isAllowedRole(value: string): value is (typeof ALLOWED_ROLES)[number] {
+  return (ALLOWED_ROLES as readonly string[]).includes(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Admins only" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Admins only");
     }
 
     const { searchParams } = new URL(req.url);
@@ -26,18 +31,17 @@ export async function GET(req: NextRequest) {
     const role = searchParams.get("role") || undefined;
     const search = searchParams.get("q") || undefined;
 
-    const where: Prisma.UserWhereInput = {};
-
-    if (role && (ALLOWED_ROLES as readonly string[]).includes(role)) {
-      where.role = role as any;
-    }
-
-    if (search) {
-      where.OR = [
-        { email: { contains: search, mode: "insensitive" } },
-        { fullname: { contains: search, mode: "insensitive" } },
-      ];
-    }
+    const where = {
+      ...(role && isAllowedRole(role) ? { role } : {}),
+      ...(search
+        ? {
+            OR: [
+              { email: { contains: search, mode: "insensitive" as const } },
+              { fullname: { contains: search, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    };
 
     const [total, items, disabledSetting] = await Promise.all([
       prisma.user.count({ where }),
@@ -59,22 +63,23 @@ export async function GET(req: NextRequest) {
 
     const disabledMap = new Map<string, string | null>();
     if (Array.isArray(disabledSetting)) {
-      for (const item of disabledSetting as any[]) {
+      for (const item of disabledSetting) {
         if (typeof item === "string") {
           disabledMap.set(item, null);
-        } else if (item && typeof item === "object" && typeof (item as any).id === "string") {
-          const it = item as any;
-          disabledMap.set(
-            it.id,
-            typeof it.reason === "string" && it.reason.trim().length > 0
-              ? it.reason.trim()
-              : null
-          );
+          continue;
+        }
+        if (isRecord(item) && typeof item.id === "string") {
+          const rawReason = item.reason;
+          const reason =
+            typeof rawReason === "string" && rawReason.trim().length > 0
+              ? rawReason.trim()
+              : null;
+          disabledMap.set(item.id, reason);
         }
       }
     }
 
-    const itemsWithStatus = items.map((u) => ({
+    const itemsWithStatus = items.map((u: { id: string; email: string; fullname: string; role: string; createdAt: Date }) => ({
       ...u,
       isDisabled: disabledMap.has(u.id),
       disabledReason: disabledMap.get(u.id) ?? null,
@@ -91,13 +96,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[API /api/admin/users] Error", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 
@@ -105,10 +104,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Admins only" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Admins only");
     }
 
     const body = await req.json().catch(() => null);
@@ -117,40 +113,25 @@ export async function POST(req: NextRequest) {
     const password = (body?.password || "").toString();
 
     if (!fullname) {
-      return NextResponse.json(
-        { success: false, message: "Vui lòng nhập họ và tên." },
-        { status: 400 }
-      );
+      return errorResponse(400, "Vui lòng nhập họ và tên.");
     }
 
     if (!email) {
-      return NextResponse.json(
-        { success: false, message: "Vui lòng nhập email." },
-        { status: 400 }
-      );
+      return errorResponse(400, "Vui lòng nhập email.");
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { success: false, message: "Email không hợp lệ." },
-        { status: 400 }
-      );
+      return errorResponse(400, "Email không hợp lệ.");
     }
 
     if (!password || password.length < 6) {
-      return NextResponse.json(
-        { success: false, message: "Mật khẩu phải có ít nhất 6 ký tự." },
-        { status: 400 }
-      );
+      return errorResponse(400, "Mật khẩu phải có ít nhất 6 ký tự.");
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return NextResponse.json(
-        { success: false, message: "Email đã được sử dụng." },
-        { status: 409 }
-      );
+      return errorResponse(409, "Email đã được sử dụng.");
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -169,12 +150,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[API /api/admin/users POST] Error", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

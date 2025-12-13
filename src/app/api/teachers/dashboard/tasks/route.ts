@@ -77,41 +77,69 @@ export async function GET(req: NextRequest) {
     const now = new Date();
     const tasks: any[] = [];
 
-    // 1. Lấy bài tập có submissions chưa chấm (URGENT)
-    const pendingAssignments = (await prisma.assignment.findMany({
-      where: {
-        authorId: userId,
-        submissions: {
-          some: {
-            grade: null, // Chưa được chấm
+    const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+
+    const [pendingAssignments, upcomingAssignments, completedAssignments] = await Promise.all([
+      // 1. Lấy bài tập có submissions chưa chấm (URGENT)
+      prisma.assignment.findMany({
+        where: {
+          authorId: userId,
+          submissions: { some: { grade: null } },
+        },
+        select: {
+          id: true,
+          title: true,
+          dueDate: true,
+          _count: { select: { submissions: true } },
+          classrooms: {
+            select: { classroom: { select: { name: true } } },
+            take: 1,
           },
         },
-      },
-      select: {
-        id: true,
-        title: true,
-        dueDate: true,
-        _count: {
-          select: {
-            submissions: true,
+        orderBy: { dueDate: 'asc' },
+        take: 3,
+      }) as unknown as Promise<TeacherPendingAssignmentRow[]>,
+
+      // 2. Lấy bài tập sắp hết hạn (trong 3 ngày tới)
+      prisma.assignment.findMany({
+        where: {
+          authorId: userId,
+          dueDate: { gte: now, lte: threeDaysLater },
+        },
+        select: {
+          id: true,
+          title: true,
+          dueDate: true,
+          classrooms: {
+            select: { classroom: { select: { name: true } } },
+            take: 1,
           },
         },
-        classrooms: {
-          select: {
-            classroom: {
-              select: {
-                name: true,
-              },
-            },
-          },
-          take: 1,
+        orderBy: { dueDate: 'asc' },
+        take: 2,
+      }) as unknown as Promise<TeacherUpcomingAssignmentRow[]>,
+
+      // 3. Lấy bài tập đã hoàn thành gần đây (trong 2 ngày qua)
+      prisma.assignment.findMany({
+        where: {
+          authorId: userId,
+          dueDate: { gte: twoDaysAgo, lt: now },
+          submissions: { every: { grade: { not: null } } },
         },
-      },
-      orderBy: {
-        dueDate: 'asc',
-      },
-      take: 3,
-    })) as TeacherPendingAssignmentRow[];
+        select: {
+          id: true,
+          title: true,
+          dueDate: true,
+          classrooms: {
+            select: { classroom: { select: { name: true } } },
+            take: 1,
+          },
+        },
+        orderBy: { dueDate: 'desc' },
+        take: 1,
+      }) as unknown as Promise<TeacherCompletedAssignmentRow[]>,
+    ]);
 
     // Thêm vào danh sách tasks
     pendingAssignments.forEach((assignment: TeacherPendingAssignmentRow) => {
@@ -132,37 +160,6 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    // 2. Lấy bài tập sắp hết hạn (trong 3 ngày tới)
-    const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const upcomingAssignments = (await prisma.assignment.findMany({
-      where: {
-        authorId: userId,
-        dueDate: {
-          gte: now,
-          lte: threeDaysLater,
-        },
-      },
-      select: {
-        id: true,
-        title: true,
-        dueDate: true,
-        classrooms: {
-          select: {
-            classroom: {
-              select: {
-                name: true,
-              },
-            },
-          },
-          take: 1,
-        },
-      },
-      orderBy: {
-        dueDate: 'asc',
-      },
-      take: 2,
-    })) as TeacherUpcomingAssignmentRow[];
-
     upcomingAssignments.forEach((assignment: TeacherUpcomingAssignmentRow) => {
       const classroomName = assignment.classrooms[0]?.classroom.name || 'Không xác định';
       const dueDate = assignment.dueDate || now;
@@ -179,44 +176,6 @@ export async function GET(req: NextRequest) {
         relatedId: assignment.id,
       });
     });
-
-    // 3. Lấy bài tập đã hoàn thành gần đây (trong 2 ngày qua)
-    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
-    const completedAssignments = (await prisma.assignment.findMany({
-      where: {
-        authorId: userId,
-        dueDate: {
-          gte: twoDaysAgo,
-          lt: now,
-        },
-        submissions: {
-          every: {
-            grade: {
-              not: null, // Tất cả đã được chấm
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        title: true,
-        dueDate: true,
-        classrooms: {
-          select: {
-            classroom: {
-              select: {
-                name: true,
-              },
-            },
-          },
-          take: 1,
-        },
-      },
-      orderBy: {
-        dueDate: 'desc',
-      },
-      take: 1,
-    })) as TeacherCompletedAssignmentRow[];
 
     completedAssignments.forEach((assignment: TeacherCompletedAssignmentRow) => {
       const classroomName = assignment.classrooms[0]?.classroom.name || 'Không xác định';

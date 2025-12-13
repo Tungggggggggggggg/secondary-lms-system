@@ -1,7 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Users, Search, KeyRound, Loader2 } from "lucide-react";
-import { formatDate } from "@/lib/date";
 import { toast } from "sonner";
 import HeaderParent from "@/components/parent/ParentHeader";
 import StudentCard from "@/components/parent/StudentCard";
@@ -21,7 +19,6 @@ import type { ParentStudentRelationship } from "@/types/parent";
 // types and SWR fetcher now provided globally
 
 export default function ParentChildrenPage() {
-  const { data: session } = useSession();
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [invitationCode, setInvitationCode] = useState("");
@@ -35,7 +32,11 @@ export default function ParentChildrenPage() {
     items?: ParentStudentRelationship[];
     total?: number;
     error?: string;
-  }>("/api/parent/children");
+  }>("/api/parent/children", {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+    keepPreviousData: true,
+  });
 
   // Fetch pending requests
   const { data: requestsData, mutate: mutateRequests } = useSWR(
@@ -49,7 +50,7 @@ export default function ParentChildrenPage() {
   // Accept invitation
   const handleAcceptInvitation = async () => {
     if (!invitationCode.trim()) {
-      toast.error("Vui lÃ²ng nháº­p mÃ£ má»i");
+      toast.error("Vui lòng nhập mã mời");
       return;
     }
 
@@ -62,16 +63,16 @@ export default function ParentChildrenPage() {
       });
 
       if (res.ok) {
-        toast.success("ÄÃ£ liÃªn káº¿t thÃ nh cÃ´ng!");
+        toast.success("Đã liên kết thành công!");
         setShowAcceptModal(false);
         setInvitationCode("");
         mutate();
       } else {
         const error = await res.json();
-        toast.error(error.message || "MÃ£ má»i khÃ´ng há»£p lá»‡");
+        toast.error(error.message || "Mã mời không hợp lệ");
       }
     } catch (error) {
-      toast.error("KhÃ´ng thá»ƒ cháº¥p nháº­n mÃ£ má»i");
+      toast.error("Không thể chấp nhận mã mời");
     } finally {
       setIsAccepting(false);
     }
@@ -80,7 +81,7 @@ export default function ParentChildrenPage() {
   // Search students
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      toast.error("Vui lÃ²ng nháº­p tÃªn hoáº·c email há»c sinh");
+      toast.error("Vui lòng nhập tên hoặc email học sinh");
       return;
     }
 
@@ -94,11 +95,11 @@ export default function ParentChildrenPage() {
       if (data.success) {
         setSearchResults(data.items || []);
         if (data.items.length === 0) {
-          toast.info("KhÃ´ng tÃ¬m tháº¥y há»c sinh nÃ o");
+          toast.info("Không tìm thấy học sinh nào");
         }
       }
     } catch (error) {
-      toast.error("KhÃ´ng thá»ƒ tÃ¬m kiáº¿m");
+      toast.error("Không thể tìm kiếm");
     } finally {
       setIsSearching(false);
     }
@@ -114,16 +115,16 @@ export default function ParentChildrenPage() {
       });
 
       if (res.ok) {
-        toast.success("ÄÃ£ gá»­i yÃªu cáº§u liÃªn káº¿t!");
+        toast.success("Đã gửi yêu cầu liên kết!");
         mutateRequests();
         // Refresh search results
         handleSearch();
       } else {
         const error = await res.json();
-        toast.error(error.message || "KhÃ´ng thá»ƒ gá»­i yÃªu cáº§u");
+        toast.error(error.message || "Không thể gửi yêu cầu");
       }
     } catch (error) {
-      toast.error("KhÃ´ng thá»ƒ gá»­i yÃªu cáº§u");
+      toast.error("Không thể gửi yêu cầu");
     }
   };
 
@@ -135,11 +136,11 @@ export default function ParentChildrenPage() {
       });
 
       if (res.ok) {
-        toast.success("ÄÃ£ há»§y yÃªu cáº§u");
+        toast.success("Đã hủy yêu cầu");
         mutateRequests();
       }
     } catch (error) {
-      toast.error("KhÃ´ng thá»ƒ há»§y yÃªu cáº§u");
+      toast.error("Không thể hủy yêu cầu");
     }
   };
 
@@ -147,11 +148,11 @@ export default function ParentChildrenPage() {
     return (
       <>
         <HeaderParent
-          title="Con cá»§a tÃ´i"
-          subtitle="Danh sÃ¡ch cÃ¡c con Ä‘Ã£ Ä‘Æ°á»£c liÃªn káº¿t vá»›i tÃ i khoáº£n cá»§a báº¡n"
+          title="Con của tôi"
+          subtitle="Danh sách các con đã được liên kết với tài khoản của bạn"
         />
         <div className="text-center py-12">
-          <p className="text-gray-500">Äang táº£i...</p>
+          <p className="text-gray-500">Đang tải...</p>
         </div>
       </>
     );
@@ -161,17 +162,17 @@ export default function ParentChildrenPage() {
     return (
       <>
         <HeaderParent
-          title="Con cá»§a tÃ´i"
-          subtitle="Danh sÃ¡ch cÃ¡c con Ä‘Ã£ Ä‘Æ°á»£c liÃªn káº¿t vá»›i tÃ i khoáº£n cá»§a báº¡n"
+          title="Con của tôi"
+          subtitle="Danh sách các con đã được liên kết với tài khoản của bạn"
         />
         <EmptyState
-          icon="âŒ"
-          title="CÃ³ lá»—i xáº£y ra"
-          description="KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u. Vui lÃ²ng thá»­ láº¡i sau."
+          icon="❌"
+          title="Có lỗi xảy ra"
+          description="Không thể tải dữ liệu. Vui lòng thử lại sau."
           variant="parent"
           action={
             <Button color="amber" onClick={() => mutate()}>
-              Thá»­ láº¡i
+              Thử lại
             </Button>
           }
         />
@@ -182,8 +183,8 @@ export default function ParentChildrenPage() {
   return (
     <>
       <HeaderParent
-        title="Con cá»§a tÃ´i"
-        subtitle={`Danh sÃ¡ch cÃ¡c con Ä‘Ã£ Ä‘Æ°á»£c liÃªn káº¿t vá»›i tÃ i khoáº£n cá»§a báº¡n (${total} há»c sinh)`}
+        title="Con của tôi"
+        subtitle={`Danh sách các con đã được liên kết với tài khoản của bạn (${total} học sinh)`}
       />
 
       <div className="flex gap-3 mb-6">
@@ -192,7 +193,7 @@ export default function ParentChildrenPage() {
           onClick={() => setShowAcceptModal(true)}
         >
           <KeyRound className="h-4 w-4 mr-2" />
-          Nháº­p mÃ£ má»i
+          Nhập mã mời
         </Button>
         <Button
           variant="outline"
@@ -200,7 +201,7 @@ export default function ParentChildrenPage() {
           onClick={() => setShowSearchModal(true)}
         >
           <Search className="h-4 w-4 mr-2" />
-          TÃ¬m há»c sinh
+          Tìm học sinh
         </Button>
       </div>
 
@@ -210,9 +211,9 @@ export default function ParentChildrenPage() {
       <Dialog open={showAcceptModal} onOpenChange={setShowAcceptModal}>
         <DialogContent onClose={() => setShowAcceptModal(false)}>
           <DialogHeader variant="parent">
-            <DialogTitle variant="parent">Nháº­p mÃ£ má»i tá»« há»c sinh</DialogTitle>
+            <DialogTitle variant="parent">Nhập mã mời từ học sinh</DialogTitle>
             <DialogDescription variant="parent">
-              Nháº­p mÃ£ má»i 8 kÃ½ tá»± mÃ  há»c sinh Ä‘Ã£ gá»­i cho báº¡n
+              Nhập mã mời 8 ký tự mà học sinh đã gửi cho bạn
             </DialogDescription>
           </DialogHeader>
           <div className="px-6 py-6 space-y-5">
@@ -238,10 +239,10 @@ export default function ParentChildrenPage() {
               {isAccepting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Äang xá»­ lÃ½...
+                  Đang xử lý...
                 </>
               ) : (
-                "XÃ¡c nháº­n"
+                "Xác nhận"
               )}
             </Button>
           </DialogFooter>
@@ -252,15 +253,15 @@ export default function ParentChildrenPage() {
       <Dialog open={showSearchModal} onOpenChange={setShowSearchModal}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" onClose={() => setShowSearchModal(false)}>
           <DialogHeader variant="parent">
-            <DialogTitle variant="parent">TÃ¬m kiáº¿m há»c sinh</DialogTitle>
+            <DialogTitle variant="parent">Tìm kiếm học sinh</DialogTitle>
             <DialogDescription variant="parent">
-              TÃ¬m kiáº¿m há»c sinh theo tÃªn hoáº·c email Ä‘á»ƒ gá»­i yÃªu cáº§u liÃªn káº¿t
+              Tìm kiếm học sinh theo tên hoặc email để gửi yêu cầu liên kết
             </DialogDescription>
           </DialogHeader>
           <div className="px-6 py-6 space-y-5">
             <div className="flex gap-3">
               <Input
-                placeholder="Nháº­p tÃªn hoáº·c email há»c sinh..."
+                placeholder="Nhập tên hoặc email học sinh..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -304,9 +305,9 @@ export default function ParentChildrenPage() {
         {pendingRequests.length > 0 && (
           <Card className="border-orange-200">
             <CardHeader className="border-b border-orange-100">
-              <CardTitle className="text-orange-700">YÃªu cáº§u Ä‘ang chá» ({pendingRequests.length})</CardTitle>
+              <CardTitle className="text-orange-700">Yêu cầu đang chờ ({pendingRequests.length})</CardTitle>
               <CardDescription>
-                CÃ¡c yÃªu cáº§u liÃªn káº¿t báº¡n Ä‘Ã£ gá»­i Ä‘ang chá» há»c sinh phÃª duyá»‡t
+                Các yêu cầu liên kết bạn đã gửi đang chờ học sinh phê duyệt
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 pt-6">
@@ -324,9 +325,9 @@ export default function ParentChildrenPage() {
         {/* Children List */}
         {children.length === 0 ? (
           <EmptyState
-            icon="ðŸ‘¨â€ðŸ‘©â€ðŸ‘§"
-            title="ChÆ°a cÃ³ há»c sinh nÃ o Ä‘Æ°á»£c liÃªn káº¿t"
-            description="HÃ£y liÃªn há»‡ vá»›i quáº£n trá»‹ viÃªn hoáº·c tÃ¬m kiáº¿m há»c sinh Ä‘á»ƒ Ä‘Æ°á»£c liÃªn káº¿t vá»›i tÃ i khoáº£n cá»§a con báº¡n."
+            icon="👪"
+            title="Chưa có học sinh nào được liên kết"
+            description="Hãy liên hệ với quản trị viên hoặc tìm kiếm học sinh để được liên kết với tài khoản của con bạn."
             variant="parent"
             action={
               <div className="flex gap-3 justify-center">
@@ -335,7 +336,7 @@ export default function ParentChildrenPage() {
                   onClick={() => setShowAcceptModal(true)}
                 >
                   <KeyRound className="h-4 w-4 mr-2" />
-                  Nháº­p mÃ£ má»i
+                  Nhập mã mời
                 </Button>
                 <Button
                   variant="outline"
@@ -343,7 +344,7 @@ export default function ParentChildrenPage() {
                   onClick={() => setShowSearchModal(true)}
                 >
                   <Search className="h-4 w-4 mr-2" />
-                  TÃ¬m há»c sinh
+                  Tìm học sinh
                 </Button>
               </div>
             }

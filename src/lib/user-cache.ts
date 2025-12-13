@@ -23,18 +23,19 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 phút
  */
 export async function getCachedUser(userId?: string, email?: string): Promise<CachedUser | null> {
   try {
+    const isDevelopment = process.env.NODE_ENV === 'development'
     const cacheKey = userId || email || ''
     if (!cacheKey) return null
 
     // Kiểm tra cache trước
     const cached = userCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log(`[USER_CACHE] Cache hit for ${cacheKey}`)
+      if (isDevelopment) console.log(`[USER_CACHE] Cache hit for ${cacheKey}`)
       return cached.user
     }
 
     // Query database nếu cache miss
-    console.log(`[USER_CACHE] Cache miss for ${cacheKey}, querying DB`)
+    if (isDevelopment) console.log(`[USER_CACHE] Cache miss for ${cacheKey}, querying DB`)
     const user = userId
       ? await prisma.user.findUnique({ 
           where: { id: userId },
@@ -67,7 +68,7 @@ export async function getCachedUser(userId?: string, email?: string): Promise<Ca
         user: user as CachedUser,
         timestamp: Date.now(),
       })
-      console.log(`[USER_CACHE] Cached user ${cacheKey}`)
+      if (isDevelopment) console.log(`[USER_CACHE] Cached user ${cacheKey}`)
     }
 
     return user as CachedUser | null
@@ -81,10 +82,11 @@ export async function getCachedUser(userId?: string, email?: string): Promise<Ca
  * Xóa user khỏi cache (khi user được update)
  */
 export function invalidateUserCache(userId?: string, email?: string): void {
+  const isDevelopment = process.env.NODE_ENV === 'development'
   const cacheKey = userId || email || ''
   if (cacheKey && userCache.has(cacheKey)) {
     userCache.delete(cacheKey)
-    console.log(`[USER_CACHE] Invalidated cache for ${cacheKey}`)
+    if (isDevelopment) console.log(`[USER_CACHE] Invalidated cache for ${cacheKey}`)
   }
 }
 
@@ -93,7 +95,7 @@ export function invalidateUserCache(userId?: string, email?: string): void {
  */
 export function clearUserCache(): void {
   userCache.clear()
-  console.log('[USER_CACHE] Cleared all cache')
+  if (process.env.NODE_ENV === 'development') console.log('[USER_CACHE] Cleared all cache')
 }
 
 /**

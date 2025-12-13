@@ -71,16 +71,26 @@ export async function listConversations(userId: string): Promise<ConversationLis
     orderBy: { joinedAt: "desc" },
   });
 
+  const unreadRows = await prisma.$queryRaw<
+    Array<{ conversationId: string; cnt: bigint }>
+  >`
+    SELECT m."conversationId" as "conversationId", COUNT(*)::bigint as cnt
+    FROM "messages" m
+    JOIN "conversation_participants" cp
+      ON cp."conversationId" = m."conversationId"
+    WHERE cp."userId" = ${userId}
+      AND m."senderId" <> ${userId}
+      AND m."createdAt" > COALESCE(cp."lastReadAt", to_timestamp(0))
+    GROUP BY m."conversationId";
+  `;
+
+  const unreadByConversationId = new Map<string, number>(
+    unreadRows.map((r) => [r.conversationId, Number(r.cnt)])
+  );
+
   const items = await Promise.all(
     cps.map(async (cp: any) => {
-      const lastReadAt: Date = cp.lastReadAt ?? new Date(0);
-      const unreadCount = await prismaAny.message.count({
-        where: {
-          conversationId: cp.conversationId,
-          createdAt: { gt: lastReadAt },
-          NOT: { senderId: userId },
-        },
-      });
+      const unreadCount = unreadByConversationId.get(cp.conversationId) ?? 0;
       return {
         id: cp.conversation.id,
         type: cp.conversation.type,
@@ -382,20 +392,16 @@ export async function listAttachments(conversationId: string) {
 }
 
 export async function totalUnreadCount(userId: string): Promise<number> {
-  const prismaAny = prisma as any;
-  const cps = await prismaAny.conversationParticipant.findMany({ where: { userId }, select: { conversationId: true, lastReadAt: true } });
-  let total = 0;
-  for (const cp of cps as any[]) {
-    const c = await prismaAny.message.count({
-      where: {
-        conversationId: cp.conversationId,
-        createdAt: { gt: cp.lastReadAt ?? new Date(0) },
-        NOT: { senderId: userId },
-      },
-    });
-    total += c;
-  }
-  return total;
+  const rows = await prisma.$queryRaw<Array<{ total: bigint }>>`
+    SELECT COUNT(*)::bigint as total
+    FROM "messages" m
+    JOIN "conversation_participants" cp
+      ON cp."conversationId" = m."conversationId"
+    WHERE cp."userId" = ${userId}
+      AND m."senderId" <> ${userId}
+      AND m."createdAt" > COALESCE(cp."lastReadAt", to_timestamp(0));
+  `;
+  return Number(rows[0]?.total ?? 0);
 }
 
 export async function getMessageConversationId(messageId: string): Promise<string | null> {

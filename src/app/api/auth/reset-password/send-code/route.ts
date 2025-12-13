@@ -3,6 +3,21 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { generateResetToken } from '@/lib/utils';
+import { errorResponse } from '@/lib/api-utils';
+import { auditRepo } from '@/lib/repositories/audit-repo';
+import { checkRateLimit, getClientIp } from '@/lib/security/rateLimit';
+
+function rateLimitResponse(retryAfterSeconds: number) {
+  return NextResponse.json(
+    { success: false, error: true, message: 'Too many requests', retryAfterSeconds },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(retryAfterSeconds),
+      },
+    }
+  );
+}
 
 // Schema validate body request
 const requestSchema = z.object({
@@ -11,35 +26,69 @@ const requestSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    // Kiểm tra kết nối Prisma
-    if (!prisma) {
-      console.error('Prisma client is not initialized');
-      return NextResponse.json(
-        { error: 'Lỗi kết nối cơ sở dữ liệu' },
-        { status: 500 }
-      );
+    const body = await req.json().catch(() => null);
+    const parsed = requestSchema.safeParse(body);
+    if (!parsed.success) {
+      return errorResponse(400, 'Dữ liệu không hợp lệ', {
+        details: parsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        })),
+      });
+    }
+    const email = parsed.data.email;
+
+    const ip = getClientIp(req);
+
+    const ipLimit = await checkRateLimit({
+      scope: 'reset_password_send_code_ip',
+      key: ip,
+      limit: 10,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!ipLimit.allowed) {
+      return rateLimitResponse(ipLimit.retryAfterSeconds);
     }
 
-    const body = await req.json();
-    const { email } = requestSchema.parse(body);
+    const emailLimit = await checkRateLimit({
+      scope: 'reset_password_send_code_email',
+      key: email.toLowerCase(),
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!emailLimit.allowed) {
+      return rateLimitResponse(emailLimit.retryAfterSeconds);
+    }
 
-    console.log('Processing reset password request for email:', email);
-
-    // Kiểm tra email có tồn tại
-    const user = await prisma.user.findUnique({ 
+    // Kiểm tra email có tồn tại (không tiết lộ kết quả ra client)
+    const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true } // Chỉ lấy id để tối ưu
+      select: { id: true },
     });
 
+    // Nếu email không tồn tại, trả OK để tránh user enumeration.
     if (!user) {
-      console.log('User not found for email:', email);
       return NextResponse.json(
-        { error: 'Email này chưa được đăng ký' },
-        { status: 404 }
+        {
+          success: true,
+          message: 'Nếu email tồn tại trong hệ thống, mã xác nhận đã được gửi.',
+        },
+        { status: 200 }
       );
     }
 
-    console.log('User found, generating reset token...');
+    try {
+      await auditRepo.write({
+        actorId: user.id,
+        actorRole: null,
+        action: 'PASSWORD_RESET_SEND_CODE',
+        entityType: 'USER',
+        entityId: user.id,
+        metadata: {
+          ip,
+        },
+      });
+    } catch {}
 
     // Tạo token reset (mã 6 số ngẫu nhiên)
     const token = generateResetToken();
@@ -52,8 +101,6 @@ export async function POST(req: Request) {
         completed: false,
       },
     });
-
-    console.log('Deleted old reset requests');
 
     await prisma.passwordReset.create({
       data: {
@@ -92,27 +139,20 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(
-      { message: 'Mã xác nhận đã được gửi thành công' },
+      { success: true, message: 'Mã xác nhận đã được gửi thành công' },
       { status: 200 }
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { 
-          error: 'Dữ liệu không hợp lệ', 
-          details: error.issues.map(issue => ({
-            path: issue.path.join('.'),
-            message: issue.message
-          }))
-        },
-        { status: 400 }
-      );
+      return errorResponse(400, 'Dữ liệu không hợp lệ', {
+        details: error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        })),
+      });
     }
 
     console.error('Error sending reset code:', error);
-    return NextResponse.json(
-      { error: 'Không thể gửi mã xác nhận' },
-      { status: 500 }
-    );
+    return errorResponse(500, 'Không thể gửi mã xác nhận');
   }
 }

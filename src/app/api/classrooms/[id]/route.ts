@@ -1,21 +1,12 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
 import prisma from "@/lib/prisma";
+import { getAuthenticatedUser, isStudentInClassroom } from "@/lib/api-utils";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const user = await prisma.user.findUnique({
-            where: { email: session.user?.email! },
-        });
-
+        const user = await getAuthenticatedUser(req as any);
         if (!user) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const classroom = await prisma.classroom.findUnique({
@@ -38,13 +29,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         }
         // Nếu là học sinh: kiểm tra đã tham gia lớp chưa
         else if (user.role === "STUDENT") {
-            const isMember = await prisma.classroomStudent.findFirst({
-                where: {
-                    classroomId: classroom.id,
-                    studentId: user.id,
-                },
-            });
-            if (!isMember) {
+            const ok = await isStudentInClassroom(user.id, classroom.id);
+            if (!ok) {
                 return NextResponse.json({ error: "Forbidden - Not a member" }, { status: 403 });
             }
         }

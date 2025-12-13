@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
 import { AlertTriangle, Users, BarChart3, Target, LayoutList, LayoutGrid } from "lucide-react";
 import StudentList, { StudentListItem } from "@/components/teacher/students/StudentList";
 import StudentListSkeleton from "@/components/teacher/students/StudentListSkeleton";
@@ -9,89 +10,53 @@ import StudentFiltersToolbar, {
   type StudentStatusFilter,
 } from "@/components/teacher/students/StudentFiltersToolbar";
 import { useClassroom } from "@/hooks/use-classroom";
-import type { ClassroomStudent } from "@/hooks/use-classroom-students";
 import { EmptyState } from "@/components/shared";
 import { PageHeader } from "@/components/shared";
 import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { StatsGrid } from "@/components/shared";
 import StudentsTable from "@/components/teacher/students/StudentsTable";
+
+type TeacherStudentsApiResponse = {
+  success?: boolean;
+  data?: StudentListItem[];
+  message?: string;
+};
+
+async function fetchTeacherStudents(): Promise<StudentListItem[]> {
+  const res = await fetch("/api/teachers/students", { cache: "no-store" });
+  const payload = (await res.json()) as TeacherStudentsApiResponse;
+  if (!res.ok || payload?.success === false) {
+    const msg = payload?.message || res.statusText || "Không thể tải danh sách học sinh";
+    throw new Error(msg);
+  }
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
+
 export default function StudentsPage() {
   const { classrooms, fetchClassrooms, isLoading: loadingClassrooms, error: classroomError } =
     useClassroom();
 
-  const [students, setStudents] = useState<StudentListItem[]>([]);
-  const [loadingStudents, setLoadingStudents] = useState(false);
-  const [studentError, setStudentError] = useState<string | null>(null);
+  const {
+    data: studentsData,
+    error: studentsError,
+    isLoading: loadingStudents,
+    mutate: refetchStudents,
+  } = useSWR<StudentListItem[]>("/api/teachers/students", fetchTeacherStudents, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+    dedupingInterval: 15000,
+  });
+
+  const students = useMemo(() => studentsData ?? [], [studentsData]);
 
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StudentStatusFilter>("all");
   const [sortKey, setSortKey] = useState<StudentSortKey>("name");
   const [search, setSearch] = useState<string>("");
 
-  useEffect(() => {
-    fetchClassrooms();
-  }, [fetchClassrooms]);
-
-  useEffect(() => {
-    const load = async () => {
-      if (!classrooms || classrooms.length === 0) {
-        setStudents([]);
-        return;
-      }
-      try {
-        setLoadingStudents(true);
-        setStudentError(null);
-        const parallel = await Promise.all(
-          classrooms.map(async (c) => {
-            try {
-              const res = await fetch(`/api/classrooms/${c.id}/students`, { cache: "no-store" });
-              const json = await res.json();
-              if (!res.ok || json?.success === false) {
-                console.error("[StudentsPage] load students error", json?.message || res.statusText);
-                return [] as StudentListItem[];
-              }
-              const items = (json.data || []) as ClassroomStudent[];
-              return items.map((s) => {
-                const totalAssignments = s.stats.totalAssignments;
-                const submitted = s.stats.submittedCount;
-                const submissionRate = totalAssignments > 0 ? (submitted / totalAssignments) * 100 : 0;
-                let status: "active" | "warning" | "inactive" = "active";
-                if (submissionRate < 50) status = "inactive";
-                else if (submissionRate < 80) status = "warning";
-                return {
-                  id: s.id,
-                  fullname: s.fullname,
-                  avatarInitial: s.fullname.charAt(0).toUpperCase(),
-                  classroomId: c.id,
-                  classroomName: c.name,
-                  classroomCode: c.code,
-                  averageGrade: s.stats.averageGrade,
-                  submissionRate,
-                  submittedCount: submitted,
-                  totalAssignments,
-                  status,
-                } as StudentListItem;
-              });
-            } catch (err) {
-              console.error("[StudentsPage] load students error", err);
-              return [] as StudentListItem[];
-            }
-          })
-        );
-        setStudents(parallel.flat());
-      } catch (e) {
-        console.error("[StudentsPage] load students error", e);
-        setStudentError(
-          e instanceof Error ? e.message : "Có lỗi xảy ra khi tải danh sách học sinh"
-        );
-        setStudents([]);
-      } finally {
-        setLoadingStudents(false);
-      }
-    };
-
-    load();
-  }, [classrooms]);
+  const handleRefresh = async (): Promise<void> => {
+    await Promise.all([fetchClassrooms(), refetchStudents()]);
+  };
 
   const filteredStudents = useMemo(() => {
     let list = [...students];
@@ -131,7 +96,7 @@ export default function StudentsPage() {
   }, [students, selectedClassId, statusFilter, search, sortKey]);
 
   const isLoading = loadingClassrooms || loadingStudents;
-  const error = classroomError || studentError;
+  const error = classroomError || (studentsError ? String(studentsError) : null);
 
   const overview = useMemo(() => {
     const totalStudents = students.length;
@@ -322,7 +287,9 @@ export default function StudentsPage() {
           action={
             <button
               type="button"
-              onClick={() => fetchClassrooms()}
+              onClick={() => {
+                void handleRefresh();
+              }}
               className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
               Thử lại
@@ -340,7 +307,7 @@ export default function StudentsPage() {
               type="button"
               onClick={() => {
                 // Điều hướng tới màn quản lý lớp nếu cần, tạm thời chỉ gọi lại fetch
-                fetchClassrooms();
+                void handleRefresh();
               }}
               className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >

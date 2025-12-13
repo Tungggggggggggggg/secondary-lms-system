@@ -34,7 +34,7 @@ export default function ResetPassword() {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || 'Có lỗi xảy ra');
+        throw new Error(data.message || data.error || 'Có lỗi xảy ra');
       }
       
       setEmail(submittedEmail);
@@ -71,7 +71,7 @@ export default function ResetPassword() {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || 'Có lỗi xảy ra');
+        throw new Error(data.message || data.error || 'Có lỗi xảy ra');
       }
 
       setVerificationCode(code);
@@ -104,7 +104,7 @@ export default function ResetPassword() {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || 'Có lỗi xảy ra');
+        throw new Error(data.message || data.error || 'Có lỗi xảy ra');
       }
 
       toast({
@@ -146,7 +146,7 @@ export default function ResetPassword() {
             .join('\n');
           throw new Error(errors);
         }
-        throw new Error(data.error || 'Có lỗi xảy ra');
+        throw new Error(data.message || data.error || 'Có lỗi xảy ra');
       }
 
       setCurrentStep(4);

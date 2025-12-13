@@ -74,6 +74,12 @@ export default function AnnouncementsFeed({
     // Fetch functions
     const fetchAnnouncements = activeHook.fetchAnnouncements;
 
+    const stableFilters = useMemo(() => filters, [
+        filters?.q,
+        filters?.sort,
+        filters?.hasAttachment,
+    ]);
+
     // Map announcements sang PostItem format
     const posts: PostItem[] = useMemo(() => {
         try {
@@ -136,19 +142,19 @@ export default function AnnouncementsFeed({
     // Reset page khi classroomId hoặc filters thay đổi
     useEffect(() => {
         setPage(1);
-    }, [classroomId, filters?.q, filters?.sort, filters?.hasAttachment]);
+    }, [classroomId, stableFilters?.q, stableFilters?.sort, stableFilters?.hasAttachment]);
 
     // Fetch announcements khi classroomId/page/filters thay đổi
     useEffect(() => {
         if (classroomId && fetchAnnouncements) {
             try {
                 console.log(`[INFO] AnnouncementsFeed - Fetching announcements for classroom ${classroomId}, page ${page}`);
-                fetchAnnouncements(classroomId, page, pageSize, filters);
+                fetchAnnouncements(classroomId, page, pageSize, stableFilters);
             } catch (error) {
                 console.error(`[ERROR] AnnouncementsFeed - Fetch announcements:`, error);
             }
         }
-    }, [classroomId, page, pageSize, fetchAnnouncements, filters]);
+    }, [classroomId, page, pageSize, fetchAnnouncements, stableFilters]);
 
     // Infinite scroll với IntersectionObserver (student)
     useEffect(() => {
@@ -159,11 +165,10 @@ export default function AnnouncementsFeed({
         const io = new IntersectionObserver(
             (entries) => {
                 const [entry] = entries;
-                if (entry.isIntersecting && !isLoading && fetchAnnouncements) {
+                if (entry.isIntersecting && !isLoading) {
                     try {
                         console.log(`[INFO] AnnouncementsFeed - Loading more announcements, page ${page + 1}`);
-                        fetchAnnouncements(classroomId, page + 1, pageSize, filters);
-                        setPage(page + 1);
+                        setPage((prev) => prev + 1);
                     } catch (error) {
                         console.error(`[ERROR] AnnouncementsFeed - Load more:`, error);
                     }
@@ -174,15 +179,14 @@ export default function AnnouncementsFeed({
 
         io.observe(sentinelRef.current);
         return () => io.disconnect();
-    }, [role, hasMore, isLoading, page, classroomId, pageSize, fetchAnnouncements]);
+    }, [role, hasMore, isLoading, page, classroomId, pageSize]);
 
     // Handler để load thêm trang (student - manual button)
     const handleLoadMore = () => {
-        if (!fetchAnnouncements || isLoading || !hasMore) return;
+        if (isLoading || !hasMore) return;
         try {
             console.log(`[INFO] AnnouncementsFeed - Manual load more, page ${page + 1}`);
-            fetchAnnouncements(classroomId, page + 1, pageSize, filters);
-            setPage(page + 1);
+            setPage((prev) => prev + 1);
         } catch (error) {
             console.error(`[ERROR] AnnouncementsFeed - Manual load more:`, error);
         }

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import prisma from "@/lib/prisma";
+import { settingsRepo } from "@/lib/repositories/settings-repo";
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -85,10 +86,10 @@ export async function getAuthenticatedUser(
     // Chặn người dùng bị khoá theo system settings (disabled_users)
     if (user) {
       try {
-        const row = await prisma.systemSetting.findUnique({ where: { key: "disabled_users" } });
         let isDisabled = false;
-        if (Array.isArray(row?.value)) {
-          for (const item of row!.value as any[]) {
+        const disabledSetting = await settingsRepo.get("disabled_users");
+        if (Array.isArray(disabledSetting)) {
+          for (const item of disabledSetting) {
             if (typeof item === "string" && item === user.id) {
               isDisabled = true;
               break;
@@ -96,8 +97,8 @@ export async function getAuthenticatedUser(
             if (
               item &&
               typeof item === "object" &&
-              typeof (item as any).id === "string" &&
-              (item as any).id === user.id
+              typeof (item as { id?: unknown }).id === "string" &&
+              (item as { id?: unknown }).id === user.id
             ) {
               isDisabled = true;
               break;
@@ -143,7 +144,7 @@ export function errorResponse(
   meta?: Record<string, unknown>
 ) {
   return NextResponse.json(
-    { success: false, message, ...(meta || {}) },
+    { success: false, ...(meta || {}), error: true, message },
     { status }
   );
 }
@@ -156,13 +157,16 @@ export function withApiLogging<T extends (...args: any[]) => Promise<Response>>(
   action: string
 ): T {
   return (async (...args: any[]) => {
+    const isDevelopment = process.env.NODE_ENV === "development";
     const req: NextRequest | undefined = args[0];
     const requestId = getRequestId(req);
     const start = Date.now();
     try {
       const res = await handler(...args);
       const ms = Date.now() - start;
-      console.log(`[INFO] ${action} OK {requestId:${requestId}, ms:${ms}}`);
+      if (isDevelopment) {
+        console.log(`[INFO] ${action} OK {requestId:${requestId}, ms:${ms}}`);
+      }
       return res;
     } catch (err) {
       const ms = Date.now() - start;

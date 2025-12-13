@@ -3,31 +3,41 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { generateQuizFromText } from "@/lib/ai/gemini-quiz";
 import type { QuizQuestion } from "@/types/assignment-builder";
+import { z } from "zod";
+import { errorResponse } from "@/lib/api-utils";
+
+const requestSchema = z.object({
+  sourceText: z.string().min(1, "sourceText is required"),
+  numQuestions: z.number().int().min(1).max(30).optional(),
+});
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== "TEACHER") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Teachers only" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Teachers only");
     }
 
     const body = await req.json().catch(() => null);
-    const sourceText = (body?.sourceText || "").toString();
-    const numQuestions = Number(body?.numQuestions) || 10;
-
-    if (!sourceText.trim()) {
-      return NextResponse.json(
-        { success: false, message: "sourceText is required" },
-        { status: 400 }
-      );
+    const parsed = requestSchema.safeParse({
+      sourceText: (body?.sourceText || "").toString(),
+      numQuestions: body?.numQuestions === undefined ? undefined : Number(body?.numQuestions),
+    });
+    if (!parsed.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsed.error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+        })),
+      });
     }
+
+    const sourceText = parsed.data.sourceText;
+    const numQuestions = parsed.data.numQuestions ?? 10;
 
     const questionsRaw = await generateQuizFromText({
       sourceText,
-      numQuestions: Math.max(1, Math.min(numQuestions, 30)),
+      numQuestions,
       language: "vi",
     });
 
@@ -56,16 +66,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[API /api/ai/quiz] Error", error);
-    const message =
-      error instanceof Error && error.message
-        ? error.message
-        : "Internal server error";
-    return NextResponse.json(
-      {
-        success: false,
-        message,
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

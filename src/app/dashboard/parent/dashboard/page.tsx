@@ -16,7 +16,7 @@ export default function ParentDashboardPage() {
     (user?.fullname && user.fullname.trim()) ||
     (user?.name && user.name.trim()) ||
     (user?.email ? user.email.split("@")[0] : "") ||
-    "báº¡n";
+    "bạn";
   const currentDate = new Date();
   const dateOptions: Intl.DateTimeFormatOptions = {
     weekday: "long",
@@ -29,8 +29,8 @@ export default function ParentDashboardPage() {
   return (
     <>
       <HeaderParent
-        title={`ChÃ o má»«ng trá»Ÿ láº¡i, ${displayName} ðŸ‘‹`}
-        subtitle={`Theo dÃµi tiáº¿n Ä‘á»™ há»c táº­p cá»§a con báº¡n - HÃ´m nay lÃ  ${formattedDate}`}
+        title={`Chào mừng trở lại, ${displayName}`}
+        subtitle={`Theo dõi tiến độ học tập của con bạn - Hôm nay là ${formattedDate}`}
       />
 
       <QuickStats />

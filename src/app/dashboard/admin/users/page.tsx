@@ -39,6 +39,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [banLoadingId, setBanLoadingId] = useState<string | null>(null);
+  const [resetLoadingId, setResetLoadingId] = useState<string | null>(null);
   const [createFullname, setCreateFullname] = useState("");
   const [createEmail, setCreateEmail] = useState("");
   const [createPassword, setCreatePassword] = useState("");
@@ -86,6 +87,44 @@ export default function AdminUsersPage() {
       setItems([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resetPassword = async (user: AdminUserItem) => {
+    if (user.role === "ADMIN") return;
+
+    const input = await prompt({
+      title: "Reset mật khẩu",
+      description: `Gửi mã đặt lại mật khẩu tới email ${user.email}. Bạn có muốn ghi lý do không? (tùy chọn)`,
+      placeholder: "Ví dụ: Người dùng quên mật khẩu…",
+      type: "textarea",
+      confirmText: "Gửi mã reset",
+      cancelText: "Hủy",
+      validate: (v) => (v.length > 500 ? "Vui lòng nhập tối đa 500 ký tự" : null),
+    });
+    if (input === null) {
+      return;
+    }
+
+    const reason = input.trim() || undefined;
+
+    try {
+      setResetLoadingId(user.id);
+      const res = await fetch(`/api/admin/users/${user.id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể gửi mã reset password");
+      }
+      alert(`Đã gửi mã reset password tới ${user.email}`);
+    } catch (e) {
+      console.error("[AdminUsersPage] resetPassword error", e);
+      alert(e instanceof Error ? e.message : "Có lỗi xảy ra khi reset mật khẩu");
+    } finally {
+      setResetLoadingId(null);
     }
   };
 
@@ -529,6 +568,7 @@ export default function AdminUsersPage() {
               ) : (
                 items.map((user) => {
                   const isProcessing = banLoadingId === user.id;
+                  const isResetting = resetLoadingId === user.id;
                   const isAdminRole = user.role === "ADMIN";
                   return (
                     <tr key={user.id} className="hover:bg-slate-50/60">
@@ -577,22 +617,33 @@ export default function AdminUsersPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 align-middle text-right">
-                        <button
-                          type="button"
-                          disabled={isProcessing || isAdminRole}
-                          onClick={() => toggleBan(user)}
-                          className={`inline-flex items-center rounded-xl px-3 py-1.5 text-[11px] font-semibold border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-                            user.isDisabled
-                              ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                              : "border-red-200 text-red-700 hover:bg-red-50"
-                          }`}
-                        >
-                          {isProcessing
-                            ? "Đang xử lý..."
-                            : user.isDisabled
-                            ? "Mở khoá"
-                            : "Khoá tài khoản"}
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={isResetting || isProcessing || isAdminRole}
+                            onClick={() => resetPassword(user)}
+                            className="inline-flex items-center rounded-xl px-3 py-1.5 text-[11px] font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {isResetting ? "Đang gửi..." : "Reset mật khẩu"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isProcessing || isResetting || isAdminRole}
+                            onClick={() => toggleBan(user)}
+                            className={`inline-flex items-center rounded-xl px-3 py-1.5 text-[11px] font-semibold border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                              user.isDisabled
+                                ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                : "border-red-200 text-red-700 hover:bg-red-50"
+                            }`}
+                          >
+                            {isProcessing
+                              ? "Đang xử lý..."
+                              : user.isDisabled
+                              ? "Mở khoá"
+                              : "Khoá tài khoản"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

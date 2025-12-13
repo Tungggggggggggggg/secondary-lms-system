@@ -42,7 +42,7 @@ function extractQuestionsFromText(text: string): GeneratedQuizQuestion[] {
   const questions: GeneratedQuizQuestion[] = [];
 
   // Chia text thành các block theo từng "question": ...
-  const blockRegex = /"question"\s*:\s*"([^\"]+)"([\s\S]*?)(?="question"\s*:\s*"|$)/g;
+  const blockRegex = /"question"\s*:\s*"([^"]+)"([\s\S]*?)(?="question"\s*:\s*"|$)/g;
 
   let blockMatch: RegExpExecArray | null;
   while ((blockMatch = blockRegex.exec(text)) !== null) {
@@ -58,7 +58,7 @@ function extractQuestionsFromText(text: string): GeneratedQuizQuestion[] {
     // Tìm tất cả options trong block; không phụ thuộc vào mảng hay dấu ] đầy đủ
     const options: { text: string; isCorrect: boolean }[] = [];
     const optionRegex =
-      /"text"\s*:\s*"([^\"]+)"[\s\S]*?"isCorrect"\s*:\s*(true|false)/g;
+      /"text"\s*:\s*"([^"]+)"[\s\S]*?"isCorrect"\s*:\s*(true|false)/g;
 
     let oMatch: RegExpExecArray | null;
     while ((oMatch = optionRegex.exec(blockBody)) !== null) {
@@ -231,13 +231,16 @@ export async function generateQuizFromText(
     // Parse format QUESTION / END_QUESTION với các dòng - [x]/- [ ]
     const blocks = rawText
       .split(/QUESTION:/i)
-      .map((b) => b.trim())
+      .map((b: string) => b.trim())
       .filter(Boolean);
 
     let addedThisRound = 0;
 
     for (const block of blocks) {
-      const lines = block.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      const lines = block
+        .split(/\r?\n/)
+        .map((l: string) => l.trim())
+        .filter(Boolean);
       if (!lines.length) continue;
 
       const questionText = lines[0];

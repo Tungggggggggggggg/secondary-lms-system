@@ -1,16 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { useTeacherDashboard } from "@/hooks/use-teacher-dashboard";
+import { useTeacherDashboardActivities } from "@/hooks/use-teacher-dashboard";
 import { ActivityList, type ActivityItem } from "@/components/shared";
 import { FileCheck, UserPlus, MessageSquare, Star, Bell } from "lucide-react";
 
 export default function RecentActivity() {
-    const { activities, isLoading, error, fetchActivities } = useTeacherDashboard();
-
-    useEffect(() => {
-        fetchActivities();
-    }, [fetchActivities]);
+    const { activities, isLoading, error } = useTeacherDashboardActivities();
 
     // Helper function để lấy config theo actorType
     const getActorConfig = (actorType: string) => {

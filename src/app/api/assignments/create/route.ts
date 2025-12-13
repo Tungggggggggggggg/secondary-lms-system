@@ -197,36 +197,43 @@ export async function POST(request: NextRequest) {
         assignmentId: assignment.id,
       }));
 
-      await prisma.question.createMany({
-        data: questionsData.map(q => ({
-          content: q.content,
-          type: q.type,
-          order: q.order,
-          assignmentId: q.assignmentId
-        }))
-      });
-
-      // Create options separately (due to createMany limitations)
-      for (let i = 0; i < questionsData.length; i++) {
-        const question = await prisma.question.findFirst({
-          where: {
-            assignmentId: assignment.id,
-            order: i + 1
-          }
+      await prisma.$transaction(async (tx) => {
+        await tx.question.createMany({
+          data: questionsData.map((q) => ({
+            content: q.content,
+            type: q.type,
+            order: q.order,
+            assignmentId: q.assignmentId,
+          })),
         });
 
-        if (question) {
-          await prisma.option.createMany({
-            data: normalizedQuestions[i].options.map((opt: any, optIndex: number) => ({
-              label: opt.label,
-              content: opt.content,
-              isCorrect: !!opt.isCorrect,
-              order: optIndex + 1,
-              questionId: question.id
-            }))
-          });
+        const createdQuestions = await tx.question.findMany({
+          where: { assignmentId: assignment.id },
+          select: { id: true, order: true },
+          orderBy: { order: 'asc' },
+        });
+
+        const questionIdByOrder = new Map<number, string>(
+          createdQuestions.map((q) => [q.order, q.id])
+        );
+
+        const optionsData = normalizedQuestions.flatMap((q, qIndex) => {
+          const questionOrder = qIndex + 1;
+          const questionId = questionIdByOrder.get(questionOrder);
+          if (!questionId) return [];
+          return q.options.map((opt: any, optIndex: number) => ({
+            label: opt.label,
+            content: opt.content,
+            isCorrect: !!opt.isCorrect,
+            order: optIndex + 1,
+            questionId,
+          }));
+        });
+
+        if (optionsData.length > 0) {
+          await tx.option.createMany({ data: optionsData });
         }
-      }
+      });
 
       console.log(`[CreateAssignment] Created ${questionsData.length} questions with options`);
     }

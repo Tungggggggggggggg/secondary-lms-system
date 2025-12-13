@@ -2,15 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { auditRepo } from "@/lib/repositories/audit-repo";
+import { errorResponse } from "@/lib/api-utils";
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Admins only" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Admins only");
     }
 
     const { searchParams } = new URL(req.url);
@@ -22,8 +20,21 @@ export async function GET(req: NextRequest) {
     const cursor = searchParams.get("cursor") || undefined;
     const limitStr = searchParams.get("limit") || undefined;
 
-    const from = fromStr ? new Date(fromStr) : undefined;
-    const to = toStr ? new Date(toStr) : undefined;
+    let from: Date | undefined;
+    if (fromStr) {
+      from = new Date(fromStr);
+      if (Number.isNaN(from.getTime())) {
+        return errorResponse(400, "Invalid from date");
+      }
+    }
+
+    let to: Date | undefined;
+    if (toStr) {
+      to = new Date(toStr);
+      if (Number.isNaN(to.getTime())) {
+        return errorResponse(400, "Invalid to date");
+      }
+    }
     const limit = limitStr ? Math.min(Math.max(parseInt(limitStr, 10) || 1, 1), 100) : 50;
 
     const result = await auditRepo.query({
@@ -39,12 +50,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error("[API /api/admin/audit-logs] Error", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

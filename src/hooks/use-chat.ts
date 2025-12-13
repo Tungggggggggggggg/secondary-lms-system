@@ -34,7 +34,9 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function useConversations() {
   const { data, error, isLoading, mutate } = useSWR("/api/chat/conversations", fetcher, {
-    refreshInterval: 5000,
+    refreshInterval: 15000,
+    dedupingInterval: 10000,
+    revalidateOnFocus: true,
   });
   return {
     conversations: (data?.data || []) as ConversationItem[],
@@ -47,7 +49,9 @@ export function useConversations() {
 export function useMessages(conversationId?: string) {
   const key = conversationId ? `/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}` : null;
   const { data, error, isLoading, mutate } = useSWR(key, fetcher, {
-    refreshInterval: 4000,
+    refreshInterval: 8000,
+    dedupingInterval: 5000,
+    revalidateOnFocus: true,
   });
   return {
     messages: (data?.data || []) as MessageDTO[],
@@ -81,7 +85,11 @@ export async function markRead(conversationId: string) {
 
 
 export function useUnreadTotal() {
-  const { data } = useSWR("/api/chat/unread-total", fetcher, { refreshInterval: 6000 });
+  const { data } = useSWR("/api/chat/unread-total", fetcher, {
+    refreshInterval: 15000,
+    dedupingInterval: 10000,
+    revalidateOnFocus: true,
+  });
   return (data?.total as number) || 0;
 }
 

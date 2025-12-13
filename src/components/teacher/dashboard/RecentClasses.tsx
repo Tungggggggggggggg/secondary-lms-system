@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useClassroom } from "@/hooks/use-classroom";
 import { ClassroomResponse } from "@/types/classroom";
@@ -9,11 +9,7 @@ import { BookOpen, Calendar, FileText, ChevronRight } from "lucide-react";
 
 export default function RecentClasses() {
     const router = useRouter();
-    const { classrooms, isLoading, fetchClassrooms } = useClassroom();
-
-    useEffect(() => {
-        fetchClassrooms();
-    }, [fetchClassrooms]);
+    const { classrooms, isLoading } = useClassroom();
 
     // Lấy 3 lớp học mới nhất, sắp xếp theo createdAt (mới nhất trước)
     const recentClasses = useMemo(() => {

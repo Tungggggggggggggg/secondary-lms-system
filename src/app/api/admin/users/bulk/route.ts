@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { userRepo } from "@/lib/repositories/user-repo";
+import { errorResponse } from "@/lib/api-utils";
 
 type BulkEntryInput = {
   fullname?: string;
@@ -15,10 +16,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Admins only" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Admins only");
     }
 
     const body = await req.json().catch(() => null);
@@ -26,17 +24,11 @@ export async function POST(req: NextRequest) {
     const defaultPassword = (body?.defaultPassword || "").toString();
 
     if (!Array.isArray(entriesRaw) || entriesRaw.length === 0) {
-      return NextResponse.json(
-        { success: false, message: "Danh sách giáo viên trống." },
-        { status: 400 }
-      );
+      return errorResponse(400, "Danh sách giáo viên trống.");
     }
 
     if (entriesRaw.length > 100) {
-      return NextResponse.json(
-        { success: false, message: "Tối đa 100 giáo viên mỗi lần tạo." },
-        { status: 400 }
-      );
+      return errorResponse(400, "Tối đa 100 giáo viên mỗi lần tạo.");
     }
 
     type Candidate = {
@@ -109,7 +101,7 @@ export async function POST(req: NextRequest) {
       where: { email: { in: uniqueCandidates.map((c) => c.email) } },
       select: { email: true },
     });
-    const existingSet = new Set(existing.map((u) => u.email.toLowerCase()));
+    const existingSet = new Set(existing.map((u: { email: string }) => u.email.toLowerCase()));
 
     const created: { index: number; id: string; email: string; fullname: string | null }[] = [];
 
@@ -134,9 +126,12 @@ export async function POST(req: NextRequest) {
           email: user.email,
           fullname: user.fullname,
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         const reason =
-          e && typeof e === "object" && (e as any).code === "P2002"
+          !!e &&
+          typeof e === "object" &&
+          "code" in e &&
+          (e as { code?: unknown }).code === "P2002"
             ? "Email đã tồn tại (unique constraint)"
             : "Lỗi khi tạo user";
         failed.push({ index: c.index, email: c.email, reason });
@@ -152,12 +147,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[API /api/admin/users/bulk POST] Error", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

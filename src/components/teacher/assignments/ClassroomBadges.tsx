@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback } from "react"
+import useSWR from "swr"
 
 /**
  * Interface cho classroom data từ API
@@ -31,42 +32,28 @@ export default function ClassroomBadges({
   assignmentId, 
   maxVisible = 3 
 }: ClassroomBadgesProps) {
-  const [classrooms, setClassrooms] = useState<ClassroomInfo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  type ApiResponse = { success?: boolean; data?: ClassroomInfo[]; message?: string }
 
-  useEffect(() => {
-    const fetchClassrooms = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch(`/api/assignments/${assignmentId}/classrooms`)
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch classrooms')
-        }
-
-        const data = await response.json()
-        if (data.success) {
-          setClassrooms(data.data)
-        } else {
-          throw new Error(data.message || 'Unknown error')
-        }
-      } catch (error) {
-        console.error('[ClassroomBadges] Error fetching classrooms:', error)
-        setError(error instanceof Error ? error.message : 'Unknown error')
-      } finally {
-        setLoading(false)
-      }
+  const fetcher = useCallback(async (url: string): Promise<ClassroomInfo[]> => {
+    const res = await fetch(url, { cache: "no-store" })
+    const json = (await res.json()) as ApiResponse
+    if (!res.ok || json?.success === false) {
+      const msg = json?.message || res.statusText || "Failed to fetch classrooms"
+      throw new Error(msg)
     }
+    return Array.isArray(json?.data) ? json.data : []
+  }, [])
 
-    if (assignmentId) {
-      fetchClassrooms()
-    }
-  }, [assignmentId])
+  const key = assignmentId ? `/api/assignments/${encodeURIComponent(assignmentId)}/classrooms` : null
+  const { data, error, isLoading } = useSWR<ClassroomInfo[]>(key, fetcher, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+    dedupingInterval: 15000,
+  })
 
-  if (loading) {
+  const classrooms = data ?? []
+
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2">
         <div className="animate-pulse bg-gray-200 rounded-md h-6 w-16"></div>

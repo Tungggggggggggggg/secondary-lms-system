@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useClassroom } from '@/hooks/use-classroom';
 import ClassTile from './class-picker/ClassTile';
 
 interface Classroom {
@@ -29,51 +30,27 @@ export function ClassroomSelector({
   onClassroomsChange,
   className 
 }: ClassroomSelectorProps) {
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { classrooms, isLoading, error } = useClassroom();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
 
   // Fetch classrooms
-  useEffect(() => {
-    const fetchClassrooms = async () => {
-      try {
-        const response = await fetch('/api/classrooms');
-        const data = await response.json();
-        console.log('📚 Classrooms API Response:', data);
-        if (data.success) {
-          // API trả về data.data, không phải data.classrooms
-          const classroomList = data.data || [];
-          console.log('📚 Parsed classrooms:', classroomList);
-          // Map API response to component format
-          type ApiClassroom = {
-            id: string;
-            name: string;
-            description?: string;
-            _count?: { students?: number };
-          };
-          const mappedClassrooms = (classroomList as ApiClassroom[]).map((classroom) => ({
-            id: classroom.id,
-            name: classroom.name,
-            studentCount: classroom._count?.students || 0,
-            subject: classroom.description
-          }));
-          setClassrooms(mappedClassrooms);
-        }
-      } catch (error) {
-        console.error('Error fetching classrooms:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchClassrooms();
-  }, []);
+  const mappedClassrooms: Classroom[] = useMemo(() => {
+    const source = classrooms ?? [];
+    return source.map((c) => ({
+      id: c.id,
+      name: c.name,
+      studentCount: c._count?.students || 0,
+      subject: c.description ?? undefined,
+    }));
+  }, [classrooms]);
 
   // Filter classrooms based on search
-  const filteredClassrooms = classrooms.filter(classroom =>
-    classroom.name.toLowerCase().includes((debouncedSearch || '').toLowerCase())
-  );
+  const filteredClassrooms = useMemo(() => {
+    const q = (debouncedSearch || '').toLowerCase();
+    if (!q) return mappedClassrooms;
+    return mappedClassrooms.filter((classroom) => classroom.name.toLowerCase().includes(q));
+  }, [debouncedSearch, mappedClassrooms]);
 
   const handleClassroomToggle = (classroomId: string) => {
     const updatedSelection = selectedClassrooms.includes(classroomId)
@@ -106,7 +83,7 @@ export function ClassroomSelector({
     return () => window.removeEventListener('keydown', onKey);
   }, [filteredClassrooms, onClassroomsChange]);
 
-  if (loading) {
+  if (isLoading && !classrooms) {
     return (
       <div className={className}>
         <Card>
@@ -114,6 +91,20 @@ export function ClassroomSelector({
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <p className="text-gray-500">Đang tải danh sách lớp học...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={className}>
+        <Card>
+          <CardContent className="p-8">
+            <div className="text-center">
+              <p className="text-red-600 text-sm">Không thể tải danh sách lớp học: {error}</p>
             </div>
           </CardContent>
         </Card>

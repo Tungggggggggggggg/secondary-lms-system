@@ -5,27 +5,31 @@ import { prisma } from "@/lib/prisma";
 interface ParentChildSubmissionRow {
   id: string;
   studentId: string;
+  assignmentId: string;
   grade: number | null;
   feedback: string | null;
   submittedAt: Date;
-  assignment: {
+}
+
+interface ParentChildAssignmentRow {
+  id: string;
+  title: string;
+  type: string;
+  dueDate: Date | null;
+}
+
+interface ParentChildAssignmentClassroomRow {
+  assignmentId: string;
+  classroom: {
     id: string;
-    title: string;
-    type: string;
-    dueDate: Date | null;
-    classrooms: Array<{
-      classroom: {
-        id: string;
-        name: string;
-        code: string;
-        icon: string | null;
-        teacher: {
-          id: string;
-          fullname: string | null;
-          email: string;
-        } | null;
-      } | null;
-    }>;
+    name: string;
+    code: string;
+    icon: string | null;
+    teacher: {
+      id: string;
+      fullname: string | null;
+      email: string;
+    } | null;
   };
 }
 
@@ -84,25 +88,55 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       where: {
         studentId: { in: studentIds },
       },
-      include: {
-        assignment: {
-          include: {
-            classrooms: {
-              include: {
-                classroom: {
-                  include: {
-                    teacher: {
-                      select: { id: true, fullname: true, email: true },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+      select: {
+        id: true,
+        studentId: true,
+        assignmentId: true,
+        grade: true,
+        feedback: true,
+        submittedAt: true,
       },
       orderBy: { submittedAt: "desc" },
     })) as ParentChildSubmissionRow[];
+
+    const assignmentIds: string[] = Array.from(
+      new Set(submissions.map((s: ParentChildSubmissionRow) => s.assignmentId))
+    );
+
+    const [assignments, assignmentClassrooms] = await Promise.all([
+      prisma.assignment.findMany({
+        where: { id: { in: assignmentIds } },
+        select: { id: true, title: true, type: true, dueDate: true },
+      }) as unknown as ParentChildAssignmentRow[],
+
+      prisma.assignmentClassroom.findMany({
+        where: { assignmentId: { in: assignmentIds } },
+        select: {
+          assignmentId: true,
+          classroom: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              icon: true,
+              teacher: { select: { id: true, fullname: true, email: true } },
+            },
+          },
+        },
+        orderBy: { addedAt: "desc" },
+      }) as unknown as ParentChildAssignmentClassroomRow[],
+    ]);
+
+    const assignmentById = new Map<string, ParentChildAssignmentRow>(
+      assignments.map((a: ParentChildAssignmentRow) => [a.id, a])
+    );
+
+    const classroomByAssignmentId = new Map<string, ParentChildAssignmentClassroomRow["classroom"]>();
+    for (const row of assignmentClassrooms) {
+      if (!classroomByAssignmentId.has(row.assignmentId)) {
+        classroomByAssignmentId.set(row.assignmentId, row.classroom);
+      }
+    }
 
     // Transform data và nhóm theo student
     const gradesByStudent: Record<
@@ -171,22 +205,20 @@ export const GET = withApiLogging(async (req: NextRequest) => {
 
     // Phân loại submissions theo student
     submissions.forEach((sub: ParentChildSubmissionRow) => {
-      const classroom = sub.assignment.classrooms[0]?.classroom;
+      const assignment = assignmentById.get(sub.assignmentId);
+      if (!assignment) return;
+      const classroom = classroomByAssignmentId.get(sub.assignmentId) ?? null;
 
       const gradeEntry = {
         id: sub.id,
-        assignmentId: sub.assignment.id,
-        assignmentTitle: sub.assignment.title,
-        assignmentType: sub.assignment.type,
-        dueDate: sub.assignment.dueDate?.toISOString() || null,
+        assignmentId: assignment.id,
+        assignmentTitle: assignment.title,
+        assignmentType: assignment.type,
+        dueDate: assignment.dueDate?.toISOString() || null,
         grade: sub.grade,
         feedback: sub.feedback,
         submittedAt: sub.submittedAt.toISOString(),
-        status: (sub.grade !== null
-          ? "graded"
-          : sub.submittedAt
-          ? "submitted"
-          : "pending") as "pending" | "submitted" | "graded",
+        status: (sub.grade !== null ? "graded" : "submitted") as "pending" | "submitted" | "graded",
         classroom: classroom
           ? {
               id: classroom.id,

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 type SettingValue = unknown | null;
 type CacheEntry = { value: SettingValue; expiresAt: number };
@@ -29,8 +30,8 @@ export const settingsRepo = {
   async set(key: string, value: unknown) {
     const saved = await prisma.systemSetting.upsert({
       where: { key },
-      update: { value: value as any },
-      create: { key, value: value as any },
+      update: { value: value as Prisma.InputJsonValue },
+      create: { key, value: value as Prisma.InputJsonValue },
       select: { key: true },
     });
     cache.delete(key); // bust cache ngay

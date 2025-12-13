@@ -64,8 +64,8 @@ export default function ParentTeachersPage() {
     return (
       <>
         <HeaderParent
-          title="GiÃ¡o viÃªn cá»§a con"
-          subtitle="Danh sÃ¡ch giÃ¡o viÃªn phá»¥ trÃ¡ch cÃ¡c lá»›p mÃ  con báº¡n Ä‘ang theo há»c"
+          title="Giáo viên của con"
+          subtitle="Danh sách giáo viên phụ trách các lớp mà con bạn đang theo học"
         />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -83,13 +83,13 @@ export default function ParentTeachersPage() {
     return (
       <>
         <HeaderParent
-          title="GiÃ¡o viÃªn cá»§a con"
-          subtitle="Danh sÃ¡ch giÃ¡o viÃªn phá»¥ trÃ¡ch cÃ¡c lá»›p mÃ  con báº¡n Ä‘ang theo há»c"
+          title="Giáo viên của con"
+          subtitle="Danh sách giáo viên phụ trách các lớp mà con bạn đang theo học"
         />
         <EmptyState
-          icon="âŒ"
-          title="CÃ³ lá»—i xáº£y ra"
-          description="KhÃ´ng thá»ƒ táº£i danh sÃ¡ch giÃ¡o viÃªn. Vui lÃ²ng thá»­ láº¡i sau."
+          icon="❌"
+          title="Có lỗi xảy ra"
+          description="Không thể tải danh sách giáo viên. Vui lòng thử lại sau."
           variant="parent"
         />
       </>
@@ -100,13 +100,13 @@ export default function ParentTeachersPage() {
     return (
       <>
         <HeaderParent
-          title="GiÃ¡o viÃªn cá»§a con"
-          subtitle="Danh sÃ¡ch giÃ¡o viÃªn phá»¥ trÃ¡ch cÃ¡c lá»›p mÃ  con báº¡n Ä‘ang theo há»c"
+          title="Giáo viên của con"
+          subtitle="Danh sách giáo viên phụ trách các lớp mà con bạn đang theo học"
         />
         <EmptyState
-          icon="ðŸ‘¨â€ðŸ«"
-          title="ChÆ°a cÃ³ giÃ¡o viÃªn nÃ o"
-          description="Khi con cá»§a báº¡n tham gia cÃ¡c lá»›p há»c, danh sÃ¡ch giÃ¡o viÃªn phá»¥ trÃ¡ch sáº½ xuáº¥t hiá»‡n táº¡i Ä‘Ã¢y Ä‘á»ƒ báº¡n dá»… dÃ ng trao Ä‘á»•i."
+          icon="🏫"
+          title="Chưa có giáo viên nào"
+          description="Khi con của bạn tham gia các lớp học, danh sách giáo viên phụ trách sẽ xuất hiện tại đây để bạn dễ dàng trao đổi."
           variant="parent"
         />
       </>
@@ -116,8 +116,8 @@ export default function ParentTeachersPage() {
   return (
     <>
       <HeaderParent
-        title="GiÃ¡o viÃªn cá»§a con"
-        subtitle="Danh sÃ¡ch giÃ¡o viÃªn phá»¥ trÃ¡ch cÃ¡c lá»›p mÃ  con báº¡n Ä‘ang theo há»c"
+        title="Giáo viên của con"
+        subtitle="Danh sách giáo viên phụ trách các lớp mà con bạn đang theo học"
       />
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -8,45 +8,28 @@ interface ParentChildSubmissionRow {
   grade: number | null;
   feedback: string | null;
   submittedAt: Date;
-  assignment: {
-    id: string;
-    title: string;
-    type: string;
-    dueDate: Date | null;
-    classrooms: Array<{
-      classroom: {
-        id: string;
-        name: string;
-        code: string;
-        icon: string | null;
-        teacher: {
-          id: string;
-          fullname: string | null;
-          email: string;
-        } | null;
-      } | null;
-    }>;
-  };
 }
 
-interface ParentMissingAssignmentRow {
+interface ParentChildAssignmentRow {
   id: string;
   title: string;
   type: string;
   dueDate: Date | null;
-  classrooms: Array<{
-    classroom: {
+}
+
+interface ParentChildAssignmentClassroomRow {
+  assignmentId: string;
+  classroom: {
+    id: string;
+    name: string;
+    code: string;
+    icon: string | null;
+    teacher: {
       id: string;
-      name: string;
-      code: string;
-      icon: string | null;
-      teacher: {
-        id: string;
-        fullname: string | null;
-        email: string;
-      } | null;
+      fullname: string | null;
+      email: string;
     } | null;
-  }>;
+  };
 }
 
 /**
@@ -161,126 +144,128 @@ export const GET = withApiLogging(async (
       );
     }
 
-    // Lấy tất cả submissions của student (bao gồm cả chưa chấm) cho các assignments này
-    const submissions = (await prisma.assignmentSubmission.findMany({
-      where: {
-        studentId: childId,
-        assignmentId: { in: assignmentIdList },
-      },
-      include: {
-        assignment: {
-          include: {
-            classrooms: {
-              include: {
-                classroom: {
-                  include: {
-                    teacher: {
-                      select: { id: true, fullname: true, email: true },
-                    },
-                  },
-                },
-              },
+    const [submissions, assignments, assignmentClassrooms] = await Promise.all([
+      prisma.assignmentSubmission.findMany({
+        where: {
+          studentId: childId,
+          assignmentId: { in: assignmentIdList },
+        },
+        select: {
+          id: true,
+          assignmentId: true,
+          grade: true,
+          feedback: true,
+          submittedAt: true,
+        },
+        orderBy: { submittedAt: "desc" },
+      }) as unknown as ParentChildSubmissionRow[],
+
+      prisma.assignment.findMany({
+        where: { id: { in: assignmentIdList } },
+        select: { id: true, title: true, type: true, dueDate: true },
+      }) as unknown as ParentChildAssignmentRow[],
+
+      prisma.assignmentClassroom.findMany({
+        where: { assignmentId: { in: assignmentIdList } },
+        select: {
+          assignmentId: true,
+          classroom: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              icon: true,
+              teacher: { select: { id: true, fullname: true, email: true } },
             },
           },
         },
-      },
-      orderBy: { submittedAt: "desc" },
-    })) as ParentChildSubmissionRow[];
+        orderBy: { addedAt: "desc" },
+      }) as unknown as ParentChildAssignmentClassroomRow[],
+    ]);
 
-    // Transform data cho các bài đã nộp
-    const submissionGrades = submissions.map((sub: ParentChildSubmissionRow) => {
-      const classroom = sub.assignment.classrooms[0]?.classroom; // Lấy classroom đầu tiên
-
-      return {
-        id: sub.id,
-        assignmentId: sub.assignment.id,
-        assignmentTitle: sub.assignment.title,
-        assignmentType: sub.assignment.type,
-        dueDate: sub.assignment.dueDate?.toISOString() || null,
-        grade: sub.grade,
-        feedback: sub.feedback,
-        submittedAt: sub.submittedAt.toISOString(),
-        status: sub.grade !== null ? "graded" : sub.submittedAt ? "submitted" : "pending",
-        classroom: classroom
-          ? {
-              id: classroom.id,
-              name: classroom.name,
-              code: classroom.code,
-              icon: classroom.icon,
-              teacher: classroom.teacher,
-            }
-          : null,
-      };
-    });
-
-    // Tìm các assignments chưa có submission nào từ student
-    const submittedAssignmentIds = new Set<string>(
-      submissions.map((sub: ParentChildSubmissionRow) => sub.assignmentId),
+    const assignmentById = new Map<string, ParentChildAssignmentRow>(
+      assignments.map((a: ParentChildAssignmentRow) => [a.id, a])
     );
 
-    const missingAssignments = (await prisma.assignment.findMany({
-      where: {
-        id: {
-          in: assignmentIdList.filter(
-            (id: string) => !submittedAssignmentIds.has(id),
-          ),
-        },
-      },
-      include: {
-        classrooms: {
-          include: {
-            classroom: {
-              include: {
-                teacher: {
-                  select: { id: true, fullname: true, email: true },
-                },
-              },
-            },
-          },
-        },
-      },
-    })) as ParentMissingAssignmentRow[];
+    const classroomByAssignmentId = new Map<string, ParentChildAssignmentClassroomRow["classroom"]>();
+    for (const row of assignmentClassrooms) {
+      if (!classroomByAssignmentId.has(row.assignmentId)) {
+        classroomByAssignmentId.set(row.assignmentId, row.classroom);
+      }
+    }
+
+    // Transform data cho các bài đã nộp
+    const submissionGrades = submissions
+      .map((sub: ParentChildSubmissionRow) => {
+        const assignment = assignmentById.get(sub.assignmentId);
+        if (!assignment) return null;
+        const classroom = classroomByAssignmentId.get(sub.assignmentId) ?? null;
+
+        return {
+          id: sub.id,
+          assignmentId: assignment.id,
+          assignmentTitle: assignment.title,
+          assignmentType: assignment.type,
+          dueDate: assignment.dueDate?.toISOString() || null,
+          grade: sub.grade,
+          feedback: sub.feedback,
+          submittedAt: sub.submittedAt.toISOString(),
+          status: sub.grade !== null ? "graded" : "submitted",
+          classroom: classroom
+            ? {
+                id: classroom.id,
+                name: classroom.name,
+                code: classroom.code,
+                icon: classroom.icon,
+                teacher: classroom.teacher,
+              }
+            : null,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
+    // Tìm các assignments chưa có submission nào từ student
+    const submittedAssignmentIds = new Set<string>(submissions.map((sub) => sub.assignmentId));
+    const missingAssignmentIds = assignmentIdList.filter((id: string) => !submittedAssignmentIds.has(id));
 
     const now = new Date();
 
     // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
-    const missingGrades = missingAssignments.map(
-      (assignment: ParentMissingAssignmentRow) => {
-      const classroom = assignment.classrooms[0]?.classroom;
-      const isPastDue =
-        assignment.dueDate !== null && assignment.dueDate < now;
+    const missingGrades = missingAssignmentIds
+      .map((assignmentId: string) => {
+        const assignment = assignmentById.get(assignmentId);
+        if (!assignment) return null;
+        const classroom = classroomByAssignmentId.get(assignmentId) ?? null;
+        const isPastDue = assignment.dueDate !== null && assignment.dueDate < now;
 
-      return {
-        id: `virtual-${assignment.id}`,
-        assignmentId: assignment.id,
-        assignmentTitle: assignment.title,
-        assignmentType: assignment.type,
-        dueDate: assignment.dueDate
-          ? assignment.dueDate.toISOString()
-          : null,
-        grade: 0,
-        feedback: null,
-        submittedAt: null as string | null,
-        status: isPastDue ? "graded" : "pending",
-        classroom: classroom
-          ? {
-              id: classroom.id,
-              name: classroom.name,
-              code: classroom.code,
-              icon: classroom.icon,
-              teacher: classroom.teacher,
-            }
-          : null,
-      };
-    });
+        return {
+          id: `virtual-${assignment.id}`,
+          assignmentId: assignment.id,
+          assignmentTitle: assignment.title,
+          assignmentType: assignment.type,
+          dueDate: assignment.dueDate ? assignment.dueDate.toISOString() : null,
+          grade: 0,
+          feedback: null,
+          submittedAt: null as string | null,
+          status: isPastDue ? "graded" : "pending",
+          classroom: classroom
+            ? {
+                id: classroom.id,
+                name: classroom.name,
+                code: classroom.code,
+                icon: classroom.icon,
+                teacher: classroom.teacher,
+              }
+            : null,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => Boolean(x));
 
     const grades = [...submissionGrades, ...missingGrades];
 
     // Tính thống kê dựa trên submissions thật
     const totalSubmissions = submissions.length;
-    const gradedSubmissions = submissions.filter(
-      (sub: ParentChildSubmissionRow) => sub.grade !== null,
-    );
+    const gradedSubmissions = submissions.filter((sub: ParentChildSubmissionRow) => sub.grade !== null);
     const totalGraded = gradedSubmissions.length;
     const totalPending = totalSubmissions - totalGraded;
 

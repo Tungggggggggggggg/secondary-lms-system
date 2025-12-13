@@ -36,11 +36,18 @@ interface UpcomingAssignmentRow {
  */
 export async function GET(req: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser(req, "PARENT");
+    const authUser = await getAuthenticatedUser(req);
     if (!authUser) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    if (authUser.role !== "PARENT") {
+      return NextResponse.json(
+        { success: false, message: "Forbidden - PARENT role required" },
+        { status: 403 }
       );
     }
 
@@ -82,110 +89,92 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Lấy tất cả submissions của tất cả con
-    const submissions = (await prisma.assignmentSubmission.findMany({
-      where: {
-        studentId: { in: studentIds },
-      },
-      select: {
-        id: true,
-        grade: true,
-        submittedAt: true,
-      },
-    })) as ParentStatsSubmissionRow[];
-
-    const totalSubmissions = submissions.length;
-    const gradedSubmissions = submissions.filter(
-      (sub: ParentStatsSubmissionRow) => sub.grade !== null,
-    );
-    const totalGraded = gradedSubmissions.length;
-    const totalPending = totalSubmissions - totalGraded;
-
-    // Tính điểm trung bình tổng
-    const overallAverage =
-      totalGraded > 0
-        ? gradedSubmissions.reduce(
-            (sum: number, sub: ParentStatsSubmissionRow) =>
-              sum + (sub.grade || 0),
-            0,
-          ) / totalGraded
-        : 0;
-
-    // Tính điểm trung bình tháng trước để so sánh
     const now = new Date();
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    const lastMonthSubmissions = (await prisma.assignmentSubmission.findMany({
-      where: {
-        studentId: { in: studentIds },
-        grade: { not: null },
-        submittedAt: {
-          gte: twoMonthsAgo,
-          lt: oneMonthAgo,
+    const [totalSubmissions, totalGraded, overallAgg, lastMonthAgg] = await Promise.all([
+      prisma.assignmentSubmission.count({
+        where: {
+          studentId: { in: studentIds },
         },
-      },
-      select: { grade: true },
-    })) as { grade: number | null }[];
+      }),
 
-    const lastMonthAverage =
-      lastMonthSubmissions.length > 0
-        ? lastMonthSubmissions.reduce(
-            (sum: number, sub: { grade: number | null }) =>
-              sum + (sub.grade || 0),
-            0,
-          ) / lastMonthSubmissions.length
-        : 0;
+      prisma.assignmentSubmission.count({
+        where: {
+          studentId: { in: studentIds },
+          grade: { not: null },
+        },
+      }),
+
+      prisma.assignmentSubmission.aggregate({
+        where: {
+          studentId: { in: studentIds },
+          grade: { not: null },
+        },
+        _avg: { grade: true },
+      }),
+
+      prisma.assignmentSubmission.aggregate({
+        where: {
+          studentId: { in: studentIds },
+          grade: { not: null },
+          submittedAt: {
+            gte: twoMonthsAgo,
+            lt: oneMonthAgo,
+          },
+        },
+        _avg: { grade: true },
+      }),
+    ]);
+
+    const totalPending = totalSubmissions - totalGraded;
+
+    // Tính điểm trung bình tổng
+    const overallAverage = Number(overallAgg._avg.grade ?? 0);
+
+    // Tính điểm trung bình tháng trước để so sánh
+    const lastMonthAverage = Number(lastMonthAgg._avg.grade ?? 0);
 
     const averageChange = overallAverage - lastMonthAverage;
 
     // Tính số assignments sắp đến hạn của tất cả con
-    const studentClassrooms = (await prisma.classroomStudent.findMany({
-      where: { studentId: { in: studentIds } },
-      select: { classroomId: true },
-    })) as StudentClassroomRow[];
-
-    const classroomIds = studentClassrooms.map(
-      (sc: StudentClassroomRow) => sc.classroomId,
-    );
+    // Đếm theo cặp (studentId, assignmentId) để tránh sai số khi có nhiều con
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     let upcomingAssignments = 0;
 
-    if (classroomIds.length > 0) {
-      const assignmentClassrooms = (await prisma.assignmentClassroom.findMany({
-        where: { classroomId: { in: classroomIds } },
-        select: { assignmentId: true },
-      })) as AssignmentClassroomRow[];
+    if (studentIds.length > 0) {
+      const [totalPairsRows, submittedPairsRows] = await Promise.all([
+        prisma.$queryRaw<Array<{ total: bigint }>>`
+          SELECT COUNT(*)::bigint as total
+          FROM (
+            SELECT DISTINCT cs."studentId", ac."assignmentId"
+            FROM "classroom_students" cs
+            JOIN "assignment_classrooms" ac ON ac."classroomId" = cs."classroomId"
+            JOIN "assignments" a ON a."id" = ac."assignmentId"
+            WHERE cs."studentId" = ANY(${studentIds}::text[])
+              AND a."dueDate" IS NOT NULL
+              AND a."dueDate" >= ${now}
+              AND a."dueDate" <= ${sevenDaysFromNow}
+          ) pairs;
+        `,
+        prisma.$queryRaw<Array<{ total: bigint }>>`
+          SELECT COUNT(*)::bigint as total
+          FROM (
+            SELECT DISTINCT s."studentId", s."assignmentId"
+            FROM "assignment_submissions" s
+            JOIN "assignments" a ON a."id" = s."assignmentId"
+            WHERE s."studentId" = ANY(${studentIds}::text[])
+              AND a."dueDate" IS NOT NULL
+              AND a."dueDate" >= ${now}
+              AND a."dueDate" <= ${sevenDaysFromNow}
+          ) submitted;
+        `,
+      ]);
 
-      const assignmentIds = assignmentClassrooms.map(
-        (ac: AssignmentClassroomRow) => ac.assignmentId,
-      );
-
-      if (assignmentIds.length > 0) {
-        const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const upcomingAssignmentsData = (await prisma.assignment.findMany({
-          where: {
-            id: { in: assignmentIds },
-            dueDate: {
-              gte: now,
-              lte: sevenDaysFromNow,
-            },
-          },
-          select: { id: true },
-        })) as UpcomingAssignmentRow[];
-
-        const upcomingIds = upcomingAssignmentsData.map(
-          (a: UpcomingAssignmentRow) => a.id,
-        );
-        if (upcomingIds.length > 0) {
-          const submittedUpcoming = await prisma.assignmentSubmission.count({
-            where: {
-              assignmentId: { in: upcomingIds },
-              studentId: { in: studentIds },
-            },
-          });
-          upcomingAssignments = upcomingIds.length - submittedUpcoming;
-        }
-      }
+      const totalPairs = Number(totalPairsRows[0]?.total ?? 0);
+      const submittedPairs = Number(submittedPairsRows[0]?.total ?? 0);
+      upcomingAssignments = Math.max(0, totalPairs - submittedPairs);
     }
 
     return NextResponse.json({

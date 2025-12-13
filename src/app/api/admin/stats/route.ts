@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
+import { errorResponse } from "@/lib/api-utils";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export async function GET(_req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Admins only" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Admins only");
     }
 
     const [totalUsers, totalClassrooms, totalAssignments, totalOrganizations, roleGroups, disabledSetting] =
@@ -27,12 +29,15 @@ export async function GET(_req: NextRequest) {
       ]);
 
     const disabledIds = new Set<string>();
-    if (Array.isArray(disabledSetting?.value)) {
-      for (const item of disabledSetting!.value as any[]) {
+    const disabledRaw: unknown = disabledSetting?.value ?? null;
+    if (Array.isArray(disabledRaw)) {
+      for (const item of disabledRaw) {
         if (typeof item === "string") {
           disabledIds.add(item);
-        } else if (item && typeof item === "object" && typeof (item as any).id === "string") {
-          disabledIds.add((item as any).id);
+          continue;
+        }
+        if (isRecord(item) && typeof item.id === "string") {
+          disabledIds.add(item.id);
         }
       }
     }
@@ -61,12 +66,6 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("[API /api/admin/stats] Error", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

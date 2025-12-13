@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,53 +40,68 @@ export default function GradeSubmissionDialog({
   const [feedback, setFeedback] = useState<string>("");
   const [isGrading, setIsGrading] = useState(false);
   const [gradeError, setGradeError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<
+    | { score: number; feedback: string; corrections?: Array<{ excerpt: string; suggestion: string }> }
+    | null
+  >(null);
 
   // Sync state với submission data
   useEffect(() => {
     if (submission) {
       setGrade(submission.grade?.toString() || "");
       setFeedback(submission.feedback || "");
+      setAiError(null);
+      setAiSuggestion(null);
     } else {
       setGrade("");
       setFeedback("");
+      setAiError(null);
+      setAiSuggestion(null);
     }
   }, [submission]);
 
-  // Parse quiz answers để hiển thị
-  const parseQuizAnswers = () => {
-    if (!submission || !submission.answers || !submission.assignment.questions) {
-      return null;
+  const canUseAi =
+    !!submission &&
+    submission.assignment.type === "ESSAY" &&
+    !submission.isFileSubmission &&
+    !(fileList && fileList.length > 0) &&
+    typeof submission.content === "string" &&
+    submission.content.trim().length > 0;
+
+  const handleAiSuggest = async () => {
+    if (!submission) return;
+    if (!canUseAi) return;
+    try {
+      setAiLoading(true);
+      setAiError(null);
+      const res = await fetch("/api/ai/grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId,
+          submissionId: submission.id,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể lấy gợi ý chấm từ AI");
+      }
+      setAiSuggestion(json.data);
+    } catch (e) {
+      setAiSuggestion(null);
+      setAiError(e instanceof Error ? e.message : "Có lỗi xảy ra khi gọi AI");
+    } finally {
+      setAiLoading(false);
     }
-
-    const questionMap = new Map(
-      submission.assignment.questions.map((q) => [q.id, q])
-    );
-
-    return submission.answers.map((answer) => {
-      const question = questionMap.get(answer.questionId);
-      if (!question) return null;
-
-      const selectedOptions = question.options?.filter((opt) =>
-        answer.optionIds.includes(opt.id)
-      ) || [];
-
-      const correctOptions =
-        question.options?.filter((opt) => opt.isCorrect) || [];
-
-      const isCorrect =
-        selectedOptions.length === correctOptions.length &&
-        selectedOptions.every((opt) => opt.isCorrect);
-
-      return {
-        question,
-        selectedOptions,
-        correctOptions,
-        isCorrect,
-      };
-    });
   };
 
-  const quizAnswers = parseQuizAnswers();
+  const applyAiSuggestion = () => {
+    if (!aiSuggestion) return;
+    setGrade(String(aiSuggestion.score));
+    setFeedback(aiSuggestion.feedback);
+  };
 
   const handleSubmit = async () => {
     const gradeNum = parseFloat(grade);
@@ -168,7 +184,41 @@ export default function GradeSubmissionDialog({
                 />
               </div>
 
-             
+              {canUseAi && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={aiLoading}
+                      onClick={handleAiSuggest}
+                      className="inline-flex items-center gap-2"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {aiLoading ? "Đang gợi ý..." : "AI gợi ý chấm"}
+                    </Button>
+                    {aiSuggestion && (
+                      <Button type="button" onClick={applyAiSuggestion} disabled={aiLoading}>
+                        Áp dụng gợi ý
+                      </Button>
+                    )}
+                  </div>
+
+                  {aiError && <p className="text-sm text-red-600">{aiError}</p>}
+
+                  {aiSuggestion && (
+                    <div className="rounded-lg border bg-gray-50 p-3 text-sm text-gray-800">
+                      <div className="font-semibold">Gợi ý từ AI</div>
+                      <div className="mt-1">
+                        <span className="font-medium">Điểm:</span> {aiSuggestion.score}/10
+                      </div>
+                      <div className="mt-1 whitespace-pre-wrap">
+                        <span className="font-medium">Nhận xét:</span> {aiSuggestion.feedback}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

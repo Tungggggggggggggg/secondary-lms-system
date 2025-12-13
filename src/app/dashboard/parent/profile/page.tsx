@@ -15,8 +15,8 @@ export default function ParentProfilePage() {
   return (
     <>
       <HeaderParent
-        title="Há»“ sÆ¡ phá»¥ huynh"
-        subtitle="Cáº­p nháº­t thÃ´ng tin cÃ¡ nhÃ¢n vÃ  báº£o máº­t tÃ i khoáº£n"
+        title="Hồ sơ phụ huynh"
+        subtitle="Cập nhật thông tin cá nhân và bảo mật tài khoản"
       />
 
       {/* User Avatar Card */}
@@ -27,9 +27,9 @@ export default function ParentProfilePage() {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 group-hover:text-amber-800 transition-colors duration-300">
-              {(session?.user as any)?.fullname || session?.user?.name || "Phá»¥ huynh"}
+              {(session?.user as any)?.fullname || session?.user?.name || "Phụ huynh"}
             </h2>
-            <p className="text-amber-700 mt-1 font-medium">{session?.user?.email} â€¢ Phá»¥ huynh</p>
+            <p className="text-amber-700 mt-1 font-medium">{session?.user?.email} • Phụ huynh</p>
           </div>
         </div>
       </div>

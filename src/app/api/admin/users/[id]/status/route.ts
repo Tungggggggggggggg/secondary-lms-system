@@ -4,23 +4,22 @@ import { authOptions } from "@/lib/auth-options";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
 import { prisma } from "@/lib/prisma";
 import { auditRepo } from "@/lib/repositories/audit-repo";
+import { errorResponse } from "@/lib/api-utils";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Admins only" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Admins only");
     }
 
     const userId = ctx.params.id;
     if (!userId) {
-      return NextResponse.json(
-        { success: false, message: "Missing user id" },
-        { status: 400 }
-      );
+      return errorResponse(400, "Missing user id");
     }
 
     const body = await req.json().catch(() => null);
@@ -28,10 +27,7 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     const reason = (body?.reason || "").toString().trim() || undefined;
 
     if (!["BAN", "UNBAN"].includes(action)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid action. Must be BAN or UNBAN" },
-        { status: 400 }
-      );
+      return errorResponse(400, "Invalid action. Must be BAN or UNBAN");
     }
 
     const target = await prisma.user.findUnique({
@@ -40,29 +36,28 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     });
 
     if (!target) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
-      );
+      return errorResponse(404, "User not found");
     }
 
     if (action === "BAN" && String(target.role) === "ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Không thể ban tài khoản ADMIN" },
-        { status: 400 }
-      );
+      return errorResponse(400, "Không thể ban tài khoản ADMIN");
     }
 
     const current = await settingsRepo.get("disabled_users");
     const entries: { id: string; reason: string | null }[] = [];
 
     if (Array.isArray(current)) {
-      for (const item of current as any[]) {
+      for (const item of current) {
         if (typeof item === "string") {
           entries.push({ id: item, reason: null });
-        } else if (item && typeof item === "object" && typeof (item as any).id === "string") {
-          const it = item as any;
-          entries.push({ id: it.id, reason: typeof it.reason === "string" ? it.reason : null });
+          continue;
+        }
+        if (isRecord(item) && typeof item.id === "string") {
+          const rawReason = item.reason;
+          entries.push({
+            id: item.id,
+            reason: typeof rawReason === "string" ? rawReason : null,
+          });
         }
       }
     }
@@ -112,12 +107,6 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     });
   } catch (error) {
     console.error("[API /api/admin/users/[id]/status] Error", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

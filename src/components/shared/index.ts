@@ -48,4 +48,5 @@ export { default as TopbarBreadcrumbs } from './TopbarBreadcrumbs';
 export { default as ValidationBanner } from './ValidationBanner';
 export { default as ValidationChecklist } from './ValidationChecklist';
 export { default as ValidationSummary } from './ValidationSummary';
+export { default as SystemStatusGate } from './SystemStatusGate';
 export { default as UploadArea } from './upload/UploadArea';

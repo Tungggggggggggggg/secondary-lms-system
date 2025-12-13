@@ -309,10 +309,18 @@ export default function ClassroomAssignmentsPage() {
   useEffect(() => {
     async function fetchTotalStudents() {
       try {
-        const res = await fetch(`/api/classrooms/${classroomId}/students`);
+        const res = await fetch(`/api/classrooms/${classroomId}`, { cache: "no-store" });
         const result = await res.json();
-        if (result.success && Array.isArray(result.data)) {
-          setTotalStudents(result.data.length);
+        const count =
+          result &&
+          typeof result === "object" &&
+          "_count" in result &&
+          (result as { _count?: { students?: unknown } })._count &&
+          typeof (result as { _count?: { students?: unknown } })._count?.students === "number"
+            ? ((result as { _count?: { students?: number } })._count?.students as number)
+            : null;
+        if (count !== null) {
+          setTotalStudents(count);
         }
       } catch (err) {
         console.error("[ClassroomAssignmentsPage] Lỗi khi lấy số học sinh:", err);

@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = (await prisma.user.findUnique({
+        const user = await prisma.user.findUnique({
           where: { email: credentials.email },
           select: {
             id: true,
@@ -34,8 +34,8 @@ export const authOptions: NextAuthOptions = {
             fullname: true,
             role: true,
             roleSelectedAt: true,
-          } as any,
-        })) as any;
+          },
+        });
 
         if (!user || !user.password) {
           return null;
@@ -52,7 +52,7 @@ export const authOptions: NextAuthOptions = {
           const disabledSetting = await settingsRepo.get('disabled_users');
           let isDisabled = false;
           if (Array.isArray(disabledSetting)) {
-            for (const item of disabledSetting as any[]) {
+            for (const item of disabledSetting) {
               if (typeof item === 'string' && item === user.id) {
                 isDisabled = true;
                 break;
@@ -60,8 +60,8 @@ export const authOptions: NextAuthOptions = {
               if (
                 item &&
                 typeof item === 'object' &&
-                typeof (item as any).id === 'string' &&
-                (item as any).id === user.id
+                typeof (item as { id?: unknown }).id === 'string' &&
+                (item as { id?: unknown }).id === user.id
               ) {
                 isDisabled = true;
                 break;
@@ -113,19 +113,28 @@ export const authOptions: NextAuthOptions = {
       
       // Khi session.update() được gọi, fetch lại role mới từ database
       // Điều này xảy ra khi user chọn role trong RoleSelector
-      const shouldRefresh = (!!user && !!user.id) || (trigger === 'update' && !!token.id);
+      const tokenHasId = typeof token.id === 'string' && token.id.length > 0;
+      const needsBackfill =
+        tokenHasId &&
+        (token.roleSelectedAt === undefined || token.role === undefined || token.fullname === undefined || token.name === undefined);
+
+      const shouldRefresh = (!!user && !!user.id) || trigger === 'update' || needsBackfill;
       if (shouldRefresh) {
         try {
-          const userId = (user?.id || (token.id as string)) as string;
-          const freshUser = (await prisma.user.findUnique({
+          const userId = user?.id ?? token.id;
+          if (typeof userId !== 'string' || userId.length === 0) {
+            return token;
+          }
+
+          const freshUser = await prisma.user.findUnique({
             where: { id: userId },
             select: {
               email: true,
               fullname: true,
               role: true,
               roleSelectedAt: true,
-            } as any,
-          })) as any;
+            },
+          });
 
           if (freshUser) {
             token.email = freshUser.email;

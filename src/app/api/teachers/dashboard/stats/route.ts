@@ -45,88 +45,64 @@ export async function GET(req: NextRequest) {
     const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // 1. Đếm tổng số lớp học của teacher
-    const totalClassrooms = await prisma.classroom.count({
-      where: {
-        teacherId: userId,
-        isActive: true,
-      },
-    });
+    const [
+      totalClassrooms,
+      newClassroomsThisWeek,
+      totalStudentsRows,
+      newStudentsThisMonth,
+      totalLessons,
+      newLessonsThisMonth,
+      pendingSubmissions,
+    ] = await Promise.all([
+      // 1. Đếm tổng số lớp học của teacher
+      prisma.classroom.count({
+        where: { teacherId: userId, isActive: true },
+      }),
 
-    // 2. Đếm số lớp mới trong tuần này
-    const newClassroomsThisWeek = await prisma.classroom.count({
-      where: {
-        teacherId: userId,
-        createdAt: {
-          gte: oneWeekAgo,
-        },
-      },
-    });
+      // 2. Đếm số lớp mới trong tuần này
+      prisma.classroom.count({
+        where: { teacherId: userId, createdAt: { gte: oneWeekAgo } },
+      }),
 
-    // 3. Đếm tổng số học sinh (unique) trong tất cả các lớp của teacher
-    const studentIds = await prisma.classroomStudent.findMany({
-      where: {
-        classroom: {
-          teacherId: userId,
-          isActive: true,
-        },
-      },
-      select: {
-        studentId: true,
-      },
-      distinct: ['studentId'],
-    });
-    const totalStudents = studentIds.length;
+      // 3. Đếm tổng số học sinh (unique) trong tất cả các lớp của teacher
+      prisma.$queryRaw<Array<{ total: bigint }>>`
+        SELECT COUNT(DISTINCT cs."studentId")::bigint as total
+        FROM "classroom_students" cs
+        JOIN "classrooms" c ON c."id" = cs."classroomId"
+        WHERE c."teacherId" = ${userId} AND c."isActive" = true;
+      `,
 
-    // 4. Đếm số học sinh mới trong tháng này
-    const newStudentsThisMonth = await prisma.classroomStudent.count({
-      where: {
-        classroom: {
-          teacherId: userId,
-          isActive: true,
+      // 4. Đếm số học sinh mới trong tháng này
+      prisma.classroomStudent.count({
+        where: {
+          classroom: { teacherId: userId, isActive: true },
+          joinedAt: { gte: oneMonthAgo },
         },
-        joinedAt: {
-          gte: oneMonthAgo,
-        },
-      },
-    });
+      }),
+
+      // 6. Đếm tổng số bài giảng (lessons) trong các khóa học của teacher
+      prisma.lesson.count({
+        where: { course: { authorId: userId } },
+      }),
+
+      // 7. Đếm số bài giảng mới trong tháng này
+      prisma.lesson.count({
+        where: { course: { authorId: userId }, createdAt: { gte: oneMonthAgo } },
+      }),
+
+      // 8. Đếm số bài tập chờ chấm (submissions chưa có grade)
+      prisma.assignmentSubmission.count({
+        where: { assignment: { authorId: userId }, grade: null },
+      }),
+    ]);
+
+    const totalStudents = Number(totalStudentsRows[0]?.total ?? 0);
 
     // 5. Tính phần trăm thay đổi học sinh
     const studentsLastMonth = totalStudents - newStudentsThisMonth;
-    const studentsChange = studentsLastMonth > 0 
+    const studentsChange = studentsLastMonth > 0
       ? Math.round((newStudentsThisMonth / studentsLastMonth) * 100)
       : 0;
-
-    // 6. Đếm tổng số bài giảng (lessons) trong các khóa học của teacher
-    const totalLessons = await prisma.lesson.count({
-      where: {
-        course: {
-          authorId: userId,
-        },
-      },
-    });
-
-    // 7. Đếm số bài giảng mới trong tháng này
-    const newLessonsThisMonth = await prisma.lesson.count({
-      where: {
-        course: {
-          authorId: userId,
-        },
-        createdAt: {
-          gte: oneMonthAgo,
-        },
-      },
-    });
-
-    // 8. Đếm số bài tập chờ chấm (submissions chưa có grade)
-    const pendingSubmissions = await prisma.assignmentSubmission.count({
-      where: {
-        assignment: {
-          authorId: userId,
-        },
-        grade: null, // Chưa được chấm điểm
-      },
-    });
 
     // Tạo response data
     const stats = {

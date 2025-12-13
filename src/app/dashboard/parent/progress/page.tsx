@@ -1,7 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useMemo } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,6 @@ import { EmptyState } from "@/components/shared";
 import {
   ChevronDown,
   ChevronUp,
-  TrendingUp,
   Award,
   BookOpen,
   Users,
@@ -79,12 +77,16 @@ interface AllChildrenGradesResponse {
  * Trang tiáº¿n Ä‘á»™ há»c táº­p - Hiá»ƒn thá»‹ káº¿t quáº£ há»c táº­p cá»§a táº¥t cáº£ con
  */
 export default function ParentProgressPage() {
-  const { data: session } = useSession();
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<"name" | "average" | "submissions">("name");
 
   const { data, error, isLoading } = useSWR<AllChildrenGradesResponse>(
-    "/api/parent/children/grades"
+    "/api/parent/children/grades",
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+    }
   );
 
   const studentsData = data?.data || [];
@@ -128,8 +130,8 @@ export default function ParentProgressPage() {
     return (
       <>
         <HeaderParent
-          title="Tiáº¿n Ä‘á»™ há»c táº­p"
-          subtitle="Tá»•ng quan káº¿t quáº£ há»c táº­p cá»§a táº¥t cáº£ con"
+          title="Tiến độ học tập"
+          subtitle="Tổng quan kết quả học tập của tất cả con"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
@@ -149,13 +151,13 @@ export default function ParentProgressPage() {
     return (
       <>
         <HeaderParent
-          title="Tiáº¿n Ä‘á»™ há»c táº­p"
-          subtitle="Tá»•ng quan káº¿t quáº£ há»c táº­p cá»§a táº¥t cáº£ con"
+          title="Tiến độ học tập"
+          subtitle="Tổng quan kết quả học tập của tất cả con"
         />
         <EmptyState
-          icon="âŒ"
-          title="CÃ³ lá»—i xáº£y ra"
-          description="KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u tiáº¿n Ä‘á»™ há»c táº­p. Vui lÃ²ng thá»­ láº¡i sau."
+          icon="❌"
+          title="Có lỗi xảy ra"
+          description="Không thể tải dữ liệu tiến độ học tập. Vui lòng thử lại sau."
           variant="parent"
         />
       </>
@@ -165,15 +167,15 @@ export default function ParentProgressPage() {
   return (
     <>
       <HeaderParent
-        title="Tiáº¿n Ä‘á»™ há»c táº­p"
-        subtitle="Tá»•ng quan káº¿t quáº£ há»c táº­p cá»§a táº¥t cáº£ con"
+        title="Tiến độ học tập"
+        subtitle="Tổng quan kết quả học tập của tất cả con"
       />
 
       {/* Overall Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-102 group bg-gradient-to-br from-amber-50/50 to-orange-50/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-amber-700">Tá»•ng sá»‘ con</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">Tổng số con</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -182,7 +184,7 @@ export default function ParentProgressPage() {
               </div>
               <div>
                 <div className="text-2xl font-bold text-amber-900">{overallStats.totalChildren}</div>
-                <p className="text-xs text-amber-600 font-medium">há»c sinh</p>
+                <p className="text-xs text-amber-600 font-medium">học sinh</p>
               </div>
             </div>
           </CardContent>
@@ -190,7 +192,7 @@ export default function ParentProgressPage() {
 
         <Card className="border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-102 group bg-gradient-to-br from-amber-50/50 to-orange-50/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-amber-700">Äiá»ƒm trung bÃ¬nh</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">Điểm trung bình</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -203,7 +205,7 @@ export default function ParentProgressPage() {
                     ? overallStats.overallAverage.toFixed(1)
                     : "N/A"}
                 </div>
-                <p className="text-xs text-amber-600 font-medium">tá»•ng thá»ƒ</p>
+                <p className="text-xs text-amber-600 font-medium">tổng thể</p>
               </div>
             </div>
           </CardContent>
@@ -211,7 +213,7 @@ export default function ParentProgressPage() {
 
         <Card className="border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-102 group bg-gradient-to-br from-amber-50/50 to-orange-50/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-amber-700">ÄÃ£ cháº¥m</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">Đã chấm</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -222,7 +224,7 @@ export default function ParentProgressPage() {
                 <div className="text-2xl font-bold text-amber-900">
                   {overallStats.totalGraded}
                 </div>
-                <p className="text-xs text-amber-600 font-medium">bÃ i táº­p</p>
+                <p className="text-xs text-amber-600 font-medium">bài tập</p>
               </div>
             </div>
           </CardContent>
@@ -230,7 +232,7 @@ export default function ParentProgressPage() {
 
         <Card className="border-amber-100 hover:border-amber-200 hover:shadow-lg transition-all duration-300 hover:scale-102 group bg-gradient-to-br from-amber-50/50 to-orange-50/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-amber-700">ChÆ°a cháº¥m</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">Chưa chấm</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -241,7 +243,7 @@ export default function ParentProgressPage() {
                 <div className="text-2xl font-bold text-amber-900">
                   {overallStats.totalPending}
                 </div>
-                <p className="text-xs text-amber-600 font-medium">bÃ i táº­p</p>
+                <p className="text-xs text-amber-600 font-medium">bài tập</p>
               </div>
             </div>
           </CardContent>
@@ -252,17 +254,18 @@ export default function ParentProgressPage() {
       {studentsData.length > 0 && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Sáº¯p xáº¿p theo:</label>
+            <label className="text-sm font-medium text-gray-700">Sắp xếp theo:</label>
             <select
               value={sortBy}
               onChange={(e) =>
                 setSortBy(e.target.value as "name" | "average" | "submissions")
               }
+              aria-label="Sắp xếp theo"
               className="px-4 py-2 bg-white rounded-xl border-2 border-amber-300 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200"
             >
-              <option value="name">TÃªn</option>
-              <option value="average">Äiá»ƒm trung bÃ¬nh</option>
-              <option value="submissions">Sá»‘ bÃ i ná»™p</option>
+              <option value="name">Tên</option>
+              <option value="average">Điểm trung bình</option>
+              <option value="submissions">Số bài nộp</option>
             </select>
           </div>
         </div>
@@ -271,13 +274,13 @@ export default function ParentProgressPage() {
       {/* Students List */}
       {studentsData.length === 0 ? (
         <EmptyState
-          icon="ðŸ“š"
-          title="ChÆ°a cÃ³ dá»¯ liá»‡u há»c táº­p"
-          description="Con báº¡n chÆ°a cÃ³ bÃ i ná»™p nÃ o hoáº·c chÆ°a Ä‘Æ°á»£c liÃªn káº¿t."
+          icon="📚"
+          title="Chưa có dữ liệu học tập"
+          description="Con bạn chưa có bài nộp nào hoặc chưa được liên kết."
           variant="parent"
           action={
             <Link href="/dashboard/parent/children">
-              <Button color="amber">Quáº£n lÃ½ con</Button>
+              <Button color="amber">Quản lý con</Button>
             </Link>
           }
         />
@@ -305,7 +308,7 @@ export default function ParentProgressPage() {
                     </div>
                     <div className="flex items-center gap-4 flex-shrink-0">
                       <div className="text-center hidden sm:block">
-                        <div className="text-xs text-gray-500 font-semibold">Äiá»ƒm TB</div>
+                        <div className="text-xs text-gray-500 font-semibold">Điểm TB</div>
                         <div className="text-lg font-bold text-amber-700">
                           {statistics.averageGrade > 0
                             ? statistics.averageGrade.toFixed(1)
@@ -313,13 +316,13 @@ export default function ParentProgressPage() {
                         </div>
                       </div>
                       <div className="text-center hidden sm:block">
-                        <div className="text-xs text-gray-500 font-semibold">ÄÃ£ cháº¥m</div>
+                        <div className="text-xs text-gray-500 font-semibold">Đã chấm</div>
                         <div className="text-lg font-bold text-amber-700">
                           {statistics.totalGraded}
                         </div>
                       </div>
                       <div className="text-center hidden sm:block">
-                        <div className="text-xs text-gray-500 font-semibold">Tá»•ng bÃ i</div>
+                        <div className="text-xs text-gray-500 font-semibold">Tổng bài</div>
                         <div className="text-lg font-bold text-amber-700">
                           {statistics.totalSubmissions}
                         </div>
@@ -342,13 +345,13 @@ export default function ParentProgressPage() {
                       <div className="flex gap-2 flex-wrap">
                         <Link href={`/dashboard/parent/children/${student.id}/grades`}>
                           <Button color="amber" size="sm" className="flex items-center gap-1.5">
-                            Xem chi tiáº¿t
+                            Xem chi tiết
                             <ArrowRight className="h-4 w-4" />
                           </Button>
                         </Link>
                         <Link href={`/dashboard/parent/children/${student.id}`}>
                           <Button variant="outline" color="amber" size="sm">
-                            Xem thÃ´ng tin
+                            Xem thông tin
                           </Button>
                         </Link>
                       </div>
@@ -356,20 +359,20 @@ export default function ParentProgressPage() {
                       {/* Grades Table */}
                       {grades.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
-                          <p>ChÆ°a cÃ³ bÃ i ná»™p nÃ o</p>
+                          <p>Chưa có bài nộp nào</p>
                         </div>
                       ) : (
                         <div className="overflow-x-auto">
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Lá»›p há»c</TableHead>
-                                <TableHead>BÃ i táº­p</TableHead>
-                                <TableHead>Loáº¡i</TableHead>
-                                <TableHead>Äiá»ƒm</TableHead>
-                                <TableHead>Nháº­n xÃ©t</TableHead>
-                                <TableHead>NgÃ y ná»™p</TableHead>
-                                <TableHead>Tráº¡ng thÃ¡i</TableHead>
+                                <TableHead>Lớp học</TableHead>
+                                <TableHead>Bài tập</TableHead>
+                                <TableHead>Loại</TableHead>
+                                <TableHead>Điểm</TableHead>
+                                <TableHead>Nhận xét</TableHead>
+                                <TableHead>Ngày nộp</TableHead>
+                                <TableHead>Trạng thái</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -399,8 +402,8 @@ export default function ParentProgressPage() {
                                       }`}
                                     >
                                       {grade.assignmentType === "ESSAY"
-                                        ? "ðŸ“ Tá»± luáº­n"
-                                        : "â“ Tráº¯c nghiá»‡m"}
+                                        ? "Tự luận"
+                                        : "Trắc nghiệm"}
                                     </span>
                                   </TableCell>
                                   <TableCell>
@@ -409,7 +412,7 @@ export default function ParentProgressPage() {
                                         {grade.grade.toFixed(1)}
                                       </span>
                                     ) : (
-                                      <span className="text-gray-400">ChÆ°a cháº¥m</span>
+                                      <span className="text-gray-400">Chưa chấm</span>
                                     )}
                                   </TableCell>
                                   <TableCell>
@@ -418,7 +421,7 @@ export default function ParentProgressPage() {
                                         {grade.feedback}
                                       </span>
                                     ) : (
-                                      <span className="text-gray-400">â€”</span>
+                                      <span className="text-gray-400">—</span>
                                     )}
                                   </TableCell>
                                   <TableCell className="text-sm text-gray-600">
@@ -439,10 +442,10 @@ export default function ParentProgressPage() {
                                       }`}
                                     >
                                       {grade.status === "graded"
-                                        ? "âœ“ ÄÃ£ cháº¥m"
+                                        ? "✓ Đã chấm"
                                         : grade.status === "submitted"
-                                        ? "ðŸ“ ÄÃ£ ná»™p"
-                                        : "â³ Chá» cháº¥m"}
+                                        ? "Đã nộp"
+                                        : "Chờ chấm"}
                                     </span>
                                   </TableCell>
                                 </TableRow>

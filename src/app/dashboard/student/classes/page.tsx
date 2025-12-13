@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClassroom } from "@/hooks/use-classroom";
 import { ClassroomResponse } from "@/types/classroom";
@@ -19,14 +19,10 @@ type ViewMode = "grid" | "list";
 
 export default function ClassesPage() {
   const router = useRouter();
-  const { classrooms, isLoading, error, fetchClassrooms } = useClassroom();
+  const { classrooms, isLoading, error } = useClassroom();
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
-
-  useEffect(() => {
-    fetchClassrooms();
-  }, [fetchClassrooms]);
 
   // Filter và sort classrooms
   const filteredAndSortedClassrooms = useMemo(() => {

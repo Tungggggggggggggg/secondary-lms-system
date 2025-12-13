@@ -65,48 +65,73 @@ export async function GET(
     const pageSize = recent ? 2 : Math.min(50, Math.max(1, parseInt(searchParams.get("pageSize") || "10", 10)));
 
     if (recent) {
-      // Lấy tất cả top-level comments để đếm và lấy ngẫu nhiên
-      const allTopLevelComments = await prisma.announcementComment.findMany({
-        where: {
-          announcementId,
-          parentId: null, // Chỉ lấy top-level comments
-          ...(statusFilter ? { status: statusFilter } : {}),
-        },
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          content: true,
-          createdAt: true,
-          parentId: true,
-          status: true,
-          author: {
-            select: {
-              id: true,
-              fullname: true,
-              email: true,
-            },
+      const whereTopLevel = {
+        announcementId,
+        parentId: null as string | null,
+        ...(statusFilter ? { status: statusFilter } : {}),
+      };
+
+      const total = await prisma.announcementComment.count({ where: whereTopLevel });
+
+      const selectComment = {
+        id: true,
+        content: true,
+        createdAt: true,
+        parentId: true,
+        status: true,
+        author: {
+          select: {
+            id: true,
+            fullname: true,
+            email: true,
           },
         },
-      });
+      } as const;
 
-      const total = allTopLevelComments.length;
-      let pickedTopLevel: typeof allTopLevelComments = [];
+      let pickedTopLevel: Array<{
+        id: string;
+        content: string;
+        createdAt: Date | string;
+        parentId: string | null;
+        status: string;
+        author: { id: string; fullname: string; email: string };
+      }> = [];
 
-      // Logic: nếu <= 2 comments thì trả về tất cả, nếu > 3 thì lấy 1-2 ngẫu nhiên
-      if (total <= 2) {
-        pickedTopLevel = allTopLevelComments;
-      } else if (total > 3) {
+      // Logic: nếu <= 3 comments thì trả về tất cả; nếu > 3 thì lấy 1-2 ngẫu nhiên
+      if (total <= 3) {
+        pickedTopLevel = total
+          ? await prisma.announcementComment.findMany({
+              where: whereTopLevel,
+              orderBy: { createdAt: "asc" },
+              take: total,
+              select: selectComment,
+            })
+          : [];
+      } else {
         const randomCount = Math.floor(Math.random() * 2) + 1; // 1 hoặc 2
-        const shuffled = [...allTopLevelComments].sort(() => Math.random() - 0.5);
-        pickedTopLevel = shuffled.slice(0, randomCount);
+        const offsets = new Set<number>();
+        while (offsets.size < randomCount) {
+          offsets.add(Math.floor(Math.random() * total));
+        }
+
+        const chunks = await Promise.all(
+          Array.from(offsets).map((offset) =>
+            prisma.announcementComment.findMany({
+              where: whereTopLevel,
+              orderBy: { createdAt: "asc" },
+              skip: offset,
+              take: 1,
+              select: selectComment,
+            })
+          )
+        );
+        pickedTopLevel = chunks.flat();
         pickedTopLevel.sort(
           (
             a: { createdAt: Date | string },
             b: { createdAt: Date | string }
           ) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
-      } else {
-        pickedTopLevel = allTopLevelComments;
       }
 
       // Lấy replies cho các top-level đã chọn và gắn vào data (nested structure)

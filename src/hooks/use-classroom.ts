@@ -1,59 +1,91 @@
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import useSWR from 'swr';
 import { CreateClassroomDTO, ClassroomResponse } from '@/types/classroom';
 import { SearchClassesQuery, SearchClassesResponse } from '@/types/api';
 
 export const useClassroom = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [classrooms, setClassrooms] = useState<ClassroomResponse[] | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
+  type ClassroomsApiResponse = {
+    success?: boolean;
+    data?: ClassroomResponse[];
+    message?: string;
+  };
+
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  const classroomsFetcher = useCallback(async (): Promise<ClassroomResponse[]> => {
+    if (isDevelopment) console.log('[fetchClassrooms] Bắt đầu lấy danh sách lớp học...');
+    const response = await fetch('/api/classrooms');
+    const result = (await response.json()) as unknown;
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        if (isDevelopment) {
+          console.warn('[fetchClassrooms] Forbidden - user is not a teacher. Trả về danh sách rỗng.');
+        }
+        return [];
+      }
+
+      const message =
+        typeof (result as { message?: unknown } | null)?.message === 'string'
+          ? String((result as { message?: unknown }).message)
+          : response.statusText;
+      throw new Error(message || 'Có lỗi xảy ra khi lấy danh sách lớp học');
+    }
+
+    if (result && typeof result === 'object') {
+      const payload = result as ClassroomsApiResponse;
+      if (payload.success === false) {
+        if (isDevelopment) {
+          console.warn('[fetchClassrooms] Server trả về success:false — trả về dữ liệu rỗng.', payload.message);
+        }
+        return [];
+      }
+
+      const data = Array.isArray(payload.data) ? payload.data : [];
+      if (isDevelopment) console.log('[fetchClassrooms] Lấy danh sách lớp học thành công:', data);
+      return data;
+    }
+
+    return [];
+  }, [isDevelopment]);
+
+  const {
+    data: classroomsData,
+    error: swrError,
+    isLoading: swrLoading,
+    mutate,
+  } = useSWR<ClassroomResponse[]>('/api/classrooms', classroomsFetcher, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+    dedupingInterval: 15000,
+  });
+
+  const classrooms = useMemo(() => classroomsData ?? null, [classroomsData]);
+
+  const error = useMemo(() => {
+    if (actionError) return actionError;
+    if (!swrError) return null;
+    return swrError instanceof Error ? swrError.message : String(swrError);
+  }, [actionError, swrError]);
+
+  const isLoading = actionLoading || swrLoading;
 
   // Hàm lấy danh sách lớp học
   // Hàm lấy danh sách lớp học, bọc useCallback để tránh vòng lặp useEffect
   const fetchClassrooms = useCallback(async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log('[fetchClassrooms] Bắt đầu lấy danh sách lớp học...');
-      const response = await fetch('/api/classrooms');
-      const result = await response.json();
-      if (!response.ok) {
-        // Nếu server trả 403 (Forbidden) — có thể người dùng không phải teacher
-        // Thay vì ném lỗi, xử lý mềm: đặt danh sách rỗng để UI không hiển thị lỗi vòng lặp
-        if (response.status === 403) {
-          console.warn('[fetchClassrooms] Forbidden - user is not a teacher. Trả về danh sách rỗng.');
-          setClassrooms([]);
-          setError(null);
-          return;
-        }
-        console.error('[fetchClassrooms] Lỗi response:', result?.message || response.statusText);
-        throw new Error(result?.message || 'Có lỗi xảy ra khi lấy danh sách lớp học');
-      }
-      // Nếu server trả về success:false nhưng status 200 (ví dụ chưa có dữ liệu), xử lý an toàn
-      if (result && result.success === false) {
-        console.warn('[fetchClassrooms] Server trả về success:false — trả về dữ liệu rỗng.', result.message);
-        setClassrooms([]);
-        return;
-      }
-      setClassrooms(result.data ?? []);
-      console.log('[fetchClassrooms] Lấy danh sách lớp học thành công:', result.data);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
-      setError(msg);
-      setClassrooms(null);
-      console.error('[fetchClassrooms] Lỗi:', msg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    setActionError(null);
+    await mutate();
+  }, [mutate]);
 
   // Hàm tạo lớp học
   const createClassroom = async (data: CreateClassroomDTO): Promise<ClassroomResponse | null> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      console.log('[createClassroom] Bắt đầu tạo lớp học...');
+      setActionLoading(true);
+      setActionError(null);
+      if (isDevelopment) console.log('[createClassroom] Bắt đầu tạo lớp học...');
       const response = await fetch('/api/classrooms', {
         method: 'POST',
         headers: {
@@ -61,29 +93,38 @@ export const useClassroom = () => {
         },
         body: JSON.stringify(data),
       });
-      const result = await response.json();
+      const result = (await response.json()) as unknown;
       if (!response.ok) {
-        console.error('[createClassroom] Lỗi response:', result.message);
-        throw new Error(result.message || 'Có lỗi xảy ra khi tạo lớp học');
+        const message =
+          typeof (result as { message?: unknown } | null)?.message === 'string'
+            ? String((result as { message?: unknown }).message)
+            : response.statusText;
+        if (isDevelopment) console.error('[createClassroom] Lỗi response:', message);
+        throw new Error(message || 'Có lỗi xảy ra khi tạo lớp học');
       }
-      console.log('[createClassroom] Tạo lớp học thành công:', result.data);
-      return result.data;
+      const created =
+        result && typeof result === 'object'
+          ? ((result as { data?: unknown }).data as ClassroomResponse | undefined)
+          : undefined;
+      if (isDevelopment) console.log('[createClassroom] Tạo lớp học thành công:', created);
+      await mutate();
+      return created ?? null;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
-      setError(msg);
-      console.error('[createClassroom] Lỗi:', msg);
+      setActionError(msg);
+      if (isDevelopment) console.error('[createClassroom] Lỗi:', msg);
       return null;
     } finally {
-      setIsLoading(false);
+      setActionLoading(false);
     }
   };
 
   // Hàm tham gia lớp học bằng mã
   const joinClassroom = async (code: string): Promise<ClassroomResponse | null> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      console.log('[joinClassroom] Tham gia lớp học với mã:', code);
+      setActionLoading(true);
+      setActionError(null);
+      if (isDevelopment) console.log('[joinClassroom] Tham gia lớp học với mã:', code);
       const response = await fetch('/api/classrooms/join', {
         method: 'POST',
         headers: {
@@ -91,22 +132,30 @@ export const useClassroom = () => {
         },
         body: JSON.stringify({ code }),
       });
-      const result = await response.json();
+      const result = (await response.json()) as unknown;
       if (!response.ok) {
-        console.error('[joinClassroom] Lỗi response:', result.message);
-        throw new Error(result.message || 'Có lỗi xảy ra khi tham gia lớp học');
+        const message =
+          typeof (result as { message?: unknown } | null)?.message === 'string'
+            ? String((result as { message?: unknown }).message)
+            : response.statusText;
+        if (isDevelopment) console.error('[joinClassroom] Lỗi response:', message);
+        throw new Error(message || 'Có lỗi xảy ra khi tham gia lớp học');
       }
-      console.log('[joinClassroom] Tham gia thành công:', result.data);
-      // Refresh danh sách lớp học sau khi tham gia
-      await fetchClassrooms();
-      return result.data?.classroom || result.data;
+      const payload = result && typeof result === 'object' ? (result as { data?: unknown }).data : undefined;
+      const joined =
+        payload && typeof payload === 'object' && 'classroom' in payload
+          ? ((payload as { classroom?: unknown }).classroom as ClassroomResponse | undefined)
+          : (payload as ClassroomResponse | undefined);
+      if (isDevelopment) console.log('[joinClassroom] Tham gia thành công:', joined);
+      await mutate();
+      return joined ?? null;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
-      setError(msg);
-      console.error('[joinClassroom] Lỗi:', msg);
+      setActionError(msg);
+      if (isDevelopment) console.error('[joinClassroom] Lỗi:', msg);
       return null;
     } finally {
-      setIsLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -121,7 +170,7 @@ export const useClassroom = () => {
         options?: { signal?: AbortSignal }
       ): Promise<SearchClassesResponse> => {
         try {
-          setError(null);
+          setActionError(null);
           const usp = new URLSearchParams();
           Object.entries(params).forEach(([k, v]) => {
             if (v !== undefined && v !== null && String(v).length > 0) {
@@ -139,7 +188,7 @@ export const useClassroom = () => {
           return data as SearchClassesResponse;
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
-          setError(msg);
+          setActionError(msg);
           throw err;
         }
       },
@@ -147,8 +196,8 @@ export const useClassroom = () => {
     ),
     getClassroomById: useCallback(async (id: string): Promise<ClassroomResponse | null> => {
       try {
-        setIsLoading(true);
-        setError(null);
+        setActionLoading(true);
+        setActionError(null);
         const res = await fetch(`/api/classrooms/${id}`, { cache: 'no-store' });
         const data = await res.json();
         if (!res.ok) {
@@ -157,11 +206,11 @@ export const useClassroom = () => {
         return data as ClassroomResponse;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
-        setError(msg);
-        console.error('[getClassroomById] Lỗi:', msg);
+        setActionError(msg);
+        if (isDevelopment) console.error('[getClassroomById] Lỗi:', msg);
         return null;
       } finally {
-        setIsLoading(false);
+        setActionLoading(false);
       }
     }, []),
     isLoading,
