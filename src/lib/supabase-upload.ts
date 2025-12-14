@@ -127,6 +127,21 @@ export async function uploadChatFile(
   });
 }
 
+// Upload file phục vụ lesson attachments, tái sử dụng bucket "assignments" với folder "lessons"
+export async function uploadLessonFile(
+  file: File,
+  lessonId: string,
+  options: FileUploadOptions = {}
+): Promise<UploadResult> {
+  return uploadAssignmentFile(file, lessonId, {
+    bucket: options.bucket ?? "assignments",
+    // Đặt dưới thư mục attachments/lessons để tận dụng cùng chính sách RLS với assignment files
+    folder: options.folder ?? "attachments/lessons",
+    maxSize: options.maxSize,
+    allowedTypes: options.allowedTypes,
+  });
+}
+
 /**
  * Upload multiple files
  */

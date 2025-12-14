@@ -140,7 +140,7 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
           ) : lesson?.attachments && lesson.attachments.length > 0 ? (
             <div className="space-y-2">
               {lesson.attachments.map((file) => (
-                <a key={file.id} href={getChatFileUrl(file.storagePath)} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-2 rounded-lg transition-colors border border-transparent hover:bg-green-100/40 hover:border-green-200">
+                <a key={file.id} href={getChatFileUrl(file.storagePath, "assignments")} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-2 rounded-lg transition-colors border border-transparent hover:bg-green-100/40 hover:border-green-200">
                   <File className="h-5 w-5 text-green-600" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate text-slate-900">{file.name}</p>

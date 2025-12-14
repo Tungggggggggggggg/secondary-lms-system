@@ -83,9 +83,9 @@ Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase
 
 ### Giai đoạn 2: Intelligent Data (Độ khó cao)
 *Mục tiêu: Triển khai Chatbot RAG.*
-- [ ] Config `pgvector` trên Supabase.
-- [ ] Viết script tạo Embeddings cho bài học (`Lesson`).
-- [ ] Xây dựng UI Chatbot cho học sinh.
+- [x] Config `pgvector` trên Supabase.
+- [x] Viết pipeline tạo Embeddings cho bài học (`Lesson`) với bảng `lesson_embedding_chunks` (dim = 1536).
+- [x] Xây dựng UI Chatbot (Tutor) cho học sinh trên trang lesson, truy vấn embeddings theo course/lớp.
 
 ### Giai đoạn 3: Analytics & UX (Hoàn thiện)
 *Mục tiêu: Báo cáo và Giám sát.*

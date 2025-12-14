@@ -33,7 +33,8 @@ Hệ thống cung cấp các chức năng cốt lõi như: quản lý lớp họ
   - Thao tác lớp: chỉnh sửa lớp (name/code/maxStudents), đổi giáo viên, lưu trữ/khôi phục.
   - Học sinh theo lớp: thêm hàng loạt (text/CSV `fullname,email`), tự tạo tài khoản học sinh nếu email chưa có, export CSV, xoá học sinh (single/bulk).
   - Xem Audit Logs hệ thống.
-- **AI Quiz Generator**: sinh câu hỏi trắc nghiệm từ nội dung bài học (paste text) bằng Google Gemini.
+- **AI Quiz Generator**: sinh câu hỏi trắc nghiệm từ nội dung bài học (paste text/file) bằng Google Gemini.
+- **AI Tutor (RAG)** theo bài học: học sinh hỏi trên tab Tutor của mỗi bài, hệ thống truy vấn embeddings từ bảng `lesson_embedding_chunks` (pgvector) và sinh câu trả lời dựa trên nội dung bài học.
 
 ## 3. Công nghệ sử dụng (Tech stack)
 ### 3.1. Frontend
@@ -279,7 +280,8 @@ Bạn có thể bổ sung thêm các mục sau (nếu dùng cho luận văn/đ�
 - Chat và announcement.
 - Phân hệ **Admin Portal** với role `ADMIN`, dashboard thống kê, quản lý user (ban/unban, tạo giáo viên, bulk import CSV) và xem Audit Logs.
 - Phân hệ **Admin Classroom Management**: trang danh sách + trang chi tiết lớp, chỉnh sửa lớp, đổi giáo viên, lưu trữ/khôi phục, import CSV học sinh có fullname, export CSV, xoá học sinh (single/bulk) và quy tắc khoá thao tác khi lớp lưu trữ.
-- Tính năng **AI Quiz Generator** từ nội dung bài học (paste text) sử dụng Google Gemini API.
+- Tính năng **AI Quiz Generator** từ nội dung bài học (paste text/file) sử dụng Google Gemini API.
+- Tính năng **AI Tutor (RAG)** cho học sinh theo từng bài học, với UI tab Tutor trong trang lesson và backend sử dụng pgvector + Google Gemini để trả lời dựa trên nội dung đã index.
 
 ### 12.2. Hướng phát triển gợi ý
 - Chuẩn hóa format lỗi API (đồng nhất `error/message/details`).

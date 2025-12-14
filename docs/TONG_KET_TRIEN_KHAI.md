@@ -2,7 +2,7 @@
 
 **Mục đích:** tài liệu bàn giao nhanh để người tiếp theo setup môi trường, chạy demo, chạy test và biết rõ việc cần làm tiếp.
 
-**Cập nhật lần cuối:** 2025-12-14
+**Cập nhật lần cuối:** 2025-12-15
 
 ---
 
@@ -43,14 +43,14 @@ Mục tiêu của file này: giúp người tiếp theo **setup + chạy demo + 
 - [] Parent weekly summary (cron endpoint có sẵn): `POST /api/cron/parent-weekly-summary` (còn thiếu cấu hình schedule trên deploy).
 
 #### P2.6 — RAG Tutor (Student)
-- [] DB pgvector + bảng `lesson_embedding_chunks` (vector dim = 1536).
-- [] Chunking lesson content.
-- [] Cron indexer embeddings: `POST /api/cron/index-lesson-embeddings`.
-- [] Tutor Chat API (retrieve topK + generate + sources): `POST /api/ai/tutor/chat`.
-- [] Student UI lesson detail + tab Tutor: `/dashboard/student/classes/[classId]/lessons/[lessonId]`.
-- [] Student UI danh sách bài học + navigation: `/dashboard/student/classes/[classId]/lessons`.
-- [] Vận hành deploy: cấu hình cron schedule + chiến lược incremental/batching để tránh timeout.
-- [] QA: checklist test thủ công + test tự động tối thiểu cho RAG.
+- [x] DB pgvector + bảng `lesson_embedding_chunks` (vector dim = 1536).
+- [x] Chunking lesson content (lib `chunkText`, lưu `contentHash` để incremental update).
+- [x] Indexer embeddings theo course/lesson: `POST /api/teachers/courses/[courseId]/index-embeddings?dryRun=false&force=true` + auto-index khi giáo viên tạo lesson từ file.
+- [x] Tutor Chat API (retrieve topK + generate + sources): `POST /api/ai/tutor/chat` (student-only).
+- [x] Student UI lesson detail + tab Tutor: `/dashboard/student/classes/[classId]/lessons/[lessonId]`.
+- [x] Student UI danh sách bài học + navigation: `/dashboard/student/classes/[classId]/lessons`.
+- [~] Vận hành deploy: cấu hình cron schedule + chiến lược incremental/batching để tránh timeout (hiện đang chạy thủ công qua Teacher Dashboard).
+- [ ] QA: checklist test thủ công + test tự động tối thiểu cho RAG.
 
 ### 0.2. Cách demo nhanh (local)
 
@@ -58,13 +58,12 @@ Mục tiêu của file này: giúp người tiếp theo **setup + chạy demo + 
 2) Đăng nhập Admin (seed): xem mục **3.1**.
 3) Test RAG tutor:
   - Set env (PowerShell):
-    - `$env:CRON_SECRET="..."`
     - `$env:GEMINI_API_KEY="..."`
-  - Chạy index (dry run trước):
-    - `POST http://localhost:3000/api/cron/index-lesson-embeddings?dryRun=1&limit=5`
-    - Header: `x-cron-secret: <CRON_SECRET>`
-  - Chạy thật:
-    - `POST http://localhost:3000/api/cron/index-lesson-embeddings?limit=5`
+  - Với một course đã có lesson:
+    - Đăng nhập bằng giáo viên sở hữu course.
+    - Mở `/dashboard/teacher/courses/[courseId]`.
+    - Ở khối **Index embeddings (Tutor)**: bỏ tick **Dry run**, có thể bật **Force**, bấm nút **Index embeddings**.
+    - Hoặc gọi trực tiếp: `POST http://localhost:3000/api/teachers/courses/[courseId]/index-embeddings?dryRun=false&force=true`.
   - Mở lesson và chat:
     - `/dashboard/student/classes/[classId]/lessons/[lessonId]` → tab **Tutor**.
 
@@ -178,7 +177,10 @@ Mục tiêu của mục này: sau khi đọc xong bạn biết **mở trang nào
 ### 4.4. Student (RAG Tutor theo bài học)
 
 - **Bước 1: đảm bảo đã có embeddings**
-  - Gọi cron index: `POST /api/cron/index-lesson-embeddings` (bảo vệ bằng `CRON_SECRET`).
+  - Với khoá học chứa lesson cần test:
+    - Mở `/dashboard/teacher/courses/[courseId]` với tài khoản giáo viên sở hữu.
+    - Ở khối **Index embeddings (Tutor)**: bỏ tick **Dry run**, có thể bật **Force**, bấm nút **Index embeddings**.
+    - Hoặc gọi API: `POST /api/teachers/courses/[courseId]/index-embeddings?dryRun=false&force=true`.
 - **Bước 2: test UI chat**
   - Lesson list: `/dashboard/student/classes/[classId]/lessons`
   - Lesson detail + tab Tutor: `/dashboard/student/classes/[classId]/lessons/[lessonId]`

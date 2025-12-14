@@ -10,6 +10,28 @@ type ChatMessage =
   | { role: "user"; content: string }
   | { role: "assistant"; content: string; sources?: Array<{ lessonId: string; chunkIndex: number; distance: number; excerpt: string }> };
 
+function sanitizeAssistantContent(text: string): string {
+  // Xóa các đoạn đánh dấu nội bộ dạng (Lesson xxx#y) để học sinh không thấy ID
+  let result = text.replace(/\(\s*Lesson [^)]+\)/gi, "");
+
+  // Thêm xuống dòng trước các mục lớn dạng "**Tiêu đề:**" để dễ đọc
+  result = result.replace(/\s*\*\*(.+?)\*\*:/g, "\n\n**$1**:");
+
+  // Các bullet từ nguồn thường có dạng "* **Tiêu đề**" -> chuyển thành dòng mới bắt đầu bằng "•"
+  result = result.replace(/\*\s+\*\*/g, "\n• **");
+
+  // Chuẩn hoá: không cho quá 2 dòng trống liên tiếp
+  result = result.replace(/\n{3,}/g, "\n\n");
+
+  // Gom bớt khoảng trắng thừa (nhưng giữ xuống dòng)
+  result = result
+    .split(/\n/)
+    .map((line) => line.replace(/\s{2,}/g, " ").trimEnd())
+    .join("\n");
+
+  return result.trim();
+}
+
 export default function LessonTutorChat(props: { classId: string; lessonId: string }) {
   const { classId, lessonId } = props;
 
@@ -131,29 +153,38 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
               Hãy đặt câu hỏi về bài học (ví dụ: "Tóm tắt ý chính", "Giải thích khái niệm X").
             </div>
           ) : (
-            messages.map((m, idx) => (
-              <div key={idx} className={m.role === "user" ? "text-right" : "text-left"}>
-                <div
-                  className={
-                    m.role === "user"
-                      ? "inline-block rounded-2xl bg-green-600 text-white px-3 py-2 text-sm max-w-[90%]"
-                      : "inline-block rounded-2xl bg-slate-100 text-slate-900 px-3 py-2 text-sm max-w-[90%]"
-                  }
-                >
-                  {m.content}
-                </div>
+            messages.map((m, idx) => {
+              const displayContent =
+                m.role === "assistant" ? sanitizeAssistantContent(m.content) : m.content;
 
-                {m.role === "assistant" && m.sources && m.sources.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {m.sources.slice(0, 5).map((s) => (
-                      <Badge key={`${s.lessonId}-${s.chunkIndex}`} variant="outline">
-                        Lesson {s.lessonId}#{s.chunkIndex}
-                      </Badge>
-                    ))}
+              return (
+                <div key={idx} className={m.role === "user" ? "text-right" : "text-left"}>
+                  <div
+                    className={
+                      m.role === "user"
+                        ? "inline-block rounded-2xl bg-green-600 text-white px-3 py-2 text-sm max-w-[90%] whitespace-pre-wrap"
+                        : "inline-block rounded-2xl bg-slate-100 text-slate-900 px-3 py-2 text-sm max-w-[90%] whitespace-pre-wrap"
+                    }
+                  >
+                    {displayContent}
                   </div>
-                )}
-              </div>
-            ))
+
+                  {m.role === "assistant" && m.sources && m.sources.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {m.sources.slice(0, 5).map((s, sourceIndex) => (
+                        <Badge
+                          key={`${s.lessonId}-${s.chunkIndex}`}
+                          variant="outline"
+                          title={s.excerpt}
+                        >
+                          Nguồn {sourceIndex + 1}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
 

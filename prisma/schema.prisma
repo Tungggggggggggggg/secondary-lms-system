@@ -127,8 +127,23 @@ model Lesson {
   courseId  String
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   embeddingChunks LessonEmbeddingChunk[]
+  attachments     LessonAttachment[]
 
   @@map("lessons")
+}
+
+model LessonAttachment {
+  id          String   @id @default(cuid())
+  lessonId    String
+  name        String
+  storagePath String
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, createdAt])
+  @@map("lesson_attachments")
 }
 
 model LessonEmbeddingChunk {

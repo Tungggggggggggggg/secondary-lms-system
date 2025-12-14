@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BookOpen,
   LayoutDashboard,
   School,
   MessagesSquare,
@@ -40,6 +41,7 @@ export const sidebarConfig: SidebarConfig = {
       title: "Lớp & Bài tập",
       items: [
         { icon: School, label: "Lớp học", href: "/dashboard/teacher/classrooms" },
+        { icon: BookOpen, label: "Khóa học", href: "/dashboard/teacher/courses" },
         { icon: NotebookPen, label: "Bài tập", href: "/dashboard/teacher/assignments" },
         { icon: MonitorCheck, label: "Giám sát thi", href: "/dashboard/teacher/exams/monitor" },
       ],

@@ -54,6 +54,15 @@ export async function GET(
             author: { select: { fullname: true, email: true } },
           },
         },
+        attachments: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            name: true,
+            storagePath: true,
+            mimeType: true,
+          },
+        },
       },
     });
 
@@ -85,7 +94,13 @@ export async function GET(
           publishedAt: lesson.createdAt.toISOString(),
           prevLessonId: prev?.id ?? null,
           nextLessonId: next?.id ?? null,
-          attachments: [],
+          attachments:
+            lesson.attachments?.map((a) => ({
+              id: a.id,
+              name: a.name,
+              storagePath: a.storagePath,
+              mimeType: a.mimeType,
+            })) ?? [],
           links: [],
         },
       },

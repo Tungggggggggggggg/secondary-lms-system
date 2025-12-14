@@ -168,12 +168,13 @@ export async function POST(req: NextRequest) {
       "Nếu không đủ thông tin, hãy nói rõ và gợi ý học sinh xem lại bài học.",
       "Không bịa đặt.",
       "Ngôn ngữ: tiếng Việt.",
-      "Trả lời ngắn gọn, rõ ràng, có thể liệt kê bước.",
-      "Nếu trích dẫn, hãy ghi (Lesson <lessonId>#<chunkIndex>).",
+      "Trả lời ngắn gọn, rõ ràng, tách ý theo đoạn hoặc gạch đầu dòng để dễ đọc.",
+      "Không hiển thị các mã nội bộ như ID, 'Lesson <lessonId>#<chunkIndex>' trong câu trả lời cho học sinh.",
+      "Nếu cần tham chiếu tới nguồn, hãy nói chung chung như 'theo tài liệu ở trên' hoặc 'theo đoạn trước' mà không ghi mã.",
     ].join("\n");
 
     const sourcesText = chunks
-      .map((c) => `- (Lesson ${c.lessonId}#${c.chunkIndex}) ${c.content}`)
+      .map((c, idx) => `- [Nguồn ${idx + 1}] ${c.content}`)
       .join("\n");
 
     const historyText = history

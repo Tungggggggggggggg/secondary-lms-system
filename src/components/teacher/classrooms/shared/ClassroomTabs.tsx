@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useRef } from "react";
-import { LayoutDashboard, FileText, Users, GraduationCap } from "lucide-react";
+import { LayoutDashboard, FileText, Users, GraduationCap, BookOpen } from "lucide-react";
 
 type Props = {
     classroomId: string;
@@ -16,13 +16,15 @@ export default function ClassroomTabs({ classroomId }: Props) {
     const isAssignments = pathname?.startsWith(`${base}/assignments`) ?? false;
     const isPeople = pathname?.startsWith(`${base}/people`) ?? false;
     const isGrades = pathname?.startsWith(`${base}/grades`) ?? false;
+    const isCourses = pathname?.startsWith(`${base}/courses`) ?? false;
 
     const tabs = useMemo(() => ([
         { href: base, label: "Tổng quan", active: isBase, Icon: LayoutDashboard },
         { href: `${base}/assignments`, label: "Bài tập", active: isAssignments, Icon: FileText },
+        { href: `${base}/courses`, label: "Khóa học", active: isCourses, Icon: BookOpen },
         { href: `${base}/people`, label: "Mọi người", active: isPeople, Icon: Users },
         { href: `${base}/grades`, label: "Điểm số", active: isGrades, Icon: GraduationCap },
-    ]), [base, isBase, isAssignments, isPeople, isGrades]);
+    ]), [base, isBase, isAssignments, isCourses, isPeople, isGrades]);
 
     const containerRef = useRef<HTMLDivElement | null>(null);
 
