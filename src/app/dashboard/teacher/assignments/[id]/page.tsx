@@ -12,7 +12,7 @@ import AssignmentCommentsView from "@/components/teacher/comments/AssignmentComm
 import type { AssignmentDetail } from "@/types/api";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { AssignmentTypeBadge, EmptyState, PageHeader } from "@/components/shared";
-import { AlertTriangle, Loader2, Trash2, PenLine, FileText, Paperclip, Image as ImageIcon, Video as VideoIcon, Clock } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2, PenLine, FileText, Paperclip, Image as ImageIcon, Video as VideoIcon, Clock, Shield } from "lucide-react";
 
 // Helper hiển thị Chip loại bài tập
 function AssignmentTypeChip({ type }: { type?: string }) {
@@ -449,6 +449,17 @@ export default function AssignmentDetailPage() {
 
             {/* Quick Actions */}
             <div className="mt-6 flex justify-end">
+                {detail.type === "QUIZ" && (
+                    <Button
+                        variant="outline"
+                        onClick={() => router.push(`/dashboard/teacher/exams/monitor?assignmentId=${assignmentId}`)}
+                        size="lg"
+                        className="inline-flex items-center gap-2 mr-3"
+                    >
+                        <Shield className="h-4 w-4" />
+                        Giám sát chống gian lận
+                    </Button>
+                )}
                 <Button
                     onClick={() => router.push(`/dashboard/teacher/assignments/${assignmentId}/submissions`)}
                     size="lg"

@@ -402,50 +402,78 @@ export default function StudentAssignmentDetailPage({
           ) : assignment.type === "ESSAY" ? (
             (() => {
               const format = ((assignment as any).submissionFormat as string) || "BOTH";
+              const hasPrompt = Array.isArray(assignment.questions) && assignment.questions.length > 0;
+              const promptPanel = hasPrompt ? (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                  <h3 className="text-base font-semibold text-slate-900 mb-4">Đề bài</h3>
+                  <div className="space-y-3">
+                    {assignment.questions.map((q, idx) => (
+                      <div key={q.id} className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-bold">
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 text-slate-800 whitespace-pre-wrap">
+                          {q.content}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+
               if (format === "TEXT") {
                 return (
-                  <EssayAssignmentForm
-                    assignmentId={assignmentId}
-                    onSubmit={canEdit ? (c) => handleUpdateSubmission(c) : handleEssaySubmit}
-                    initialContent={submission?.content || ""}
-                    isLoading={isLoading}
-                    dueDate={assignment.dueDate}
-                    isSubmitted={!!submission && canEdit}
-                    openAt={(assignment as any).openAt || null}
-                    lockAt={(assignment as any).lockAt || null}
-                    timeLimitMinutes={(assignment as any).timeLimitMinutes || null}
-                  />
+                  <div className="space-y-6">
+                    {promptPanel}
+                    <EssayAssignmentForm
+                      assignmentId={assignmentId}
+                      onSubmit={canEdit ? (c) => handleUpdateSubmission(c) : handleEssaySubmit}
+                      initialContent={submission?.content || ""}
+                      isLoading={isLoading}
+                      dueDate={assignment.dueDate}
+                      isSubmitted={!!submission && canEdit}
+                      openAt={(assignment as any).openAt || null}
+                      lockAt={(assignment as any).lockAt || null}
+                      timeLimitMinutes={(assignment as any).timeLimitMinutes || null}
+                    />
+                  </div>
                 );
               }
               if (format === "FILE") {
                 return (
-                  <div className="bg-white rounded-xl p-6 shadow space-y-4">
-                    <p className="text-sm text-gray-700">Bạn cần nộp tệp theo yêu cầu của giáo viên.</p>
-                    <FileSubmissionPanel assignmentId={assignmentId} />
+                  <div className="space-y-6">
+                    {promptPanel}
+                    <div className="bg-white rounded-xl p-6 shadow space-y-4">
+                      <p className="text-sm text-gray-700">Bạn cần nộp tệp theo yêu cầu của giáo viên.</p>
+                      <FileSubmissionPanel assignmentId={assignmentId} />
+                    </div>
                   </div>
                 );
               }
               return (
-                <div className="bg-white rounded-xl p-6 shadow space-y-6">
-                  <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">Bạn có thể chọn nộp văn bản hoặc nộp tệp. Chỉ cần chọn một hình thức phù hợp.</div>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <h4 className="font-semibold">Nộp văn bản</h4>
-                      <EssayAssignmentForm
-                        assignmentId={assignmentId}
-                        onSubmit={canEdit ? (c) => handleUpdateSubmission(c) : handleEssaySubmit}
-                        initialContent={submission?.content || ""}
-                        isLoading={isLoading}
-                        dueDate={assignment.dueDate}
-                        isSubmitted={!!submission && canEdit}
-                        openAt={(assignment as any).openAt || null}
-                        lockAt={(assignment as any).lockAt || null}
-                        timeLimitMinutes={(assignment as any).timeLimitMinutes || null}
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <h4 className="font-semibold">Nộp tệp</h4>
-                      <FileSubmissionPanel assignmentId={assignmentId} />
+                <div className="space-y-6">
+                  {promptPanel}
+                  <div className="bg-white rounded-xl p-6 shadow space-y-6">
+                    <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">Bạn có thể chọn nộp văn bản hoặc nộp tệp. Chỉ cần chọn một hình thức phù hợp.</div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <h4 className="font-semibold">Nộp văn bản</h4>
+                        <EssayAssignmentForm
+                          assignmentId={assignmentId}
+                          onSubmit={canEdit ? (c) => handleUpdateSubmission(c) : handleEssaySubmit}
+                          initialContent={submission?.content || ""}
+                          isLoading={isLoading}
+                          dueDate={assignment.dueDate}
+                          isSubmitted={!!submission && canEdit}
+                          openAt={(assignment as any).openAt || null}
+                          lockAt={(assignment as any).lockAt || null}
+                          timeLimitMinutes={(assignment as any).timeLimitMinutes || null}
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <h4 className="font-semibold">Nộp tệp</h4>
+                        <FileSubmissionPanel assignmentId={assignmentId} />
+                      </div>
                     </div>
                   </div>
                 </div>

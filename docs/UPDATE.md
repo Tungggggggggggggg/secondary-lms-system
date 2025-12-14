@@ -24,7 +24,7 @@ Nâng cấp hệ thống trở thành **AI-Powered Smart LMS** bằng cách tíc
 ## 2. Kiến trúc hệ thống nâng cấp
 Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase, Prisma) và bổ sung thêm lớp xử lý AI (AI Layer):
 
-1.  **AI Provider:** Sử dụng **Google Gemini API** (Model `gemini-2.5-flash` cho tốc độ cao và chi phí tối ưu).
+1.  **AI Provider:** Sử dụng **Google Gemini API** (Model `gemini-2.5-flash-lite` cho tốc độ cao và chi phí tối ưu).
 2.  **Vector Database:** Kích hoạt extension `pgvector` trên Supabase để lưu trữ vector embeddings của dữ liệu bài học (phục vụ Chatbot).
 3.  **AI SDK:** Sử dụng `Vercel AI SDK` để quản lý luồng dữ liệu (streaming) giữa Client và Gemini API.
 
@@ -39,7 +39,7 @@ Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase
 - **Cơ chế hoạt động:**
     - Sử dụng kỹ thuật **Structured Output** để yêu cầu Gemini trả về JSON gồm: `{ "score": number, "feedback": string, "corrections": array }`.
     - Giáo viên có thể chỉnh sửa lại điểm số/nhận xét do AI gợi ý trước khi lưu.
-- **Model:** `gemini-2.5-flash`.
+- **Model:** `gemini-2.5-flash-lite`.
 
 ### 3.2. Tạo đề thi tự động từ tài liệu (AI Quiz Generator)
 *Giải quyết bài toán: Soạn đề thi mất thời gian.*
@@ -47,7 +47,7 @@ Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase
 - **Mô tả:** Giáo viên **paste nội dung bài học** (đã triển khai) hoặc trong tương lai có thể upload tài liệu (PDF bài giảng/Word).
 - **Cơ chế hoạt động (bản triển khai hiện tại):**
     1. UI cho phép giáo viên dán nội dung văn bản bài học và chọn số lượng câu hỏi.
-    2. Server gửi prompt tới Gemini (`gemini-2.5-flash`) nhiều lượt (multi-call) để sinh đủ số câu hỏi trắc nghiệm, tránh trùng lặp.
+    2. Server gửi prompt tới Gemini (`gemini-2.5-flash-lite`) nhiều lượt (multi-call) để sinh đủ số câu hỏi trắc nghiệm, tránh trùng lặp.
     3. Gemini trả về danh sách câu hỏi + đáp án, hệ thống parse và chuẩn hoá, đánh dấu đáp án đúng/sai.
     4. Hệ thống map dữ liệu này vào bảng `Question`/`Option` trong Database thông qua Prisma.
     5. Từ đó giáo viên có thể chỉnh sửa lại nội dung câu hỏi trước khi lưu.

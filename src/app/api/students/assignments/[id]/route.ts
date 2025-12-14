@@ -83,7 +83,6 @@ export async function GET(
                   id: true,
                   label: true,
                   content: true,
-                  isCorrect: true,
                   order: true,
                 },
                 orderBy: { order: "asc" },
@@ -195,7 +194,6 @@ export async function GET(
           id: opt.id,
           label: opt.label,
           content: opt.content,
-          isCorrect: opt.isCorrect,
           order: opt.order,
         })),
         _count: {

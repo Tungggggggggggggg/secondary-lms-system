@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import RateLimitDialog, {
+  getRetryAfterSecondsFromResponse,
+} from "@/components/shared/RateLimitDialog";
 import { ArrowLeft, Award, CheckCircle2, Clock, ChevronDown, MessageCircle, Sparkles, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParentGrades, GradeEntry } from "@/hooks/use-parent-grades";
@@ -41,7 +44,9 @@ export default function ParentChildGradesPage() {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
-  const [summaryWindowDays, setSummaryWindowDays] = useState(30);
+  const [summaryWindowDays, setSummaryWindowDays] = useState(7);
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitRetryAfterSeconds, setRateLimitRetryAfterSeconds] = useState(0);
   const [summaryData, setSummaryData] = useState<
     | {
         title: string;
@@ -204,6 +209,12 @@ export default function ParentChildGradesPage() {
         }),
       });
       const json = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        const retryAfterSeconds = getRetryAfterSecondsFromResponse(res, json) ?? 60;
+        setRateLimitRetryAfterSeconds(retryAfterSeconds);
+        setRateLimitOpen(true);
+        return;
+      }
       if (!res.ok || json?.success === false) {
         throw new Error(json?.message || "Không thể tạo tóm tắt học tập");
       }
@@ -318,6 +329,14 @@ export default function ParentChildGradesPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <RateLimitDialog
+        open={rateLimitOpen}
+        onOpenChange={setRateLimitOpen}
+        retryAfterSeconds={rateLimitRetryAfterSeconds}
+        title="Bạn đang yêu cầu AI quá nhanh"
+        description="Hệ thống cần một chút thời gian để phục vụ ổn định."
+        onRetry={fetchSmartSummary}
+      />
       {/* Back button */}
       <div>
         <Link href={`/dashboard/parent/children/${childId}`}>
@@ -343,11 +362,12 @@ export default function ParentChildGradesPage() {
             <span className="text-xs font-medium text-slate-500">Khoảng:</span>
             <select
               value={summaryWindowDays}
-              onChange={(e) => setSummaryWindowDays(Number(e.target.value) || 30)}
+              onChange={(e) => setSummaryWindowDays(Number(e.target.value) || 7)}
               className="appearance-none px-3 py-2 bg-white/90 rounded-full border border-amber-200 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
               aria-label="Chọn khoảng thời gian tóm tắt"
               disabled={summaryLoading}
             >
+              <option value={7}>7 ngày</option>
               <option value={14}>14 ngày</option>
               <option value={30}>30 ngày</option>
               <option value={60}>60 ngày</option>

@@ -1,5 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
+import {
+  generateContentWithModelFallback,
+  getDefaultFastModelCandidates,
+} from "./geminiModelFallback";
 
 const QuizOptionSchema = z.object({
   text: z.string(),
@@ -161,7 +165,7 @@ export async function generateQuizFromText(
   const targetCount = Math.min(Math.max(numQuestions, 1), 60);
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const modelCandidates = getDefaultFastModelCandidates();
 
   const systemPrompt = [
     "Bạn là trợ lý tạo đề thi trắc nghiệm cho học sinh THCS.",
@@ -216,17 +220,20 @@ export async function generateQuizFromText(
       .filter(Boolean)
       .join("\n\n");
 
-    const result = await model.generateContent({
-      contents: [
-        { role: "user", parts: [{ text: systemPrompt + "\n\n" + userPrompt }] },
-      ],
-      generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 2048,
+    const { result: fallbackResult } = await generateContentWithModelFallback(genAI, {
+      modelCandidates,
+      request: {
+        contents: [
+          { role: "user", parts: [{ text: systemPrompt + "\n\n" + userPrompt }] },
+        ],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 2048,
+        },
       },
     });
 
-    const rawText = result.response.text();
+    const rawText = fallbackResult.response.text();
 
     // Parse format QUESTION / END_QUESTION với các dòng - [x]/- [ ]
     const blocks = rawText

@@ -1,5 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
+import {
+  generateContentWithModelFallback,
+  getDefaultFastModelCandidates,
+} from "./geminiModelFallback";
+import {
+  formatZodIssues,
+  normalizeJsonCandidate,
+  parseJsonFromGeminiText,
+} from "./geminiJson";
 
 const CorrectionSchema = z.object({
   excerpt: z.string().min(1),
@@ -21,42 +30,6 @@ export type GenerateEssayGradeParams = {
   submissionText: string;
   maxScore?: number;
 };
-
-function tryParseJsonCandidate(candidate: string): unknown | undefined {
-  try {
-    return JSON.parse(candidate);
-  } catch {
-    const sanitized = candidate.replace(/,\s*([}\]])/g, "$1");
-    try {
-      return JSON.parse(sanitized);
-    } catch {
-      return undefined;
-    }
-  }
-}
-
-function parseJsonFromGeminiText(text: string): unknown {
-  const direct = tryParseJsonCandidate(text);
-  if (typeof direct !== "undefined") return direct;
-
-  const fenced = text.match(/```(?:json)?([\s\S]*?)```/i);
-  if (fenced && fenced[1]) {
-    const inner = fenced[1].trim();
-    const parsedInner = tryParseJsonCandidate(inner);
-    if (typeof parsedInner !== "undefined") return parsedInner;
-  }
-
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) {
-    const candidate = text.slice(start, end + 1);
-    const parsedCandidate = tryParseJsonCandidate(candidate);
-    if (typeof parsedCandidate !== "undefined") return parsedCandidate;
-  }
-
-  const truncated = text.slice(0, 500);
-  throw new Error("Không parse được JSON từ phản hồi AI. Raw (truncated): " + truncated);
-}
 
 /**
  * Sinh gợi ý chấm bài tự luận (ESSAY) bằng Gemini.
@@ -92,12 +65,12 @@ export async function generateEssayGradeSuggestion(
   const wasTruncated = trimmed.length > maxChars;
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const systemPrompt = [
     "Bạn là trợ lý hỗ trợ giáo viên chấm bài tự luận cho học sinh THCS.",
     `Hãy chấm theo thang điểm 0-${safeMaxScore} (có thể dùng 1 chữ số thập phân).`,
     "Chỉ trả về DUY NHẤT một object JSON, không thêm markdown, không thêm giải thích ngoài JSON.",
+    "Giới hạn độ dài để tránh bị cắt cụt: feedback <= 700 ký tự; corrections tối đa 6 mục; mỗi excerpt/suggestion <= 160 ký tự.",
     "Bắt buộc output theo schema:",
     "{",
     `  "score": number, // 0..${safeMaxScore}`,
@@ -121,29 +94,79 @@ export async function generateEssayGradeSuggestion(
     .filter(Boolean)
     .join("\n\n");
 
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: systemPrompt + "\n\n" + userPrompt }] }],
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: 1024,
+  const modelCandidates = getDefaultFastModelCandidates();
+
+  const { result } = await generateContentWithModelFallback(genAI, {
+    modelCandidates,
+    systemInstruction: systemPrompt,
+    request: {
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 768,
+        responseMimeType: "application/json",
+      },
     },
   });
 
   const rawText = result.response.text();
-  const parsed = parseJsonFromGeminiText(rawText);
-  const validated = GradeSuggestionSchema.safeParse(parsed);
-  if (!validated.success) {
-    const issues = validated.error.issues
-      .map((i) => `${i.path.join(".")}: ${i.message}`)
-      .join("; ");
-    throw new Error("Phản hồi AI không đúng định dạng: " + issues);
-  }
 
-  const score = Math.min(Math.max(validated.data.score, 0), safeMaxScore);
-
-  return {
-    score,
-    feedback: validated.data.feedback,
-    corrections: validated.data.corrections,
+  const parseAndValidate = (text: string): GradeSuggestion => {
+    const parsed = parseJsonFromGeminiText(text);
+    const validated = GradeSuggestionSchema.safeParse(parsed);
+    if (!validated.success) {
+      const issues = formatZodIssues(validated.error.issues);
+      throw new Error("Phản hồi AI không đúng định dạng: " + issues);
+    }
+    const score = Math.min(Math.max(validated.data.score, 0), safeMaxScore);
+    return {
+      score,
+      feedback: validated.data.feedback,
+      corrections: validated.data.corrections,
+    };
   };
+
+  try {
+    return parseAndValidate(rawText);
+  } catch (err: unknown) {
+    if (process.env.NODE_ENV === "development") {
+      const preview = normalizeJsonCandidate(rawText).slice(0, 1200);
+      const reason = err instanceof Error ? err.message : "Unknown error";
+      console.warn("[AI_GRADE_SUGGESTION] First attempt failed", {
+        reason,
+        len: typeof rawText === "string" ? rawText.length : 0,
+        preview,
+      });
+    }
+
+    const repairSystemPrompt = [
+      "Bạn là công cụ SỬA JSON.",
+      "Nhiệm vụ: nhận một đoạn text có thể là JSON bị lỗi/cắt cụt và trả về một object JSON HỢP LỆ theo schema.",
+      "Chỉ trả về DUY NHẤT JSON (không markdown, không giải thích).",
+      `Schema: { score: number (0..${safeMaxScore}), feedback: string, corrections: Array<{ excerpt: string, suggestion: string }> }`,
+      "Không được bịa thêm nội dung mới ngoài những gì đã có trong input.",
+    ].join("\n");
+
+    const repairPrompt = [
+      "Hãy sửa JSON sau thành JSON hợp lệ theo schema. Không được bịa thêm dữ liệu mới ngoài nội dung đã có.",
+      "INPUT:",
+      rawText,
+    ].join("\n");
+
+    const { result: repaired } = await generateContentWithModelFallback(genAI, {
+      modelCandidates,
+      systemInstruction: repairSystemPrompt,
+      request: {
+        contents: [{ role: "user", parts: [{ text: repairPrompt.slice(0, 6000) }] }],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 512,
+          responseMimeType: "application/json",
+        },
+      },
+    });
+
+    const repairedText = repaired.response.text();
+    return parseAndValidate(repairedText);
+  }
 }

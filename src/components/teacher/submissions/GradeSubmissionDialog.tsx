@@ -15,6 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SubmissionDetail } from "@/hooks/use-teacher-submissions";
+import RateLimitDialog, {
+  getRetryAfterSecondsFromResponse,
+} from "@/components/shared/RateLimitDialog";
 
 interface GradeSubmissionDialogProps {
   open: boolean;
@@ -42,6 +45,8 @@ export default function GradeSubmissionDialog({
   const [gradeError, setGradeError] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitRetryAfterSeconds, setRateLimitRetryAfterSeconds] = useState(0);
   const [aiSuggestion, setAiSuggestion] = useState<
     | { score: number; feedback: string; corrections?: Array<{ excerpt: string; suggestion: string }> }
     | null
@@ -85,6 +90,12 @@ export default function GradeSubmissionDialog({
         }),
       });
       const json = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        const retryAfterSeconds = getRetryAfterSecondsFromResponse(res, json) ?? 60;
+        setRateLimitRetryAfterSeconds(retryAfterSeconds);
+        setRateLimitOpen(true);
+        return;
+      }
       if (!res.ok || json?.success === false) {
         throw new Error(json?.message || "Không thể lấy gợi ý chấm từ AI");
       }
@@ -129,6 +140,14 @@ export default function GradeSubmissionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-2xl" onClose={() => onOpenChange(false)}>
+        <RateLimitDialog
+          open={rateLimitOpen}
+          onOpenChange={setRateLimitOpen}
+          retryAfterSeconds={rateLimitRetryAfterSeconds}
+          title="Bạn đang yêu cầu AI quá nhanh"
+          description="Vui lòng chờ thêm một chút rồi thử lại."
+          onRetry={handleAiSuggest}
+        />
         <div className="bg-gradient-to-r from-blue-50 to-white px-6 pt-6 pb-4 border-b">
           <DialogHeader>
             <DialogTitle className="text-xl">Chấm bài tập</DialogTitle>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, GraduationCap } from "lucide-react";
+import { LayoutDashboard, FileText, GraduationCap, BookOpen } from "lucide-react";
 
 type Props = {
     classId: string;
@@ -13,6 +13,7 @@ export default function StudentClassroomTabs({ classId }: Props) {
     const base = `/dashboard/student/classes/${classId}`;
     const isBase = pathname === base;
 
+    const isLessons = pathname?.startsWith(`${base}/lessons`) ?? false;
     const isAssignments = pathname?.startsWith(`${base}/assignments`) ?? false;
     const isGrades = pathname?.startsWith(`${base}/grades`) ?? false;
 
@@ -30,6 +31,14 @@ export default function StudentClassroomTabs({ classId }: Props) {
                 <Link prefetch className={pillClass(isBase)} href={base}>
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Tổng quan</span>
+                </Link>
+                <Link
+                    prefetch
+                    className={pillClass(isLessons)}
+                    href={`${base}/lessons`}
+                >
+                    <BookOpen className="h-4 w-4" />
+                    <span>Bài học</span>
                 </Link>
                 <Link
                     prefetch

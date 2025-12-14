@@ -4,17 +4,52 @@ import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
 import { generateEssayGradeSuggestion } from "@/lib/ai/gemini-grade";
 import { auditRepo } from "@/lib/repositories/audit-repo";
+import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
 
 const requestSchema = z.object({
   assignmentId: z.string().min(1),
   submissionId: z.string().min(1),
 });
 
+function rateLimitResponse(retryAfterSeconds: number) {
+  return NextResponse.json(
+    { success: false, error: true, message: "Too many requests", retryAfterSeconds },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(retryAfterSeconds),
+      },
+    }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthenticatedUser(req, "TEACHER");
     if (!user) {
       return errorResponse(401, "Unauthorized");
+    }
+
+    const ip = getClientIp(req);
+
+    const ipLimit = await checkRateLimit({
+      scope: "ai_grade_ip",
+      key: ip,
+      limit: 20,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!ipLimit.allowed) {
+      return rateLimitResponse(ipLimit.retryAfterSeconds);
+    }
+
+    const userLimit = await checkRateLimit({
+      scope: "ai_grade_teacher",
+      key: user.id,
+      limit: 20,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!userLimit.allowed) {
+      return rateLimitResponse(userLimit.retryAfterSeconds);
     }
 
     const body = await req.json().catch(() => null);
@@ -88,7 +123,7 @@ export async function POST(req: NextRequest) {
         entityId: submission.id,
         metadata: {
           assignmentId,
-          model: "gemini-2.5-flash",
+          model: "gemini-2.5-flash-lite",
           score: suggestion.score,
         },
       });
@@ -110,8 +145,21 @@ export async function POST(req: NextRequest) {
       if (error.message === "Bài làm trống.") {
         return errorResponse(400, "Nội dung bài nộp trống");
       }
-      if (/Phản hồi AI không đúng định dạng/i.test(error.message)) {
+      if (
+        /Phản hồi AI không đúng định dạng/i.test(error.message) ||
+        /Không parse được JSON/i.test(error.message)
+      ) {
         return errorResponse(502, "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.");
+      }
+      if (
+        /models\//i.test(error.message) &&
+        (/is not found/i.test(error.message) ||
+          /not supported for generatecontent/i.test(error.message))
+      ) {
+        return errorResponse(502, "Dịch vụ AI đang tạm thời không khả dụng. Vui lòng thử lại sau.");
+      }
+      if (/không hỗ trợ các model/i.test(error.message)) {
+        return errorResponse(502, "Dịch vụ AI đang tạm thời không khả dụng. Vui lòng thử lại sau.");
       }
     }
     return errorResponse(500, "Internal server error");

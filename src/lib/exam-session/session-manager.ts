@@ -39,7 +39,11 @@ export function shuffleWithSeed<T>(array: T[], seed: string): T[] {
   let currentIndex = shuffled.length
   
   // Simple seeded random function
-  let seedNum = parseInt(seed, 36) || 1
+  let seedNum = 0
+  for (let i = 0; i < seed.length; i++) {
+    seedNum = (seedNum * 31 + seed.charCodeAt(i)) >>> 0
+  }
+  if (seedNum === 0) seedNum = 1
   const seededRandom = () => {
     seedNum = (seedNum * 9301 + 49297) % 233280
     return seedNum / 233280

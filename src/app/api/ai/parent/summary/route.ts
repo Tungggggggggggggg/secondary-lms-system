@@ -8,6 +8,11 @@ import {
   generateParentSmartSummary,
   type ParentGradeSnapshotItem,
 } from "@/lib/ai/gemini-parent-summary";
+import {
+  getParentSummaryBucket,
+  readParentSummaryCache,
+  writeParentSummaryCache,
+} from "@/lib/ai/parentSummaryCache";
 
 const requestSchema = z.object({
   childId: z.string().min(1),
@@ -37,28 +42,6 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       return errorResponse(403, "Forbidden - PARENT role required");
     }
 
-    const ip = getClientIp(req);
-
-    const ipLimit = await checkRateLimit({
-      scope: "ai_parent_summary_ip",
-      key: ip,
-      limit: 20,
-      windowMs: 10 * 60 * 1000,
-    });
-    if (!ipLimit.allowed) {
-      return rateLimitResponse(ipLimit.retryAfterSeconds);
-    }
-
-    const userLimit = await checkRateLimit({
-      scope: "ai_parent_summary_parent",
-      key: authUser.id,
-      limit: 20,
-      windowMs: 10 * 60 * 1000,
-    });
-    if (!userLimit.allowed) {
-      return rateLimitResponse(userLimit.retryAfterSeconds);
-    }
-
     const body = await req.json().catch(() => null);
     const parsed = requestSchema.safeParse(body);
     if (!parsed.success) {
@@ -71,6 +54,9 @@ export const POST = withApiLogging(async (req: NextRequest) => {
     }
 
     const { childId, windowDays } = parsed.data;
+
+    const now = new Date();
+    const bucket = getParentSummaryBucket(now, windowDays);
 
     const relationship = await prisma.parentStudent.findUnique({
       where: {
@@ -99,7 +85,41 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       return errorResponse(404, "Student not found");
     }
 
-    const now = new Date();
+    const cached = await readParentSummaryCache({
+      parentId: authUser.id,
+      childId,
+      windowDays,
+      bucket,
+    });
+    if (cached) {
+      return NextResponse.json(
+        { success: true, data: cached.data, cached: true, cacheCreatedAt: cached.createdAt },
+        { status: 200 }
+      );
+    }
+
+    const ip = getClientIp(req);
+
+    const ipLimit = await checkRateLimit({
+      scope: "ai_parent_summary_ip",
+      key: ip,
+      limit: 20,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!ipLimit.allowed) {
+      return rateLimitResponse(ipLimit.retryAfterSeconds);
+    }
+
+    const userLimit = await checkRateLimit({
+      scope: "ai_parent_summary_parent",
+      key: authUser.id,
+      limit: 20,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!userLimit.allowed) {
+      return rateLimitResponse(userLimit.retryAfterSeconds);
+    }
+
     const fromDate = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
     const classroomLinks = await prisma.classroomStudent.findMany({
@@ -118,6 +138,16 @@ export const POST = withApiLogging(async (req: NextRequest) => {
         totalPending: 0,
         items: [],
       });
+
+      try {
+        await writeParentSummaryCache({
+          parentId: authUser.id,
+          childId,
+          windowDays,
+          bucket,
+          data: empty,
+        });
+      } catch {}
 
       try {
         await auditRepo.write({
@@ -151,6 +181,16 @@ export const POST = withApiLogging(async (req: NextRequest) => {
         totalPending: 0,
         items: [],
       });
+
+      try {
+        await writeParentSummaryCache({
+          parentId: authUser.id,
+          childId,
+          windowDays,
+          bucket,
+          data: empty,
+        });
+      } catch {}
 
       try {
         await auditRepo.write({
@@ -280,6 +320,16 @@ export const POST = withApiLogging(async (req: NextRequest) => {
     });
 
     try {
+      await writeParentSummaryCache({
+        parentId: authUser.id,
+        childId,
+        windowDays,
+        bucket,
+        data: summary,
+      });
+    } catch {}
+
+    try {
       await auditRepo.write({
         actorId: authUser.id,
         actorRole: "PARENT",
@@ -305,6 +355,16 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       }
       if (/Không parse được JSON/i.test(error.message)) {
         return errorResponse(502, "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.");
+      }
+      if (
+        /models\//i.test(error.message) &&
+        (/is not found/i.test(error.message) ||
+          /not supported for generatecontent/i.test(error.message))
+      ) {
+        return errorResponse(502, "Dịch vụ AI đang tạm thời không khả dụng. Vui lòng thử lại sau.");
+      }
+      if (/không hỗ trợ các model/i.test(error.message)) {
+        return errorResponse(502, "Dịch vụ AI đang tạm thời không khả dụng. Vui lòng thử lại sau.");
       }
     }
 

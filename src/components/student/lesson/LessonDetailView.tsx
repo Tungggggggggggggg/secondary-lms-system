@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { PageHeader } from "@/components/shared";
 import { EmptyState } from "@/components/shared";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LessonTutorChat from "@/components/student/lesson/LessonTutorChat";
 import { getChatFileUrl } from "@/lib/supabase-upload";
 import { FileText, Link as LinkIcon, File, CheckCircle2, ArrowLeft, ArrowRight, User } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -105,6 +106,7 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
       <Tabs defaultValue="content" className="w-full">
         <TabsList className="bg-green-100/60 text-green-700">
           <TabsTrigger value="content" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-green-500">Nội dung</TabsTrigger>
+          <TabsTrigger value="tutor" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-green-500">Tutor</TabsTrigger>
           <TabsTrigger value="files" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-green-500">Tệp</TabsTrigger>
           <TabsTrigger value="links" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-green-500">Liên kết</TabsTrigger>
           <TabsTrigger value="notes" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-green-500">Ghi chú</TabsTrigger>
@@ -126,6 +128,10 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
           ) : (
             <EmptyState title="Chưa có nội dung" description="Bài học này chưa có nội dung hiển thị." icon={<FileText className="h-12 w-12 text-slate-400" />} />
           )}
+        </TabsContent>
+
+        <TabsContent value="tutor" className="mt-4">
+          <LessonTutorChat classId={classId} lessonId={lessonId} />
         </TabsContent>
 
         <TabsContent value="files" className="mt-4">

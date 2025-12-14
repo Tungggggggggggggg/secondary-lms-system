@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import RateLimitDialog, { getRetryAfterSecondsFromResponse } from "@/components/shared/RateLimitDialog";
+import { z } from "zod";
 import { 
   Monitor, 
   Users, 
@@ -92,12 +94,54 @@ const mockStudentSessions: Array<{
  */
 export default function ExamMonitorPage() {
   const { toast } = useToast();
+
+  const antiScoreSchema = z.object({
+    suspicionScore: z.number().int().min(0).max(100),
+    riskLevel: z.enum(["low", "medium", "high"]),
+    breakdown: z
+      .array(
+        z.object({
+          ruleId: z.string(),
+          title: z.string(),
+          count: z.number().int().min(0),
+          points: z.number().int().min(0).max(100),
+          maxPoints: z.number().int().min(0).max(100),
+          details: z.string(),
+        })
+      )
+      .default([]),
+    countsByType: z.record(z.number().int().min(0)).default({}),
+    totalEvents: z.number().int().min(0),
+  });
+
+  const aiSummarySchema = z.object({
+    title: z.string(),
+    summary: z.string(),
+    keySignals: z.array(z.string()).default([]),
+    recommendations: z.array(z.string()).default([]),
+    suspicionScore: z.number().int().min(0).max(100),
+    riskLevel: z.enum(["low", "medium", "high"]),
+  });
+
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
   const [assignmentIdInput, setAssignmentIdInput] = useState("");
   const [studentIdInput, setStudentIdInput] = useState("");
   const [attemptInput, setAttemptInput] = useState<string>("");
-  const [events, setEvents] = useState<Array<{ id: string; assignmentId: string; studentId: string; attempt: number | null; eventType: string; createdAt: string; metadata: any; student?: { id: string; fullname: string; email: string } }>>([]);
+  const [events, setEvents] = useState<
+    Array<{
+      id: string;
+      assignmentId: string;
+      studentId: string;
+      attempt: number | null;
+      eventType: string;
+      createdAt: string;
+      metadata: unknown;
+      student?: { id: string; fullname: string; email: string };
+    }>
+  >([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [fromInput, setFromInput] = useState("");
   const [toInput, setToInput] = useState("");
@@ -105,6 +149,27 @@ export default function ExamMonitorPage() {
   const [extendMinutesInput, setExtendMinutesInput] = useState("15");
   const [extendReasonInput, setExtendReasonInput] = useState("");
   const [controlsLoading, setControlsLoading] = useState(false);
+
+  const [antiScoreLoading, setAntiScoreLoading] = useState(false);
+  const [antiScore, setAntiScore] = useState<null | {
+    suspicionScore: number;
+    riskLevel: "low" | "medium" | "high";
+    breakdown: Array<{ ruleId: string; title: string; count: number; points: number; maxPoints: number; details: string }>;
+    countsByType: Record<string, number>;
+    totalEvents: number;
+  }>(null);
+
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState<null | {
+    title: string;
+    summary: string;
+    keySignals: string[];
+    recommendations: string[];
+    suspicionScore: number;
+    riskLevel: "low" | "medium" | "high";
+  }>(null);
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitRetryAfterSeconds, setRateLimitRetryAfterSeconds] = useState(0);
 
   const searchParams = useSearchParams();
   const assignmentIdFromQuery = searchParams.get("assignmentId");
@@ -150,9 +215,59 @@ export default function ExamMonitorPage() {
       if (toInput.trim()) params.set("to", new Date(toInput).toISOString());
       if (limitInput.trim()) params.set("limit", limitInput.trim());
       const res = await fetch(`/api/exam-events?${params.toString()}`);
-      const j = await res.json();
-      if (!res.ok || !j?.success) throw new Error(j?.message || res.statusText);
-      setEvents((j.data || []).map((e: any) => ({ ...e, createdAt: e.createdAt })));
+      const j = (await res.json().catch(() => null)) as unknown;
+      const ok =
+        typeof j === "object" &&
+        j !== null &&
+        (j as { success?: unknown }).success === true;
+      if (!res.ok || !ok) {
+        const msg =
+          typeof j === "object" &&
+          j !== null &&
+          typeof (j as { message?: unknown }).message === "string"
+            ? (j as { message: string }).message
+            : res.statusText;
+        throw new Error(msg);
+      }
+
+      const raw = isRecord(j) && Array.isArray(j.data) ? j.data : [];
+      const mapped = raw
+        .map((item) => {
+          if (!isRecord(item)) return null;
+          const id = typeof item.id === "string" ? item.id : null;
+          const assignmentId = typeof item.assignmentId === "string" ? item.assignmentId : null;
+          const studentId = typeof item.studentId === "string" ? item.studentId : null;
+          const eventType = typeof item.eventType === "string" ? item.eventType : null;
+          const createdAt = typeof item.createdAt === "string" ? item.createdAt : null;
+          const attemptRaw = item.attempt;
+          const attempt = typeof attemptRaw === "number" && Number.isFinite(attemptRaw) ? attemptRaw : null;
+          const metadata = (item as { metadata?: unknown }).metadata ?? null;
+          const student = isRecord(item.student)
+            ? {
+                id: typeof item.student.id === "string" ? item.student.id : "",
+                fullname: typeof item.student.fullname === "string" ? item.student.fullname : "",
+                email: typeof item.student.email === "string" ? item.student.email : "",
+              }
+            : undefined;
+
+          if (!id || !assignmentId || !studentId || !eventType || !createdAt) return null;
+          return { id, assignmentId, studentId, attempt, eventType, createdAt, metadata, student };
+        })
+        .filter(
+          (
+            v
+          ): v is {
+            id: string;
+            assignmentId: string;
+            studentId: string;
+            attempt: number | null;
+            eventType: string;
+            createdAt: string;
+            metadata: unknown;
+            student?: { id: string; fullname: string; email: string };
+          } => v !== null
+        );
+      setEvents(mapped);
     } catch (e) {
       console.error("[ExamLogs] fetch error", e);
       setEvents([]);
@@ -283,15 +398,15 @@ export default function ExamMonitorPage() {
       const isCompletedEvent = ev.eventType === 'SESSION_COMPLETED';
       const isTerminatedEvent = ev.eventType === 'SESSION_TERMINATED' || ev.eventType === 'TEACHER_TERMINATE_SESSION';
 
-      const meta = (ev as any).metadata as any | null;
-      const answeredQuestionId = ev.eventType === 'QUESTION_ANSWERED' && meta && typeof meta.questionId === 'string'
-        ? meta.questionId
+      const meta = isRecord(ev.metadata) ? ev.metadata : null;
+      const answeredQuestionId = ev.eventType === 'QUESTION_ANSWERED' && meta && typeof meta["questionId"] === 'string'
+        ? (meta["questionId"] as string)
         : null;
-      const questionIndexFromAnswered = ev.eventType === 'QUESTION_ANSWERED' && meta && typeof meta.currentQuestionIndex === 'number'
-        ? meta.currentQuestionIndex
+      const questionIndexFromAnswered = ev.eventType === 'QUESTION_ANSWERED' && meta && typeof meta["currentQuestionIndex"] === 'number'
+        ? (meta["currentQuestionIndex"] as number)
         : null;
-      const questionIndexFromChanged = ev.eventType === 'QUESTION_CHANGED' && meta && typeof meta.toIndex === 'number'
-        ? meta.toIndex
+      const questionIndexFromChanged = ev.eventType === 'QUESTION_CHANGED' && meta && typeof meta["toIndex"] === 'number'
+        ? (meta["toIndex"] as number)
         : null;
 
       if (!existing) {
@@ -379,7 +494,7 @@ export default function ExamMonitorPage() {
 
     return Array.from(byStudent.values()).map((s) => {
       // Tiến độ dựa trên số câu đã trả lời
-      const answeredCount = (s as any).answeredCount as number | undefined ?? 0;
+      const answeredCount = s.answeredCount;
       const safeTotalQ = totalQ > 0 ? totalQ : 0;
       const progress = safeTotalQ > 0
         ? Math.min(100, Math.max(0, Math.round((answeredCount / safeTotalQ) * 100)))
@@ -410,7 +525,7 @@ export default function ExamMonitorPage() {
         currentQuestion: answeredCount,
         totalQuestions: safeTotalQ,
         suspiciousActivities: (s.highCount ?? 0) + (s.mediumCount ?? 0),
-        isOnline: s.isOnline as boolean,
+        isOnline: s.isOnline,
       };
     });
   }, [useDemoSessions, derivedSessions, assignmentTitle, assignmentQuestionCount, assignmentTimeLimitMinutes]);
@@ -453,6 +568,112 @@ export default function ExamMonitorPage() {
     return { studentId, attemptNumber: Number.isNaN(attemptNumber as number) ? null : attemptNumber };
   };
 
+  const loadAntiCheatScore = async () => {
+    if (!effectiveAssignmentId) return;
+    const studentId = studentIdInput.trim() || undefined;
+    const attempt = attemptInput.trim() || undefined;
+
+    try {
+      setAntiScoreLoading(true);
+      const params = new URLSearchParams();
+      if (studentId) params.set("studentId", studentId);
+      if (attempt) params.set("attempt", attempt);
+      const res = await fetch(`/api/teachers/assignments/${effectiveAssignmentId}/anti-cheat/score?${params.toString()}`);
+      const j = (await res.json().catch(() => null)) as unknown;
+      const ok =
+        typeof j === "object" &&
+        j !== null &&
+        (j as { success?: unknown }).success === true;
+      if (!res.ok || !ok) {
+        const msg =
+          typeof j === "object" &&
+          j !== null &&
+          typeof (j as { message?: unknown }).message === "string"
+            ? (j as { message: string }).message
+            : res.statusText;
+        throw new Error(msg);
+      }
+      const data = isRecord(j) ? j.data : null;
+      const validated = antiScoreSchema.safeParse(data);
+      if (!validated.success) {
+        throw new Error("Dữ liệu anti-cheat score không hợp lệ");
+      }
+      setAntiScore(validated.data);
+    } catch (e) {
+      console.error("[AntiCheatScore] load error", e);
+      setAntiScore(null);
+    } finally {
+      setAntiScoreLoading(false);
+    }
+  };
+
+  const callAiSummary = async () => {
+    if (!effectiveAssignmentId) return;
+    const studentId = studentIdInput.trim();
+    if (!studentId) {
+      toast({
+        title: "Thiếu Student ID",
+        description: "Vui lòng nhập Student ID để AI tóm tắt đúng theo học sinh.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const attemptNumber = attemptInput.trim() ? Number(attemptInput.trim()) : null;
+    const attempt = Number.isFinite(attemptNumber as number) ? (attemptNumber as number) : null;
+
+    try {
+      setAiSummaryLoading(true);
+      const res = await fetch("/api/ai/anti-cheat/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId: effectiveAssignmentId,
+          studentId,
+          attempt,
+        }),
+      });
+
+      const j = (await res.json().catch(() => null)) as unknown;
+      if (res.status === 429) {
+        const retryAfter = getRetryAfterSecondsFromResponse(res, j) ?? 30;
+        setRateLimitRetryAfterSeconds(retryAfter);
+        setRateLimitOpen(true);
+        return;
+      }
+
+      const ok =
+        typeof j === "object" &&
+        j !== null &&
+        (j as { success?: unknown }).success === true;
+      if (!res.ok || !ok) {
+        const msg =
+          typeof j === "object" &&
+          j !== null &&
+          typeof (j as { message?: unknown }).message === "string"
+            ? (j as { message: string }).message
+            : res.statusText;
+        throw new Error(msg);
+      }
+
+      const data = isRecord(j) ? j.data : null;
+      const validated = aiSummarySchema.safeParse(data);
+      if (!validated.success) {
+        throw new Error("Dữ liệu AI summary không hợp lệ");
+      }
+      setAiSummary(validated.data);
+    } catch (e) {
+      console.error("[AntiCheatAiSummary] error", e);
+      toast({
+        title: "Không thể AI tóm tắt",
+        description: "Vui lòng thử lại sau.",
+        variant: "destructive",
+      });
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
+
   const callTeacherOverride = async (
     sessionKey: string,
     action: "EXTEND_TIME" | "PAUSE" | "RESUME" | "TERMINATE",
@@ -467,7 +688,7 @@ export default function ExamMonitorPage() {
 
     setControlsLoading(true);
     try {
-      const body: any = {
+      const body: Record<string, unknown> = {
         studentId,
         attemptNumber,
         action,
@@ -480,10 +701,20 @@ export default function ExamMonitorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const j = await res.json().catch(() => null as any);
-      if (!res.ok || !j?.success) {
+      const j = (await res.json().catch(() => null)) as unknown;
+      const ok =
+        typeof j === "object" &&
+        j !== null &&
+        (j as { success?: unknown }).success === true;
+      if (!res.ok || !ok) {
+        const msg =
+          typeof j === "object" &&
+          j !== null &&
+          typeof (j as { message?: unknown }).message === "string"
+            ? (j as { message: string }).message
+            : res.statusText || "Không thể thực hiện hành động";
         console.error("[TeacherOverride] error", j);
-        window.alert(j?.message || res.statusText || "Không thể thực hiện hành động");
+        window.alert(msg);
         return;
       }
       if (action === "EXTEND_TIME") {
@@ -571,6 +802,15 @@ export default function ExamMonitorPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <RateLimitDialog
+          open={rateLimitOpen}
+          onOpenChange={setRateLimitOpen}
+          retryAfterSeconds={rateLimitRetryAfterSeconds}
+          onRetry={async () => {
+            await callAiSummary();
+          }}
+        />
+
         <PageHeader
           role="teacher"
           title="Giám sát thi trực tuyến"
@@ -803,6 +1043,124 @@ export default function ExamMonitorPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="rounded-lg border bg-white p-4 space-y-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="font-medium">Tổng hợp chống gian lận (P2.5)</div>
+                      <div className="text-sm text-gray-600">
+                        Dùng filters (Student ID / Attempt) rồi bấm tải để xem breakdown.
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={loadAntiCheatScore}
+                        disabled={!Boolean(effectiveAssignmentId) || antiScoreLoading}
+                      >
+                        {antiScoreLoading ? "Đang tải..." : "Tải điểm nghi ngờ"}
+                      </Button>
+                      <Button
+                        onClick={callAiSummary}
+                        disabled={!Boolean(effectiveAssignmentId) || aiSummaryLoading}
+                      >
+                        {aiSummaryLoading ? "Đang tóm tắt..." : "AI tóm tắt"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {antiScore ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="rounded-lg border bg-slate-50 p-3">
+                        <div className="text-sm text-gray-600">Suspicion score</div>
+                        <div className="text-2xl font-bold">{antiScore.suspicionScore}/100</div>
+                        <div className="mt-1">
+                          <Badge
+                            variant={
+                              antiScore.riskLevel === "high"
+                                ? "destructive"
+                                : antiScore.riskLevel === "medium"
+                                ? "warning"
+                                : "outline"
+                            }
+                          >
+                            {antiScore.riskLevel === "high"
+                              ? "Rủi ro cao"
+                              : antiScore.riskLevel === "medium"
+                              ? "Rủi ro trung bình"
+                              : "Rủi ro thấp"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border bg-slate-50 p-3">
+                        <div className="text-sm text-gray-600">Tổng số events</div>
+                        <div className="text-2xl font-bold">{antiScore.totalEvents}</div>
+                      </div>
+                      <div className="rounded-lg border bg-slate-50 p-3">
+                        <div className="text-sm text-gray-600">Rule hits</div>
+                        <div className="text-2xl font-bold">{antiScore.breakdown.length}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      Chưa có dữ liệu điểm nghi ngờ. Hãy bấm “Tải điểm nghi ngờ”.
+                    </div>
+                  )}
+
+                  {antiScore?.breakdown?.length ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-left border-b">
+                            <th className="py-2 pr-4">Rule</th>
+                            <th className="py-2 pr-4">Số lần</th>
+                            <th className="py-2 pr-4">Điểm</th>
+                            <th className="py-2 pr-4">Ghi chú</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {antiScore.breakdown.map((b) => (
+                            <tr key={b.ruleId} className="border-b align-top">
+                              <td className="py-2 pr-4 font-medium">{b.title}</td>
+                              <td className="py-2 pr-4">{b.count}</td>
+                              <td className="py-2 pr-4">{b.points}/{b.maxPoints}</td>
+                              <td className="py-2 pr-4 text-gray-600 max-w-[520px] whitespace-pre-wrap break-words">
+                                {b.details}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+
+                  {aiSummary ? (
+                    <div className="rounded-lg border bg-white p-4 space-y-3">
+                      <div className="font-semibold">{aiSummary.title}</div>
+                      <div className="text-sm text-gray-700 whitespace-pre-wrap">{aiSummary.summary}</div>
+                      {(aiSummary.keySignals?.length ?? 0) > 0 && (
+                        <div>
+                          <div className="text-sm font-medium">Tín hiệu chính</div>
+                          <ul className="mt-1 list-disc pl-5 text-sm text-gray-700">
+                            {aiSummary.keySignals.map((s, idx) => (
+                              <li key={`${idx}-${s}`}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {(aiSummary.recommendations?.length ?? 0) > 0 && (
+                        <div>
+                          <div className="text-sm font-medium">Khuyến nghị</div>
+                          <ul className="mt-1 list-disc pl-5 text-sm text-gray-700">
+                            {aiSummary.recommendations.map((s, idx) => (
+                              <li key={`${idx}-${s}`}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+
                 {events.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-gray-600">

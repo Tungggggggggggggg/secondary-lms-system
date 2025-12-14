@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import { generateQuizFromText } from "@/lib/ai/gemini-quiz";
-import type { QuizQuestion } from "@/types/assignment-builder";
 import { z } from "zod";
+
+import { authOptions } from "@/lib/auth-options";
 import { errorResponse } from "@/lib/api-utils";
 import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
+import { extractTextFromFile } from "@/lib/files/extractTextFromFile";
+import { generateQuizFromText } from "@/lib/ai/gemini-quiz";
+import type { QuizQuestion } from "@/types/assignment-builder";
 
-const requestSchema = z.object({
-  sourceText: z.string().min(1, "sourceText is required"),
+export const runtime = "nodejs";
+
+const formSchema = z.object({
   numQuestions: z.number().int().min(1).max(30).optional(),
 });
 
@@ -53,11 +56,20 @@ export async function POST(req: NextRequest) {
       return rateLimitResponse(userLimit.retryAfterSeconds);
     }
 
-    const body = await req.json().catch(() => null);
-    const parsed = requestSchema.safeParse({
-      sourceText: (body?.sourceText || "").toString(),
-      numQuestions: body?.numQuestions === undefined ? undefined : Number(body?.numQuestions),
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!file || !(file instanceof File)) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", { details: "file is required" });
+    }
+
+    const numQuestionsRaw = form.get("numQuestions");
+    const parsed = formSchema.safeParse({
+      numQuestions:
+        numQuestionsRaw === null || numQuestionsRaw === undefined || numQuestionsRaw === ""
+          ? undefined
+          : Number(numQuestionsRaw),
     });
+
     if (!parsed.success) {
       return errorResponse(400, "Dữ liệu không hợp lệ", {
         details: parsed.error.issues.map((issue) => ({
@@ -67,16 +79,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const sourceText = parsed.data.sourceText;
-    const numQuestions = parsed.data.numQuestions ?? 10;
+    const extracted = await extractTextFromFile(file);
 
     const questionsRaw = await generateQuizFromText({
-      sourceText,
-      numQuestions,
+      sourceText: extracted.text,
+      numQuestions: parsed.data.numQuestions ?? 10,
       language: "vi",
     });
 
-    // Map AI questions to QuizQuestion shape used in builder
     const mapped: QuizQuestion[] = questionsRaw.map((q, idx) => {
       const options = q.options.map((opt, j) => ({
         label: String.fromCharCode(65 + j),
@@ -100,10 +110,20 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[API /api/ai/quiz] Error", error);
+    console.error("[API /api/ai/quiz/file] Error", error);
+
     if (error instanceof Error) {
       if (/GEMINI_API_KEY/i.test(error.message)) {
         return errorResponse(500, "Dịch vụ AI chưa được cấu hình.");
+      }
+      if (/Định dạng file không được hỗ trợ/i.test(error.message)) {
+        return errorResponse(415, error.message);
+      }
+      if (/File quá lớn/i.test(error.message)) {
+        return errorResponse(413, error.message);
+      }
+      if (/Không trích xuất được nội dung/i.test(error.message)) {
+        return errorResponse(400, error.message);
       }
       if (
         /Phản hồi AI không đúng định dạng/i.test(error.message) ||

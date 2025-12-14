@@ -2,9 +2,12 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import RateLimitDialog, {
+  getRetryAfterSecondsFromResponse,
+} from "@/components/shared/RateLimitDialog";
 import { ScheduleSection } from "@/components/shared";
 import { FormSwitchRow } from "@/components/shared";
 import { AccordionItem } from '@/components/ui/accordion';
@@ -54,9 +57,17 @@ const TIME_PRESETS = [
 export default function QuizContentBuilder({ content, onContentChange }: QuizContentBuilderProps) {
   const [customTime, setCustomTime] = useState(false);
   const [aiSourceText, setAiSourceText] = useState("");
+  const [aiSourceFile, setAiSourceFile] = useState<File | null>(null);
   const [aiNumQuestions, setAiNumQuestions] = useState(10);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [rateLimitOpen, setRateLimitOpen] = useState(false);
+  const [rateLimitRetryAfterSeconds, setRateLimitRetryAfterSeconds] = useState(0);
+  const [lastAiRequest, setLastAiRequest] = useState<
+    | { mode: "text"; sourceText: string; numQuestions: number }
+    | { mode: "file"; file: File; numQuestions: number }
+    | null
+  >(null);
 
   const currentContent: QuizContent = useMemo(() => (
     content ?? {
@@ -287,6 +298,110 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [currentContent.questions.length, duplicateQuestion]);
 
+  const applyAiQuestions = useCallback(
+    (aiQuestions: QuizQuestion[]) => {
+      if (!aiQuestions.length) {
+        setAiError("AI không tạo được câu hỏi phù hợp. Hãy thử rút gọn hoặc làm rõ nội dung.");
+        return;
+      }
+      onContentChange({
+        ...currentContent,
+        questions: [...currentContent.questions, ...aiQuestions],
+      });
+    },
+    [currentContent, onContentChange]
+  );
+
+  const openRateLimitDialog = useCallback(
+    (retryAfterSeconds: number) => {
+      setRateLimitRetryAfterSeconds(retryAfterSeconds);
+      setRateLimitOpen(true);
+    },
+    []
+  );
+
+  const runAiFromText = useCallback(async () => {
+    const source = aiSourceText.trim();
+    if (!source) return;
+
+    setLastAiRequest({ mode: "text", sourceText: source, numQuestions: aiNumQuestions });
+
+    try {
+      setAiLoading(true);
+      setAiError(null);
+      const res = await fetch("/api/ai/quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceText: source,
+          numQuestions: aiNumQuestions,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        openRateLimitDialog(getRetryAfterSecondsFromResponse(res, json) ?? 60);
+        return;
+      }
+      if (!res.ok || (json as any)?.success === false) {
+        throw new Error((json as any)?.message || "Không thể sinh câu hỏi bằng AI");
+      }
+
+      const aiQuestions = (((json as any)?.data?.questions || []) as QuizQuestion[]) ?? [];
+      applyAiQuestions(aiQuestions);
+    } catch (e) {
+      console.error("[QuizContentBuilder] AI quiz error", e);
+      setAiError(e instanceof Error ? e.message : "Có lỗi xảy ra khi gọi AI. Vui lòng thử lại.");
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiNumQuestions, aiSourceText, applyAiQuestions, openRateLimitDialog]);
+
+  const runAiFromFile = useCallback(async () => {
+    if (!aiSourceFile) return;
+
+    setLastAiRequest({ mode: "file", file: aiSourceFile, numQuestions: aiNumQuestions });
+
+    try {
+      setAiLoading(true);
+      setAiError(null);
+
+      const fd = new FormData();
+      fd.append("file", aiSourceFile);
+      fd.append("numQuestions", String(aiNumQuestions));
+
+      const res = await fetch("/api/ai/quiz/file", { method: "POST", body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        openRateLimitDialog(getRetryAfterSecondsFromResponse(res, json) ?? 60);
+        return;
+      }
+      if (!res.ok || (json as any)?.success === false) {
+        throw new Error((json as any)?.message || "Không thể sinh câu hỏi bằng AI");
+      }
+
+      const aiQuestions = (((json as any)?.data?.questions || []) as QuizQuestion[]) ?? [];
+      applyAiQuestions(aiQuestions);
+    } catch (e) {
+      console.error("[QuizContentBuilder] AI quiz file error", e);
+      setAiError(e instanceof Error ? e.message : "Có lỗi xảy ra khi gọi AI. Vui lòng thử lại.");
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiNumQuestions, aiSourceFile, applyAiQuestions, openRateLimitDialog]);
+
+  const handleRetryAi = useCallback(async () => {
+    if (!lastAiRequest) return;
+
+    if (lastAiRequest.mode === "text") {
+      setAiSourceText(lastAiRequest.sourceText);
+      await runAiFromText();
+      return;
+    }
+
+    setAiSourceFile(lastAiRequest.file);
+    await runAiFromFile();
+  }, [lastAiRequest, runAiFromFile, runAiFromText]);
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="text-center mb-4">
@@ -321,6 +436,26 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
             placeholder="Dán nội dung bài giảng, đoạn văn, ghi chú... (Tiếng Việt)"
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs min-h-[96px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
           />
+
+          <div className="grid gap-2">
+            <Label className="text-xs font-semibold text-slate-700" htmlFor="aiSourceFile">
+              Hoặc tải file (PDF/DOCX/TXT)
+            </Label>
+            <Input
+              id="aiSourceFile"
+              type="file"
+              accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+              disabled={aiLoading}
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setAiSourceFile(file);
+                setAiError(null);
+              }}
+            />
+            <p className="text-[11px] text-slate-600">
+              Gợi ý: file nên nhỏ hơn 5MB và ưu tiên nội dung chữ (không scan hình).
+            </p>
+          </div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex items-center gap-2 text-[11px] text-slate-600">
               <Label htmlFor="aiNumQuestions" className="font-semibold">
@@ -344,6 +479,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                 disabled={aiLoading}
                 onClick={() => {
                   setAiSourceText("");
+                  setAiSourceFile(null);
                   setAiError(null);
                 }}
               >
@@ -352,46 +488,20 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
               <Button
                 type="button"
                 className="bg-blue-600 hover:bg-blue-700 text-[11px]"
-                disabled={aiLoading || !aiSourceText.trim()}
+                disabled={aiLoading || (!aiSourceText.trim() && !aiSourceFile)}
                 onClick={async () => {
-                  if (!aiSourceText.trim()) return;
-                  try {
-                    setAiLoading(true);
-                    setAiError(null);
-                    const res = await fetch("/api/ai/quiz", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        sourceText: aiSourceText,
-                        numQuestions: aiNumQuestions,
-                      }),
-                    });
-                    const json = await res.json();
-                    if (!res.ok || json?.success === false) {
-                      throw new Error(json?.message || "Không thể sinh câu hỏi bằng AI");
-                    }
-                    const aiQuestions = (json.data?.questions || []) as QuizQuestion[];
-                    if (!aiQuestions.length) {
-                      setAiError("AI không tạo được câu hỏi phù hợp. Hãy thử rút gọn hoặc làm rõ nội dung.");
-                      return;
-                    }
-                    onContentChange({
-                      ...currentContent,
-                      questions: [...currentContent.questions, ...aiQuestions],
-                    });
-                  } catch (e) {
-                    console.error("[QuizContentBuilder] AI quiz error", e);
-                    setAiError(
-                      e instanceof Error
-                        ? e.message
-                        : "Có lỗi xảy ra khi gọi AI. Vui lòng thử lại."
-                    );
-                  } finally {
-                    setAiLoading(false);
+                  if (aiSourceFile) {
+                    await runAiFromFile();
+                    return;
                   }
+                  await runAiFromText();
                 }}
               >
-                {aiLoading ? "Đang sinh câu hỏi..." : "Tạo câu hỏi bằng AI"}
+                {aiLoading
+                  ? "Đang sinh câu hỏi..."
+                  : aiSourceFile
+                  ? "Tạo câu hỏi từ file"
+                  : "Tạo câu hỏi bằng AI"}
               </Button>
             </div>
           </div>
@@ -400,6 +510,15 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
           )}
         </CardContent>
       </Card>
+
+      <RateLimitDialog
+        open={rateLimitOpen}
+        onOpenChange={setRateLimitOpen}
+        retryAfterSeconds={rateLimitRetryAfterSeconds}
+        title="Bạn đang yêu cầu AI quá nhanh"
+        description="Vui lòng chờ thêm một chút rồi thử lại."
+        onRetry={handleRetryAi}
+      />
 
       {/* Question Templates (Top) */}
       <QuestionTemplates 

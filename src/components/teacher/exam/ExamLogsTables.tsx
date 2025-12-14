@@ -26,7 +26,7 @@ interface LogEvent {
   studentId: string;
   attempt: number | null;
   eventType: string;
-  metadata: any;
+  metadata: unknown;
   student?: { id: string; fullname: string; email: string };
 }
 

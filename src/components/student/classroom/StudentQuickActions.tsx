@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { SectionCard } from "@/components/shared";
-import { FileText, GraduationCap, MessageSquare } from "lucide-react";
+import { FileText, GraduationCap, MessageSquare, BookOpen } from "lucide-react";
 
 interface Props {
   classId: string;
@@ -10,6 +10,9 @@ interface Props {
 
 export default function StudentQuickActions({ classId }: Props) {
   const actions = [
+    {
+      icon: <BookOpen className="h-5 w-5" />, label: "Bài học", href: `/dashboard/student/classes/${classId}/lessons`,
+    },
     {
       icon: <FileText className="h-5 w-5" />, label: "Bài tập", href: `/dashboard/student/classes/${classId}/assignments`,
     },
@@ -26,7 +29,7 @@ export default function StudentQuickActions({ classId }: Props) {
       title={<span className="text-green-700">Hành động nhanh</span>}
       description="Truy cập nhanh các chức năng"
     >
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {actions.map((a) => (
           <Link key={a.label} href={a.href} aria-label={a.label}>
             <div className="flex flex-col items-center justify-center p-4 rounded-xl border border-green-200 bg-green-50/40 text-green-700 hover:bg-green-50 hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer group">

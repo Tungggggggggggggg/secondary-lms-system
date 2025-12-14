@@ -111,6 +111,7 @@ model Course {
   author         User              @relation(fields: [authorId], references: [id])
   organization   Organization?     @relation(fields: [organizationId], references: [id])
   lessons        Lesson[]
+  embeddingChunks LessonEmbeddingChunk[]
 
   @@index([organizationId, createdAt])
   @@map("courses")
@@ -125,8 +126,28 @@ model Lesson {
   updatedAt DateTime @updatedAt
   courseId  String
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  embeddingChunks LessonEmbeddingChunk[]
 
   @@map("lessons")
+}
+
+model LessonEmbeddingChunk {
+  id          String   @id
+  lessonId    String
+  courseId    String
+  chunkIndex  Int
+  content     String
+  contentHash String
+  embedding   Unsupported("vector")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, chunkIndex])
+  @@index([courseId])
+  @@map("lesson_embedding_chunks")
 }
 
 model Assignment {

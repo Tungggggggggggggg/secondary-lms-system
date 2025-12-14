@@ -68,6 +68,7 @@ export function useParentGrades() {
   const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       abortRef.current?.abort();
@@ -111,19 +112,55 @@ export function useParentGrades() {
       const response = await fetch(url, {
         signal: controller.signal,
       });
-      const result = await response.json();
+      const result: unknown = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          result?.message || "Có lỗi xảy ra khi lấy danh sách điểm số"
+          (typeof result === "object" && result !== null && "message" in result && typeof (result as { message?: unknown }).message === "string"
+            ? (result as { message: string }).message
+            : "Có lỗi xảy ra khi lấy danh sách điểm số")
         );
+      }
+
+      if (
+        typeof result === "object" &&
+        result !== null &&
+        "success" in result &&
+        (result as { success?: unknown }).success === false
+      ) {
+        const message =
+          "message" in result && typeof (result as { message?: unknown }).message === "string"
+            ? (result as { message: string }).message
+            : "Có lỗi xảy ra khi lấy danh sách điểm số";
+        throw new Error(message);
       }
 
       if (!mountedRef.current) return;
 
-      setGrades(result.data ?? []);
-      setStatistics(result.statistics ?? { averageGrade: 0 });
-      setPageInfo(result.pageInfo ?? { nextCursor: null, hasMore: false, limit: DEFAULT_LIMIT });
+      const data =
+        typeof result === "object" && result !== null && "data" in result
+          ? (result as { data?: unknown }).data
+          : undefined;
+      const statisticsPayload =
+        typeof result === "object" && result !== null && "statistics" in result
+          ? (result as { statistics?: unknown }).statistics
+          : undefined;
+      const pageInfoPayload =
+        typeof result === "object" && result !== null && "pageInfo" in result
+          ? (result as { pageInfo?: unknown }).pageInfo
+          : undefined;
+
+      setGrades(Array.isArray(data) ? (data as GradeEntry[]) : []);
+      setStatistics(
+        (typeof statisticsPayload === "object" && statisticsPayload !== null
+          ? (statisticsPayload as GradeStatistics)
+          : { averageGrade: 0 })
+      );
+      setPageInfo(
+        (typeof pageInfoPayload === "object" && pageInfoPayload !== null
+          ? (pageInfoPayload as GradePageInfo)
+          : { nextCursor: null, hasMore: false, limit: DEFAULT_LIMIT })
+      );
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         if (!didTimeout) return;
@@ -181,14 +218,37 @@ export function useParentGrades() {
       const res = await fetch(`/api/parent/children/${last.childId}/grades?${params.toString()}`, {
         signal: controller.signal,
       });
-      const json = await res.json().catch(() => ({}));
+      const json: unknown = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(json?.message || "Có lỗi xảy ra khi tải thêm điểm số");
+        const message =
+          typeof json === "object" &&
+          json !== null &&
+          "message" in json &&
+          typeof (json as { message?: unknown }).message === "string"
+            ? (json as { message: string }).message
+            : "Có lỗi xảy ra khi tải thêm điểm số";
+        throw new Error(message);
+      }
+
+      if (
+        typeof json === "object" &&
+        json !== null &&
+        "success" in json &&
+        (json as { success?: unknown }).success === false
+      ) {
+        const message =
+          "message" in json && typeof (json as { message?: unknown }).message === "string"
+            ? (json as { message: string }).message
+            : "Có lỗi xảy ra khi tải thêm điểm số";
+        throw new Error(message);
       }
 
       if (!mountedRef.current) return;
 
-      const nextItems: GradeEntry[] = Array.isArray(json?.data) ? json.data : [];
+      const nextItems: GradeEntry[] =
+        typeof json === "object" && json !== null && "data" in json && Array.isArray((json as { data?: unknown }).data)
+          ? ((json as { data: unknown[] }).data as GradeEntry[])
+          : [];
       setGrades((prev) => {
         if (!nextItems.length) return prev;
         const seen = new Set(prev.map((i) => i.id));
@@ -198,8 +258,26 @@ export function useParentGrades() {
         }
         return merged;
       });
-      setStatistics(json.statistics ?? statistics);
-      setPageInfo(json.pageInfo ?? pageInfo);
+
+      const nextStats =
+        typeof json === "object" && json !== null && "statistics" in json
+          ? (json as { statistics?: unknown }).statistics
+          : undefined;
+      const nextPageInfo =
+        typeof json === "object" && json !== null && "pageInfo" in json
+          ? (json as { pageInfo?: unknown }).pageInfo
+          : undefined;
+
+      setStatistics(
+        (typeof nextStats === "object" && nextStats !== null
+          ? (nextStats as GradeStatistics)
+          : statistics)
+      );
+      setPageInfo(
+        (typeof nextPageInfo === "object" && nextPageInfo !== null
+          ? (nextPageInfo as GradePageInfo)
+          : pageInfo)
+      );
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         if (!didTimeout) return;
