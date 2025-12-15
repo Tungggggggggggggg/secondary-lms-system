@@ -2,7 +2,7 @@
 
 **Mục đích:** tài liệu bàn giao nhanh để người tiếp theo setup môi trường, chạy demo, chạy test và biết rõ việc cần làm tiếp.
 
-**Cập nhật lần cuối:** 2025-12-15
+**Cập nhật lần cuối:** 2025-12-16
 
 ---
 
@@ -62,6 +62,11 @@ npx tsc --noEmit
 -   **Student submissions + parent/student linking:** đã chuẩn hoá auth/role + validate.
 -   **Announcements + Classrooms + Chat:** dọn log/any và chuẩn hoá response lỗi.
 -   **RAG Tutor + AI (Gemini):** các endpoint chính đã có (chi tiết xem docs tham chiếu).
+-   **Admin Portal (UI/UX + vận hành):**
+    -   Refactor `/dashboard/admin/users` và `/dashboard/admin/classrooms` theo pattern component tái sử dụng (header/toolbars/actions menu/pagination/states).
+    -   Thêm thao tác **xóa user** (admin-only) với UI confirm dialog (không dùng `alert`) + API guard + audit.
+    -   Refactor `/dashboard/admin/classrooms/[id]` chuẩn hoá loading/error/empty/pagination cho danh sách học sinh.
+    -   Tối ưu sidebar admin: tăng tương phản để brand + tên admin dễ đọc; hạn chế icon đối với role `admin`, logout dùng SVG inline.
 
 ---
 
@@ -90,9 +95,9 @@ npx tsc --noEmit
 
 ### P1 — nâng chất lượng
 
--   [ ] RAG: incremental indexing + batching/retry để giảm timeout.
--   [ ] Tutor UI: empty state + sources modal/preview.
--   [ ] Cân nhắc gom helper “unknown → Prisma JSON” thành file dùng chung để tránh duplicate.
+-   [x] RAG: incremental indexing + batching/retry để giảm timeout.
+-   [x] Tutor UI: empty state + sources modal/preview.
+-   [x] Cân nhắc gom helper “unknown → Prisma JSON” thành file dùng chung để tránh duplicate.
 
 ### P2 — mở rộng
 

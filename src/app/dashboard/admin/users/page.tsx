@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import PageHeader from "@/components/shared/PageHeader";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminUsersToolbar, { type AdminRoleValue } from "@/components/admin/AdminUsersToolbar";
+import AdminPagination from "@/components/admin/AdminPagination";
+import UserRowActionsMenu from "@/components/admin/UserRowActionsMenu";
+import AdminTableSkeleton from "@/components/admin/AdminTableSkeleton";
+import { EmptyState, ErrorBanner } from "@/components/shared";
+import Button from "@/components/ui/button";
 import { usePrompt } from "@/components/providers/PromptProvider";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -38,12 +44,15 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
-  const [roleFilter, setRoleFilter] = useState<"" | AdminUserItem["role"]>("");
+  const [roleFilter, setRoleFilter] = useState<AdminRoleValue>("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [banLoadingId, setBanLoadingId] = useState<string | null>(null);
   const [resetLoadingId, setResetLoadingId] = useState<string | null>(null);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUserItem | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createFullname, setCreateFullname] = useState("");
@@ -95,6 +104,52 @@ export default function AdminUsersPage() {
       setItems([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const requestDeleteUser = (user: AdminUserItem) => {
+    if (user.role === "ADMIN") return;
+    setDeleteTarget(user);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    const user = deleteTarget;
+    if (!user) return;
+    if (user.role === "ADMIN") return;
+
+    try {
+      setDeleteLoadingId(user.id);
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể xóa người dùng");
+      }
+
+      setItems((prev) => prev.filter((u) => u.id !== user.id));
+      setTotal((t) => Math.max(0, t - 1));
+
+      toast({
+        title: "Đã xóa người dùng",
+        description: user.email,
+        variant: "success",
+      });
+
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+
+      if (items.length === 1 && page > 1) {
+        fetchUsers(page - 1, roleFilter, search);
+      }
+    } catch (e) {
+      console.error("[AdminUsersPage] deleteUser error", e);
+      toast({
+        title: "Không thể xóa người dùng",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi xóa người dùng",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteLoadingId(null);
     }
   };
 
@@ -154,6 +209,12 @@ export default function AdminUsersPage() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchUsers(1, roleFilter, search);
+  };
+
+  const handleResetFilters = () => {
+    setRoleFilter("");
+    setSearch("");
+    fetchUsers(1, "", "");
   };
 
   const handleRoleChange = (value: "" | AdminUserItem["role"]) => {
@@ -394,232 +455,178 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <PageHeader
-        title="Quản lý người dùng"
-        subtitle="Tìm kiếm, lọc và thao tác trên tài khoản trong toàn hệ thống"
-      />
-
-      <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-[11px] text-slate-600">
-            Tạo nhanh tài khoản giáo viên (1 người hoặc hàng loạt) rồi quay lại danh sách để quản lý.
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                setCreateError(null);
-                setCreateOpen(true);
-              }}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800"
-            >
-              Tạo giáo viên
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setBulkError(null);
-                setBulkResult(null);
-                setBulkOpen(true);
-              }}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
-            >
-              Tạo giáo viên hàng loạt
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap gap-2">
-            {ROLE_OPTIONS.map((opt) => (
-              <button
-                key={opt.label}
+    <div className="p-6 sm:p-8">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        <AdminPageHeader
+          title="Quản lý người dùng"
+          subtitle="Tìm kiếm, lọc và thao tác trên tài khoản trong toàn hệ thống"
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
                 type="button"
-                onClick={() => handleRoleChange(opt.value)}
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${
-                  roleFilter === opt.value
-                    ? `${opt.badgeClass} border-transparent`
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                }`}
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  setCreateError(null);
+                  setCreateOpen(true);
+                }}
               >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+                Tạo giáo viên
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBulkError(null);
+                  setBulkResult(null);
+                  setBulkOpen(true);
+                }}
+              >
+                Tạo hàng loạt
+              </Button>
+            </div>
+          }
+        />
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="flex items-center gap-2 w-full md:w-auto"
-          >
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo email hoặc họ tên..."
-              className="flex-1 md:w-64 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-            />
-            <button
-              type="submit"
-              className="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800"
-            >
-              Tìm kiếm
-            </button>
-          </form>
-        </div>
+        {error ? <ErrorBanner message={error} onRetry={() => fetchUsers(page, roleFilter, search)} /> : null}
 
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-            {error}
-          </div>
-        )}
+        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+          <AdminUsersToolbar
+            roleOptions={ROLE_OPTIONS}
+            roleValue={roleFilter}
+            onRoleChange={handleRoleChange}
+            search={search}
+            onSearchChange={setSearch}
+            onSubmit={() => fetchUsers(1, roleFilter, search)}
+            onReset={handleResetFilters}
+          />
 
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
-          <table className="min-w-full divide-y divide-slate-200 text-xs">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Email</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Họ tên</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Vai trò</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Trạng thái</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Lý do khoá</th>
-                <th className="px-3 py-2 text-right font-semibold text-slate-600">Hành động</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {loading && items.length === 0 ? (
+          <div className="overflow-x-auto rounded-xl border border-slate-100">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-3 py-6 text-center text-[11px] text-slate-500"
-                  >
-                    Đang tải danh sách người dùng...
-                  </td>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Email</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Họ tên</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Vai trò</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Trạng thái</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Lý do khoá</th>
+                  <th className="px-4 py-3 text-right font-semibold text-slate-600">Hành động</th>
                 </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-3 py-6 text-center text-[11px] text-slate-500"
-                  >
-                    Không có người dùng nào phù hợp với bộ lọc.
-                  </td>
-                </tr>
-              ) : (
-                items.map((user) => {
-                  const isProcessing = banLoadingId === user.id;
-                  const isResetting = resetLoadingId === user.id;
-                  const isAdminRole = user.role === "ADMIN";
-                  return (
-                    <tr key={user.id} className="hover:bg-slate-50/60">
-                      <td className="px-3 py-2 align-middle">
-                        <div className="flex flex-col">
-                          <Link
-                            href={`/dashboard/admin/users/${user.id}`}
-                            className="font-medium text-slate-900 text-xs hover:underline"
-                          >
-                            {user.email}
-                          </Link>
-                          <span className="text-[10px] text-slate-500">
-                            ID: {user.id.slice(0, 8)}…
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 align-middle text-xs text-slate-700">
-                        {user.fullname || "(Chưa cập nhật)"}
-                      </td>
-                      <td className="px-3 py-2 align-middle">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            user.role === "TEACHER"
-                              ? "bg-blue-100 text-blue-700"
-                              : user.role === "STUDENT"
-                              ? "bg-green-100 text-green-700"
-                              : user.role === "PARENT"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-slate-900 text-emerald-300"
-                          }`}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 align-middle text-[10px] text-slate-600 max-w-[220px] truncate">
-                        {user.isDisabled
-                          ? user.disabledReason || "Không có lý do cụ thể"
-                          : "—"}
-                      </td>
-                      <td className="px-3 py-2 align-middle">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            user.isDisabled
-                              ? "bg-red-100 text-red-700"
-                              : "bg-emerald-50 text-emerald-700"
-                          }`}
-                        >
-                          {user.isDisabled ? "Đã khoá" : "Hoạt động"}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 align-middle text-right">
-                        <div className="inline-flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={isResetting || isProcessing || isAdminRole}
-                            onClick={() => resetPassword(user)}
-                            className="inline-flex items-center rounded-xl px-3 py-1.5 text-[11px] font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                          >
-                            {isResetting ? "Đang gửi..." : "Reset mật khẩu"}
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={isProcessing || isResetting || isAdminRole}
-                            onClick={() => toggleBan(user)}
-                            className={`inline-flex items-center rounded-xl px-3 py-1.5 text-[11px] font-semibold border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-                              user.isDisabled
-                                ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                                : "border-red-200 text-red-700 hover:bg-red-50"
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {loading && items.length === 0 ? (
+                  <AdminTableSkeleton rows={8} cols={6} />
+                ) : items.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8">
+                      <EmptyState
+                        title="Không có người dùng phù hợp"
+                        description="Thử thay đổi bộ lọc hoặc đặt lại tìm kiếm để xem thêm kết quả."
+                        action={
+                          <div className="flex items-center justify-center gap-2">
+                            <Button type="button" variant="outline" onClick={handleResetFilters}>
+                              Reset bộ lọc
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                setCreateError(null);
+                                setCreateOpen(true);
+                              }}
+                            >
+                              Tạo giáo viên
+                            </Button>
+                          </div>
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((user) => {
+                    const isProcessing = banLoadingId === user.id;
+                    const isResetting = resetLoadingId === user.id;
+                    const isDeleting = deleteLoadingId === user.id;
+                    const isAdminRole = user.role === "ADMIN";
+                    const disabledReason = user.isDisabled
+                      ? user.disabledReason || "Không có lý do cụ thể"
+                      : "—";
+                    return (
+                      <tr key={user.id} className="hover:bg-slate-50/60">
+                        <td className="px-4 py-3 align-middle">
+                          <div className="flex flex-col min-w-0">
+                            <Link
+                              href={`/dashboard/admin/users/${user.id}`}
+                              className="font-semibold text-slate-900 hover:underline truncate"
+                              title={user.email}
+                            >
+                              {user.email}
+                            </Link>
+                            <span className="text-xs text-slate-500">Tạo lúc: {new Date(user.createdAt).toLocaleDateString("vi-VN")}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 align-middle text-slate-700">
+                          {user.fullname || <span className="text-slate-400">(Chưa cập nhật)</span>}
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              user.role === "TEACHER"
+                                ? "bg-blue-100 text-blue-700"
+                                : user.role === "STUDENT"
+                                ? "bg-green-100 text-green-700"
+                                : user.role === "PARENT"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-900 text-emerald-300"
                             }`}
                           >
-                            {isProcessing
-                              ? "Đang xử lý..."
-                              : user.isDisabled
-                              ? "Mở khoá"
-                              : "Khoá tài khoản"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              user.isDisabled ? "bg-red-100 text-red-700" : "bg-emerald-50 text-emerald-700"
+                            }`}
+                          >
+                            {user.isDisabled ? "Đã khoá" : "Hoạt động"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-middle text-slate-600 max-w-[360px] truncate" title={disabledReason}>
+                          {disabledReason}
+                        </td>
+                        <td className="px-4 py-3 align-middle text-right">
+                          <UserRowActionsMenu
+                            disabled={isProcessing || isResetting || isDeleting}
+                            disableReset={isAdminRole}
+                            disableToggle={isAdminRole}
+                            disableDelete={isAdminRole}
+                            onResetPassword={() => resetPassword(user)}
+                            onToggleBan={() => toggleBan(user)}
+                            onDeleteUser={() => requestDeleteUser(user)}
+                            toggleLabel={
+                              isProcessing
+                                ? "Đang xử lý..."
+                                : user.isDisabled
+                                ? "Mở khoá"
+                                : "Khoá tài khoản"
+                            }
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-600">
-          <div>
-            Trang {page} / {totalPages}  Total {total} người dùng
-          </div>
-          <div className="inline-flex gap-2">
-            <button
-              type="button"
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page <= 1}
-              className="rounded-full border border-slate-200 px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-            >
-              Trước
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page >= totalPages}
-              className="rounded-full border border-slate-200 px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-            >
-              Sau
-            </button>
-          </div>
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onPageChange={handlePageChange}
+          />
         </div>
       </div>
 
@@ -688,21 +695,12 @@ export default function AdminUsersPage() {
             </form>
           </div>
           <DialogFooter className="shrink-0">
-            <button
-              type="button"
-              onClick={() => setCreateOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
-            >
+            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
               Hủy
-            </button>
-            <button
-              form="create-teacher-form"
-              type="submit"
-              disabled={createLoading}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button form="create-teacher-form" type="submit" disabled={createLoading}>
               {createLoading ? "Đang tạo..." : "Tạo giáo viên"}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -800,21 +798,38 @@ export default function AdminUsersPage() {
           </div>
 
           <DialogFooter className="shrink-0">
-            <button
-              type="button"
-              onClick={() => setBulkOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
-            >
+            <Button type="button" variant="outline" onClick={() => setBulkOpen(false)}>
               Đóng
-            </button>
-            <button
-              form="bulk-create-teachers-form"
-              type="submit"
-              disabled={bulkLoading}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button form="bulk-create-teachers-form" type="submit" disabled={bulkLoading}>
               {bulkLoading ? "Đang xử lý..." : "Tạo hàng loạt"}
-            </button>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          if (deleteLoadingId) return;
+          setDeleteConfirmOpen(open);
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="w-[min(92vw,40rem)] max-w-lg" onClose={() => setDeleteConfirmOpen(false)}>
+          <DialogHeader>
+            <DialogTitle>Xóa người dùng</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa người dùng{deleteTarget?.email ? `: ${deleteTarget.email}` : ""}? Hành động này có thể không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={!!deleteLoadingId}>
+              Hủy
+            </Button>
+            <Button type="button" onClick={confirmDeleteUser} disabled={!!deleteLoadingId} className="bg-red-600 hover:bg-red-700">
+              {deleteLoadingId ? "Đang xóa..." : "Xác nhận"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

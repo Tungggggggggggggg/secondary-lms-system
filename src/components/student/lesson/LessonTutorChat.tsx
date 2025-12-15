@@ -63,6 +63,7 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
   const [noEmbeddings, setNoEmbeddings] = useState(false);
 
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [activeSources, setActiveSources] = useState<ChatSource[]>([]);
   const [activeSource, setActiveSource] = useState<ChatSource | null>(null);
 
   const [rateLimitOpen, setRateLimitOpen] = useState(false);
@@ -197,6 +198,7 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
         onOpenChange={(open) => {
           setSourceOpen(open);
           if (!open) {
+            setActiveSources([]);
             setActiveSource(null);
           }
         }}
@@ -210,20 +212,50 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
             <DialogDescription>
               {activeSource?.lessonTitle
                 ? `Bài học: ${activeSource.lessonTitle}`
-                : activeSource
-                ? "Chi tiết đoạn trích" 
+                : activeSources.length > 0
+                ? "Chọn một nguồn để xem chi tiết."
                 : ""}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
-            {activeSource ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-[11px] text-slate-600 mb-2">
-                  lessonId: {activeSource.lessonId}  ·  chunkIndex: {activeSource.chunkIndex}  ·  distance: {activeSource.distance.toFixed(4)}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {activeSources.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
+                <div className="space-y-2">
+                  {activeSources.map((s, idx) => {
+                    const isActive =
+                      activeSource?.lessonId === s.lessonId &&
+                      activeSource?.chunkIndex === s.chunkIndex;
+                    return (
+                      <button
+                        key={`${s.lessonId}-${s.chunkIndex}`}
+                        type="button"
+                        onClick={() => setActiveSource(s)}
+                        className={
+                          isActive
+                            ? "w-full text-left rounded-xl border border-slate-200 bg-slate-100 px-3 py-2"
+                            : "w-full text-left rounded-xl border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
+                        }
+                      >
+                        <div className="text-xs font-semibold text-slate-800">Nguồn {idx + 1}</div>
+                        <div className="mt-1 text-[11px] text-slate-600 line-clamp-3">
+                          {s.excerpt}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="whitespace-pre-wrap text-sm text-slate-900">
-                  {activeSource.content || activeSource.excerpt}
+
+                <div>
+                  {activeSource ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="whitespace-pre-wrap text-sm text-slate-900">
+                        {activeSource.content || activeSource.excerpt}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-500">Chọn một nguồn ở bên trái để xem chi tiết.</div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -284,15 +316,25 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
                           key={`${s.lessonId}-${s.chunkIndex}`}
                           type="button"
                           onClick={() => {
-                            const next: ChatSource = {
-                              lessonId: s.lessonId,
-                              chunkIndex: s.chunkIndex,
-                              distance: s.distance,
-                              excerpt: s.excerpt,
-                              content: typeof s.content === "string" ? s.content : s.excerpt,
-                              lessonTitle: typeof s.lessonTitle === "string" ? s.lessonTitle : null,
-                            };
-                            setActiveSource(next);
+                            const list: ChatSource[] = m.sources
+                              ? m.sources
+                                  .map((src) => ({
+                                    lessonId: src.lessonId,
+                                    chunkIndex: src.chunkIndex,
+                                    distance: src.distance,
+                                    excerpt: src.excerpt,
+                                    content: typeof src.content === "string" ? src.content : src.excerpt,
+                                    lessonTitle: typeof src.lessonTitle === "string" ? src.lessonTitle : null,
+                                  }))
+                                  .slice(0, 10)
+                              : [];
+
+                            const next = list.find(
+                              (x) => x.lessonId === s.lessonId && x.chunkIndex === s.chunkIndex
+                            );
+
+                            setActiveSources(list);
+                            setActiveSource(next ?? null);
                             setSourceOpen(true);
                           }}
                           className="group"

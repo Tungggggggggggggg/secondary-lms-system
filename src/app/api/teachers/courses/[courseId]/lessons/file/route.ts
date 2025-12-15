@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import crypto from "crypto";
 
-import { TaskType } from "@google/generative-ai";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { extractTextFromFile } from "@/lib/files/extractTextFromFile";
 import { supabaseAdmin } from "@/lib/supabase";
-import { chunkText } from "@/lib/rag/chunkText";
-import { DEFAULT_EMBEDDING_DIMENSIONALITY, embedTextWithGemini } from "@/lib/ai/gemini-embedding";
+import { indexLessonEmbeddings } from "@/lib/rag/indexLessonEmbeddings";
 
 export const runtime = "nodejs";
 
@@ -25,10 +23,6 @@ function slugifyFileName(name: string): string {
     .replace(/^-|-$|\s+/g, "");
 }
 
-function sha256Hex(text: string): string {
-  return crypto.createHash("sha256").update(text, "utf8").digest("hex");
-}
-
 async function indexLessonEmbeddingsForLesson(params: {
   lessonId: string;
   courseId: string;
@@ -38,57 +32,25 @@ async function indexLessonEmbeddingsForLesson(params: {
 }) {
   const { lessonId, courseId, title, content, maxChars = 1200 } = params;
 
-  const fullText = `# ${title}\n\n${content || ""}`.trim();
-  if (!fullText || fullText.length < 10) {
-    return;
-  }
-
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.error("[LessonEmbedding] Missing GEMINI_API_KEY, skip indexing", { lessonId, courseId });
     return;
   }
 
-  const chunks = chunkText({ text: fullText, maxChars });
-  if (!chunks || chunks.length === 0) {
-    return;
-  }
-
-  let embeddedChunks = 0;
-
-  for (const ch of chunks) {
-    const contentHash = sha256Hex(ch.content);
-
-    const embedding = await embedTextWithGemini({
-      text: ch.content,
-      outputDimensionality: DEFAULT_EMBEDDING_DIMENSIONALITY,
-      taskType: TaskType.RETRIEVAL_DOCUMENT,
-    });
-    if (embedding.length !== DEFAULT_EMBEDDING_DIMENSIONALITY) {
-      throw new Error(`Embedding dimension không hợp lệ: ${embedding.length}`);
-    }
-
-    const vecLiteral = `[${embedding.join(",")}]`;
-    const id = `lec_${lessonId}_${ch.index}`;
-
-    await prisma.$executeRaw`
-      INSERT INTO "lesson_embedding_chunks" (
-        "id", "lessonId", "courseId", "chunkIndex", "content", "contentHash", "embedding", "updatedAt"
-      )
-      VALUES (
-        ${id}, ${lessonId}, ${courseId}, ${ch.index}, ${ch.content}, ${contentHash}, ${vecLiteral}::vector, NOW()
-      )
-      ON CONFLICT ("lessonId", "chunkIndex")
-      DO UPDATE SET
-        "content" = EXCLUDED."content",
-        "contentHash" = EXCLUDED."contentHash",
-        "embedding" = EXCLUDED."embedding",
-        "updatedAt" = NOW();
-    `;
-
-    embeddedChunks += 1;
-  }
-
+  await indexLessonEmbeddings({
+    lessonId,
+    courseId,
+    title,
+    content,
+    options: {
+      maxChars,
+      concurrency: 2,
+      retryAttempts: 2,
+      maxEmbeddings: 300,
+      force: false,
+    },
+  });
 }
 
 const formSchema = z.object({

@@ -5,7 +5,11 @@ import type { FormEvent } from "react";
 import type { DragEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import PageHeader from "@/components/shared/PageHeader";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminPagination from "@/components/admin/AdminPagination";
+import AdminTableSkeleton from "@/components/admin/AdminTableSkeleton";
+import ErrorBanner from "@/components/shared/ErrorBanner";
+import EmptyState from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usePrompt } from "@/components/providers/PromptProvider";
@@ -799,26 +803,25 @@ export default function AdminClassroomDetailPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <PageHeader
-            title={classroom ? `${classroom.icon ? `${classroom.icon} ` : ""}${classroom.name}` : "Chi tiết lớp"}
-            subtitle={classroom ? `Mã lớp: ${classroom.code}` : "Xem thông tin và quản lý lớp học"}
-          />
-          <Button asChild variant="outline" className="rounded-full px-5">
-            <Link href="/dashboard/admin/classrooms">Quay lại</Link>
-          </Button>
-        </div>
+    <div className="p-6">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        <AdminPageHeader
+          title={classroom ? `${classroom.icon ? `${classroom.icon} ` : ""}${classroom.name}` : "Chi tiết lớp"}
+          subtitle={classroom ? `Mã lớp: ${classroom.code}` : "Xem thông tin và quản lý lớp học"}
+          label="Quản trị lớp học"
+          actions={
+            <Button asChild variant="outline">
+              <Link href="/dashboard/admin/classrooms">Quay lại</Link>
+            </Button>
+          }
+        />
 
         {loading ? (
           <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 text-sm text-slate-600">
             Đang tải thông tin lớp...
           </div>
         ) : error ? (
-          <div className="rounded-2xl p-6 shadow-sm border border-red-200 bg-red-50 text-sm text-red-700">
-            {error}
-          </div>
+          <ErrorBanner message={error} onRetry={fetchClassroom} />
         ) : classroom ? (
           <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -868,223 +871,218 @@ export default function AdminClassroomDetailPage() {
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
-              <Button
-                variant="outline"
-                className="rounded-full px-5"
-                onClick={exportStudents}
-              >
+              <Button variant="outline" onClick={exportStudents}>
                 Export CSV
               </Button>
-              <Button
-                variant="outline"
-                className="rounded-full px-5"
-                onClick={toggleArchive}
-              >
+              <Button variant="outline" onClick={toggleArchive}>
                 {classroom.isActive ? "Lưu trữ" : "Khôi phục"}
               </Button>
-              <Button
-                variant="outline"
-                className="rounded-full px-5"
-                onClick={openEdit}
-                disabled={isArchived}
-              >
+              <Button variant="outline" onClick={openEdit} disabled={isArchived}>
                 Sửa lớp
               </Button>
-              <Button
-                variant="outline"
-                className="rounded-full px-5"
-                onClick={openChangeTeacher}
-                disabled={isArchived}
-              >
+              <Button variant="outline" onClick={openChangeTeacher} disabled={isArchived}>
                 Đổi GV
               </Button>
-              <Button
-                className="rounded-full px-5"
-                onClick={openBulkAdd}
-                disabled={isArchived}
-              >
+              <Button onClick={openBulkAdd} disabled={isArchived}>
                 Thêm HS
               </Button>
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={forceDeleteClassroom}
                 disabled={!isArchived || forceDeleting}
-                className="inline-flex items-center justify-center rounded-full border border-red-200 bg-white px-5 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="border-red-200 text-red-700 hover:bg-red-50"
               >
                 {forceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
-              </button>
+              </Button>
             </div>
           </div>
-        ) : null}
-      </div>
-
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="text-sm font-semibold text-slate-800">Danh sách học sinh</div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              fetchStudents(1, studentsSearch);
-            }}
-            className="flex items-center gap-2 w-full md:w-auto"
-          >
-            <input
-              type="text"
-              value={studentsSearch}
-              onChange={(e) => setStudentsSearch(e.target.value)}
-              placeholder="Tìm theo email hoặc họ tên..."
-              className="flex-1 md:w-72 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-            />
-            <button
-              type="submit"
-              className="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800"
-            >
-              Tìm
-            </button>
-          </form>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-[11px] text-slate-600">
-            Đã chọn <span className="font-semibold text-slate-900">{selectedCount}</span> học sinh
-            {selectedCount > 0 && (
-              <span className="text-slate-500"> (chỉ chọn trong trang hiện tại hoặc chọn nhiều trang)</span>
-            )}
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
-            <button
-              type="button"
-              onClick={clearSelection}
-              disabled={selectedCount === 0 || bulkRemoving}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              Bỏ chọn
-            </button>
-            <button
-              type="button"
-              onClick={bulkRemoveSelected}
-              disabled={selectedCount === 0 || bulkRemoving || isArchived}
-              className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-white px-4 py-2 text-[11px] font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {bulkRemoving ? "Đang xóa..." : "Xóa đã chọn"}
-            </button>
-          </div>
-        </div>
-
-        {studentsError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-            {studentsError}
-          </div>
+        ) : (
+          <EmptyState
+            title="Không tìm thấy lớp"
+            description="Lớp có thể đã bị xóa hoặc bạn không có quyền truy cập."
+            action={
+              <Button asChild variant="outline">
+                <Link href="/dashboard/admin/classrooms">Quay lại danh sách lớp</Link>
+              </Button>
+            }
+          />
         )}
 
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
-          <table className="min-w-full divide-y divide-slate-200 text-xs">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600 w-[52px]">
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    checked={allSelectedOnPage}
-                    onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
-                    disabled={isArchived || pageStudentIds.length === 0}
-                    className="h-4 w-4 rounded border-slate-300"
-                    aria-label="Chọn tất cả học sinh trong trang"
-                  />
-                </th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Email</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Họ tên</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Ngày vào lớp</th>
-                <th className="px-3 py-2 text-right font-semibold text-slate-600">Hành động</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {studentsLoading && students.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-[11px] text-slate-500">
-                    Đang tải danh sách học sinh...
-                  </td>
-                </tr>
-              ) : students.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-[11px] text-slate-500">
-                    Chưa có học sinh nào trong lớp.
-                  </td>
-                </tr>
-              ) : (
-                students.map((s) => {
-                  const isRemoving = studentsActionId === s.id;
-                  const isChecked = selectedStudentIds.has(s.id);
-                  return (
-                    <tr key={s.id} className="hover:bg-slate-50/60">
-                      <td className="px-3 py-2 align-middle">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => toggleStudentSelected(s.id, e.target.checked)}
-                          disabled={isArchived}
-                          className="h-4 w-4 rounded border-slate-300"
-                          aria-label={`Chọn học sinh ${s.email}`}
-                        />
-                      </td>
-                      <td className="px-3 py-2 align-middle">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-slate-900 text-xs">{s.email}</span>
-                          <span className="text-[10px] text-slate-500">ID: {s.id.slice(0, 8)}…</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 align-middle text-xs text-slate-700">{s.fullname || "(Chưa cập nhật)"}</td>
-                      <td className="px-3 py-2 align-middle text-[11px] text-slate-700">
-                        {s.joinedAt ? new Date(s.joinedAt).toLocaleString() : "—"}
-                      </td>
-                      <td className="px-3 py-2 align-middle text-right">
-                        <button
-                          type="button"
-                          disabled={isRemoving || isArchived}
-                          onClick={() => removeStudent(s.id)}
-                          className="inline-flex items-center rounded-xl px-3 py-1.5 text-[11px] font-semibold border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {isRemoving ? "Đang xóa..." : "Xóa"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="text-sm font-semibold text-slate-800">Danh sách học sinh</div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                fetchStudents(1, studentsSearch);
+              }}
+              className="flex items-center gap-2 w-full md:w-auto"
+            >
+              <input
+                type="text"
+                value={studentsSearch}
+                onChange={(e) => setStudentsSearch(e.target.value)}
+                placeholder="Tìm theo email hoặc họ tên..."
+                className="flex-1 md:w-72 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              />
+              <Button type="submit" size="sm">
+                Tìm
+              </Button>
+            </form>
+          </div>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-600">
-          <div>
-            Trang {studentsPage} / {totalStudentPages}  Total {studentsTotal} học sinh
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-[11px] text-slate-600">
+              Đã chọn <span className="font-semibold text-slate-900">{selectedCount}</span> học sinh
+              {selectedCount > 0 && (
+                <span className="text-slate-500"> (chỉ chọn trong trang hiện tại hoặc chọn nhiều trang)</span>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={clearSelection} disabled={selectedCount === 0 || bulkRemoving}>
+                Bỏ chọn
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={bulkRemoveSelected}
+                disabled={selectedCount === 0 || bulkRemoving || isArchived}
+                className="border-red-200 text-red-700 hover:bg-red-50"
+              >
+                {bulkRemoving ? "Đang xóa..." : "Xóa đã chọn"}
+              </Button>
+            </div>
           </div>
-          <div className="inline-flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const next = Math.max(1, studentsPage - 1);
-                setStudentsPage(next);
-                fetchStudents(next, studentsSearch);
-              }}
-              disabled={studentsPage <= 1}
-              className="rounded-full border border-slate-200 px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-            >
-              Trước
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const next = Math.min(totalStudentPages, studentsPage + 1);
-                setStudentsPage(next);
-                fetchStudents(next, studentsSearch);
-              }}
-              disabled={studentsPage >= totalStudentPages}
-              className="rounded-full border border-slate-200 px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-            >
-              Sau
-            </button>
-          </div>
+
+          {studentsError ? (
+            <ErrorBanner message={studentsError} onRetry={() => fetchStudents(studentsPage, studentsSearch)} />
+          ) : null}
+
+          {studentsLoading && students.length === 0 ? (
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="min-w-full divide-y divide-slate-200 text-xs">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600 w-[52px]" />
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Email</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Họ tên</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Ngày vào lớp</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-600">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  <AdminTableSkeleton rows={8} cols={5} />
+                </tbody>
+              </table>
+            </div>
+          ) : students.length === 0 ? (
+            <EmptyState
+              title="Chưa có học sinh"
+              description={
+                studentsSearch.trim()
+                  ? "Không tìm thấy học sinh phù hợp với từ khóa hiện tại."
+                  : "Lớp hiện chưa có học sinh. Bạn có thể thêm học sinh ngay từ nút “Thêm HS”."
+              }
+              action={
+                studentsSearch.trim() ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setStudentsSearch("");
+                      setStudentsPage(1);
+                      fetchStudents(1, "");
+                    }}
+                  >
+                    Xóa tìm kiếm
+                  </Button>
+                ) : null
+              }
+              className="border-slate-200"
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="min-w-full divide-y divide-slate-200 text-xs">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600 w-[52px]">
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={allSelectedOnPage}
+                        onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                        disabled={isArchived || pageStudentIds.length === 0}
+                        className="h-4 w-4 rounded border-slate-300"
+                        aria-label="Chọn tất cả học sinh trong trang"
+                      />
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Email</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Họ tên</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Ngày vào lớp</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-600">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {students.map((s) => {
+                    const isRemoving = studentsActionId === s.id;
+                    const isChecked = selectedStudentIds.has(s.id);
+                    return (
+                      <tr key={s.id} className="hover:bg-slate-50/60">
+                        <td className="px-3 py-2 align-middle">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => toggleStudentSelected(s.id, e.target.checked)}
+                            disabled={isArchived}
+                            className="h-4 w-4 rounded border-slate-300"
+                            aria-label={`Chọn học sinh ${s.email}`}
+                          />
+                        </td>
+                        <td className="px-3 py-2 align-middle">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-slate-900 text-xs">{s.email}</span>
+                            <span className="text-[10px] text-slate-500">ID: {s.id.slice(0, 8)}…</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 align-middle text-xs text-slate-700">
+                          {s.fullname || "(Chưa cập nhật)"}
+                        </td>
+                        <td className="px-3 py-2 align-middle text-[11px] text-slate-700">
+                          {s.joinedAt ? new Date(s.joinedAt).toLocaleString() : "—"}
+                        </td>
+                        <td className="px-3 py-2 align-middle text-right">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isRemoving || isArchived}
+                            onClick={() => removeStudent(s.id)}
+                            className="border-red-200 text-red-700 hover:bg-red-50"
+                          >
+                            {isRemoving ? "Đang xóa..." : "Xóa"}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <AdminPagination
+            page={studentsPage}
+            totalPages={totalStudentPages}
+            total={studentsTotal}
+            onPageChange={(next) => {
+              const safe = Math.min(Math.max(1, next), totalStudentPages);
+              setStudentsPage(safe);
+              fetchStudents(safe, studentsSearch);
+            }}
+            className="text-xs"
+          />
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma, type AssignmentType, type QuestionType } from '@prisma/client'
 import { z } from 'zod'
 import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
+import { coercePrismaJson } from '@/lib/prisma-json'
 
 const ALLOWED_QUESTION_TYPES = [
   'SINGLE',
@@ -60,47 +61,6 @@ function normalizeZodIssues(issues: z.ZodIssue[]): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function toNestedJsonValue(value: unknown, depth = 0): Prisma.InputJsonValue | null | undefined {
-  if (depth > 20) return undefined
-  if (value === null) return null
-
-  const t = typeof value
-  if (t === 'string' || t === 'number' || t === 'boolean') return value
-  if (t === 'bigint' || t === 'symbol' || t === 'function' || t === 'undefined') return undefined
-
-  if (Array.isArray(value)) {
-    const arr: Array<Prisma.InputJsonValue | null> = []
-    for (const item of value) {
-      const v = toNestedJsonValue(item, depth + 1)
-      if (v === undefined) return undefined
-      arr.push(v)
-    }
-    return arr
-  }
-
-  if (isRecord(value)) {
-    const obj: Record<string, Prisma.InputJsonValue | null> = {}
-    for (const [k, vUnknown] of Object.entries(value)) {
-      const v = toNestedJsonValue(vUnknown, depth + 1)
-      if (v === undefined) return undefined
-      obj[k] = v
-    }
-    return obj
-  }
-
-  return undefined
-}
-
-function coerceJsonForPrisma(
-  value: unknown,
-): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
-  if (value === undefined) return undefined
-  const nested = toNestedJsonValue(value)
-  if (nested === undefined) return undefined
-  if (nested === null) return Prisma.JsonNull
-  return nested
 }
 
 // Lấy chi tiết bài tập (chỉ giáo viên chủ sở hữu)
@@ -296,7 +256,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         updateData.max_attempts = maxAttempts;
       }
       if (antiCheatConfig !== undefined) {
-        const coerced = coerceJsonForPrisma(antiCheatConfig)
+        const coerced = coercePrismaJson(antiCheatConfig)
         if (coerced === undefined) {
           return errorResponse(400, 'antiCheatConfig không hợp lệ')
         }

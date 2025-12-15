@@ -27,12 +27,15 @@ Hệ thống cung cấp các chức năng cốt lõi như: quản lý lớp họ
 - **Admin Portal (Global Admin)**:
   - Dashboard tổng quan (thống kê users/lớp/bài tập/tổ chức, số tài khoản bị khoá).
   - Quản lý người dùng: danh sách, lọc, tìm kiếm, Ban/Unban tài khoản.
+  - Xóa user (admin-only) với guard an toàn (không xóa ADMIN, không xóa chính mình) + ghi audit.
   - Tạo giáo viên mới (Create Teacher) và tạo **hàng loạt giáo viên** từ danh sách/CSV (UI dạng dialog).
   - Quản lý lớp học toàn hệ thống: danh sách, lọc trạng thái (active/archived), tìm kiếm.
   - Trang chi tiết lớp `/dashboard/admin/classrooms/[id]`: overview + quản lý học sinh.
   - Thao tác lớp: chỉnh sửa lớp (name/code/maxStudents), đổi giáo viên, lưu trữ/khôi phục.
   - Học sinh theo lớp: thêm hàng loạt (text/CSV `fullname,email`), tự tạo tài khoản học sinh nếu email chưa có, export CSV, xoá học sinh (single/bulk).
   - Xem Audit Logs hệ thống.
+  - Chuẩn hoá UI admin theo các component tái sử dụng: `AdminPageHeader`, `AdminPagination`, `AdminTableSkeleton`, `ErrorBanner`, `EmptyState`, toolbar/actions menu theo từng trang.
+  - Sidebar admin được tối ưu khả năng đọc (tăng tương phản) và hạn chế icon đối với role `admin` (logout dùng SVG inline).
 - **AI Quiz Generator**: sinh câu hỏi trắc nghiệm từ nội dung bài học (paste text/file) bằng Google Gemini.
 - **AI Tutor (RAG)** theo bài học: học sinh hỏi trên tab Tutor của mỗi bài, hệ thống truy vấn embeddings từ bảng `lesson_embedding_chunks` (pgvector) và sinh câu trả lời dựa trên nội dung bài học.
 

@@ -23,6 +23,7 @@ Admin Portal là khu vực dành riêng cho quản trị viên hệ thống. Kh�
   - `/dashboard/admin/dashboard` + `GET /api/admin/stats`: thống kê tổng quan users/lớp/bài tập/tổ chức và số tài khoản bị khoá.
   - `/dashboard/admin/users` + `GET /api/admin/users`: danh sách user với phân trang, lọc theo vai trò, tìm kiếm.
   - `POST /api/admin/users/[id]/status`: Ban/Unban user qua `SystemSetting.disabled_users` và ghi `AuditLog`.
+  - `DELETE /api/admin/users/[id]`: xóa user (admin-only) với guard an toàn (không xóa ADMIN, không xóa chính mình) + xử lý lỗi ràng buộc dữ liệu + audit.
   - `POST /api/admin/users`: tạo nhanh giáo viên (Create Teacher) với họ tên, email, mật khẩu (**UI dạng dialog**).
   - `POST /api/admin/users/bulk`: tạo **hàng loạt** giáo viên từ danh sách text hoặc file CSV (**UI dạng dialog**, hỗ trợ kéo‑thả).
   - `/dashboard/admin/classrooms` + `GET /api/admin/classrooms`: quản lý lớp học toàn hệ thống (lọc trạng thái, tìm kiếm, phân trang).
@@ -37,6 +38,12 @@ Admin Portal là khu vực dành riêng cho quản trị viên hệ thống. Kh�
   - Bulk remove học sinh (multi-select) ở trang chi tiết lớp.
   - Khi thêm học sinh hàng loạt có dòng không thêm được: hiển thị dialog liệt kê email + lý do.
   - `/dashboard/admin/audit-logs` + `GET /api/admin/audit-logs`: xem nhật ký hệ thống với phân trang theo cursor.
+  - Chuẩn hoá UI admin theo các component tái sử dụng:
+    - `AdminPageHeader`, `AdminPagination`, `AdminTableSkeleton`
+    - `AdminUsersToolbar`, `AdminClassroomsToolbar`
+    - `UserRowActionsMenu`, `ClassroomRowActionsMenu`
+    - `ErrorBanner`, `EmptyState`
+  - Ghi chú UI: các màn hình admin đã triển khai theo hướng hạn chế icon và tránh phụ thuộc `lucide-react` trong page content.
 
 -----
 
@@ -151,6 +158,10 @@ Sử dụng Sidebar riêng biệt để Admin luôn ý thức được mình đa
   * **Navigation Items:** Overview, Users, Classes, Audit Logs, Settings.
   * **User Menu:** Có nút "Exit Admin View" (về trang chủ) hoặc "Logout".
 
+**Cập nhật UI Sidebar (Admin):**
+  * Tăng tương phản để chữ "EduVerse" và tên admin dễ đọc trên nền tối.
+  * Với role `admin`, sidebar hiển thị theo hướng hạn chế icon; nút đăng xuất sử dụng SVG inline.
+
 ### 5.2. Các màn hình chính
 
   * **Data Tables:** Sử dụng thư viện `@tanstack/react-table` kết hợp Shadcn UI Table.
@@ -172,6 +183,7 @@ Các API này nên được đặt trong `src/app/api/admin/...` để dễ qu�
 | `GET` | `/api/admin/stats` | Lấy số liệu thống kê dashboard. |
 | `GET` | `/api/admin/users` | Lấy danh sách user (có phân trang). |
 | `POST` | `/api/admin/users` | Tạo user mới (Admin create). |
+| `DELETE` | `/api/admin/users/[id]` | Xóa user (có guard và audit log). |
 | `PATCH`| `/api/admin/users/[id]/status` | Ban/Unban user. |
 | `GET` | `/api/admin/audit-logs` | Lấy dữ liệu nhật ký hệ thống. |
 
@@ -185,7 +197,3 @@ Các API này nên được đặt trong `src/app/api/admin/...` để dễ qu�
 4.  **Feature 1 (Users):** Xây dựng trang danh sách User và chức năng Ban/Unban trước (dễ nhất).
 5.  **Feature 2 (Stats):** Viết query đếm số lượng user/class hiển thị lên Dashboard.
 6.  **Feature 3 (Logs):** Viết helper function `logAudit()` và gắn vào các server action quan trọng.
-
-<!-- end list -->
-
-```

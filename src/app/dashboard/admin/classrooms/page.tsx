@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import PageHeader from "@/components/shared/PageHeader";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminClassroomsToolbar from "@/components/admin/AdminClassroomsToolbar";
+import ClassroomRowActionsMenu from "@/components/admin/ClassroomRowActionsMenu";
+import AdminPagination from "@/components/admin/AdminPagination";
+import AdminTableSkeleton from "@/components/admin/AdminTableSkeleton";
+import { EmptyState, ErrorBanner } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { usePrompt } from "@/components/providers/PromptProvider";
 import { Select } from "@/components/ui/select";
@@ -116,6 +121,12 @@ export default function AdminClassroomsPage() {
   const [editError, setEditError] = useState<string | null>(null);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
+
+  const handleResetFilters = () => {
+    setStatus("");
+    setSearch("");
+    fetchClassrooms(1, "", "");
+  };
 
   const fetchClassrooms = async (nextPage = page, nextStatus = status, nextSearch = search) => {
     try {
@@ -777,99 +788,96 @@ export default function AdminClassroomsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <PageHeader title="Quản lý lớp học" subtitle="Danh sách lớp học toàn hệ thống và thao tác lưu trữ" />
-        <div className="flex items-center justify-end gap-3">
-          <Button
-            onClick={() => {
-              setCreateError(null);
-              setTeacherError(null);
-              setTeacherQuery("");
-              setTeacherOptions([]);
-              setCreateTeacherId("");
-              fetchTeachers("");
-              setCreateOpen(true);
-            }}
-            className="rounded-full px-5"
-          >
-            Tạo lớp học
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => fetchClassrooms(page, status, search)}
-            disabled={loading}
-            className="rounded-full px-5"
-          >
-            Tải lại
-          </Button>
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap gap-2">
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.label}
+    <div className="p-6 sm:p-8">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        <AdminPageHeader
+          title="Quản lý lớp học"
+          subtitle="Danh sách lớp học toàn hệ thống và thao tác lưu trữ"
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
                 type="button"
-                onClick={() => handleStatusChange(opt.value)}
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${
-                  status === opt.value
-                    ? "bg-slate-900 text-white border-transparent"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                }`}
+                size="sm"
+                onClick={() => {
+                  setCreateError(null);
+                  setTeacherError(null);
+                  setTeacherQuery("");
+                  setTeacherOptions([]);
+                  setCreateTeacherId("");
+                  fetchTeachers("");
+                  setCreateOpen(true);
+                }}
               >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+                Tạo lớp học
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fetchClassrooms(page, status, search)}
+                disabled={loading}
+              >
+                Tải lại
+              </Button>
+            </div>
+          }
+        />
 
-          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full md:w-auto">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo mã lớp, tên lớp, giáo viên..."
-              className="flex-1 md:w-80 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-            />
-            <button
-              type="submit"
-              className="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800"
-            >
-              Tìm kiếm
-            </button>
-          </form>
-        </div>
+        {error ? <ErrorBanner message={error} onRetry={() => fetchClassrooms(page, status, search)} /> : null}
 
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-            {error}
-          </div>
-        )}
+        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+          <AdminClassroomsToolbar
+            statusOptions={STATUS_OPTIONS}
+            statusValue={status}
+            onStatusChange={handleStatusChange}
+            search={search}
+            onSearchChange={setSearch}
+            onSubmit={() => fetchClassrooms(1, status, search)}
+            onReset={handleResetFilters}
+          />
 
         <div className="overflow-x-auto rounded-xl border border-slate-100">
-          <table className="min-w-full divide-y divide-slate-200 text-xs">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Lớp</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Giáo viên</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Học sinh</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Trạng thái</th>
-                <th className="px-3 py-2 text-right font-semibold text-slate-600">Hành động</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Lớp</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Giáo viên</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Học sinh</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-600">Trạng thái</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-600">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {loading && items.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-[11px] text-slate-500">
-                    Đang tải danh sách lớp học...
-                  </td>
-                </tr>
+                <AdminTableSkeleton rows={8} cols={5} />
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-[11px] text-slate-500">
-                    Không có lớp học nào phù hợp với bộ lọc.
+                  <td colSpan={5} className="px-4 py-8">
+                    <EmptyState
+                      title="Không có lớp học phù hợp"
+                      description="Thử thay đổi bộ lọc hoặc đặt lại tìm kiếm để xem thêm kết quả."
+                      action={
+                        <div className="flex items-center justify-center gap-2">
+                          <Button type="button" variant="outline" onClick={handleResetFilters}>
+                            Reset bộ lọc
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              setCreateError(null);
+                              setTeacherError(null);
+                              setTeacherQuery("");
+                              setTeacherOptions([]);
+                              setCreateTeacherId("");
+                              fetchTeachers("");
+                              setCreateOpen(true);
+                            }}
+                          >
+                            Tạo lớp học
+                          </Button>
+                        </div>
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
@@ -878,26 +886,26 @@ export default function AdminClassroomsPage() {
                   const isArchived = !c.isActive;
                   return (
                     <tr key={c.id} className="hover:bg-slate-50/60">
-                      <td className="px-3 py-2 align-middle">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-slate-900 text-xs">
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-slate-900 truncate" title={c.name}>
                             {c.icon ? `${c.icon} ` : ""}{c.name}
                           </span>
-                          <span className="text-[10px] text-slate-500">Mã: {c.code}</span>
+                          <span className="text-xs text-slate-500">Mã: {c.code}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-2 align-middle">
-                        <div className="flex flex-col">
-                          <span className="text-slate-800">{c.teacher?.fullname || "(Chưa cập nhật)"}</span>
-                          <span className="text-[10px] text-slate-500">{c.teacher?.email || "—"}</span>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-slate-800 truncate" title={c.teacher?.fullname || ""}>{c.teacher?.fullname || "(Chưa cập nhật)"}</span>
+                          <span className="text-xs text-slate-500 truncate" title={c.teacher?.email || ""}>{c.teacher?.email || "—"}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-2 align-middle text-[11px] text-slate-700">
+                      <td className="px-4 py-3 align-middle text-slate-700">
                         {c._count?.students ?? 0} / {c.maxStudents}
                       </td>
-                      <td className="px-3 py-2 align-middle">
+                      <td className="px-4 py-3 align-middle">
                         <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
                             c.isActive
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
                               : "bg-slate-100 text-slate-700 border border-slate-200"
@@ -906,29 +914,22 @@ export default function AdminClassroomsPage() {
                           {c.isActive ? "Hoạt động" : "Đã lưu trữ"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 align-middle text-right">
+                      <td className="px-4 py-3 align-middle text-right">
                         <div className="inline-flex items-center gap-2">
-                          <Button asChild variant="outline" className="rounded-full h-9 px-4 text-[11px]">
+                          <Button asChild variant="outline" size="sm">
                             <Link href={`/dashboard/admin/classrooms/${c.id}`}>Chi tiết</Link>
                           </Button>
 
-                          <button
-                            type="button"
+                          <ClassroomRowActionsMenu
                             disabled={isProcessing}
-                            onClick={() => toggleArchive(c)}
-                            className={`inline-flex items-center rounded-xl px-3 py-1.5 text-[11px] font-semibold border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-                              c.isActive
-                                ? "border-slate-200 text-slate-700 hover:bg-slate-50"
-                                : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                            }`}
-                          >
-                            {isProcessing ? "Đang xử lý..." : c.isActive ? "Lưu trữ" : "Khôi phục"}
-                          </button>
+                            isArchived={isArchived}
+                            onOpenStudents={() => openStudentsDialog(c)}
+                            onOpenBulkAddStudents={() => openBulkAddStudents(c)}
+                            onOpenEdit={() => openEditClassroom(c)}
+                            onOpenChangeTeacher={() => openChangeTeacherDialog(c)}
+                            onToggleArchive={() => toggleArchive(c)}
+                          />
                         </div>
-
-                        {isArchived && (
-                          <div className="mt-1 text-[10px] text-slate-500">Lớp đã lưu trữ: chỉ xem/khôi phục</div>
-                        )}
                       </td>
                     </tr>
                   );
@@ -938,30 +939,7 @@ export default function AdminClassroomsPage() {
           </table>
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-600">
-          <div>
-            Trang {page} / {totalPages}  Total {total} lớp học
-          </div>
-          <div className="inline-flex gap-2">
-            <button
-              type="button"
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page <= 1}
-              className="rounded-full border border-slate-200 px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-            >
-              Trước
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page >= totalPages}
-              className="rounded-full border border-slate-200 px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-            >
-              Sau
-            </button>
-          </div>
-        </div>
-
+        <AdminPagination page={page} totalPages={totalPages} total={total} onPageChange={handlePageChange} />
       </div>
 
       <Dialog
@@ -1594,6 +1572,7 @@ export default function AdminClassroomsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

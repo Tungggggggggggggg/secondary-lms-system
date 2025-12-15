@@ -7,12 +7,32 @@ import { useSidebarState } from "@/hooks/useSidebarState";
 import { isActivePath } from "@/utils/routing";
 import { SidebarToggleButton } from "@/components/shared";
 import { useUnreadTotal } from "@/hooks/use-chat";
-import { LogOut } from "lucide-react";
 import Tooltip from "@/components/ui/tooltip";
 import { AccordionItem } from "@/components/ui/accordion";
 import type { CSSProperties } from "react";
 import { sidebarConfig } from "@/constants/sidebar.config";
 import { NotificationBell } from "@/components/shared";
+
+function LogoutGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M10 17l5-5-5-5" />
+      <path d="M15 12H3" />
+      <path d="M21 3v18" />
+    </svg>
+  );
+}
 
 type DashboardRole = "teacher" | "student" | "parent" | "admin";
 
@@ -152,6 +172,13 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
     borderColor: rolePalette.border,
   };
 
+  const isAdmin = role === "admin";
+  const brandTextClass = isAdmin ? "text-slate-100" : "text-slate-900";
+  const profileCardClass = isAdmin ? "border-slate-700/60 bg-slate-900/30" : "border-gray-200";
+  const avatarClass = isAdmin ? "bg-slate-800 text-slate-100" : "bg-gray-100 text-slate-700";
+  const nameClass = isAdmin ? "text-slate-100" : "text-slate-900";
+  const groupHeaderClass = isAdmin ? "text-slate-400 hover:bg-slate-800/50" : "text-slate-600 hover:bg-gray-50";
+
   return (
     <aside
       style={containerStyle}
@@ -167,7 +194,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
         >
           {expanded && (
             <div className="flex items-center gap-2">
-              <span className="text-xl font-extrabold text-slate-900">EduVerse</span>
+              <span className={`text-xl font-extrabold ${brandTextClass}`}>EduVerse</span>
             </div>
           )}
           <div className="flex items-center gap-2">
@@ -181,14 +208,16 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
             />
           </div>
         </div>
-        <div className={`${expanded ? "rounded-xl border border-gray-200 p-3 mb-4" : "hidden"}`}>
+        <div className={`${expanded ? `rounded-xl border p-3 mb-4 ${profileCardClass}` : "hidden"}`}>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-sm font-semibold text-slate-700">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold ${avatarClass}`}>
               {userAny?.name?.charAt(0).toUpperCase() || defaultInitial}
             </div>
             {expanded && (
               <div className="min-w-0">
-                <h3 className="font-semibold text-slate-900 truncate" title={displayName}>{displayName}</h3>
+                <h3 className={`font-semibold truncate ${nameClass}`} title={displayName}>
+                  {displayName}
+                </h3>
                 <p className={`text-xs ${accent.textAccent}`}>{roleLabel}</p>
               </div>
             )}
@@ -209,7 +238,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                 key={group.title}
                 title={group.title.toUpperCase()}
                 defaultOpen
-                headerClassName="text-slate-600 hover:bg-gray-50"
+                headerClassName={groupHeaderClass}
               >
                 {group.items.map((item) => {
                   const active = isActive(item.href);
@@ -226,7 +255,9 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                       {active && (
                         <span className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full ${accent.indicator}`} aria-hidden="true" />
                       )}
-                      <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
+                      {isAdmin ? null : (
+                        <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
+                      )}
                       <span className={`transition-colors duration-200 ${active ? accent.labelActive : accent.labelBase}`}>{item.label}</span>
                       {active && (
                         <span className="sr-only" aria-current="page">Trang hiện tại</span>
@@ -261,7 +292,15 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                   )}
                   <div className="relative flex items-center justify-center">
                     <Tooltip content={item.label}>
-                      <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
+                      {isAdmin ? (
+                        <span className={`h-9 w-9 inline-flex items-center justify-center rounded-lg border ${
+                          active ? "border-slate-700 bg-slate-800" : "border-transparent"
+                        } text-[11px] font-bold text-slate-100`}>
+                          {item.label.slice(0, 1).toUpperCase()}
+                        </span>
+                      ) : (
+                        <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
+                      )}
                     </Tooltip>
                     {isMessages && unreadBadge && (
                       <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
@@ -286,7 +325,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
             title={!expanded ? "Đăng xuất" : undefined}
             aria-label={!expanded ? "Đăng xuất" : undefined}
           >
-            <LogOut className="h-5 w-5" aria-hidden="true" />
+            <LogoutGlyph className="h-5 w-5" />
             {expanded && <span>Đăng xuất</span>}
           </button>
         </div>

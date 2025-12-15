@@ -5,6 +5,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
+import { auditRepo } from "@/lib/repositories/audit-repo";
 import { errorResponse } from "@/lib/api-utils";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -146,6 +147,85 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     });
   } catch (error) {
     console.error("[API /api/admin/users/[id] GET] Error", error);
+    return errorResponse(500, "Internal server error");
+  }
+}
+
+export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      return errorResponse(403, "Forbidden - Admins only");
+    }
+
+    const parsedParams = paramsSchema.safeParse(ctx?.params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Missing user id");
+    }
+
+    const userId = parsedParams.data.id;
+    if (userId === session.user.id) {
+      return errorResponse(400, "Không thể xóa chính tài khoản đang đăng nhập.");
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true },
+    });
+
+    if (!target) {
+      return errorResponse(404, "User not found");
+    }
+
+    if (String(target.role) === "ADMIN") {
+      return errorResponse(400, "Không thể xóa tài khoản ADMIN");
+    }
+
+    const currentDisabled = await settingsRepo.get("disabled_users");
+    const nextDisabled: unknown[] = Array.isArray(currentDisabled)
+      ? currentDisabled.filter((item) => {
+          if (typeof item === "string") return item !== userId;
+          if (isRecord(item) && typeof item.id === "string") return item.id !== userId;
+          return true;
+        })
+      : [];
+
+    await prisma.$transaction(async (tx) => {
+      await settingsRepo.set("disabled_users", nextDisabled);
+      await tx.user.delete({ where: { id: userId } });
+    });
+
+    try {
+      await auditRepo.write({
+        actorId: session.user.id,
+        actorRole: "ADMIN",
+        action: "USER_DELETE",
+        entityType: "USER",
+        entityId: userId,
+        metadata: {
+          targetEmail: target.email,
+          targetRole: String(target.role),
+        },
+      });
+    } catch {}
+
+    return NextResponse.json({ success: true, data: { id: userId } }, { status: 200 });
+  } catch (error: unknown) {
+    const code =
+      !!error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code) : null;
+
+    if (code === "P2003") {
+      return errorResponse(
+        409,
+        "Không thể xóa người dùng vì còn dữ liệu liên quan. Hãy dùng thao tác 'Khoá tài khoản' thay vì xoá.",
+        { details: { code } }
+      );
+    }
+    if (code === "P2025") {
+      return errorResponse(404, "User not found", { details: { code } });
+    }
+
+    console.error("[API /api/admin/users/[id] DELETE] Error", error);
     return errorResponse(500, "Internal server error");
   }
 }

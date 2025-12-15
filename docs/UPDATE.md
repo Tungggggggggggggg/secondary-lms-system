@@ -10,6 +10,8 @@
 ### 1.1. Hiện trạng
 Hệ thống `secondary-lms-system` hiện tại đã hoàn thiện các chức năng quản lý học tập cơ bản (Core LMS) như: quản lý lớp học, bài tập (Essay/Quiz), nộp bài qua file và giao tiếp cơ bản.
 
+Ngoài Core LMS, hệ thống đã có **Admin Portal** phục vụ vận hành: quản lý người dùng/lớp học toàn hệ thống, audit log và các thao tác quản trị.
+
 ### 1.2. Vấn đề tồn tại
 Tuy nhiên, mô hình LMS truyền thống đang gặp phải các hạn chế:
 - **Gánh nặng cho giáo viên:** Tốn quá nhiều thời gian để chấm bài tự luận và soạn bộ câu hỏi trắc nghiệm thủ công.
@@ -97,3 +99,5 @@ Hệ thống giữ nguyên Tech Stack hiện tại (Next.js App Router, Supabase
 
 ## 5. Kết luận
 Việc tích hợp **Gemini API** không chỉ giúp hệ thống `secondary-lms-system` bắt kịp xu hướng công nghệ giáo dục (EdTech) hiện đại mà còn giải quyết triệt để các bài toán về hiệu suất làm việc của giáo viên và trải nghiệm cá nhân hóa của học sinh. Đây là điểm nhấn quan trọng giúp đồ án đạt được hàm lượng công nghệ cao và giá trị thực tiễn lớn.
+
+Ghi chú triển khai kèm theo: Admin Portal đã được cải tiến theo hướng chuẩn hoá UI/UX để demo và vận hành ổn định hơn (chuẩn hoá trạng thái loading/error/empty/pagination, bổ sung thao tác xóa user có guard/audit, tối ưu sidebar admin để dễ đọc).

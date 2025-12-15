@@ -3,6 +3,7 @@
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import DashboardSidebar from "@/components/layout/Sidebar";
+import { RoleThemeProvider } from "@/components/providers/RoleThemeProvider";
 
 export default function AdminLayout({
   children,
@@ -11,13 +12,15 @@ export default function AdminLayout({
 }) {
   return (
     <ProtectedRoute allowedRoles={["ADMIN"]}>
-      <DashboardLayout
-        role="admin"
-        sidebarStateKey="sidebar:admin"
-        sidebar={<DashboardSidebar role="admin" />}
-      >
-        {children}
-      </DashboardLayout>
+      <RoleThemeProvider color="violet">
+        <DashboardLayout
+          role="admin"
+          sidebarStateKey="sidebar:admin"
+          sidebar={<DashboardSidebar role="admin" />}
+        >
+          {children}
+        </DashboardLayout>
+      </RoleThemeProvider>
     </ProtectedRoute>
   );
 }
