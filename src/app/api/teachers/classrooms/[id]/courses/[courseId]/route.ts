@@ -10,8 +10,9 @@ export async function DELETE(
   ctx: { params: { id: string; courseId: string } }
 ) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const classroomId = ctx?.params?.id;
     const courseId = ctx?.params?.courseId;

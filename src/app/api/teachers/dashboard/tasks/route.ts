@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils';
 
 interface TeacherPendingAssignmentRow {
   id: string;
@@ -39,6 +38,19 @@ interface TeacherCompletedAssignmentRow {
   }[];
 }
 
+type TeacherDashboardTaskPriority = 'URGENT' | 'IMPORTANT' | 'NORMAL' | 'COMPLETED';
+
+type TeacherDashboardTask = {
+  id: string;
+  type: 'ASSIGNMENT';
+  title: string;
+  detail: string;
+  priority: TeacherDashboardTaskPriority;
+  dueDate: Date;
+  relatedClassroom: string;
+  relatedId: string;
+};
+
 /**
  * API: GET /api/teachers/dashboard/tasks
  * Mục đích: Lấy danh sách công việc sắp tới của teacher
@@ -48,34 +60,19 @@ interface TeacherCompletedAssignmentRow {
  */
 export async function GET(req: NextRequest) {
   try {
-    console.log('[API /api/teachers/dashboard/tasks] Bắt đầu xử lý request...');
-
-    // Xác thực người dùng
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      console.error('[API /api/teachers/dashboard/tasks] Không có session');
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return errorResponse(401, 'Unauthorized');
     }
 
-    const userId = session.user.id;
-    const userRole = session.user.role;
-
-    // Kiểm tra role teacher
-    if (userRole !== 'TEACHER') {
-      console.error('[API /api/teachers/dashboard/tasks] User không phải teacher');
-      return NextResponse.json(
-        { success: false, message: 'Forbidden - Only teachers can access this endpoint' },
-        { status: 403 }
-      );
+    if (authUser.role !== 'TEACHER') {
+      return errorResponse(403, 'Forbidden - Only teachers can access this endpoint');
     }
 
-    console.log(`[API /api/teachers/dashboard/tasks] Teacher ID: ${userId}`);
+    const userId = authUser.id;
 
     const now = new Date();
-    const tasks: any[] = [];
+    const tasks: TeacherDashboardTask[] = [];
 
     const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
@@ -193,7 +190,12 @@ export async function GET(req: NextRequest) {
     });
 
     // Sắp xếp theo priority và dueDate
-    const priorityOrder = { URGENT: 0, IMPORTANT: 1, NORMAL: 2, COMPLETED: 3 };
+    const priorityOrder: Record<TeacherDashboardTaskPriority, number> = {
+      URGENT: 0,
+      IMPORTANT: 1,
+      NORMAL: 2,
+      COMPLETED: 3,
+    };
     tasks.sort((a, b) => {
       const priorityDiff = priorityOrder[a.priority as keyof typeof priorityOrder] - 
                           priorityOrder[b.priority as keyof typeof priorityOrder];
@@ -201,22 +203,13 @@ export async function GET(req: NextRequest) {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
 
-    console.log('[API /api/teachers/dashboard/tasks] Tasks:', tasks.length);
-
     return NextResponse.json({
       success: true,
       data: tasks.slice(0, 5), // Lấy tối đa 5 tasks
     });
 
   } catch (error) {
-    console.error('[API /api/teachers/dashboard/tasks] Lỗi:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    console.error('[ERROR] [GET] /api/teachers/dashboard/tasks', error);
+    return errorResponse(500, 'Internal server error');
   }
 }

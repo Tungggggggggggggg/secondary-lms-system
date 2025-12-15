@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
 
 interface TeacherClassroomAssignmentSummary {
   id: string;
@@ -8,6 +9,13 @@ interface TeacherClassroomAssignmentSummary {
   type: string;
   dueDate: Date | null;
 }
+
+const querySchema = z.object({
+  status: z.enum(["all", "graded", "ungraded"]).default("all"),
+  search: z.string().max(200).default(""),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
 
 // GET: Danh sách submissions/grades của lớp cho giáo viên (newest-first, filter, search)
 export async function GET(
@@ -18,33 +26,36 @@ export async function GET(
   try {
     const classroomId = params.id;
     if (!classroomId) {
-      return NextResponse.json(
-        { success: false, message: "classroomId is required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "classroomId is required", { requestId });
     }
 
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized", requestId },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized", { requestId });
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
 
     const owns = await isTeacherOfClassroom(user.id, classroomId);
     if (!owns) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your classroom", requestId },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your classroom", { requestId });
     }
 
     const { searchParams } = new URL(req.url);
-    const status = (searchParams.get("status") || "all") as "all" | "graded" | "ungraded";
-    const search = (searchParams.get("search") || "").trim().toLowerCase();
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "20", 10)));
+    const parsedQuery = querySchema.safeParse({
+      status: searchParams.get("status") || undefined,
+      search: searchParams.get("search") || undefined,
+      page: searchParams.get("page") || undefined,
+      pageSize: searchParams.get("pageSize") || undefined,
+    });
+    if (!parsedQuery.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        requestId,
+        details: parsedQuery.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
+    }
+
+    const status = parsedQuery.data.status;
+    const search = parsedQuery.data.search.trim().toLowerCase();
+    const page = parsedQuery.data.page;
+    const pageSize = parsedQuery.data.pageSize;
 
     // Lấy assignmentIds của lớp
     const ac = await prisma.assignmentClassroom.findMany({
@@ -243,15 +254,12 @@ export async function GET(
     );
     res.headers.set("Cache-Control", "public, max-age=10, s-maxage=30, stale-while-revalidate=60");
     return res;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `[ERROR] [GET] /api/teachers/classrooms/${params.id}/grades {requestId:${requestId}}`,
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error", requestId },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 

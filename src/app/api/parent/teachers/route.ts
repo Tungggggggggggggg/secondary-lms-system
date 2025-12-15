@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 
 interface ParentTeacherClassroomRow {
@@ -26,13 +26,9 @@ interface ParentTeacherClassroomRow {
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req, "PARENT");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "PARENT") return errorResponse(403, "Forbidden - Parent role required");
 
     // Lấy danh sách tất cả con của phụ huynh
     const relationships = await prisma.parentStudent.findMany({
@@ -149,11 +145,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: unknown) {
     console.error("[GET /api/parent/teachers] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

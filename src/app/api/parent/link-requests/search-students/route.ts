@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+
+const querySchema = z
+  .object({
+    q: z.string().max(200).optional(),
+    limit: z.coerce.number().int().min(1).max(50).optional(),
+    skip: z.coerce.number().int().min(0).max(10_000).optional(),
+  })
+  .strict();
 
 interface ParentSearchStudentClassroomRow {
   classroom: {
@@ -36,9 +45,18 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     }
 
     const { searchParams } = new URL(req.url);
-    const query = searchParams.get("q") || "";
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const skip = parseInt(searchParams.get("skip") || "0");
+    const parsedQuery = querySchema.safeParse({
+      q: searchParams.get("q") || undefined,
+      limit: searchParams.get("limit") || undefined,
+      skip: searchParams.get("skip") || undefined,
+    });
+    if (!parsedQuery.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ");
+    }
+
+    const query = parsedQuery.data.q ?? "";
+    const limit = parsedQuery.data.limit ?? 20;
+    const skip = parsedQuery.data.skip ?? 0;
 
     // Build search conditions
     const where = {
@@ -78,12 +96,8 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       prisma.user.count({ where }),
     ]);
 
-    const students = studentsRaw as ParentSearchStudentRow[];
-
     // Kiểm tra xem đã có link hoặc request chưa
-    const studentIds = students.map(
-      (s: ParentSearchStudentRow) => s.id,
-    );
+    const studentIds = studentsRaw.map((s) => s.id);
     
     const [existingLinks, existingRequests] = await Promise.all([
       prisma.parentStudent.findMany({
@@ -115,7 +129,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     );
 
     // Format kết quả
-    const results = students.map((student: ParentSearchStudentRow) => ({
+    const results = studentsRaw.map((student) => ({
       id: student.id,
       email: student.email,
       fullname: student.fullname,
@@ -134,7 +148,6 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     });
   } catch (error: unknown) {
     console.error("[GET /api/parent/link-requests/search-students] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "PARENT_SEARCH_STUDENTS");

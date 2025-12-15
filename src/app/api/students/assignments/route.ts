@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 
 interface StudentAssignmentSubmissionRow {
   id: string;
@@ -47,13 +47,9 @@ interface StudentAssignmentRow {
 export async function GET(req: NextRequest) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "STUDENT");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden - Student role required");
 
     // OPTIMIZE: Lấy classrooms trước, sau đó filter trực tiếp thay vì nested some()
     const studentClassrooms = await prisma.classroomStudent.findMany({
@@ -195,10 +191,6 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    console.log(
-      `[INFO] [GET] /api/students/assignments - Found ${assignments.length} assignments for student: ${user.id}`
-    );
-
     return NextResponse.json(
       { success: true, data: assignments },
       { status: 200 }
@@ -208,10 +200,6 @@ export async function GET(req: NextRequest) {
       "[ERROR] [GET] /api/students/assignments - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

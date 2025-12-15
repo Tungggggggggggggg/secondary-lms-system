@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isTeacherOfClassroom, isTeacherOfAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfClassroom, isTeacherOfAssignment } from "@/lib/api-utils";
+
+const postSchema = z
+  .object({
+    assignmentId: z.string().min(1),
+  })
+  .strict();
 
 interface AssignmentClassroomRow {
   addedAt: Date;
@@ -38,23 +45,16 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const classroomId = params.id;
 
     // Optimize: Kiểm tra teacher có sở hữu classroom không (single query)
     const isOwner = await isTeacherOfClassroom(user.id, classroomId);
     if (!isOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your classroom" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your classroom");
     }
 
     // Optimize: Sử dụng select thay vì include để chỉ lấy fields cần thiết
@@ -120,23 +120,16 @@ export async function GET(
       },
     );
 
-    console.log(
-      `[INFO] [GET] /api/classrooms/${classroomId}/assignments - Found ${assignments.length} assignments`
-    );
-
     return NextResponse.json(
       { success: true, data: assignments },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/classrooms/[id]/assignments - Error:",
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 
@@ -150,24 +143,20 @@ export async function POST(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const classroomId = params.id;
-    const body = await req.json();
-    const { assignmentId } = body as { assignmentId?: string };
-
-    if (!assignmentId) {
-      return NextResponse.json(
-        { success: false, message: "assignmentId is required" },
-        { status: 400 }
-      );
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = postSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
+
+    const { assignmentId } = parsedBody.data;
 
     // Optimize: Parallel queries - Kiểm tra classroom ownership + assignment ownership
     const [isClassroomOwner, isAssignmentOwner] = await Promise.all([
@@ -176,20 +165,11 @@ export async function POST(
     ]);
 
     if (!isClassroomOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your classroom" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your classroom");
     }
 
     if (!isAssignmentOwner) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Forbidden - Assignment does not belong to you",
-        },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Assignment does not belong to you");
     }
 
     // Kiểm tra assignment đã được thêm vào classroom chưa
@@ -203,13 +183,7 @@ export async function POST(
     });
 
     if (existing) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Assignment already added to this classroom",
-        },
-        { status: 409 }
-      );
+      return errorResponse(409, "Assignment already added to this classroom");
     }
 
     // Thêm assignment vào classroom
@@ -242,10 +216,6 @@ export async function POST(
       },
     });
 
-    console.log(
-      `[INFO] [POST] /api/classrooms/${classroomId}/assignments - Added assignment ${assignmentId}`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -257,15 +227,12 @@ export async function POST(
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [POST] /api/classrooms/[id]/assignments - Error:",
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 
@@ -284,30 +251,20 @@ export async function DELETE(
       params.assignmentId || url.searchParams.get("assignmentId");
 
     if (!assignmentId) {
-      return NextResponse.json(
-        { success: false, message: "assignmentId is required" },
-        { status: 400 }
-      );
+      return errorResponse(400, "assignmentId is required");
     }
 
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const classroomId = params.id;
 
     // Optimize: Kiểm tra teacher có sở hữu classroom không (single query)
     const isOwner = await isTeacherOfClassroom(user.id, classroomId);
     if (!isOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your classroom" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your classroom");
     }
 
     // Kiểm tra assignment có được thêm vào classroom không
@@ -321,13 +278,7 @@ export async function DELETE(
     });
 
     if (!assignmentClassroom) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Assignment not found in this classroom",
-        },
-        { status: 404 }
-      );
+      return errorResponse(404, "Assignment not found in this classroom");
     }
 
     // Xóa assignment khỏi classroom
@@ -340,10 +291,6 @@ export async function DELETE(
       },
     });
 
-    console.log(
-      `[INFO] [DELETE] /api/classrooms/${classroomId}/assignments - Removed assignment ${assignmentId}`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -351,14 +298,11 @@ export async function DELETE(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [DELETE] /api/classrooms/[id]/assignments - Error:",
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

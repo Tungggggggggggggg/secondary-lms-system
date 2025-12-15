@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { z } from "zod";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
+
+const querySchema = z
+    .object({
+        assignmentId: z.string().min(1).max(100),
+    })
+    .strict();
 
 const MIME_WHITELIST = new Set([
     "application/pdf",
@@ -26,30 +33,36 @@ function slugifyFileName(name: string): string {
 export async function POST(req: NextRequest) {
     const requestId = crypto.randomUUID();
     try {
-        const user = await getAuthenticatedUser(req, "STUDENT");
-        if (!user) {
-            return NextResponse.json({ success: false, message: "Unauthorized", requestId }, { status: 401 });
-        }
+        const user = await getAuthenticatedUser(req);
+        if (!user) return errorResponse(401, "Unauthorized", { requestId });
+        if (user.role !== "STUDENT") return errorResponse(403, "Forbidden", { requestId });
 
         const url = new URL(req.url);
-        const assignmentId = url.searchParams.get("assignmentId");
-        if (!assignmentId) {
-            return NextResponse.json({ success: false, message: "assignmentId is required", requestId }, { status: 400 });
+        const parsedQuery = querySchema.safeParse({
+            assignmentId: url.searchParams.get("assignmentId") ?? "",
+        });
+        if (!parsedQuery.success) {
+            return errorResponse(400, "Dữ liệu không hợp lệ", {
+                requestId,
+                details: parsedQuery.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+            });
         }
+
+        const { assignmentId } = parsedQuery.data;
 
         const form = await req.formData();
         const file = form.get("file");
         if (!file || !(file instanceof File)) {
-            return NextResponse.json({ success: false, message: "file is required", requestId }, { status: 400 });
+            return errorResponse(400, "file is required", { requestId });
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            return NextResponse.json({ success: false, message: "File exceeds 20MB limit", requestId }, { status: 413 });
+            return errorResponse(413, "File exceeds 20MB limit", { requestId });
         }
 
         const contentType = file.type || "application/octet-stream";
         if (contentType && !MIME_WHITELIST.has(contentType)) {
-            return NextResponse.json({ success: false, message: "Unsupported file type", requestId }, { status: 415 });
+            return errorResponse(415, "Unsupported file type", { requestId });
         }
 
         const originalName = typeof (file as File).name === "string" ? (file as File).name : "file";
@@ -58,7 +71,7 @@ export async function POST(req: NextRequest) {
 
         const arrayBuffer = await file.arrayBuffer();
         if (!supabaseAdmin) {
-            return NextResponse.json({ success: false, message: "Supabase admin client is not available", requestId }, { status: 500 });
+            return errorResponse(500, "Supabase admin client is not available", { requestId });
         }
         const admin = supabaseAdmin;
         const { data, error } = await admin.storage
@@ -67,7 +80,7 @@ export async function POST(req: NextRequest) {
 
         if (error) {
             console.error(`[ERROR] [POST] /api/submissions/upload - Upload failed {requestId:${requestId}}`, error);
-            return NextResponse.json({ success: false, message: "Upload failed", requestId }, { status: 500 });
+            return errorResponse(500, "Upload failed", { requestId });
         }
 
         return NextResponse.json({
@@ -76,9 +89,9 @@ export async function POST(req: NextRequest) {
             data: { storagePath: data?.path, fileName: originalName, mimeType: contentType, sizeBytes: file.size },
             requestId,
         }, { status: 201 });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error(`[ERROR] [POST] /api/submissions/upload {requestId:${requestId}}`, error);
-        return NextResponse.json({ success: false, message: "Internal server error", requestId }, { status: 500 });
+        return errorResponse(500, "Internal server error", { requestId });
     }
 }
 

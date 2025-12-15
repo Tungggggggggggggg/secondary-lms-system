@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getAuthenticatedUser, isTeacherOfAssignment, getRequestId } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment, getRequestId } from "@/lib/api-utils";
 
 const BUCKET =
   process.env.SUPABASE_ASSIGNMENTS_BUCKET ||
@@ -16,25 +16,16 @@ export async function GET(
   try {
     const admin = supabaseAdmin;
     if (!admin) {
-      return NextResponse.json(
-        { success: false, message: "Storage client not initialized", requestId },
-        { status: 500 }
-      );
+      return errorResponse(500, "Storage client not initialized", { requestId });
     }
     const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized", requestId },
-        { status: 401 }
-      );
+      return errorResponse(401, "Unauthorized", { requestId });
     }
 
     const assignmentId = params.id;
     if (!assignmentId) {
-      return NextResponse.json(
-        { success: false, message: "assignmentId is required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "assignmentId is required", { requestId });
     }
 
     // Quyền xem: giáo viên (tác giả) hoặc học sinh thuộc lớp có assignment này
@@ -51,10 +42,7 @@ export async function GET(
     }
 
     if (!canView) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden", requestId },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden", { requestId });
     }
 
     const files = await prisma.assignmentFile.findMany({
@@ -94,15 +82,12 @@ export async function GET(
       { success: true, data: entries, requestId },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `[ERROR] [GET] /api/assignments/${params.id}/files {requestId:${requestId}}`,
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error", requestId },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 
@@ -114,37 +99,24 @@ export async function DELETE(
   try {
     const admin = supabaseAdmin;
     if (!admin) {
-      return NextResponse.json(
-        { success: false, message: "Storage client not initialized", requestId },
-        { status: 500 }
-      );
+      return errorResponse(500, "Storage client not initialized", { requestId });
     }
 
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized", requestId },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized", { requestId });
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
 
     const assignmentId = params.id;
     const url = new URL(req.url);
     const fileId = url.searchParams.get('fileId');
 
     if (!assignmentId || !fileId) {
-      return NextResponse.json(
-        { success: false, message: "assignmentId and fileId are required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "assignmentId and fileId are required", { requestId });
     }
 
     const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
     if (!isOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden", requestId },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden", { requestId });
     }
 
     const file = await prisma.assignmentFile.findFirst({
@@ -153,10 +125,7 @@ export async function DELETE(
     });
 
     if (!file) {
-      return NextResponse.json(
-        { success: false, message: "File not found", requestId },
-        { status: 404 }
-      );
+      return errorResponse(404, "File not found", { requestId });
     }
 
     // Xóa khỏi storage trước
@@ -166,10 +135,7 @@ export async function DELETE(
 
     if (storageErr) {
       console.error(`[ERROR] [DELETE] /api/assignments/${assignmentId}/files - Storage remove failed {requestId:${requestId}}`, storageErr);
-      return NextResponse.json(
-        { success: false, message: "Failed to delete file from storage", requestId },
-        { status: 500 }
-      );
+      return errorResponse(500, "Failed to delete file from storage", { requestId });
     }
 
     // Xóa metadata DB
@@ -179,15 +145,12 @@ export async function DELETE(
       { success: true, message: "File deleted", requestId },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `[ERROR] [DELETE] /api/assignments/${params.id}/files {requestId:${requestId}}`,
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error", requestId },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 

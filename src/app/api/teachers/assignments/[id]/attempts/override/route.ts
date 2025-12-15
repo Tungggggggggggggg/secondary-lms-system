@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+
+const bodySchema = z.object({
+  studentId: z.string().min(1),
+  attemptNumber: z.coerce.number().int().min(1).max(999).optional().nullable(),
+  action: z.enum(["EXTEND_TIME", "PAUSE", "RESUME", "TERMINATE"]),
+  minutes: z.coerce.number().int().min(1).max(1440).optional(),
+  reason: z.string().max(500).optional().nullable(),
+});
 
 /**
  * POST /api/teachers/assignments/[id]/attempts/override
@@ -11,68 +21,36 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const teacher = await getAuthenticatedUser(req, "TEACHER");
-    if (!teacher) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const teacher = await getAuthenticatedUser(req);
+    if (!teacher) return errorResponse(401, "Unauthorized");
+    if (teacher.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const assignmentId = params.id;
     if (!assignmentId) {
-      return NextResponse.json(
-        { success: false, message: "Missing assignmentId" },
-        { status: 400 }
-      );
+      return errorResponse(400, "Missing assignmentId");
     }
 
     const isOwner = await isTeacherOfAssignment(teacher.id, assignmentId);
     if (!isOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your assignment" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your assignment");
     }
 
-    const body = await req.json().catch(() => null as any);
-    if (!body) {
-      return NextResponse.json(
-        { success: false, message: "Invalid JSON" },
-        { status: 400 }
-      );
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = bodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
 
-    const {
-      studentId,
-      attemptNumber,
-      action,
-      minutes,
-      reason,
-    }: {
-      studentId: string;
-      attemptNumber?: number | null;
-      action: "EXTEND_TIME" | "PAUSE" | "RESUME" | "TERMINATE";
-      minutes?: number;
-      reason?: string;
-    } = body;
-
-    if (!studentId || !action) {
-      return NextResponse.json(
-        { success: false, message: "Missing studentId or action" },
-        { status: 400 }
-      );
-    }
+    const { studentId, attemptNumber, action, minutes, reason } = parsedBody.data;
 
     // Tìm attempt hiện tại của học sinh
-    const attemptWhere: any = {
+    const attemptWhere: Prisma.AssignmentAttemptWhereInput = {
       assignmentId,
       studentId,
+      ...(typeof attemptNumber === "number" ? { attemptNumber } : {}),
     };
-
-    if (typeof attemptNumber === "number") {
-      attemptWhere.attemptNumber = attemptNumber;
-    }
 
     const targetAttempt = await prisma.assignmentAttempt.findFirst({
       where: attemptWhere,
@@ -80,26 +58,17 @@ export async function POST(
     });
 
     if (!targetAttempt) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Không tìm thấy lần làm bài phù hợp cho học sinh này",
-        },
-        { status: 404 }
-      );
+      return errorResponse(404, "Không tìm thấy lần làm bài phù hợp cho học sinh này");
     }
 
     const now = new Date();
-    const updateData: any = {};
+    const updateData: Prisma.AssignmentAttemptUpdateInput = {};
 
     switch (action) {
       case "EXTEND_TIME": {
         const m = typeof minutes === "number" ? minutes : 0;
         if (m <= 0) {
-          return NextResponse.json(
-            { success: false, message: "Số phút gia hạn phải > 0" },
-            { status: 400 }
-          );
+          return errorResponse(400, "Số phút gia hạn phải > 0");
         }
         const currentLimit = targetAttempt.timeLimitMinutes ?? 0;
         updateData.timeLimitMinutes = currentLimit + m;
@@ -123,10 +92,7 @@ export async function POST(
         break;
       }
       default: {
-        return NextResponse.json(
-          { success: false, message: "Unsupported action" },
-          { status: 400 }
-        );
+        return errorResponse(400, "Unsupported action");
       }
     }
 
@@ -160,7 +126,7 @@ export async function POST(
             attemptId: updatedAttempt.id,
             attemptNumber: updatedAttempt.attemptNumber,
             at: now.toISOString(),
-          } as any,
+          } as Prisma.InputJsonValue,
         },
       });
     } catch (e) {
@@ -176,10 +142,6 @@ export async function POST(
       "[ERROR] [POST] /api/teachers/assignments/[id]/attempts/override - Error:",
       error
     );
-    const msg = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: msg },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

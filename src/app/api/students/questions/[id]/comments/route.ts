@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, getStudentAssignmentForQuestion } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, getStudentAssignmentForQuestion } from "@/lib/api-utils";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
+
+const getQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  })
+  .strict();
+
+const postBodySchema = z
+  .object({
+    content: z.string().min(1).max(5000),
+  })
+  .strict();
 
 interface StudentQuestionCommentRow {
   id: string;
@@ -24,26 +44,25 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "STUDENT");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
 
-    const questionId = params.id;
+    const questionId = parsedParams.data.id;
 
     // Optimize: Kiểm tra student có trong classroom nào có question này không (single query)
     const assignmentId = await getStudentAssignmentForQuestion(user.id, questionId);
     if (!assignmentId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Forbidden - Not a member of this assignment's classroom",
-        },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not a member of this assignment's classroom");
     }
 
     // POLICY: Không cho bình luận khi đang làm bài QUIZ
@@ -53,7 +72,7 @@ export async function GET(
       prisma.assignmentSubmission.findFirst({ where: { assignmentId, studentId: user.id }, select: { id: true } }),
     ]);
     if (!assignmentMeta) {
-      return NextResponse.json({ success: false, message: "Assignment not found" }, { status: 404 });
+      return errorResponse(404, "Assignment not found");
     }
     if (assignmentMeta.type === "QUIZ") {
       const lockedAt = assignmentMeta.lockAt ?? assignmentMeta.dueDate;
@@ -61,21 +80,28 @@ export async function GET(
       const locked = lockedAt ? now > new Date(lockedAt) : false;
       const canComment = !!existingSubmission || locked;
       if (!canComment) {
-        return NextResponse.json(
-          { success: false, message: "Bạn chỉ có thể bình luận sau khi nộp bài hoặc sau khi bài kiểm tra kết thúc." },
-          { status: 403 }
+        return errorResponse(
+          403,
+          "Bạn chỉ có thể bình luận sau khi nộp bài hoặc sau khi bài kiểm tra kết thúc."
         );
       }
     }
 
     // Parse pagination params
-    const url = req.url ? new URL(req.url, "http://localhost") : null;
-    const page = url?.searchParams.get("page")
-      ? Number(url.searchParams.get("page"))
-      : 1;
-    const limit = url?.searchParams.get("limit")
-      ? Number(url.searchParams.get("limit"))
-      : 20;
+    const url = new URL(req.url);
+    const parsedQuery = getQuerySchema.safeParse({
+      page: url.searchParams.get("page") ?? undefined,
+      limit: url.searchParams.get("limit") ?? undefined,
+    });
+    if (!parsedQuery.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedQuery.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
+    }
+
+    const { page, limit } = parsedQuery.data;
     const skip = (page - 1) * limit;
 
     // Parallel queries: Count và fetch comments
@@ -111,10 +137,6 @@ export async function GET(
       user: comment.user,
     }) as const);
 
-    console.log(
-      `[INFO] [GET] /api/students/questions/${questionId}/comments - Found ${commentsData.length} comments (page ${page})`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -132,11 +154,7 @@ export async function GET(
       "[ERROR] [GET] /api/students/questions/[id]/comments - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 
@@ -150,35 +168,37 @@ export async function POST(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "STUDENT");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
 
-    const questionId = params.id;
-    const body = await req.json();
-    const { content } = body as { content?: string };
+    const questionId = parsedParams.data.id;
 
-    if (!content || !content.trim()) {
-      return NextResponse.json(
-        { success: false, message: "Content is required" },
-        { status: 400 }
-      );
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = postBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
+
+    const content = parsedBody.data.content.trim();
 
     // Optimize: Kiểm tra student có trong classroom nào có question này không (single query)
     const assignmentId = await getStudentAssignmentForQuestion(user.id, questionId);
     if (!assignmentId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Forbidden - Not a member of this assignment's classroom",
-        },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not a member of this assignment's classroom");
     }
 
     // Verify question exists (lightweight check)
@@ -191,10 +211,7 @@ export async function POST(
     });
 
     if (!questionExists) {
-      return NextResponse.json(
-        { success: false, message: "Question not found" },
-        { status: 404 }
-      );
+      return errorResponse(404, "Question not found");
     }
 
     // Tạo comment
@@ -218,10 +235,6 @@ export async function POST(
       },
     });
 
-    console.log(
-      `[INFO] [POST] /api/students/questions/${questionId}/comments - Student ${user.id} created comment`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -240,11 +253,7 @@ export async function POST(
       "[ERROR] [POST] /api/students/questions/[id]/comments - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

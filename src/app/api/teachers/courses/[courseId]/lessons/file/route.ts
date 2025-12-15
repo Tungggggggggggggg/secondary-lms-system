@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import crypto from "crypto";
 
+import { TaskType } from "@google/generative-ai";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { extractTextFromFile } from "@/lib/files/extractTextFromFile";
@@ -39,7 +40,6 @@ async function indexLessonEmbeddingsForLesson(params: {
 
   const fullText = `# ${title}\n\n${content || ""}`.trim();
   if (!fullText || fullText.length < 10) {
-    console.log("[LessonEmbedding] Skip indexing: content too short", { lessonId, courseId });
     return;
   }
 
@@ -51,7 +51,6 @@ async function indexLessonEmbeddingsForLesson(params: {
 
   const chunks = chunkText({ text: fullText, maxChars });
   if (!chunks || chunks.length === 0) {
-    console.log("[LessonEmbedding] No chunks generated, skip indexing", { lessonId, courseId });
     return;
   }
 
@@ -63,7 +62,7 @@ async function indexLessonEmbeddingsForLesson(params: {
     const embedding = await embedTextWithGemini({
       text: ch.content,
       outputDimensionality: DEFAULT_EMBEDDING_DIMENSIONALITY,
-      taskType: "RETRIEVAL_DOCUMENT",
+      taskType: TaskType.RETRIEVAL_DOCUMENT,
     });
     if (embedding.length !== DEFAULT_EMBEDDING_DIMENSIONALITY) {
       throw new Error(`Embedding dimension không hợp lệ: ${embedding.length}`);
@@ -90,11 +89,6 @@ async function indexLessonEmbeddingsForLesson(params: {
     embeddedChunks += 1;
   }
 
-  console.log("[LessonEmbedding] Indexed lesson", {
-    lessonId,
-    courseId,
-    embeddedChunks,
-  });
 }
 
 const formSchema = z.object({
@@ -104,8 +98,9 @@ const formSchema = z.object({
 
 export async function POST(req: NextRequest, ctx: { params: { courseId: string } }) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const courseId = ctx?.params?.courseId;
     if (!courseId) return errorResponse(400, "Missing courseId");
@@ -136,14 +131,6 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
       });
     }
 
-    console.log("[LessonFile] Received file upload", {
-      courseId,
-      teacherId: user.id,
-      fileName: file.name,
-      mimeType: (file as File).type,
-      sizeBytes: (file as File).size,
-    });
-
     const extracted = await extractTextFromFile(file);
 
     let order = parsed.data.order;
@@ -164,29 +151,15 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
       select: { id: true, title: true, order: true, createdAt: true, updatedAt: true },
     });
 
-    console.log("[LessonFile] Created lesson from file", {
-      lessonId: created.id,
-      title: created.title,
-      order: created.order,
-    });
-
     // Upload original file as attachment for students to download (non-fatal on failure)
     try {
       const admin = supabaseAdmin;
       if (!admin) {
         console.error("[LessonAttachment] supabaseAdmin not initialized");
       } else {
-        const originalName = typeof (file as any).name === "string" ? (file as any).name : created.title;
+        const originalName = file.name?.trim() ? file.name : created.title;
         const safeName = slugifyFileName(originalName);
         const key = `lesson/${created.id}/${crypto.randomUUID()}-${safeName}`;
-
-        console.log("[LessonAttachment] Start upload to Supabase", {
-          lessonId: created.id,
-          bucket: LESSON_FILES_BUCKET,
-          key,
-          mimeType: (file as File).type,
-          sizeBytes: (file as File).size,
-        });
 
         const arrayBuffer = await file.arrayBuffer();
         const { data, error } = await admin.storage
@@ -199,7 +172,7 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
         if (error) {
           console.error("[LessonAttachment] Upload failed", error);
         } else if (data?.path) {
-          const attachment = await (prisma as any).lessonAttachment.create({
+          await prisma.lessonAttachment.create({
             data: {
               lessonId: created.id,
               name: originalName,
@@ -207,11 +180,6 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
               mimeType: (file as File).type || "application/octet-stream",
               sizeBytes: (file as File).size,
             },
-          });
-          console.log("[LessonAttachment] Created attachment record", {
-            id: attachment.id,
-            lessonId: attachment.lessonId,
-            storagePath: attachment.storagePath,
           });
         }
       }
@@ -221,11 +189,6 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
 
     // Tự động index embeddings cho bài học vừa tạo (không dry run, luôn embed)
     try {
-      console.log("[LessonEmbedding] Start indexing for created lesson", {
-        lessonId: created.id,
-        courseId,
-      });
-
       await indexLessonEmbeddingsForLesson({
         lessonId: created.id,
         courseId,

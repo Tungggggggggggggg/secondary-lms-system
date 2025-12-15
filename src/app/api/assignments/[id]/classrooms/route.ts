@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
+import { z } from 'zod'
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
 import { prisma } from '@/lib/prisma'
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict()
+
+function normalizeZodIssues(issues: z.ZodIssue[]): string {
+  return issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
+}
 
 /**
  * GET /api/assignments/[id]/classrooms
@@ -13,52 +23,37 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id && !session?.user?.email) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Unauthorized' 
-      }, { status: 401 })
+    const user = await getAuthenticatedUser(req)
+    if (!user) return errorResponse(401, 'Unauthorized')
+    if (user.role !== 'TEACHER') return errorResponse(403, 'Forbidden - Teacher only')
+
+    const parsedParams = paramsSchema.safeParse(params)
+    if (!parsedParams.success) {
+      return errorResponse(400, 'Dữ liệu không hợp lệ', {
+        details: normalizeZodIssues(parsedParams.error.issues),
+      })
     }
 
-    // Lấy thông tin user hiện tại
-    const user = session.user.id
-      ? await prisma.user.findUnique({ where: { id: session.user.id } })
-      : session.user.email
-      ? await prisma.user.findUnique({ where: { email: session.user.email } })
-      : null;
-
-    if (!user || user.role !== 'TEACHER') {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Forbidden - Teacher only' 
-      }, { status: 403 })
-    }
+    const assignmentId = parsedParams.data.id
 
     // Validate assignment ID và quyền sở hữu
     const assignment = await prisma.assignment.findUnique({
-      where: { id: params.id },
+      where: { id: assignmentId },
       select: { id: true, authorId: true, title: true }
     });
 
     if (!assignment) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Assignment not found' 
-      }, { status: 404 })
+      return errorResponse(404, 'Assignment not found')
     }
 
     if (assignment.authorId !== user.id) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Forbidden - Not your assignment' 
-      }, { status: 403 })
+      return errorResponse(403, 'Forbidden - Not your assignment')
     }
 
     // Lấy danh sách classrooms có assignment này
     const assignmentClassrooms = await prisma.assignmentClassroom.findMany({
       where: {
-        assignmentId: params.id
+        assignmentId
       },
       select: {
         addedAt: true,
@@ -101,7 +96,7 @@ export async function GET(
           SELECT cs."classroomId" as "classroomId", COUNT(DISTINCT s."studentId")::bigint as cnt
           FROM "classroom_students" cs
           JOIN "assignment_submissions" s
-            ON s."studentId" = cs."studentId" AND s."assignmentId" = ${params.id}
+            ON s."studentId" = cs."studentId" AND s."assignmentId" = ${assignmentId}
           WHERE cs."classroomId" = ANY(${classroomIds}::text[])
           GROUP BY cs."classroomId";
         `
@@ -166,11 +161,8 @@ export async function GET(
       }
     }, { status: 200 });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[ASSIGNMENT CLASSROOMS GET] Error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Internal server error' 
-    }, { status: 500 });
+    return errorResponse(500, 'Internal server error')
   }
 }

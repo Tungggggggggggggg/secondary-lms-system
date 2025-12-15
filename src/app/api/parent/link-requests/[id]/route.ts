@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { parentStudentLinkRequestRepo } from "@/lib/repositories/parent-student-link-request-repo";
+import { z } from "zod";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
 
 /**
  * DELETE /api/parent/link-requests/[id]
@@ -19,7 +26,12 @@ export const DELETE = withApiLogging(async (
       return errorResponse(403, "Forbidden: PARENT role only");
     }
 
-    const { id } = params;
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ");
+    }
+
+    const { id } = parsedParams.data;
 
     await parentStudentLinkRequestRepo.cancel({
       requestId: id,
@@ -32,7 +44,6 @@ export const DELETE = withApiLogging(async (
     });
   } catch (error: unknown) {
     console.error("[DELETE /api/parent/link-requests/[id]] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "PARENT_LINK_REQUEST_CANCEL");

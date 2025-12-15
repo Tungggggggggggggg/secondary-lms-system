@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
-import { createAssignmentSchema, paginationSchema } from '@/types/api'
-import { getCachedUser } from '@/lib/user-cache'
+import type { AssignmentType, Prisma, QuestionType } from '@prisma/client'
+import { createAssignmentSchema, paginationSchema, type CreateAssignmentInput } from '@/types/api'
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
 import { withPerformanceTracking } from '@/lib/performance-monitor'
 
 const ALLOWED_QUESTION_TYPES = [
@@ -17,29 +16,42 @@ const ALLOWED_QUESTION_TYPES = [
 // Lấy danh sách bài tập theo giáo viên hiện tại - TỐI ƯU SELECT + pagination + user cache + performance tracking
 export async function GET(req: NextRequest) {
   return withPerformanceTracking('/api/assignments', 'GET', async () => {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id && !session?.user?.email) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    const user = await getAuthenticatedUser(req)
+    if (!user) return errorResponse(401, 'Unauthorized')
+    if (user.role !== 'TEACHER') return errorResponse(403, 'Forbidden - Teacher role required')
+
+    let url: URL
+    try {
+      url = new URL(req.url)
+    } catch {
+      return errorResponse(400, 'Invalid URL')
     }
 
-    // ✅ SỬ DỤNG CACHE CHO USER LOOKUP - Giảm từ 208ms xuống <50ms
-    const user = await getCachedUser(
-      session.user.id || undefined, 
-      session.user.email || undefined
-    )
+    const takeParam = url.searchParams.get('take') ?? undefined;
+    const skipParam = url.searchParams.get('skip') ?? undefined;
 
-    if (!user || user.role !== 'TEACHER') {
-      return NextResponse.json({ success: true, data: [] }, { status: 200 })
+    let take: number
+    let skip: number
+    try {
+      const parsed = paginationSchema.parse({ take: takeParam, skip: skipParam })
+      take = parsed.take
+      skip = parsed.skip
+    } catch (e) {
+      return errorResponse(400, 'Dữ liệu không hợp lệ')
     }
 
-    const url = req?.url ? new URL(req.url, 'http://localhost') : null;
-    const takeParam = url?.searchParams.get('take') ?? undefined;
-    const skipParam = url?.searchParams.get('skip') ?? undefined;
+    const classroomId = url.searchParams.get('classroomId');
+    const availableForClassroom = url.searchParams.get('availableForClassroom');
 
-    const { take, skip } = paginationSchema.parse({ take: takeParam, skip: skipParam });
-
-    const classroomId = url?.searchParams.get('classroomId');
-    const availableForClassroom = url?.searchParams.get('availableForClassroom');
+    if (classroomId) {
+      const classroom = await prisma.classroom.findFirst({
+        where: { id: classroomId, teacherId: user.id },
+        select: { id: true },
+      })
+      if (!classroom) {
+        return errorResponse(403, 'Forbidden - Classroom access denied')
+      }
+    }
 
     const whereClause: { authorId: string; id?: { in?: string[]; notIn?: string[] } } = { authorId: user.id };
 
@@ -100,41 +112,28 @@ export async function GET(req: NextRequest) {
 // Tạo bài tập mới (essay hoặc quiz) - TỐI ƯU với user cache
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id && !session?.user?.email) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    }
+    const me = await getAuthenticatedUser(req)
+    if (!me) return errorResponse(401, 'Unauthorized')
+    if (me.role !== 'TEACHER') return errorResponse(403, 'Forbidden - Teacher role required')
 
-    // ✅ SỬ DỤNG CACHE CHO USER LOOKUP
-    const me = await getCachedUser(
-      session.user.id || undefined, 
-      session.user.email || undefined
-    )
-
-    if (!me || me.role !== 'TEACHER') {
-      return NextResponse.json({ success: false, message: 'Forbidden - Teacher only' }, { status: 403 })
-    }
-
-    const bodyRaw = await req.json()
-    console.log('[ASSIGNMENTS POST] Raw request body:', JSON.stringify(bodyRaw, null, 2))
-    
+    const bodyRaw: unknown = await req.json().catch(() => null)
     const parsed = createAssignmentSchema.safeParse(bodyRaw)
     if (!parsed.success) {
-      console.error('[ASSIGNMENTS POST] Schema validation failed:', parsed.error.flatten())
-      console.error('[ASSIGNMENTS POST] Raw body that failed:', bodyRaw)
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Invalid payload', 
+      return errorResponse(400, 'Invalid payload', {
+        details: parsed.error.flatten(),
         errors: parsed.error.flatten(),
-        receivedData: bodyRaw 
-      }, { status: 400 })
+      })
     }
 
-    const { title, description, dueDate, type, questions, openAt, lockAt, timeLimitMinutes } = parsed.data
+    const { title, description, dueDate, type, questions, openAt, lockAt, timeLimitMinutes } = parsed.data as CreateAssignmentInput
 
-    const normalizedType = type.toUpperCase()
+    const normalizedTypeStr = type.trim().toUpperCase()
+    if (normalizedTypeStr !== 'ESSAY' && normalizedTypeStr !== 'QUIZ') {
+      return errorResponse(400, 'Invalid assignment type')
+    }
+    const normalizedType: AssignmentType = normalizedTypeStr
 
-    const data: any = {
+    const data: Prisma.AssignmentCreateInput = {
       title,
       description: description ?? null,
       dueDate: dueDate ? new Date(dueDate) : null,
@@ -147,58 +146,65 @@ export async function POST(req: NextRequest) {
 
     if (normalizedType === 'QUIZ') {
       if (!questions || !Array.isArray(questions) || questions.length === 0) {
-        return NextResponse.json({ success: false, message: 'Quiz requires at least 1 question' }, { status: 400 })
+        return errorResponse(400, 'Quiz requires at least 1 question')
       }
 
-      data.questions = {
-        create: questions.map((q, idx) => {
-          const qType = (q.type || 'SINGLE').toUpperCase()
-          if (!ALLOWED_QUESTION_TYPES.includes(qType as any)) {
-            throw new Error(`Invalid question type at index ${idx}`)
-          }
-          const opts = q.options || []
-          if (opts.length < 2) {
-            throw new Error(`Question ${idx + 1} must have at least 2 options`)
-          }
-          const numCorrect = opts.filter(o => !!o.isCorrect).length
-          if (qType === 'SINGLE' && numCorrect !== 1) {
-            throw new Error(`Question ${idx + 1} (SINGLE) must have exactly 1 correct option`)
-          }
-          if (qType === 'MULTIPLE' && numCorrect < 1) {
-            throw new Error(`Question ${idx + 1} (MULTIPLE) must have at least 1 correct option`)
-          }
-          return {
-            content: q.content,
-            type: qType,
-            order: typeof q.order === 'number' ? q.order : idx + 1,
-            options: {
-              create: opts.map((opt, j) => ({
-                label: opt.label || String.fromCharCode(65 + j),
-                content: opt.content,
-                isCorrect: !!opt.isCorrect,
-                order: j + 1,
-              })),
-            },
-          }
-        }),
+      const questionCreates: Array<{
+        content: string
+        type: QuestionType
+        order: number
+        options: { create: Array<{ label: string; content: string; isCorrect: boolean; order: number }> }
+      }> = []
+
+      for (let idx = 0; idx < questions.length; idx++) {
+        const q = questions[idx]
+        const qTypeStr = (q.type || 'SINGLE').toUpperCase()
+        if (!ALLOWED_QUESTION_TYPES.includes(qTypeStr as (typeof ALLOWED_QUESTION_TYPES)[number])) {
+          return errorResponse(400, `Invalid question type at index ${idx}`)
+        }
+
+        const qType = qTypeStr as QuestionType
+
+        const opts = q.options || []
+        if (opts.length < 2) {
+          return errorResponse(400, `Question ${idx + 1} must have at least 2 options`)
+        }
+
+        const numCorrect = opts.filter((o) => !!o.isCorrect).length
+        if (qType === 'SINGLE' && numCorrect !== 1) {
+          return errorResponse(400, `Question ${idx + 1} (SINGLE) must have exactly 1 correct option`)
+        }
+        if (qType === 'MULTIPLE' && numCorrect < 1) {
+          return errorResponse(400, `Question ${idx + 1} (MULTIPLE) must have at least 1 correct option`)
+        }
+
+        questionCreates.push({
+          content: q.content,
+          type: qType,
+          order: typeof q.order === 'number' ? q.order : idx + 1,
+          options: {
+            create: opts.map((opt, j) => ({
+              label: opt.label || String.fromCharCode(65 + j),
+              content: opt.content,
+              isCorrect: !!opt.isCorrect,
+              order: j + 1,
+            })),
+          },
+        })
       }
+
+      data.questions = { create: questionCreates }
     }
 
     const created = await prisma.assignment.create({
-      // Cast để tương thích khi chưa chạy prisma generate sau migration
-      data: data as any,
+      data,
       include: { questions: { include: { options: true } } },
     })
 
     return NextResponse.json({ success: true, data: created }, { status: 201 })
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error('[ASSIGNMENTS POST] Error:', error.message, error.stack)
-    } else {
-      console.error('[ASSIGNMENTS POST] Unknown error:', error)
-    }
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 })
+    console.error('[ASSIGNMENTS POST] Error:', error)
+    return errorResponse(500, 'Internal server error')
   }
 }
 

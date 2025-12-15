@@ -33,7 +33,6 @@ export const POST = withApiLogging(async (
     });
   } catch (error: unknown) {
     console.error("[POST /api/student/link-requests/[id]/approve] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "STUDENT_LINK_REQUEST_APPROVE");

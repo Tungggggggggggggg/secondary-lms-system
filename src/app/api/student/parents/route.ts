@@ -40,8 +40,6 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       },
     });
 
-    console.log(`[INFO] STUDENT_PARENTS_LIST OK {studentId:${authUser.id}, count:${parentLinks.length}}`);
-
     return NextResponse.json({
       success: true,
       items: parentLinks,
@@ -49,7 +47,6 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     });
   } catch (error: unknown) {
     console.error("[GET /api/student/parents] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "STUDENT_PARENTS_LIST");

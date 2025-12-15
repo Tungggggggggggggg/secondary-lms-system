@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { errorResponse } from "@/lib/api-utils";
+import { settingsRepo } from "@/lib/repositories/settings-repo";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -25,11 +26,11 @@ export async function GET(_req: NextRequest) {
           by: ["role"],
           _count: { role: true },
         }),
-        prisma.systemSetting.findUnique({ where: { key: "disabled_users" } }),
+        settingsRepo.get("disabled_users"),
       ]);
 
     const disabledIds = new Set<string>();
-    const disabledRaw: unknown = disabledSetting?.value ?? null;
+    const disabledRaw: unknown = disabledSetting ?? null;
     if (Array.isArray(disabledRaw)) {
       for (const item of disabledRaw) {
         if (typeof item === "string") {

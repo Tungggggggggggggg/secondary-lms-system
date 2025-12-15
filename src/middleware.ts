@@ -32,10 +32,16 @@ export async function middleware(req: NextRequest) {
     // Bảo vệ API admin: chỉ cho phép ADMIN
     if (pathname.startsWith('/api/admin')) {
         if (!token) {
-            return NextResponse.json({ error: true, message: 'Unauthorized', success: false }, { status: 401 });
+            return NextResponse.json(
+                { success: false, error: true, message: 'Unauthorized', details: null },
+                { status: 401 }
+            );
         }
         if (role !== 'ADMIN') {
-            return NextResponse.json({ error: true, message: 'Forbidden - Admins only', success: false }, { status: 403 });
+            return NextResponse.json(
+                { success: false, error: true, message: 'Forbidden - Admins only', details: null },
+                { status: 403 }
+            );
         }
         return NextResponse.next();
     }

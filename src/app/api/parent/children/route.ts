@@ -23,8 +23,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     });
   } catch (error: unknown) {
     console.error("[GET /api/parent/children] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "PARENT_CHILDREN_LIST");
 

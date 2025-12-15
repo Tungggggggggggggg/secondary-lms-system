@@ -278,10 +278,6 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       overallAverage: Math.round(overallAverage * 10) / 10,
     };
 
-    console.log(
-      `[INFO] [GET] /api/parent/children/grades - Found ${submissions.length} submissions for ${result.length} children`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -292,8 +288,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     );
   } catch (error: unknown) {
     console.error("[ERROR] [GET] /api/parent/children/grades - Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "PARENT_ALL_CHILDREN_GRADES");
 

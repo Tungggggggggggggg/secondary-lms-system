@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
+
+const antiCheatConfigSchema = z
+  .object({
+    showCorrectMode: z.enum(["never", "afterSubmit", "afterLock"]).optional(),
+  })
+  .passthrough();
 
 interface QuizAnswerOptionRow {
   id: string;
@@ -22,20 +35,25 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getAuthenticatedUser(req, "STUDENT");
-    if (!user) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden - Student role required");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
 
-    const assignmentId = params.id;
+    const assignmentId = parsedParams.data.id;
 
     // Kiểm tra membership
     const classroomId = await getStudentClassroomForAssignment(user.id, assignmentId);
     if (!classroomId) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not a member of this assignment's classroom" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not a member of this assignment's classroom");
     }
 
     // Lấy meta assignment
@@ -51,19 +69,19 @@ export async function GET(
     });
 
     if (!assignment) {
-      return NextResponse.json({ success: false, message: "Assignment not found" }, { status: 404 });
+      return errorResponse(404, "Assignment not found");
     }
 
     if (assignment.type !== "QUIZ") {
-      return NextResponse.json({ success: false, message: "Only QUIZ supports answers reveal" }, { status: 400 });
+      return errorResponse(400, "Only QUIZ supports answers reveal");
     }
 
     // Chính sách hiển thị đáp án đúng
-    const cfg = (assignment.anti_cheat_config || {}) as any;
-    const mode = (cfg?.showCorrectMode as string) || "never"; // never | afterSubmit | afterLock
+    const cfgParsed = antiCheatConfigSchema.safeParse(assignment.anti_cheat_config ?? {});
+    const mode = cfgParsed.success ? (cfgParsed.data.showCorrectMode ?? "never") : "never";
 
     if (mode === "never") {
-      return NextResponse.json({ success: false, message: "Answers reveal is disabled" }, { status: 403 });
+      return errorResponse(403, "Answers reveal is disabled");
     }
 
     // Kiểm tra điều kiện thời điểm
@@ -72,7 +90,7 @@ export async function GET(
     const locked = lockedAt ? now > new Date(lockedAt) : false;
 
     if (mode === "afterLock" && !locked) {
-      return NextResponse.json({ success: false, message: "Answers available after the quiz is closed" }, { status: 403 });
+      return errorResponse(403, "Answers available after the quiz is closed");
     }
 
     if (mode === "afterSubmit") {
@@ -82,7 +100,7 @@ export async function GET(
         select: { id: true },
       });
       if (!sub) {
-        return NextResponse.json({ success: false, message: "Answers available after you submit this quiz" }, { status: 403 });
+        return errorResponse(403, "Answers available after you submit this quiz");
       }
     }
 
@@ -109,7 +127,6 @@ export async function GET(
     );
   } catch (error: unknown) {
     console.error("[ERROR] [GET] /api/students/assignments/[id]/answers - Error:", error);
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ success: false, message }, { status: 500 });
+    return errorResponse(500, "Internal server error");
   }
 }

@@ -393,10 +393,6 @@ export const GET = withApiLogging(async (
     const totalPending = totalSubmissions - totalGraded;
     const averageGrade = (avgGrade._avg.grade ?? 0) as number;
 
-    console.log(
-      `[INFO] [GET] /api/parent/children/${childId}/grades - Found ${grades.length} grade entries for student: ${childId}`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -417,8 +413,7 @@ export const GET = withApiLogging(async (
     );
   } catch (error: unknown) {
     console.error("[ERROR] [GET] /api/parent/children/[childId]/grades - Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "PARENT_CHILD_GRADES");
 

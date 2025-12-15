@@ -21,7 +21,7 @@ const requestSchema = z.object({
 
 function rateLimitResponse(retryAfterSeconds: number) {
   return NextResponse.json(
-    { success: false, error: true, message: "Too many requests", retryAfterSeconds },
+    { success: false, error: true, message: "Too many requests", details: null, retryAfterSeconds },
     {
       status: 429,
       headers: {
@@ -37,8 +37,9 @@ function rateLimitResponse(retryAfterSeconds: number) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const teacher = await getAuthenticatedUser(req, "TEACHER");
+    const teacher = await getAuthenticatedUser(req);
     if (!teacher) return errorResponse(401, "Unauthorized");
+    if (teacher.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const ip = getClientIp(req);
 

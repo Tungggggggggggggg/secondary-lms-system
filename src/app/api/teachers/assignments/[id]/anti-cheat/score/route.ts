@@ -22,8 +22,9 @@ const querySchema = z.object({
  */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const teacher = await getAuthenticatedUser(req, "TEACHER");
+    const teacher = await getAuthenticatedUser(req);
     if (!teacher) return errorResponse(401, "Unauthorized");
+    if (teacher.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const assignmentId = params.id;
     if (!assignmentId) return errorResponse(400, "Missing assignmentId");
@@ -89,7 +90,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     );
   } catch (error: unknown) {
     console.error("[API /teachers/assignments/[id]/anti-cheat/score] Error", error);
-    const msg = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, msg);
+    return errorResponse(500, "Internal server error");
   }
 }

@@ -64,6 +64,20 @@ export function chunkText(params: {
     const words = p.split(/\s+/g).filter(Boolean);
     let wbuf = "";
     for (const w of words) {
+      if (w.length > maxChars) {
+        if (wbuf) {
+          pushChunk(chunks, idx, wbuf);
+          idx += 1;
+          wbuf = "";
+        }
+
+        for (let start = 0; start < w.length; start += maxChars) {
+          pushChunk(chunks, idx, w.slice(start, start + maxChars));
+          idx += 1;
+        }
+        continue;
+      }
+
       const next = wbuf ? `${wbuf} ${w}` : w;
       if (next.length <= maxChars) {
         wbuf = next;

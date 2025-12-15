@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -44,60 +44,38 @@ export async function POST(
 	try {
 		const admin = supabaseAdmin;
 		if (!admin) {
-			return NextResponse.json(
-				{ success: false, message: "Storage client not initialized", requestId },
-				{ status: 500 }
-			);
+			return errorResponse(500, "Storage client not initialized", { requestId });
 		}
-		const user = await getAuthenticatedUser(req, "TEACHER");
-		if (!user) {
-			return NextResponse.json(
-				{ success: false, message: "Unauthorized", requestId },
-				{ status: 401 }
-			);
-		}
+		const user = await getAuthenticatedUser(req);
+		if (!user) return errorResponse(401, "Unauthorized", { requestId });
+		if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
 
 		const assignmentId = params.id;
 		if (!assignmentId) {
-			return NextResponse.json(
-				{ success: false, message: "assignmentId is required", requestId },
-				{ status: 400 }
-			);
+			return errorResponse(400, "assignmentId is required", { requestId });
 		}
 
 		const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
 		if (!isOwner) {
-			return NextResponse.json(
-				{ success: false, message: "Forbidden - Not your assignment", requestId },
-				{ status: 403 }
-			);
+			return errorResponse(403, "Forbidden - Not your assignment", { requestId });
 		}
 
 		const form = await req.formData();
 		const file = form.get("file");
 		if (!file || !(file instanceof File)) {
-			return NextResponse.json(
-				{ success: false, message: "file is required", requestId },
-				{ status: 400 }
-			);
+			return errorResponse(400, "file is required", { requestId });
 		}
 
 		if (file.size > MAX_FILE_SIZE) {
-			return NextResponse.json(
-				{ success: false, message: "File exceeds 20MB limit", requestId },
-				{ status: 413 }
-			);
+			return errorResponse(413, "File exceeds 20MB limit", { requestId });
 		}
 
 		const contentType = file.type || "application/octet-stream";
 		if (contentType && !MIME_WHITELIST.has(contentType)) {
-			return NextResponse.json(
-				{ success: false, message: "Unsupported file type", requestId },
-				{ status: 415 }
-			);
+			return errorResponse(415, "Unsupported file type", { requestId });
 		}
 
-		const originalName = typeof (file as any).name === "string" ? (file as any).name : "file";
+		const originalName = file.name?.trim() ? file.name : "file";
 		const safeName = slugifyFileName(originalName);
 		const key = `assignment/${assignmentId}/${crypto.randomUUID()}-${safeName}`;
 
@@ -114,10 +92,7 @@ export async function POST(
 				`[ERROR] [POST] /api/assignments/${assignmentId}/upload - Upload failed {requestId:${requestId}}`,
 				error
 			);
-			return NextResponse.json(
-				{ success: false, message: "Upload failed", requestId },
-				{ status: 500 }
-			);
+			return errorResponse(500, "Upload failed", { requestId });
 		}
 
 		let savedMeta: { id: string } | null = null;
@@ -141,10 +116,6 @@ export async function POST(
 			);
 		}
 
-		console.log(
-			`[INFO] [POST] /api/assignments/${assignmentId}/upload - Uploaded ${safeName} to ${data?.path} {requestId:${requestId}}`
-		);
-
 		return NextResponse.json(
 			{
 				success: true,
@@ -159,11 +130,7 @@ export async function POST(
 			`[ERROR] [POST] /api/assignments/${params.id}/upload - Error {requestId:${requestId}}`,
 			error
 		);
-		const errorMessage = error instanceof Error ? error.message : "Internal server error";
-		return NextResponse.json(
-			{ success: false, message: errorMessage, requestId },
-			{ status: 500 }
-		);
+		return errorResponse(500, "Internal server error", { requestId });
 	}
 }
 

@@ -1,19 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { z } from "zod";
+
 import { prisma } from "@/lib/prisma";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
+
+const bodySchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  copyClassrooms: z.boolean().optional().default(false),
+});
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
-    }
-    const teacherId = String(session.user.id);
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) return errorResponse(401, "Unauthorized");
+    if (authUser.role !== "TEACHER") return errorResponse(403, "Forbidden");
+
+    const teacherId = authUser.id;
     const assignmentId = params.id;
-    const body = await req.json().catch(() => ({}));
-    const newTitle: string | undefined = body?.title;
-    const copyClassrooms: boolean = Boolean(body?.copyClassrooms);
+
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsed = bodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
+    }
+
+    const newTitle = parsed.data.title;
+    const copyClassrooms = parsed.data.copyClassrooms;
 
     const original = await prisma.assignment.findUnique({
       where: { id: assignmentId },
@@ -23,10 +37,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     });
     if (!original) {
-      return NextResponse.json({ success: false, message: "Not found" }, { status: 404 });
+      return errorResponse(404, "Not found");
     }
     if (original.authorId !== teacherId) {
-      return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+      return errorResponse(403, "Forbidden");
     }
 
     const created = await prisma.$transaction(async (tx) => {
@@ -84,6 +98,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ success: true, data: { id: created.id } }, { status: 201 });
   } catch (error) {
     console.error("[POST /api/teachers/assignments/[id]/duplicate]", error);
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    return errorResponse(500, "Internal server error");
   }
 }

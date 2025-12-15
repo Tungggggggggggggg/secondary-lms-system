@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
+  errorResponse,
   getAuthenticatedUser,
   getRequestId,
   isStudentInClassroom,
@@ -17,18 +18,12 @@ export async function GET(
   try {
     const announcementId = params.id;
     if (!announcementId) {
-      return NextResponse.json(
-        { success: false, message: "announcementId is required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "announcementId is required", { requestId });
     }
 
     const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized", requestId },
-        { status: 401 }
-      );
+      return errorResponse(401, "Unauthorized", { requestId });
     }
 
     // Lấy thông tin announcement và classroomId
@@ -37,10 +32,7 @@ export async function GET(
       select: { classroomId: true },
     });
     if (!ann) {
-      return NextResponse.json(
-        { success: false, message: "Announcement not found", requestId },
-        { status: 404 }
-      );
+      return errorResponse(404, "Announcement not found", { requestId });
     }
 
     const classroomId = ann.classroomId;
@@ -50,10 +42,7 @@ export async function GET(
     const isStudentMember = user.role === "STUDENT" && (await isStudentInClassroom(user.id, classroomId));
     const canView = isTeacherOwner || isStudentMember;
     if (!canView) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden", requestId },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden", { requestId });
     }
 
     // Lấy query params
@@ -190,10 +179,6 @@ export async function GET(
         })
       );
 
-      console.log(
-        `[INFO] [GET] /api/announcements/${announcementId}/comments?recent=true - Picked ${recentWithReplies.length}/${total} top-level with ${replies.length} replies (requestId: ${requestId})`
-      );
-
       return NextResponse.json(
         {
           success: true,
@@ -314,10 +299,6 @@ export async function GET(
       })
     );
 
-    console.log(
-      `[INFO] [GET] /api/announcements/${announcementId}/comments - Found ${topLevelComments.length} top-level comments with ${replies.length} replies (page ${page}, total: ${total}, requestId: ${requestId})`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -332,15 +313,12 @@ export async function GET(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `[ERROR] [GET] /api/announcements/${params.id}/comments {requestId:${requestId}}`,
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error", requestId },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 
@@ -353,18 +331,12 @@ export async function POST(
   try {
     const announcementId = params.id;
     if (!announcementId) {
-      return NextResponse.json(
-        { success: false, message: "announcementId is required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "announcementId is required", { requestId });
     }
 
     const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized", requestId },
-        { status: 401 }
-      );
+      return errorResponse(401, "Unauthorized", { requestId });
     }
 
     const ann = await prisma.announcement.findUnique({
@@ -372,10 +344,7 @@ export async function POST(
       select: { classroomId: true },
     });
     if (!ann) {
-      return NextResponse.json(
-        { success: false, message: "Announcement not found", requestId },
-        { status: 404 }
-      );
+      return errorResponse(404, "Announcement not found", { requestId });
     }
 
     const classroomId = ann.classroomId;
@@ -383,44 +352,32 @@ export async function POST(
       (user.role === "TEACHER" && (await isTeacherOfClassroom(user.id, classroomId))) ||
       (user.role === "STUDENT" && (await isStudentInClassroom(user.id, classroomId)));
     if (!canComment) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden", requestId },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden", { requestId });
     }
 
     // Chặn bình luận nếu bài đăng đã khóa (dùng raw SQL để tương thích trước/ sau migrate)
     try {
       const lockedRows = await prisma.$queryRaw<{ comments_locked: boolean }[]>`SELECT "comments_locked" FROM "announcements" WHERE id = ${announcementId} LIMIT 1`;
       if (Array.isArray(lockedRows) && lockedRows[0]?.comments_locked) {
-        return NextResponse.json(
-          { success: false, message: "Bình luận đã bị khóa cho bài đăng này", requestId },
-          { status: 403 }
-        );
+        return errorResponse(403, "Bình luận đã bị khóa cho bài đăng này", { requestId });
       }
     } catch {}
 
     // Rate limit bình luận theo ip+user+org
     try {
-      const ip = (req.headers.get("x-forwarded-for") || (req as any).ip || "").split(",")[0].trim();
+      const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
       const classroom = await prisma.classroom.findUnique({ where: { id: classroomId }, select: { organizationId: true } });
       enforceRateLimit({ route: "announcements.comments.post", ip, userId: user.id, orgId: classroom?.organizationId || undefined, limit: 8, windowMs: 30_000 });
     } catch (e) {
       if (e instanceof RateLimitError) {
-        return NextResponse.json(
-          { success: false, message: "Bạn đang bình luận quá nhanh, vui lòng thử lại sau", requestId },
-          { status: 429 }
-        );
+        return errorResponse(429, "Bạn đang bình luận quá nhanh, vui lòng thử lại sau", { requestId });
       }
     }
 
     const body = await req.json().catch(() => null);
     const content = (body?.content ?? "").toString().trim();
     if (!content) {
-      return NextResponse.json(
-        { success: false, message: "content is required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "content is required", { requestId });
     }
 
     // Lấy parentId nếu có (cho reply comments)
@@ -434,17 +391,11 @@ export async function POST(
       });
 
       if (!parentComment) {
-        return NextResponse.json(
-          { success: false, message: "Parent comment not found", requestId },
-          { status: 404 }
-        );
+        return errorResponse(404, "Parent comment not found", { requestId });
       }
 
       if (parentComment.announcementId !== announcementId) {
-        return NextResponse.json(
-          { success: false, message: "Parent comment does not belong to this announcement", requestId },
-          { status: 400 }
-        );
+        return errorResponse(400, "Parent comment does not belong to this announcement", { requestId });
       }
     }
 
@@ -468,15 +419,12 @@ export async function POST(
       { success: true, data: created, requestId },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `[ERROR] [POST] /api/announcements/${params.id}/comments {requestId:${requestId}}`,
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error", requestId },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 

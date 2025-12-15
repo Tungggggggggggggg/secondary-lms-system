@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 
 // Always compute fresh data; avoid any route caching
@@ -14,17 +14,11 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+      return errorResponse(401, "Unauthorized");
     }
 
     if (user.role !== "STUDENT") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Student role required" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Student role required");
     }
 
     const now = new Date();
@@ -179,11 +173,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: unknown) {
     console.error("[GET /api/students/dashboard/stats] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

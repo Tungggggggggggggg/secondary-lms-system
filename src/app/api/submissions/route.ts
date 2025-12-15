@@ -1,30 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 
-const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
-interface IncomingFileMeta {
-    fileName: string;
-    mimeType: string;
-    sizeBytes: number;
-    storagePath: string;
-}
+const assignmentIdSchema = z.string().min(1).max(100);
+
+const getQuerySchema = z
+    .object({
+        assignmentId: assignmentIdSchema,
+    })
+    .strict();
+
+const postBodySchema = z
+    .object({
+        assignmentId: assignmentIdSchema,
+        status: z.enum(["draft", "submitted"]).optional(),
+        files: z
+            .array(
+                z
+                    .object({
+                        fileName: z.string().min(1).max(255),
+                        mimeType: z.string().min(1).max(200).optional(),
+                        sizeBytes: z.number().int().positive().max(MAX_FILE_SIZE),
+                        storagePath: z.string().min(1).max(1024),
+                    })
+                    .strict(),
+            )
+            .min(1),
+    })
+    .strict();
+
+const putBodySchema = z
+    .object({
+        assignmentId: assignmentIdSchema,
+    })
+    .strict();
 
 // GET: lấy submission hiện tại (bao gồm file) của học sinh cho 1 assignment
 export async function GET(req: NextRequest) {
     try {
-        const user = await getAuthenticatedUser(req, "STUDENT");
-        if (!user) {
-            return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
-        }
+        const user = await getAuthenticatedUser(req);
+        if (!user) return errorResponse(401, "Unauthorized");
+        if (user.role !== "STUDENT") return errorResponse(403, "Forbidden");
 
         const url = new URL(req.url);
-        const assignmentId = url.searchParams.get("assignmentId");
-        if (!assignmentId) {
-            return NextResponse.json({ success: false, message: "assignmentId is required" }, { status: 400 });
+        const parsedQuery = getQuerySchema.safeParse({
+            assignmentId: url.searchParams.get("assignmentId") ?? "",
+        });
+        if (!parsedQuery.success) {
+            return errorResponse(400, "Dữ liệu không hợp lệ", {
+                details: parsedQuery.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+            });
         }
+
+        const { assignmentId } = parsedQuery.data;
 
         const submission = await prisma.submission.findFirst({
             where: { assignmentId, studentId: user.id },
@@ -32,40 +63,40 @@ export async function GET(req: NextRequest) {
         });
 
         return NextResponse.json({ success: true, data: submission || null });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error("[ERROR] [GET] /api/submissions", error);
-        return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+        return errorResponse(500, "Internal server error");
     }
 }
 
 export async function POST(req: NextRequest) {
     try {
-        const user = await getAuthenticatedUser(req, "STUDENT");
-        if (!user) {
-            return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+        const user = await getAuthenticatedUser(req);
+        if (!user) return errorResponse(401, "Unauthorized");
+        if (user.role !== "STUDENT") return errorResponse(403, "Forbidden");
+
+        const rawBody: unknown = await req.json().catch(() => null);
+        const parsedBody = postBodySchema.safeParse(rawBody);
+        if (!parsedBody.success) {
+            return errorResponse(400, "Dữ liệu không hợp lệ", {
+                details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+            });
         }
 
-        const body = await req.json();
-        const { assignmentId, files, status } = body as { assignmentId?: string; files?: IncomingFileMeta[]; status?: "draft" | "submitted" };
-        if (!assignmentId || !Array.isArray(files) || files.length === 0) {
-            return NextResponse.json({ success: false, message: "assignmentId and files are required" }, { status: 400 });
-        }
+        const { assignmentId, files, status } = parsedBody.data;
 
         // Validate files
         for (const f of files) {
-            if (!f || typeof f.fileName !== "string" || typeof f.storagePath !== "string") {
-                return NextResponse.json({ success: false, message: "Invalid file metadata" }, { status: 400 });
-            }
-            if (typeof f.sizeBytes !== "number" || f.sizeBytes <= 0 || f.sizeBytes > MAX_FILE_SIZE) {
-                return NextResponse.json({ success: false, message: `File ${f.fileName} exceeds 20MB` }, { status: 413 });
-            }
             if (!f.storagePath.startsWith("submissions/")) {
-                return NextResponse.json({ success: false, message: "Invalid storage path" }, { status: 400 });
+                return errorResponse(400, "Invalid storage path");
+            }
+            if (f.storagePath.includes("..") || f.storagePath.includes("\\")) {
+                return errorResponse(400, "Invalid storage path");
             }
             // path should be submissions/{assignmentId}/{studentId}/...
             const parts = f.storagePath.split("/");
-            if (parts.length < 4 || parts[1] !== assignmentId) {
-                return NextResponse.json({ success: false, message: "Path does not match assignment" }, { status: 400 });
+            if (parts.length < 4 || parts[1] !== assignmentId || parts[2] !== user.id) {
+                return errorResponse(400, "Path does not match assignment");
             }
         }
 
@@ -105,32 +136,35 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ success: true, data: { submissionId } }, { status: 201 });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error("[ERROR] [POST] /api/submissions", error);
-        return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+        return errorResponse(500, "Internal server error");
     }
 }
 
 // PUT: xác nhận nộp bài (chuyển từ draft -> submitted)
 export async function PUT(req: NextRequest) {
     try {
-        const user = await getAuthenticatedUser(req, "STUDENT");
-        if (!user) {
-            return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+        const user = await getAuthenticatedUser(req);
+        if (!user) return errorResponse(401, "Unauthorized");
+        if (user.role !== "STUDENT") return errorResponse(403, "Forbidden");
+
+        const rawBody: unknown = await req.json().catch(() => null);
+        const parsedBody = putBodySchema.safeParse(rawBody);
+        if (!parsedBody.success) {
+            return errorResponse(400, "Dữ liệu không hợp lệ", {
+                details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+            });
         }
 
-        const body = await req.json();
-        const { assignmentId } = body as { assignmentId?: string };
-        if (!assignmentId) {
-            return NextResponse.json({ success: false, message: "assignmentId is required" }, { status: 400 });
-        }
+        const { assignmentId } = parsedBody.data;
 
         const submission = await prisma.submission.findFirst({
             where: { assignmentId, studentId: user.id },
             select: { id: true, status: true },
         });
         if (!submission) {
-            return NextResponse.json({ success: false, message: "Submission not found" }, { status: 404 });
+            return errorResponse(404, "Submission not found");
         }
 
         // Enforce max_attempts (ưu tiên áp dụng cho QUIZ, nhưng với file-based ta chặn nếu đã submitted khi max_attempts=1)
@@ -143,10 +177,7 @@ export async function PUT(req: NextRequest) {
         if (maxAttempts <= 1) {
             // Nếu chỉ cho 1 lần nộp, mà đã submitted rồi -> chặn
             if (submission.status === "submitted") {
-                return NextResponse.json(
-                    { success: false, message: "Bạn đã nộp bài. Không thể nộp thêm lần nữa." },
-                    { status: 403 }
-                );
+                return errorResponse(403, "Bạn đã nộp bài. Không thể nộp thêm lần nữa.");
             }
         } else {
             // Nếu cho nhiều lần, dùng số lượng assignment_submissions đã có để ước lượng attempts đã dùng
@@ -154,20 +185,17 @@ export async function PUT(req: NextRequest) {
                 where: { assignmentId, studentId: user.id },
             });
             if (usedAttempts >= maxAttempts) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: `Bạn đã sử dụng hết số lần nộp (${maxAttempts}). Không thể nộp thêm lần nữa.`,
-                    },
-                    { status: 403 }
+                return errorResponse(
+                    403,
+                    `Bạn đã sử dụng hết số lần nộp (${maxAttempts}). Không thể nộp thêm lần nữa.`
                 );
             }
         }
 
         await prisma.submission.update({ where: { id: submission.id }, data: { status: "submitted" } });
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error("[ERROR] [PUT] /api/submissions", error);
-        return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+        return errorResponse(500, "Internal server error");
     }
 }

@@ -1,51 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
-import { getCachedUser } from '@/lib/user-cache'
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
 
 /**
  * GET /api/teachers/assignments/stats
  * Lấy thống kê tổng hợp về assignments và classrooms của teacher - TỐI ƯU PERFORMANCE
  */
 export async function GET(req: NextRequest) {
-  const startTime = Date.now()
-  
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id && !session?.user?.email) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Unauthorized' 
-      }, { status: 401 })
+    const authUser = await getAuthenticatedUser(req)
+    if (!authUser) {
+      return errorResponse(401, 'Unauthorized')
+    }
+    if (authUser.role !== 'TEACHER') {
+      return errorResponse(403, 'Forbidden - Teacher only')
     }
 
-    const sessionUser = session.user as any
-    const sessionUserId = (sessionUser.id as string | undefined) || undefined
-    const sessionUserEmail = (sessionUser.email as string | undefined) || undefined
-    const sessionRole = (sessionUser.role as string | undefined) || undefined
-
-    // ✅ SỬ DỤNG CACHE CHO USER LOOKUP (perf), nhưng quyền dựa trên session.role
-    const cachedUser = await getCachedUser(
-      sessionUserId,
-      sessionUserEmail
-    )
-
-    if (sessionRole !== 'TEACHER') {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Forbidden - Teacher only' 
-      }, { status: 403 })
-    }
-
-    const teacherId = cachedUser?.id ?? sessionUserId
-
-    if (!teacherId) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Forbidden - Teacher only' 
-      }, { status: 403 })
-    }
+    const teacherId = authUser.id
 
     // ✅ TỐI ƯU: Sử dụng single raw query cho tất cả stats
     const statsResult = await prisma.$queryRaw<Array<{
@@ -122,20 +93,13 @@ export async function GET(req: NextRequest) {
       expectedSubmissions
     };
 
-    const duration = Date.now() - startTime
-    console.log(`[API] GET /api/teachers/assignments/stats - Completed in ${duration}ms`)
-
     return NextResponse.json({ 
       success: true, 
       data: finalStats 
     }, { status: 200 });
 
   } catch (error) {
-    const duration = Date.now() - startTime
-    console.error(`[API] GET /api/teachers/assignments/stats - Error after ${duration}ms:`, error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Internal server error' 
-    }, { status: 500 });
+    console.error('[ERROR] [GET] /api/teachers/assignments/stats', error)
+    return errorResponse(500, 'Internal server error')
   }
 }

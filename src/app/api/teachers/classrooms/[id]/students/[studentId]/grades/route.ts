@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
 
 interface TeacherStudentSubmissionRow {
   id: string;
@@ -25,26 +25,16 @@ export async function GET(
     const classroomId = params.id;
     const studentId = params.studentId;
     if (!classroomId || !studentId) {
-      return NextResponse.json(
-        { success: false, message: "classroomId and studentId are required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "classroomId and studentId are required", { requestId });
     }
 
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized", requestId },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized", { requestId });
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
 
     const owns = await isTeacherOfClassroom(user.id, classroomId);
     if (!owns) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your classroom", requestId },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your classroom", { requestId });
     }
 
     // Lấy danh sách assignmentId thuộc classroom
@@ -70,8 +60,7 @@ export async function GET(
       orderBy: { submittedAt: "desc" },
     });
 
-    const submissions =
-      submissionsRaw as TeacherStudentSubmissionRow[];
+    const submissions = submissionsRaw as TeacherStudentSubmissionRow[];
 
     const grades = submissions.map((sub: TeacherStudentSubmissionRow) => ({
       id: sub.id,
@@ -111,15 +100,12 @@ export async function GET(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `[ERROR] [GET] /api/teachers/classrooms/${params.id}/students/${params.studentId}/grades {requestId:${requestId}}`,
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error", requestId },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 

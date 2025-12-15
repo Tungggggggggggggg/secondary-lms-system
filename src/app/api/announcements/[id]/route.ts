@@ -1,41 +1,74 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
+
+const patchSchema = z
+  .object({
+    content: z.string().min(1).max(5000).optional(),
+    pin: z.boolean().optional(),
+  })
+  .strict();
 
 // PATCH: Chỉnh sửa nội dung announcement (teacher sở hữu lớp)
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const requestId = getRequestId(req);
   try {
     const id = params.id;
-    if (!id) return NextResponse.json({ success: false, message: "id is required", requestId }, { status: 400 });
+    if (!id) return errorResponse(400, "id is required", { requestId });
 
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) return NextResponse.json({ success: false, message: "Unauthorized", requestId }, { status: 401 });
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized", { requestId });
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
 
-    const body = await req.json().catch(() => null);
-    const content = typeof body?.content === "string" ? body.content.toString().trim() : undefined;
-    const hasPin = typeof body?.pin === "boolean";
-
-    const ann = await prisma.announcement.findUnique({ where: { id }, select: { classroomId: true } });
-    if (!ann) return NextResponse.json({ success: false, message: "Announcement not found", requestId }, { status: 404 });
-
-    const owns = await isTeacherOfClassroom(user.id, ann.classroomId);
-    if (!owns) return NextResponse.json({ success: false, message: "Forbidden", requestId }, { status: 403 });
-
-    if (!hasPin && (content == null || content === "")) {
-      return NextResponse.json({ success: false, message: "No changes provided", requestId }, { status: 400 });
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = patchSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        requestId,
+        details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
 
-    const data: any = {};
+    const content = typeof parsedBody.data.content === "string" ? parsedBody.data.content.trim() : undefined;
+    const hasPin = typeof parsedBody.data.pin === "boolean";
+
+    const ann = await prisma.announcement.findUnique({ where: { id }, select: { classroomId: true } });
+    if (!ann) return errorResponse(404, "Announcement not found", { requestId });
+
+    const owns = await isTeacherOfClassroom(user.id, ann.classroomId);
+    if (!owns) return errorResponse(403, "Forbidden", { requestId });
+
+    if (!hasPin && (content == null || content === "")) {
+      return errorResponse(400, "No changes provided", { requestId });
+    }
+
+    const data: { content?: string; pinnedAt?: Date | null } = {};
     if (typeof content === "string" && content.length > 0) data.content = content;
-    if (hasPin) data.pinnedAt = body.pin ? new Date() : null;
+    if (hasPin) data.pinnedAt = parsedBody.data.pin ? new Date() : null;
 
-    const updated = await prisma.announcement.update({ where: { id }, data });
+    const updated = await prisma.announcement.update({
+      where: { id },
+      data,
+      select: { id: true, content: true, pinnedAt: true, updatedAt: true },
+    });
 
-    return NextResponse.json({ success: true, data: { id: updated.id, content: updated.content, pinnedAt: (updated as any).pinnedAt ?? null, updatedAt: updated.updatedAt }, requestId });
-  } catch (error) {
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: updated.id,
+          content: updated.content,
+          pinnedAt: updated.pinnedAt ?? null,
+          updatedAt: updated.updatedAt,
+        },
+        requestId,
+      },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
     console.error(`[ERROR] [PATCH] /api/announcements/${params.id} {requestId:${requestId}}`, error);
-    return NextResponse.json({ success: false, message: "Internal server error", requestId }, { status: 500 });
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 
@@ -44,22 +77,23 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const requestId = getRequestId(req);
   try {
     const id = params.id;
-    if (!id) return NextResponse.json({ success: false, message: "id is required", requestId }, { status: 400 });
+    if (!id) return errorResponse(400, "id is required", { requestId });
 
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) return NextResponse.json({ success: false, message: "Unauthorized", requestId }, { status: 401 });
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized", { requestId });
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
 
     const ann = await prisma.announcement.findUnique({ where: { id }, select: { id: true, classroomId: true } });
-    if (!ann) return NextResponse.json({ success: false, message: "Announcement not found", requestId }, { status: 404 });
+    if (!ann) return errorResponse(404, "Announcement not found", { requestId });
 
     const owns = await isTeacherOfClassroom(user.id, ann.classroomId);
-    if (!owns) return NextResponse.json({ success: false, message: "Forbidden", requestId }, { status: 403 });
+    if (!owns) return errorResponse(403, "Forbidden", { requestId });
 
     await prisma.announcement.delete({ where: { id } });
 
     return NextResponse.json({ success: true, data: { id }, requestId });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`[ERROR] [DELETE] /api/announcements/${params.id} {requestId:${requestId}}`, error);
-    return NextResponse.json({ success: false, message: "Internal server error", requestId }, { status: 500 });
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }

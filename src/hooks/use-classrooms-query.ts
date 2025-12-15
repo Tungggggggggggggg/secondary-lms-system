@@ -51,6 +51,16 @@ export function useClassroomsQuery(params: UseClassroomsQueryParams): UseClassro
     return q.toString();
   }, [params.search, params.status, page, pageSize, params.sortKey, params.sortDir]);
 
+  const isAbortError = (e: unknown): boolean =>
+    typeof e === "object" && e !== null && (e as { name?: unknown }).name === "AbortError";
+
+  const getErrorMessage = (e: unknown): string => {
+    if (typeof e === "object" && e !== null && typeof (e as { message?: unknown }).message === "string") {
+      return (e as { message: string }).message;
+    }
+    return "Lỗi tải dữ liệu";
+  };
+
   useEffect(() => {
     if (!enabled) {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -72,7 +82,7 @@ export function useClassroomsQuery(params: UseClassroomsQueryParams): UseClassro
           const ac = new AbortController();
           abortRef.current = ac;
           const res = await fetch(`/api/teachers/classrooms/query?${query}`, { signal: ac.signal, cache: "no-store" });
-          const json = await res.json().catch(() => ({}));
+          const json = (await res.json().catch(() => null)) as unknown;
           if (res.status === 403) {
             console.warn('[useClassroomsQuery] Forbidden - Teacher only. Trả về danh sách rỗng.');
             setItems([]);
@@ -81,13 +91,36 @@ export function useClassroomsQuery(params: UseClassroomsQueryParams): UseClassro
             setError(null);
             return;
           }
-          if (!res.ok || json?.success === false) {
-            throw new Error(json?.message || res.statusText || 'Fetch error');
+          const ok = typeof json === "object" && json !== null && (json as { success?: unknown }).success === true;
+          if (!res.ok || !ok) {
+            const msg =
+              typeof json === "object" &&
+              json !== null &&
+              typeof (json as { message?: unknown }).message === "string"
+                ? (json as { message: string }).message
+                : res.statusText || "Fetch error";
+            throw new Error(msg);
           }
-          setItems(json.data?.items ?? []);
-          setTotal(json.data?.total ?? 0);
-          if (json.data?.counts) {
-            const c = json.data.counts;
+          const data = typeof json === "object" && json !== null ? (json as { data?: unknown }).data : undefined;
+          const itemsRaw =
+            typeof data === "object" && data !== null && Array.isArray((data as { items?: unknown }).items)
+              ? ((data as { items: UseClassroomsQueryResult["items"] }).items as UseClassroomsQueryResult["items"])
+              : [];
+          const totalRaw =
+            typeof data === "object" && data !== null && typeof (data as { total?: unknown }).total === "number"
+              ? (data as { total: number }).total
+              : 0;
+
+          setItems(itemsRaw);
+          setTotal(totalRaw);
+
+          const countsRaw =
+            typeof data === "object" && data !== null && typeof (data as { counts?: unknown }).counts === "object"
+              ? (data as { counts?: unknown }).counts
+              : null;
+
+          if (countsRaw && typeof countsRaw === "object") {
+            const c = countsRaw as Record<string, unknown>;
             setCounts({
               all: Number(c.all ?? 0),
               active: Number(c.active ?? 0),
@@ -96,9 +129,9 @@ export function useClassroomsQuery(params: UseClassroomsQueryParams): UseClassro
           } else {
             setCounts(null);
           }
-        } catch (e: any) {
-          if (e?.name === "AbortError") return;
-          setError(e?.message || "Lỗi tải dữ liệu");
+        } catch (e: unknown) {
+          if (isAbortError(e)) return;
+          setError(getErrorMessage(e));
           setItems([]);
           setTotal(0);
           setCounts(null);

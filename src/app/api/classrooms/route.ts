@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateClassroomCode } from "@/lib/utils";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
+
+const postSchema = z
+  .object({
+    name: z.string().min(1).max(200),
+    description: z.string().max(2000).optional(),
+    icon: z.string().min(1).max(100),
+    maxStudents: z.coerce.number().int().min(1).max(10_000),
+    code: z.string().optional(),
+  })
+  .strict();
 
 interface StudentClassroomRow {
   joinedAt: Date;
@@ -31,12 +42,7 @@ export async function GET(req: NextRequest) {
   try {
     // Sử dụng getAuthenticatedUser (không yêu cầu role cụ thể)
     const user = await getAuthenticatedUser(req);
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    if (!user) return errorResponse(401, "Unauthorized");
 
     // Nếu là giáo viên: trả về lớp học do giáo viên tạo
     if (user.role === "TEACHER") {
@@ -58,7 +64,6 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: 'desc' }, // Sắp xếp để consistent ordering
       });
-      console.log(`[INFO] [GET] Lấy danh sách lớp học cho teacher: ${user.id}`);
       return NextResponse.json({ success: true, data: classrooms }, { status: 200 });
     }
 
@@ -92,61 +97,42 @@ export async function GET(req: NextRequest) {
         ...sc.classroom,
         joinedAt: sc.joinedAt, // Thông tin thời gian tham gia
       }));
-      console.log(`[INFO] [GET] Lấy danh sách lớp học cho student: ${user.id}`);
       return NextResponse.json({ success: true, data: classrooms }, { status: 200 });
     }
 
-    // Các role khác trả về rỗng
-    console.warn(`[WARN] [GET] User ${user.id} with role=${user.role} tried to access classrooms`);
-    return NextResponse.json({ success: true, data: [] }, { status: 200 });
-  } catch (error) {
+    return errorResponse(403, "Forbidden");
+  } catch (error: unknown) {
     console.error("[ERROR] [GET] Lỗi lấy danh sách lớp học:", error);
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
+
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = postSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
 
-    // Lấy dữ liệu từ request
-    const data = await req.json();
-    const { name, description, icon, maxStudents, code: providedCode } = data as {
-      name?: string;
-      description?: string;
-      icon?: string;
-      maxStudents?: number;
-      code?: string;
-    };
-
-    // Validate dữ liệu
-    if (!name || !icon || !maxStudents) {
-      return NextResponse.json(
-        { success: false, message: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    const { name, description, icon, maxStudents, code: providedCode } = parsedBody.data;
 
     // Chọn mã lớp học: ưu tiên mã do client cung cấp (nếu hợp lệ, không trùng), nếu không sẽ tự sinh
     let code = (providedCode ?? "").trim().toUpperCase();
     if (code) {
       const validPattern = /^[A-Z2-9]{4,10}$/; // giống form phía client: loại bỏ ký tự dễ nhầm, độ dài hợp lý
       if (!validPattern.test(code)) {
-        return NextResponse.json({ success: false, message: "Mã lớp không hợp lệ" }, { status: 400 });
+        return errorResponse(400, "Mã lớp không hợp lệ");
       }
       const exists = await prisma.classroom.findUnique({ where: { code } });
       if (exists) {
-        return NextResponse.json({ success: false, message: "Mã lớp đã tồn tại, vui lòng chọn mã khác" }, { status: 409 });
+        return errorResponse(409, "Mã lớp đã tồn tại, vui lòng chọn mã khác");
       }
     } else {
       // Tự động sinh mã không trùng
@@ -158,7 +144,7 @@ export async function POST(req: NextRequest) {
       }
       if (!code) {
         console.error("[ERROR] Không thể sinh mã lớp học duy nhất sau nhiều lần thử");
-        return NextResponse.json({ success: false, message: "Không thể tạo mã lớp học, vui lòng thử lại" }, { status: 500 });
+        return errorResponse(500, "Không thể tạo mã lớp học, vui lòng thử lại");
       }
     }
 
@@ -181,9 +167,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Log thành công
-    console.log(`[INFO] Created new classroom: ${classroom.id} by teacher: ${user.id}`);
-
     return NextResponse.json(
       {
         success: true,
@@ -193,18 +176,16 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: unknown) {
-    // Log lỗi, ưu tiên bắt lỗi unique constraint nếu có
-    if (typeof error === "object" && error && (error as any).code === "P2002") {
-      console.error("[ERROR][CLASSROOMS POST] Unique constraint error:", (error as any).meta);
-    } else if (error instanceof Error) {
-      console.error("[ERROR][CLASSROOMS POST] Unexpected error:", error.message, error.stack);
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "P2002"
+    ) {
+      console.error("[ERROR][CLASSROOMS POST] Unique constraint error:", (error as { meta?: unknown }).meta);
     } else {
-      console.error("[ERROR][CLASSROOMS POST] Unknown error:", error);
+      console.error("[ERROR][CLASSROOMS POST] Unexpected error:", error);
     }
-
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

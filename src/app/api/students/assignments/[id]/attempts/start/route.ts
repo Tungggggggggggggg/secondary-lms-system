@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
 
 /**
  * POST /api/students/assignments/[id]/attempts/start
@@ -11,23 +18,25 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getAuthenticatedUser(req, "STUDENT");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden - Student role required");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
 
-    const assignmentId = params.id;
+    const assignmentId = parsedParams.data.id;
 
     // Kiểm tra quyền truy cập assignment qua classroom membership
     const classroomId = await getStudentClassroomForAssignment(user.id, assignmentId);
     if (!classroomId) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not a member of this assignment's classroom" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not a member of this assignment's classroom");
     }
 
     // Lấy thông tin assignment cần thiết
@@ -46,34 +55,22 @@ export async function POST(
     });
 
     if (!assignment) {
-      return NextResponse.json(
-        { success: false, message: "Assignment not found" },
-        { status: 404 }
-      );
+      return errorResponse(404, "Assignment not found");
     }
 
     if (assignment.type !== "QUIZ") {
-      return NextResponse.json(
-        { success: false, message: "Only QUIZ assignments support attempts" },
-        { status: 400 }
-      );
+      return errorResponse(400, "Only QUIZ assignments support attempts");
     }
 
     const now = new Date();
 
     // Kiểm tra thời gian mở/khóa
     if (assignment.openAt && now < new Date(assignment.openAt)) {
-      return NextResponse.json(
-        { success: false, message: "Bài chưa mở, không thể bắt đầu" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Bài chưa mở, không thể bắt đầu");
     }
     const lockedAt = assignment.lockAt ?? assignment.dueDate;
     if (lockedAt && now > new Date(lockedAt)) {
-      return NextResponse.json(
-        { success: false, message: "Bài đã khóa hoặc quá hạn" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Bài đã khóa hoặc quá hạn");
     }
 
     // Nếu đã có attempt đang IN_PROGRESS -> trả về attempt đó để tiếp tục (tránh tạo trùng)
@@ -123,9 +120,9 @@ export async function POST(
 
     // Kiểm tra giới hạn số lần làm
     if ((assignment.max_attempts ?? 1) < nextAttempt) {
-      return NextResponse.json(
-        { success: false, message: `Bạn đã vượt quá số lần làm tối đa (${assignment.max_attempts ?? 1}).` },
-        { status: 403 }
+      return errorResponse(
+        403,
+        `Bạn đã vượt quá số lần làm tối đa (${assignment.max_attempts ?? 1}).`
       );
     }
 
@@ -160,7 +157,6 @@ export async function POST(
     );
   } catch (error: unknown) {
     console.error("[ERROR] [POST] /api/students/assignments/[id]/attempts/start - Error:", error);
-    const msg = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ success: false, message: msg }, { status: 500 });
+    return errorResponse(500, "Internal server error");
   }
 }

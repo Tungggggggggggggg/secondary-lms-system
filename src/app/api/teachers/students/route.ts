@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 
 type TeacherStudentRow = {
   studentId: string;
@@ -37,14 +37,11 @@ export async function GET(req: NextRequest) {
   try {
     const authUser = await getAuthenticatedUser(req);
     if (!authUser) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+      return errorResponse(401, "Unauthorized");
     }
 
     if (authUser.role !== "TEACHER") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - TEACHER role required" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - TEACHER role required");
     }
 
     const teacherId = authUser.id;
@@ -128,6 +125,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data: items }, { status: 200 });
   } catch (error) {
     console.error("[ERROR] [GET] /api/teachers/students", error);
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    return errorResponse(500, "Internal server error");
   }
 }

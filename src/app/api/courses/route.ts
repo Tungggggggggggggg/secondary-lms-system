@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { errorResponse } from "@/lib/api-utils";
 
 // GET /api/courses?orgId=...
 // Trả về danh sách courses, nếu có orgId thì lọc theo organization
@@ -16,16 +17,9 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: courses });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("[GET /api/courses] Lỗi:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,30 @@ import ExamStatsOverview from "@/components/teacher/exam/ExamStatsOverview";
 import ExamMonitoringList from "@/components/teacher/exam/ExamMonitoringList";
 import ExamLogsFilters from "@/components/teacher/exam/ExamLogsFilters";
 import ExamLogsTables from "@/components/teacher/exam/ExamLogsTables";
+
+type TeacherAssignmentListItem = {
+  id: string;
+  title: string;
+  type: string;
+  updatedAt: string;
+};
+
+type TeacherAssignmentsApiResponse = {
+  success?: boolean;
+  data?: {
+    items?: TeacherAssignmentListItem[];
+  };
+  message?: string;
+};
+
+const teacherAssignmentsFetcher = async (url: string): Promise<TeacherAssignmentsApiResponse> => {
+  const res = await fetch(url, { cache: "no-store" });
+  const json = (await res.json().catch(() => ({}))) as TeacherAssignmentsApiResponse;
+  if (!res.ok || json?.success === false) {
+    throw new Error(json?.message || "Không thể tải danh sách bài tập");
+  }
+  return json;
+};
 
 // Mock data đơn giản cho UI (để trống, chỉ dùng cho demo nếu cần)
 const mockStudentSessions: Array<{
@@ -95,6 +120,23 @@ const mockStudentSessions: Array<{
 export default function ExamMonitorPage() {
   const { toast } = useToast();
 
+  const { data: teacherAssignmentsData } = useSWR<TeacherAssignmentsApiResponse>(
+    "/api/teachers/assignments?take=100&skip=0&status=all&sortKey=createdAt&sortDir=desc",
+    teacherAssignmentsFetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
+  );
+
+  const quizOptions = useMemo(() => {
+    const items = teacherAssignmentsData?.data?.items ?? [];
+    const quizzes = items
+      .filter((a) => a.type === "QUIZ")
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    return quizzes.map((a) => ({ id: a.id, title: a.title }));
+  }, [teacherAssignmentsData]);
+
   const antiScoreSchema = z.object({
     suspicionScore: z.number().int().min(0).max(100),
     riskLevel: z.enum(["low", "medium", "high"]),
@@ -110,7 +152,7 @@ export default function ExamMonitorPage() {
         })
       )
       .default([]),
-    countsByType: z.record(z.number().int().min(0)).default({}),
+    countsByType: z.record(z.string(), z.number().int().min(0)).default({}),
     totalEvents: z.number().int().min(0),
   });
 
@@ -253,20 +295,7 @@ export default function ExamMonitorPage() {
           if (!id || !assignmentId || !studentId || !eventType || !createdAt) return null;
           return { id, assignmentId, studentId, attempt, eventType, createdAt, metadata, student };
         })
-        .filter(
-          (
-            v
-          ): v is {
-            id: string;
-            assignmentId: string;
-            studentId: string;
-            attempt: number | null;
-            eventType: string;
-            createdAt: string;
-            metadata: unknown;
-            student?: { id: string; fullname: string; email: string };
-          } => v !== null
-        );
+        .filter((v): v is NonNullable<typeof v> => v !== null);
       setEvents(mapped);
     } catch (e) {
       console.error("[ExamLogs] fetch error", e);
@@ -319,7 +348,7 @@ export default function ExamMonitorPage() {
     return () => {
       cancelled = true;
     };
-  }, [assignmentIdFromQuery]);
+  }, [effectiveAssignmentId]);
 
   const severityOf = (type: string): 'low' | 'medium' | 'high' | 'info' => {
     if (type === 'SESSION_STARTED' || type === 'AUTO_SAVED' || type === 'SESSION_RESUMED') return 'info';
@@ -679,8 +708,9 @@ export default function ExamMonitorPage() {
     action: "EXTEND_TIME" | "PAUSE" | "RESUME" | "TERMINATE",
     extra?: { minutes?: number; reason?: string }
   ) => {
-    if (!assignmentIdFromQuery) {
-      window.alert("Chức năng điều khiển chỉ dùng được khi mở từ bài Quiz (có assignmentId trên URL).");
+    const assignmentId = effectiveAssignmentId.trim();
+    if (!assignmentId) {
+      window.alert("Vui lòng chọn bài Quiz để thực hiện điều khiển.");
       return;
     }
     const { studentId, attemptNumber } = parseSessionKey(sessionKey);
@@ -696,7 +726,7 @@ export default function ExamMonitorPage() {
       if (extra?.minutes != null) body.minutes = extra.minutes;
       if (extra?.reason != null) body.reason = extra.reason;
 
-      const res = await fetch(`/api/teachers/assignments/${assignmentIdFromQuery}/attempts/override`, {
+      const res = await fetch(`/api/teachers/assignments/${assignmentId}/attempts/override`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -765,8 +795,8 @@ export default function ExamMonitorPage() {
       return;
     }
 
-    if (!assignmentIdFromQuery) {
-      window.alert("Chức năng gia hạn tất cả chỉ dùng được khi mở từ bài Quiz (có assignmentId trên URL).");
+    if (!effectiveAssignmentId.trim()) {
+      window.alert("Vui lòng chọn bài Quiz để gia hạn cho tất cả.");
       return;
     }
 
@@ -878,6 +908,8 @@ export default function ExamMonitorPage() {
               <CardContent className="space-y-4">
                 <ExamLogsFilters
                   assignmentId={assignmentIdInput}
+                  assignments={quizOptions}
+                  assignmentDisabled={Boolean(assignmentIdFromQuery)}
                   studentId={studentIdInput}
                   attempt={attemptInput}
                   from={fromInput}
@@ -1055,13 +1087,13 @@ export default function ExamMonitorPage() {
                       <Button
                         variant="outline"
                         onClick={loadAntiCheatScore}
-                        disabled={!Boolean(effectiveAssignmentId) || antiScoreLoading}
+                        disabled={!effectiveAssignmentId || antiScoreLoading}
                       >
                         {antiScoreLoading ? "Đang tải..." : "Tải điểm nghi ngờ"}
                       </Button>
                       <Button
                         onClick={callAiSummary}
-                        disabled={!Boolean(effectiveAssignmentId) || aiSummaryLoading}
+                        disabled={!effectiveAssignmentId || aiSummaryLoading}
                       >
                         {aiSummaryLoading ? "Đang tóm tắt..." : "AI tóm tắt"}
                       </Button>

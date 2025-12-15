@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logging/logger";
 import { ensureTeacherStudentConversation, listConversations, createConversation } from "@/lib/repositories/chat";
+import { z } from "zod";
+
+const postBodySchema = z
+  .object({
+    studentId: z.string().min(1).max(100).optional(),
+    includeParents: z.boolean().optional(),
+    classId: z.string().min(1).max(100).optional().nullable(),
+    participantIds: z.array(z.string().min(1).max(100)).optional(),
+    type: z.enum(["DM", "TRIAD", "GROUP"]).optional(),
+    contextStudentId: z.string().min(1).max(100).optional().nullable(),
+  })
+  .passthrough();
 
 export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
@@ -20,8 +32,13 @@ export async function POST(req: NextRequest) {
   if (!user) return errorResponse(401, "Unauthorized");
 
   try {
-    const body = await req.json();
-    const { studentId, includeParents, classId, participantIds, type, contextStudentId } = body || {};
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = postBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ");
+    }
+
+    const { studentId, includeParents, classId, participantIds, type, contextStudentId } = parsedBody.data;
 
     let conversationId: string | null = null;
 
@@ -36,7 +53,7 @@ export async function POST(req: NextRequest) {
     } else if (Array.isArray(participantIds) && participantIds.length > 0) {
       // Nhánh generic: tạo hội thoại theo tập participants (đảm bảo self included)
       const unique: string[] = Array.from(new Set([...participantIds, user.id]));
-      const t: "DM" | "TRIAD" | "GROUP" = ((type as string) || (unique.length > 2 ? "GROUP" : "DM")) as any;
+      const t: "DM" | "TRIAD" | "GROUP" = type ?? (unique.length > 2 ? "GROUP" : "DM");
       conversationId = await createConversation({
         type: t,
         createdById: user.id,

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
+import { errorResponse } from '@/lib/api-utils';
 
 const ALLOWED_USER_ROLES = [
   'TEACHER',
@@ -10,37 +13,26 @@ const ALLOWED_USER_ROLES = [
 
 type UserRole = (typeof ALLOWED_USER_ROLES)[number];
 
+const registerSchema = z
+  .object({
+    fullname: z.string().min(1).max(200),
+    email: z.string().email().max(320),
+    password: z.string().min(6).max(200),
+    role: z.string().optional().nullable(),
+  })
+  .strict();
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { fullname, email, password, role } = body as {
-      fullname?: string;
-      email?: string;
-      password?: string;
-      role?: string | null;
-    };
-
-    // 1. Kiểm tra dữ liệu đầu vào
-    if (!fullname) {
-      return NextResponse.json({ message: 'Vui lòng nhập họ và tên.' }, { status: 400 });
-    }
-    if (!email) {
-      return NextResponse.json({ message: 'Vui lòng nhập địa chỉ email.' }, { status: 400 });
-    }
-    if (!password) {
-      return NextResponse.json({ message: 'Vui lòng nhập mật khẩu.' }, { status: 400 });
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsed = registerSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errorResponse(400, 'Dữ liệu không hợp lệ', {
+        details: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+      });
     }
 
-    // 2. Kiểm tra định dạng email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ message: 'Email không hợp lệ.' }, { status: 400 });
-    }
-
-    // 3. Kiểm tra độ dài mật khẩu
-    if (password.length < 6) {
-      return NextResponse.json({ message: 'Mật khẩu phải có ít nhất 6 ký tự.' }, { status: 400 });
-    }
+    const { fullname, email, password, role } = parsed.data;
 
     // 4. Kiểm tra người dùng đã tồn tại chưa
     const existingUser = await prisma.user.findUnique({
@@ -48,7 +40,7 @@ export async function POST(req: Request) {
     });
 
     if (existingUser) {
-      return NextResponse.json({ message: 'Email đã được đăng ký.' }, { status: 409 });
+      return errorResponse(409, 'Email đã được đăng ký.');
     }
 
     // 5. Mã hóa mật khẩu
@@ -56,7 +48,7 @@ export async function POST(req: Request) {
 
     // 6. Tạo người dùng mới trong cơ sở dữ liệu
     // KHÔNG truyền role = null để Prisma áp dụng default từ schema (STUDENT)
-    const data: any = {
+    const data: Prisma.UserCreateInput = {
       fullname,
       email,
       password: hashedPassword,
@@ -83,18 +75,12 @@ export async function POST(req: Request) {
     };
     return NextResponse.json({ message: 'Đăng ký thành công!', user: safeUser }, { status: 201 });
   } catch (error: unknown) {
-    // Log lỗi chi tiết để debug và phân loại lỗi unique constraint nếu có
-    if (typeof error === 'object' && error && (error as any).code === 'P2002') {
-      console.error('[API Register] Unique constraint failed:', (error as any).meta);
-      return NextResponse.json({ message: 'Email đã tồn tại.' }, { status: 409 });
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      console.error('[API Register] Unique constraint failed:', error.meta);
+      return errorResponse(409, 'Email đã tồn tại.');
     }
 
-    if (error instanceof Error) {
-      console.error('[API Register] Unexpected error:', error.message, error.stack);
-    } else {
-      console.error('[API Register] Unknown error:', error);
-    }
-
-    return NextResponse.json({ message: 'Đã xảy ra lỗi trong quá trình đăng ký.' }, { status: 500 });
+    console.error('[API Register] Error:', error);
+    return errorResponse(500, 'Đã xảy ra lỗi trong quá trình đăng ký.');
   }
 }

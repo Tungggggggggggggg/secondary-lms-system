@@ -65,10 +65,9 @@ export async function POST(req: NextRequest) {
     });
 
     if (candidates.length === 0) {
-      return NextResponse.json({
-        success: false,
-        message: "Không có dòng hợp lệ để tạo giáo viên.",
+      return errorResponse(400, "Không có dòng hợp lệ để tạo giáo viên.", {
         data: { created: [], failed },
+        details: { failedCount: failed.length },
       });
     }
 
@@ -90,10 +89,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (uniqueCandidates.length === 0) {
-      return NextResponse.json({
-        success: false,
-        message: "Tất cả email trong danh sách đều bị trùng hoặc không hợp lệ.",
+      return errorResponse(400, "Tất cả email trong danh sách đều bị trùng hoặc không hợp lệ.", {
         data: { created: [], failed },
+        details: { failedCount: failed.length },
       });
     }
 

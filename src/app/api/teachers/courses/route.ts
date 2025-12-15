@@ -14,8 +14,9 @@ const createSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const takeRaw = req.nextUrl.searchParams.get("take");
     const take = Math.min(Math.max(Number(takeRaw ?? 50) || 50, 1), 200);
@@ -44,8 +45,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const body = await req.json().catch(() => null);
     const parsed = createSchema.safeParse(body);

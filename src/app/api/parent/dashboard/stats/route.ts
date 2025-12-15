@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 
 interface ParentChildLinkRow {
@@ -38,17 +38,11 @@ export async function GET(req: NextRequest) {
   try {
     const authUser = await getAuthenticatedUser(req);
     if (!authUser) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+      return errorResponse(401, "Unauthorized");
     }
 
     if (authUser.role !== "PARENT") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - PARENT role required" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Parent role required");
     }
 
     // Lấy danh sách tất cả con của phụ huynh
@@ -191,11 +185,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: unknown) {
     console.error("[GET /api/parent/dashboard/stats] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

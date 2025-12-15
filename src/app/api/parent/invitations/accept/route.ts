@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { parentStudentInvitationRepo } from "@/lib/repositories/parent-student-invitation-repo";
+import { z } from "zod";
+
+const bodySchema = z
+  .object({
+    code: z.string().min(1).max(200),
+  })
+  .passthrough();
 
 /**
  * POST /api/parent/invitations/accept
@@ -16,12 +23,13 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       return errorResponse(403, "Forbidden: PARENT role only");
     }
 
-    const body = await req.json();
-    const { code } = body;
-
-    if (!code) {
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = bodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
       return errorResponse(400, "Invitation code is required");
     }
+
+    const code = parsedBody.data.code;
 
     const result = await parentStudentInvitationRepo.acceptInvitation({
       code: code.toUpperCase().trim(),
@@ -35,7 +43,6 @@ export const POST = withApiLogging(async (req: NextRequest) => {
     });
   } catch (error: unknown) {
     console.error("[POST /api/parent/invitations/accept] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "PARENT_INVITATION_ACCEPT");

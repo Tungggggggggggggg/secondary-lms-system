@@ -35,7 +35,6 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     });
   } catch (error: unknown) {
     console.error("[GET /api/student/link-requests] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "STUDENT_LINK_REQUESTS_LIST");

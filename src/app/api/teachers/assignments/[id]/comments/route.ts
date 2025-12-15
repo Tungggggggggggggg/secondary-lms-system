@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+
+const querySchema = z.object({
+  questionId: z.string().min(1).optional(),
+  studentId: z.string().min(1).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
 
 interface TeacherAssignmentCommentRow {
   id: string;
@@ -29,39 +38,37 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const assignmentId = params.id;
 
     // Kiểm tra teacher có sở hữu assignment không
     const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
     if (!isOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your assignment" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your assignment");
     }
 
     // Parse query params
-    const url = req.url ? new URL(req.url, "http://localhost") : null;
-    const questionId = url?.searchParams.get("questionId"); // Filter theo question cụ thể
-    const studentId = url?.searchParams.get("studentId"); // Filter theo student cụ thể
-    const page = url?.searchParams.get("page")
-      ? Number(url.searchParams.get("page"))
-      : 1;
-    const limit = url?.searchParams.get("limit")
-      ? Number(url.searchParams.get("limit"))
-      : 50;
+    const url = new URL(req.url);
+    const parsedQuery = querySchema.safeParse({
+      questionId: url.searchParams.get("questionId") || undefined,
+      studentId: url.searchParams.get("studentId") || undefined,
+      page: url.searchParams.get("page") || undefined,
+      limit: url.searchParams.get("limit") || undefined,
+    });
+    if (!parsedQuery.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedQuery.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
+    }
+
+    const { questionId, studentId, page, limit } = parsedQuery.data;
     const skip = (page - 1) * limit;
 
     // Xây dựng where clause
-    const whereClause: any = {
+    const whereClause: Prisma.QuestionCommentWhereInput = {
       question: {
         assignmentId,
       },
@@ -122,10 +129,6 @@ export async function GET(
       }),
     );
 
-    console.log(
-      `[INFO] [GET] /api/teachers/assignments/${assignmentId}/comments - Found ${commentsData.length} comments (total: ${total}, page: ${page})`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -139,15 +142,12 @@ export async function GET(
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/teachers/assignments/[id]/comments - Error:",
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

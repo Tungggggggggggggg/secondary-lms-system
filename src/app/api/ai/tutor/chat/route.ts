@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { Prisma } from "@prisma/client";
+import { TaskType } from "@google/generative-ai";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isStudentInClassroom } from "@/lib/api-utils";
 import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
@@ -33,7 +34,7 @@ const requestSchema = z.object({
 
 function rateLimitResponse(retryAfterSeconds: number) {
   return NextResponse.json(
-    { success: false, error: true, message: "Too many requests", retryAfterSeconds },
+    { success: false, error: true, message: "Too many requests", details: null, retryAfterSeconds },
     {
       status: 429,
       headers: {
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
     const queryEmbedding = await embedTextWithGemini({
       text: message,
       outputDimensionality: DEFAULT_EMBEDDING_DIMENSIONALITY,
-      taskType: "RETRIEVAL_QUERY",
+      taskType: TaskType.RETRIEVAL_QUERY,
     });
     if (queryEmbedding.length !== DEFAULT_EMBEDDING_DIMENSIONALITY) {
       return errorResponse(500, "Embedding query có dimension không hợp lệ");
@@ -151,11 +152,20 @@ export async function POST(req: NextRequest) {
             answer:
               "Hiện chưa có dữ liệu bài học được index để tra cứu. Vui lòng thử lại sau hoặc liên hệ giáo viên để hệ thống index bài học.",
             sources: [],
+            noEmbeddings: true,
           },
         },
         { status: 200 }
       );
     }
+
+    const uniqueLessonIds = Array.from(new Set(chunks.map((c) => c.lessonId)));
+    const lessonRows = await prisma.lesson.findMany({
+      where: { id: { in: uniqueLessonIds } },
+      select: { id: true, title: true },
+      take: 50,
+    });
+    const lessonTitleById = new Map<string, string>(lessonRows.map((l) => [l.id, l.title]));
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -218,6 +228,8 @@ export async function POST(req: NextRequest) {
             chunkIndex: c.chunkIndex,
             distance: c.distance,
             excerpt: c.content.slice(0, 240),
+            content: c.content,
+            lessonTitle: lessonTitleById.get(c.lessonId) ?? null,
           })),
         },
       },

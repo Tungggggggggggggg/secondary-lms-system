@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+
+const bodySchema = z
+  .object({
+    studentId: z.string().min(1),
+    grade: z.number().min(0).max(10),
+    feedback: z.string().max(5000).optional(),
+  })
+  .strict();
 
 /**
  * POST /api/assignments/[id]/file-grade
@@ -8,21 +17,23 @@ import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const assignmentId = params.id;
     const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
-    if (!isOwner) return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+    if (!isOwner) return errorResponse(403, "Forbidden");
 
-    const body = await req.json();
-    const { studentId, grade, feedback } = body as { studentId?: string; grade?: number; feedback?: string };
-    if (!studentId || grade === undefined) {
-      return NextResponse.json({ success: false, message: "studentId and grade are required" }, { status: 400 });
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = bodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
-    if (grade < 0 || grade > 10) {
-      return NextResponse.json({ success: false, message: "Grade must be 0-10" }, { status: 400 });
-    }
+
+    const { studentId, grade, feedback } = parsedBody.data;
 
     // Upsert assignmentSubmission for grade storage
     const existing = await prisma.assignmentSubmission.findFirst({ where: { assignmentId, studentId } });
@@ -39,9 +50,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         });
 
     return NextResponse.json({ success: true, data: { id: updated.id, grade: updated.grade, feedback: updated.feedback } }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("[ERROR] [POST] /api/assignments/[id]/file-grade", error);
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
+    return errorResponse(500, "Internal server error");
   }
 }
 

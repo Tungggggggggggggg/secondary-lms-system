@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,10 +13,7 @@ export async function POST(req: NextRequest) {
     const email = (body?.email || "").toString().trim();
 
     if (!email) {
-      return NextResponse.json(
-        { success: false, message: "Missing email" },
-        { status: 400 }
-      );
+      return errorResponse(400, "Missing email");
     }
 
     const user = await prisma.user.findUnique({
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ success: true, locked: false });
+      return NextResponse.json({ success: true, locked: false, reason: null });
     }
 
     const disabledSetting = await settingsRepo.get("disabled_users");
@@ -28,30 +30,24 @@ export async function POST(req: NextRequest) {
     let reason: string | null = null;
 
     if (Array.isArray(disabledSetting)) {
-      for (const item of disabledSetting as any[]) {
+      for (const item of disabledSetting) {
         if (typeof item === "string" && item === user.id) {
           locked = true;
           break;
         }
-        if (
-          item &&
-          typeof item === "object" &&
-          typeof (item as any).id === "string" &&
-          (item as any).id === user.id
-        ) {
-          locked = true;
-          reason = typeof (item as any).reason === "string" ? (item as any).reason : null;
-          break;
-        }
+
+        if (!isRecord(item)) continue;
+        if (typeof item.id !== "string" || item.id !== user.id) continue;
+
+        locked = true;
+        reason = typeof item.reason === "string" ? item.reason : null;
+        break;
       }
     }
 
     return NextResponse.json({ success: true, locked, reason });
   } catch (error) {
     console.error("[API /api/auth/check-locked] Error", error);
-    return NextResponse.json(
-      { success: false, locked: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

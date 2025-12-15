@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
+  errorResponse,
   getAuthenticatedUser,
   isTeacherOfClassroom,
   isStudentInClassroom,
   getRequestId,
 } from "@/lib/api-utils";
+
+const getQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(10),
+  q: z.string().max(200).default(""),
+  sort: z.enum(["new", "comments", "attachments"]).default("new"),
+  hasAttachment: z.enum(["true", "false"]).optional(),
+});
+
+const postBodySchema = z
+  .object({
+    content: z.string().min(1).max(5000),
+  })
+  .strict();
 
 // GET: Liệt kê announcements của một classroom (newest-first, có pagination)
 export async function GET(
@@ -16,18 +33,12 @@ export async function GET(
   try {
     const classroomId = params.id;
     if (!classroomId) {
-      return NextResponse.json(
-        { success: false, message: "classroomId is required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "classroomId is required", { requestId });
     }
 
     const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized", requestId },
-        { status: 401 }
-      );
+      return errorResponse(401, "Unauthorized", { requestId });
     }
 
     // Quyền xem: giáo viên sở hữu lớp hoặc học sinh thuộc lớp
@@ -38,22 +49,28 @@ export async function GET(
     const canView = isTeacherOwner || isStudentMember;
 
     if (!canView) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden", requestId },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden", { requestId });
     }
 
     const { searchParams } = new URL(req.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get("pageSize") || "10", 10)));
+    const parsedQuery = getQuerySchema.safeParse({
+      page: searchParams.get("page") || undefined,
+      pageSize: searchParams.get("pageSize") || undefined,
+      q: searchParams.get("q") || undefined,
+      sort: searchParams.get("sort") || undefined,
+      hasAttachment: searchParams.get("hasAttachment") || undefined,
+    });
 
-    // Optional filters
-    const q = (searchParams.get("q") || "").trim();
-    const sort = (searchParams.get("sort") || "new") as "new" | "comments" | "attachments";
-    const hasAttachment = searchParams.get("hasAttachment");
+    if (!parsedQuery.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        requestId,
+        details: parsedQuery.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
+    }
 
-    const where: any = { classroomId };
+    const { page, pageSize, q, sort, hasAttachment } = parsedQuery.data;
+
+    const where: Prisma.AnnouncementWhereInput = { classroomId };
     if (q) {
       where.OR = [
         { content: { contains: q, mode: "insensitive" } },
@@ -65,13 +82,13 @@ export async function GET(
       if (flag) where.attachments = { some: {} };
     }
 
-    const secondaryOrder: any =
+    const secondaryOrder: Prisma.AnnouncementOrderByWithRelationInput =
       sort === "comments"
         ? { comments: { _count: "desc" } }
         : sort === "attachments"
         ? { attachments: { _count: "desc" } }
         : { createdAt: "desc" };
-    const orderBy: any[] = [{ pinnedAt: "desc" }, secondaryOrder];
+    const orderBy: Prisma.AnnouncementOrderByWithRelationInput[] = [{ pinnedAt: "desc" }, secondaryOrder];
 
     const [items, total] = await Promise.all([
       prisma.announcement.findMany({
@@ -119,15 +136,12 @@ export async function GET(
     );
     res.headers.set("Cache-Control", "public, max-age=15, s-maxage=60, stale-while-revalidate=60");
     return res;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `[ERROR] [GET] /api/classrooms/${params.id}/announcements {requestId:${requestId}}`,
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error", requestId },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 
@@ -140,36 +154,28 @@ export async function POST(
   try {
     const classroomId = params.id;
     if (!classroomId) {
-      return NextResponse.json(
-        { success: false, message: "classroomId is required", requestId },
-        { status: 400 }
-      );
+      return errorResponse(400, "classroomId is required", { requestId });
     }
 
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized", requestId },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized", { requestId });
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
 
     const owns = await isTeacherOfClassroom(user.id, classroomId);
     if (!owns) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your classroom", requestId },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your classroom", { requestId });
     }
 
-    const body = await req.json().catch(() => null);
-    const content = (body?.content ?? "").toString().trim();
-    if (!content) {
-      return NextResponse.json(
-        { success: false, message: "content is required", requestId },
-        { status: 400 }
-      );
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = postBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        requestId,
+        details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
+
+    const content = parsedBody.data.content.trim();
 
     // Xác định organizationId từ classroom
     const classroom = await prisma.classroom.findUnique({ where: { id: classroomId }, select: { organizationId: true } });
@@ -193,15 +199,12 @@ export async function POST(
       { success: true, data: created, requestId },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `[ERROR] [POST] /api/classrooms/${params.id}/announcements {requestId:${requestId}}`,
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error", requestId },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error", { requestId });
   }
 }
 

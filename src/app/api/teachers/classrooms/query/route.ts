@@ -1,36 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
+import { Prisma } from '@prisma/client'
+import { z } from 'zod'
+
 import { prisma } from '@/lib/prisma'
-import { getCachedUser } from '@/lib/user-cache'
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
+
+const querySchema = z.object({
+  q: z.string().optional().default(''),
+  status: z.enum(['all', 'active', 'archived']).optional().default('all'),
+  take: z.coerce.number().int().min(1).max(100).optional().default(12),
+  skip: z.coerce.number().int().min(0).optional().default(0),
+  sortKey: z.enum(['createdAt', 'name', 'students']).optional().default('createdAt'),
+  sortDir: z.enum(['asc', 'desc']).optional().default('desc'),
+});
 
 // GET /api/teachers/classrooms/query
 // Aggregator: pagination + filters + sorting for teacher classrooms
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id && !session?.user?.email) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    const authUser = await getAuthenticatedUser(req)
+    if (!authUser) {
+      return errorResponse(401, 'Unauthorized')
     }
 
-    const user = await getCachedUser(
-      session.user.id || undefined,
-      session.user.email || undefined
-    )
-
-    if (!user || user.role !== 'TEACHER') {
-      return NextResponse.json({ success: false, message: 'Forbidden - Teacher only' }, { status: 403 })
+    if (authUser.role !== 'TEACHER') {
+      return errorResponse(403, 'Forbidden - Teacher only')
     }
 
-    const url = new URL(req.url || '', 'http://localhost')
-    const q = (url.searchParams.get('q') || '').trim()
-    const status = url.searchParams.get('status') as 'all' | 'active' | 'archived' | null
-    const take = Math.max(1, Math.min(100, Number(url.searchParams.get('take') || 12)))
-    const skip = Math.max(0, Number(url.searchParams.get('skip') || 0))
-    const sortKey = (url.searchParams.get('sortKey') || 'createdAt') as 'createdAt' | 'name' | 'students'
-    const sortDir = (url.searchParams.get('sortDir') || 'desc') as 'asc' | 'desc'
+    const parsed = querySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
+    if (!parsed.success) {
+      return errorResponse(400, 'Dữ liệu không hợp lệ', {
+        details: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+      })
+    }
 
-    const whereBase: any = { teacherId: user.id }
+    const q = parsed.data.q.trim()
+    const status = parsed.data.status
+    const take = parsed.data.take
+    const skip = parsed.data.skip
+    const sortKey = parsed.data.sortKey
+    const sortDir = parsed.data.sortDir
+
+    const whereBase: Prisma.ClassroomWhereInput = { teacherId: authUser.id }
     if (q) {
       whereBase.OR = [
         { name: { contains: q, mode: 'insensitive' } },
@@ -39,13 +50,15 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    const where: any = { ...whereBase }
-    if (status && status !== 'all') {
-      where.isActive = status === 'active'
-    }
+    const where: Prisma.ClassroomWhereInput =
+      status !== 'all' ? { ...whereBase, isActive: status === 'active' } : { ...whereBase }
 
-    const orderBy: any =
-      sortKey === 'students' ? { students: { _count: sortDir } } : { [sortKey]: sortDir }
+    const orderBy: Prisma.ClassroomOrderByWithRelationInput =
+      sortKey === 'students'
+        ? { students: { _count: sortDir as Prisma.SortOrder } }
+        : sortKey === 'name'
+          ? { name: sortDir as Prisma.SortOrder }
+          : { createdAt: sortDir as Prisma.SortOrder }
 
     const [items, total, countAll, countActive, countArchived] = await Promise.all([
       prisma.classroom.findMany({
@@ -73,9 +86,19 @@ export async function GET(req: NextRequest) {
       prisma.classroom.count({ where: { ...whereBase, isActive: false } }),
     ])
 
-    return NextResponse.json({ success: true, data: { items, total, counts: { all: countAll, active: countActive, archived: countArchived } } }, { status: 200 })
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          items,
+          total,
+          counts: { all: countAll, active: countActive, archived: countArchived },
+        },
+      },
+      { status: 200 }
+    )
   } catch (error) {
-    console.error('[GET /api/teachers/classrooms/query] error', error)
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 })
+    console.error('[ERROR] [GET] /api/teachers/classrooms/query', error)
+    return errorResponse(500, 'Internal server error')
   }
 }

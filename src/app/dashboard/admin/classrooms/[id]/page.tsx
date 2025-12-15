@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { DragEvent } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import PageHeader from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -82,6 +82,7 @@ function parseStudentLine(line: string): BulkCreateStudentEntry | null {
 export default function AdminClassroomDetailPage() {
   const { toast } = useToast();
   const prompt = usePrompt();
+  const router = useRouter();
   const params = useParams();
   const rawId = (params as unknown as { id?: string | string[] })?.id;
   const classroomId = Array.isArray(rawId) ? rawId[0] : rawId;
@@ -89,6 +90,8 @@ export default function AdminClassroomDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [classroom, setClassroom] = useState<ClassroomDetail | null>(null);
+
+  const [forceDeleting, setForceDeleting] = useState(false);
 
   const isArchived = !!classroom && !classroom.isActive;
 
@@ -189,6 +192,80 @@ export default function AdminClassroomDetailPage() {
       setClassroom(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const forceDeleteClassroom = async () => {
+    if (!classroomId || !classroom) return;
+    if (classroom.isActive) {
+      toast({
+        title: "Chưa thể xóa vĩnh viễn",
+        description: "Vui lòng lưu trữ lớp trước khi force delete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reasonInput = await prompt({
+      title: "Xóa vĩnh viễn lớp (Force delete)",
+      description: "Hành động này sẽ xóa vĩnh viễn lớp và dữ liệu liên quan. Vui lòng nhập lý do bắt buộc.",
+      placeholder: "VD: Lớp vi phạm quy định / tạo nhầm / dữ liệu rác…",
+      type: "textarea",
+      confirmText: "Tiếp tục",
+      cancelText: "Hủy",
+      validate: (v) => {
+        const trimmed = v.trim();
+        if (!trimmed) return "Vui lòng nhập lý do";
+        if (trimmed.length > 500) return "Vui lòng nhập tối đa 500 ký tự";
+        return null;
+      },
+    });
+    if (reasonInput === null) return;
+
+    const confirmInput = await prompt({
+      title: "Xác nhận mã lớp",
+      description: `Nhập chính xác mã lớp để xác nhận xóa vĩnh viễn: ${classroom.code}`,
+      placeholder: classroom.code,
+      type: "text",
+      confirmText: "Xóa vĩnh viễn",
+      cancelText: "Hủy",
+      validate: (v) => {
+        const typed = v.trim().toUpperCase();
+        const expected = classroom.code.trim().toUpperCase();
+        if (!typed) return "Vui lòng nhập mã lớp";
+        if (typed !== expected) return "Mã lớp không khớp";
+        return null;
+      },
+    });
+    if (confirmInput === null) return;
+
+    try {
+      setForceDeleting(true);
+      const res = await fetch(`/api/admin/classrooms/${classroomId}/force-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reasonInput.trim(), confirm: confirmInput.trim() }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể xóa vĩnh viễn lớp");
+      }
+
+      toast({
+        title: "Đã xóa lớp vĩnh viễn",
+        description: `${classroom.code} — ${classroom.name}`,
+        variant: "success",
+      });
+
+      router.push("/dashboard/admin/classrooms");
+    } catch (err) {
+      toast({
+        title: "Không thể xóa vĩnh viễn",
+        description: err instanceof Error ? err.message : "Có lỗi xảy ra",
+        variant: "destructive",
+      });
+    } finally {
+      setForceDeleting(false);
     }
   };
 
@@ -739,7 +816,7 @@ export default function AdminClassroomDetailPage() {
             Đang tải thông tin lớp...
           </div>
         ) : error ? (
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-red-200 bg-red-50 text-sm text-red-700">
+          <div className="rounded-2xl p-6 shadow-sm border border-red-200 bg-red-50 text-sm text-red-700">
             {error}
           </div>
         ) : classroom ? (
@@ -786,7 +863,7 @@ export default function AdminClassroomDetailPage() {
 
             {isArchived && (
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-700">
-                Lớp đã lưu trữ: chỉ cho phép xem, export và khôi phục.
+                Lớp đã lưu trữ: cho phép xem, export, khôi phục hoặc xóa vĩnh viễn.
               </div>
             )}
 
@@ -828,6 +905,14 @@ export default function AdminClassroomDetailPage() {
               >
                 Thêm HS
               </Button>
+              <button
+                type="button"
+                onClick={forceDeleteClassroom}
+                disabled={!isArchived || forceDeleting}
+                className="inline-flex items-center justify-center rounded-full border border-red-200 bg-white px-5 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {forceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
+              </button>
             </div>
           </div>
         ) : null}

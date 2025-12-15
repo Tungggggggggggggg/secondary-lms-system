@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils';
 
 interface TeacherDashboardSubmissionActivityRow {
   id: string;
@@ -49,6 +48,45 @@ interface TeacherDashboardAnnouncementCommentRow {
   };
 }
 
+type TeacherDashboardActorType = 'STUDENT' | 'TEACHER' | 'PARENT';
+
+type TeacherDashboardActivity =
+  | {
+      id: string;
+      type: 'SUBMISSION';
+      actorName: string;
+      actorType: 'STUDENT';
+      action: string;
+      detail: string;
+      timestamp: Date;
+      relatedId: string;
+      assignmentId: string;
+      classroomId?: string;
+    }
+  | {
+      id: string;
+      type: 'JOIN';
+      actorName: string;
+      actorType: 'STUDENT';
+      action: string;
+      detail: string;
+      timestamp: Date;
+      relatedId: string;
+      classroomId: string;
+    }
+  | {
+      id: string;
+      type: 'COMMENT';
+      actorName: string;
+      actorType: TeacherDashboardActorType;
+      action: string;
+      detail: string;
+      timestamp: Date;
+      relatedId: string;
+      announcementId: string;
+      classroomId: string;
+    };
+
 /**
  * API: GET /api/teachers/dashboard/activities
  * Mục đích: Lấy hoạt động gần đây liên quan đến teacher
@@ -59,33 +97,17 @@ interface TeacherDashboardAnnouncementCommentRow {
  */
 export async function GET(req: NextRequest) {
   try {
-    console.log('[API /api/teachers/dashboard/activities] Bắt đầu xử lý request...');
-
-    // Xác thực người dùng
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      console.error('[API /api/teachers/dashboard/activities] Không có session');
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return errorResponse(401, 'Unauthorized');
     }
 
-    const userId = session.user.id;
-    const userRole = session.user.role;
-
-    // Kiểm tra role teacher
-    if (userRole !== 'TEACHER') {
-      console.error('[API /api/teachers/dashboard/activities] User không phải teacher');
-      return NextResponse.json(
-        { success: false, message: 'Forbidden - Only teachers can access this endpoint' },
-        { status: 403 }
-      );
+    if (authUser.role !== 'TEACHER') {
+      return errorResponse(403, 'Forbidden - Only teachers can access this endpoint');
     }
 
-    console.log(`[API /api/teachers/dashboard/activities] Teacher ID: ${userId}`);
-
-    const activities: any[] = [];
+    const userId = authUser.id;
+    const activities: TeacherDashboardActivity[] = [];
 
     const [recentSubmissions, newStudents, recentComments] = await Promise.all([
       // 1. Lấy submissions mới nhất (học sinh nộp bài)
@@ -155,11 +177,12 @@ export async function GET(req: NextRequest) {
       const firstClassroom = submission.assignment.classrooms[0];
       const classroomName = firstClassroom?.classroom.name || 'Không xác định';
       const timeAgo = getTimeAgo(new Date(submission.submittedAt));
+      const actorName = submission.student.fullname?.trim() || 'Học sinh';
 
       activities.push({
         id: `submission-${submission.id}`,
         type: 'SUBMISSION',
-        actorName: submission.student.fullname,
+        actorName,
         actorType: 'STUDENT',
         action: 'đã nộp bài tập',
         detail: `${submission.assignment.title} - ${classroomName} - ${timeAgo}`,
@@ -172,11 +195,12 @@ export async function GET(req: NextRequest) {
 
     newStudents.forEach((student: TeacherDashboardNewStudentRow) => {
       const timeAgo = getTimeAgo(new Date(student.joinedAt));
+      const actorName = student.student.fullname?.trim() || 'Học sinh';
 
       activities.push({
         id: `join-${student.id}`,
         type: 'JOIN',
-        actorName: student.student.fullname,
+        actorName,
         actorType: 'STUDENT',
         action: 'đã tham gia lớp',
         detail: `${student.classroom.name} - ${timeAgo}`,
@@ -190,11 +214,12 @@ export async function GET(req: NextRequest) {
       const timeAgo = getTimeAgo(new Date(comment.createdAt));
       const actorType = comment.author.role === 'PARENT' ? 'PARENT' : 
                        comment.author.role === 'STUDENT' ? 'STUDENT' : 'TEACHER';
+      const actorName = comment.author.fullname?.trim() || 'Người dùng';
 
       activities.push({
         id: `comment-${comment.id}`,
         type: 'COMMENT',
-        actorName: comment.author.fullname,
+        actorName,
         actorType: actorType,
         action: 'đã bình luận',
         detail: `${comment.announcement.classroom.name} - ${timeAgo}`,
@@ -210,23 +235,14 @@ export async function GET(req: NextRequest) {
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
-    console.log('[API /api/teachers/dashboard/activities] Activities:', activities.length);
-
     return NextResponse.json({
       success: true,
       data: activities.slice(0, 5), // Lấy tối đa 5 activities
     });
 
   } catch (error) {
-    console.error('[API /api/teachers/dashboard/activities] Lỗi:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    console.error('[ERROR] [GET] /api/teachers/dashboard/activities', error);
+    return errorResponse(500, 'Internal server error');
   }
 }
 

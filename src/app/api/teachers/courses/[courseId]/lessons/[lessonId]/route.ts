@@ -26,8 +26,9 @@ async function assertTeacherOwnsLesson(teacherId: string, courseId: string, less
 
 export async function GET(req: NextRequest, ctx: { params: { courseId: string; lessonId: string } }) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const courseId = ctx?.params?.courseId;
     const lessonId = ctx?.params?.lessonId;
@@ -45,8 +46,9 @@ export async function GET(req: NextRequest, ctx: { params: { courseId: string; l
 
 export async function PATCH(req: NextRequest, ctx: { params: { courseId: string; lessonId: string } }) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const courseId = ctx?.params?.courseId;
     const lessonId = ctx?.params?.lessonId;
@@ -82,8 +84,9 @@ export async function PATCH(req: NextRequest, ctx: { params: { courseId: string;
 
 export async function DELETE(req: NextRequest, ctx: { params: { courseId: string; lessonId: string } }) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const courseId = ctx?.params?.courseId;
     const lessonId = ctx?.params?.lessonId;

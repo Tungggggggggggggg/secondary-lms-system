@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { errorResponse } from "@/lib/api-utils";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
 
 // GET /api/courses/[id]
 // Trả về thông tin khóa học theo id
@@ -8,34 +16,22 @@ export async function GET(
   ctx: { params: { id: string } }
 ) {
   try {
-    const id = ctx?.params?.id;
-    if (!id || typeof id !== "string") {
-      console.error("[GET /api/courses/[id]] Thiếu hoặc sai định dạng id");
-      return NextResponse.json(
-        { success: false, message: "Missing or invalid id" },
-        { status: 400 }
-      );
+    const parsedParams = paramsSchema.safeParse(ctx?.params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Missing or invalid id");
     }
+
+    const { id } = parsedParams.data;
 
     const course = await prisma.course.findUnique({ where: { id } });
     if (!course) {
-      return NextResponse.json(
-        { success: false, message: "Course not found" },
-        { status: 404 }
-      );
+      return errorResponse(404, "Course not found");
     }
 
     return NextResponse.json({ success: true, data: course });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("[GET /api/courses/[id]] Lỗi:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

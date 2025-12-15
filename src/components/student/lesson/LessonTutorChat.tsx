@@ -5,10 +5,31 @@ import TextareaAutosize from "react-textarea-autosize";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import RateLimitDialog, { getRetryAfterSecondsFromResponse } from "@/components/shared/RateLimitDialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type ChatMessage =
   | { role: "user"; content: string }
-  | { role: "assistant"; content: string; sources?: Array<{ lessonId: string; chunkIndex: number; distance: number; excerpt: string }> };
+  | {
+      role: "assistant";
+      content: string;
+      sources?: Array<{
+        lessonId: string;
+        chunkIndex: number;
+        distance: number;
+        excerpt: string;
+        content?: string;
+        lessonTitle?: string | null;
+      }>;
+    };
+
+type ChatSource = {
+  lessonId: string;
+  chunkIndex: number;
+  distance: number;
+  excerpt: string;
+  content: string;
+  lessonTitle: string | null;
+};
 
 function sanitizeAssistantContent(text: string): string {
   // Xóa các đoạn đánh dấu nội bộ dạng (Lesson xxx#y) để học sinh không thấy ID
@@ -38,6 +59,11 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [noEmbeddings, setNoEmbeddings] = useState(false);
+
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const [activeSource, setActiveSource] = useState<ChatSource | null>(null);
 
   const [rateLimitOpen, setRateLimitOpen] = useState(false);
   const [rateLimitRetryAfterSeconds, setRateLimitRetryAfterSeconds] = useState(0);
@@ -100,6 +126,14 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
           ? (data as { answer: string }).answer
           : "";
 
+      const noEmbeddingsFlag =
+        typeof data === "object" &&
+        data !== null &&
+        typeof (data as { noEmbeddings?: unknown }).noEmbeddings === "boolean"
+          ? (data as { noEmbeddings: boolean }).noEmbeddings
+          : false;
+      setNoEmbeddings(noEmbeddingsFlag);
+
       const sourcesRaw =
         typeof data === "object" &&
         data !== null &&
@@ -114,10 +148,27 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
           const chunkIndex = typeof (s as { chunkIndex?: unknown }).chunkIndex === "number" ? (s as { chunkIndex: number }).chunkIndex : null;
           const distance = typeof (s as { distance?: unknown }).distance === "number" ? (s as { distance: number }).distance : null;
           const excerpt = typeof (s as { excerpt?: unknown }).excerpt === "string" ? (s as { excerpt: string }).excerpt : "";
+          const content = typeof (s as { content?: unknown }).content === "string" ? (s as { content: string }).content : "";
+          const lessonTitle =
+            (s as { lessonTitle?: unknown }).lessonTitle === null
+              ? null
+              : typeof (s as { lessonTitle?: unknown }).lessonTitle === "string"
+              ? (s as { lessonTitle: string }).lessonTitle
+              : null;
           if (!lessonId || chunkIndex === null || distance === null) return null;
-          return { lessonId, chunkIndex, distance, excerpt };
+          return {
+            lessonId,
+            chunkIndex,
+            distance,
+            excerpt,
+            content,
+            lessonTitle,
+          };
         })
-        .filter((v): v is { lessonId: string; chunkIndex: number; distance: number; excerpt: string } => v !== null);
+        .filter(
+          (v): v is { lessonId: string; chunkIndex: number; distance: number; excerpt: string; content: string; lessonTitle: string | null } =>
+            v !== null
+        );
 
       setMessages((prev) => [...prev, { role: "assistant", content: answer || "(Không có phản hồi)", sources }]);
     } catch (e) {
@@ -141,11 +192,68 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
         }}
       />
 
+      <Dialog
+        open={sourceOpen}
+        onOpenChange={(open) => {
+          setSourceOpen(open);
+          if (!open) {
+            setActiveSource(null);
+          }
+        }}
+      >
+        <DialogContent
+          className="w-[min(92vw,56rem)] max-w-3xl max-h-[90vh]"
+          onClose={() => setSourceOpen(false)}
+        >
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Nguồn tham khảo</DialogTitle>
+            <DialogDescription>
+              {activeSource?.lessonTitle
+                ? `Bài học: ${activeSource.lessonTitle}`
+                : activeSource
+                ? "Chi tiết đoạn trích" 
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
+            {activeSource ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-[11px] text-slate-600 mb-2">
+                  lessonId: {activeSource.lessonId}  ·  chunkIndex: {activeSource.chunkIndex}  ·  distance: {activeSource.distance.toFixed(4)}
+                </div>
+                <div className="whitespace-pre-wrap text-sm text-slate-900">
+                  {activeSource.content || activeSource.excerpt}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500">Không có dữ liệu nguồn.</div>
+            )}
+          </div>
+
+          <DialogFooter className="shrink-0">
+            <button
+              type="button"
+              onClick={() => setSourceOpen(false)}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Đóng
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
         <div className="text-sm font-semibold text-slate-800">Trợ lý AI (RAG Tutor)</div>
         <div className="text-xs text-slate-600">
           Trợ lý sẽ trả lời dựa trên nội dung bài học đã được hệ thống index.
         </div>
+
+        {noEmbeddings && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+            Bài học hiện chưa được index dữ liệu để AI tra cứu. Bạn có thể thử lại sau hoặc nhờ giáo viên chạy chức năng index embeddings.
+          </div>
+        )}
 
         <div className="space-y-3">
           {messages.length === 0 ? (
@@ -172,13 +280,27 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
                   {m.role === "assistant" && m.sources && m.sources.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {m.sources.slice(0, 5).map((s, sourceIndex) => (
-                        <Badge
+                        <button
                           key={`${s.lessonId}-${s.chunkIndex}`}
-                          variant="outline"
-                          title={s.excerpt}
+                          type="button"
+                          onClick={() => {
+                            const next: ChatSource = {
+                              lessonId: s.lessonId,
+                              chunkIndex: s.chunkIndex,
+                              distance: s.distance,
+                              excerpt: s.excerpt,
+                              content: typeof s.content === "string" ? s.content : s.excerpt,
+                              lessonTitle: typeof s.lessonTitle === "string" ? s.lessonTitle : null,
+                            };
+                            setActiveSource(next);
+                            setSourceOpen(true);
+                          }}
+                          className="group"
                         >
-                          Nguồn {sourceIndex + 1}
-                        </Badge>
+                          <Badge variant="outline" title={s.excerpt} className="cursor-pointer group-hover:bg-slate-50">
+                            Nguồn {sourceIndex + 1}
+                          </Badge>
+                        </button>
                       ))}
                     </div>
                   )}

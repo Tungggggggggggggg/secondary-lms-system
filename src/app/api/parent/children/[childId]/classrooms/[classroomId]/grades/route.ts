@@ -206,10 +206,6 @@ export const GET = withApiLogging(async (
         ? gradedSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) / totalGraded
         : 0;
 
-    console.log(
-      `[INFO] [GET] /api/parent/children/${childId}/classrooms/${classroomId}/grades - Found ${grades.length} grade entries for student: ${childId}`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -228,8 +224,7 @@ export const GET = withApiLogging(async (
       "[ERROR] [GET] /api/parent/children/[childId]/classrooms/[classroomId]/grades - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return errorResponse(500, errorMessage);
+    return errorResponse(500, "Internal server error");
   }
 }, "PARENT_CHILD_CLASSROOM_GRADES");
 

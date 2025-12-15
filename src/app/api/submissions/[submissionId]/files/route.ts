@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
 import { supabaseAdmin } from "@/lib/supabase";
 
 interface SubmissionFileRow {
@@ -29,13 +29,9 @@ export async function GET(
   { params }: { params: { submissionId: string } },
 ) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 },
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const submission = (await prisma.submission.findUnique({
       where: { id: params.submissionId },
@@ -57,30 +53,18 @@ export async function GET(
     })) as SubmissionWithFilesRow | null;
 
     if (!submission) {
-      return NextResponse.json(
-        { success: false, message: "Submission not found" },
-        { status: 404 },
-      );
+      return errorResponse(404, "Submission not found");
     }
 
     // Authorization: teacher must own the assignment
     const ok = await isTeacherOfAssignment(user.id, submission.assignmentId);
     if (!ok) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden" },
-        { status: 403 },
-      );
+      return errorResponse(403, "Forbidden");
     }
 
     // Create short-lived signed URLs
     if (!supabaseAdmin) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Supabase admin client is not available",
-        },
-        { status: 500 },
-      );
+      return errorResponse(500, "Supabase admin client is not available");
     }
 
     const admin = supabaseAdmin;
@@ -119,9 +103,6 @@ export async function GET(
       "[ERROR] [GET] /api/submissions/[submissionId]/files",
       error,
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 },
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

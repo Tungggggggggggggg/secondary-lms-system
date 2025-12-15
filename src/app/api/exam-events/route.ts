@@ -1,51 +1,93 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
-import { prisma } from '@/lib/prisma'
-import { isTeacherOfAssignment } from '@/lib/api-utils'
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import {
+  errorResponse,
+  getAuthenticatedUser,
+  getStudentClassroomForAssignment,
+  isTeacherOfAssignment,
+} from "@/lib/api-utils";
 
+const getQuerySchema = z.object({
+  assignmentId: z.string().min(1),
+  studentId: z.string().min(1).optional(),
+  attempt: z.coerce.number().int().min(1).max(999).optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional().default(200),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
+const postBodySchema = z.object({
+  assignmentId: z.string().min(1),
+  eventType: z.string().min(1).max(32),
+  attempt: z
+    .union([z.coerce.number().int().min(1).max(999), z.null()])
+    .optional(),
+  metadata: z.unknown().nullable().optional(),
+});
+
+/**
+ * GET /api/exam-events
+ * 
+ * @param req - NextRequest
+ * @returns Danh sách exam events của assignment (teacher-only)
+ * @sideEffects Query database (examEvent)
+ */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    }
-    const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } })
-    if (!me || me.role !== 'TEACHER') {
-      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
-    }
+    const me = await getAuthenticatedUser(req);
+    if (!me) return errorResponse(401, "Unauthorized");
+    if (me.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
-    const { searchParams } = new URL(req.url)
-    const assignmentId = String(searchParams.get('assignmentId') || '')
-    const studentId = searchParams.get('studentId') ? String(searchParams.get('studentId')) : undefined
-    const attemptStr = searchParams.get('attempt')
-    const attempt = attemptStr != null ? Number(attemptStr) : undefined
-    const limitStr = searchParams.get('limit')
-    const limit = limitStr != null ? Math.min(500, Math.max(1, Number(limitStr))) : 200
-    const fromStr = searchParams.get('from')
-    const toStr = searchParams.get('to')
+    const { searchParams } = new URL(req.url);
+    const parsed = getQuerySchema.safeParse({
+      assignmentId: searchParams.get("assignmentId") || "",
+      studentId: searchParams.get("studentId") || undefined,
+      attempt: searchParams.get("attempt") || undefined,
+      limit: searchParams.get("limit") || undefined,
+      from: searchParams.get("from") || undefined,
+      to: searchParams.get("to") || undefined,
+    });
 
-    if (!assignmentId) {
-      return NextResponse.json({ success: false, message: 'Missing assignmentId' }, { status: 400 })
+    if (!parsed.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
 
-    const allowed = await isTeacherOfAssignment(me.id, assignmentId)
-    if (!allowed) {
-      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
-    }
+    const { assignmentId, studentId, attempt, limit, from, to } = parsed.data;
 
-    const where: any = { assignmentId }
-    if (studentId) where.studentId = studentId
-    if (!Number.isNaN(attempt) && typeof attempt === 'number') where.attempt = attempt
-    if (fromStr || toStr) {
-      where.createdAt = {}
-      if (fromStr) where.createdAt.gte = new Date(fromStr as string)
-      if (toStr) where.createdAt.lte = new Date(toStr as string)
+    const allowed = await isTeacherOfAssignment(me.id, assignmentId);
+    if (!allowed) return errorResponse(403, "Forbidden");
+
+    const where: {
+      assignmentId: string;
+      studentId?: string;
+      attempt?: number;
+      createdAt?: { gte?: Date; lte?: Date };
+    } = { assignmentId };
+
+    if (studentId) where.studentId = studentId;
+    if (typeof attempt === "number" && Number.isFinite(attempt)) where.attempt = attempt;
+
+    const fromDate = from ? new Date(from) : undefined;
+    const toDate = to ? new Date(to) : undefined;
+    if (fromDate && Number.isNaN(fromDate.getTime())) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", { details: "from: Invalid date" });
+    }
+    if (toDate && Number.isNaN(toDate.getTime())) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", { details: "to: Invalid date" });
+    }
+    if (fromDate || toDate) {
+      where.createdAt = {};
+      if (fromDate) where.createdAt.gte = fromDate;
+      if (toDate) where.createdAt.lte = toDate;
     }
 
     const events = await prisma.examEvent.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
       select: {
         id: true,
@@ -57,55 +99,69 @@ export async function GET(req: NextRequest) {
         metadata: true,
         student: { select: { id: true, fullname: true, email: true } },
       },
-    })
+    });
 
-    return NextResponse.json({ success: true, data: events }, { status: 200 })
+    return NextResponse.json({ success: true, data: events }, { status: 200 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Internal server error'
-    return NextResponse.json({ success: false, message: msg }, { status: 500 })
+    console.error("[ERROR] [GET] /api/exam-events", error);
+    return errorResponse(500, "Internal server error");
   }
 }
 
+/**
+ * POST /api/exam-events
+ * 
+ * @param req - NextRequest
+ * @returns success boolean (student-only)
+ * @sideEffects Insert examEvent record
+ */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    }
-    const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true } })
-    if (!me || me.role !== 'STUDENT') {
-      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
+    const me = await getAuthenticatedUser(req);
+    if (!me) return errorResponse(401, "Unauthorized");
+    if (me.role !== "STUDENT") return errorResponse(403, "Forbidden");
+
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsed = postBodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
 
-    let body: any
-    try {
-      body = await req.json()
-    } catch {
-      return NextResponse.json({ success: false, message: 'Invalid JSON' }, { status: 400 })
+    const { assignmentId, eventType, attempt, metadata } = parsed.data;
+
+    const classroomId = await getStudentClassroomForAssignment(me.id, assignmentId);
+    if (!classroomId) return errorResponse(403, "Forbidden");
+
+    let metadataSize = 0;
+    if (metadata !== undefined && metadata !== null) {
+      try {
+        metadataSize = JSON.stringify(metadata).length;
+      } catch {
+        return errorResponse(400, "Dữ liệu không hợp lệ", { details: "metadata: Invalid JSON" });
+      }
+    }
+    if (metadataSize > 10_000) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", { details: "metadata: Payload too large" });
     }
 
-    const assignmentId = String(body.assignmentId || '')
-    const eventType = String(body.eventType || '')
-    const attempt = typeof body.attempt === 'number' ? body.attempt : null
-    const metadata = body.metadata ?? null
-
-    if (!assignmentId || !eventType) {
-      return NextResponse.json({ success: false, message: 'Missing assignmentId or eventType' }, { status: 400 })
-    }
+    const prismaMetadata: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined =
+      metadata === undefined ? undefined : metadata === null ? Prisma.JsonNull : (metadata as Prisma.InputJsonValue);
 
     await prisma.examEvent.create({
       data: {
         assignmentId,
         studentId: me.id,
-        attempt: attempt ?? undefined,
-        eventType: eventType.slice(0, 32),
-        metadata: metadata as any,
+        attempt: typeof attempt === "number" ? attempt : undefined,
+        eventType,
+        metadata: prismaMetadata,
       },
-    })
+    });
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Internal server error'
-    return NextResponse.json({ success: false, message: msg }, { status: 500 })
+    console.error("[ERROR] [POST] /api/exam-events", error);
+    return errorResponse(500, "Internal server error");
   }
 }

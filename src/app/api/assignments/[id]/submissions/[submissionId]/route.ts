@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+
+const putSchema = z
+  .object({
+    grade: z.number().min(0).max(10).optional(),
+    feedback: z.string().max(5000).optional(),
+  })
+  .strict();
 
 /**
  * PUT /api/assignments/[id]/submissions/[submissionId]
@@ -12,42 +20,37 @@ export async function PUT(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const assignmentId = params.id;
     const submissionId = params.submissionId;
 
     // Parse request body
-    const body = await req.json();
-    const { grade, feedback } = body as {
-      grade?: number;
-      feedback?: string;
-    };
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = putSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
+    }
+
+    const { grade, feedback } = parsedBody.data;
+
+    if (grade === undefined && feedback === undefined) {
+      return errorResponse(400, "No changes provided");
+    }
 
     // Validate grade (0-10)
     if (grade !== undefined && (grade < 0 || grade > 10)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Grade must be between 0 and 10",
-        },
-        { status: 400 }
-      );
+      return errorResponse(400, "Grade must be between 0 and 10");
     }
 
     // Kiểm tra teacher có sở hữu assignment không
     const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
     if (!isOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your assignment" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your assignment");
     }
 
     // Kiểm tra submission có tồn tại và thuộc về assignment này không
@@ -82,10 +85,7 @@ export async function PUT(
     });
 
     if (!submission) {
-      return NextResponse.json(
-        { success: false, message: "Submission not found" },
-        { status: 404 }
-      );
+      return errorResponse(404, "Submission not found");
     }
 
     // Cập nhật grade và feedback
@@ -95,7 +95,7 @@ export async function PUT(
         grade: grade !== undefined ? grade : submission.grade,
         feedback: feedback !== undefined ? feedback.trim() : submission.feedback,
       },
-      select: ({
+      select: {
         id: true,
         content: true,
         grade: true,
@@ -117,12 +117,8 @@ export async function PUT(
             email: true,
           },
         },
-      } as any),
+      },
     });
-
-    console.log(
-      `[INFO] [PUT] /api/assignments/${assignmentId}/submissions/${submissionId} - Teacher ${user.id} graded submission (grade: ${grade})`
-    );
 
     return NextResponse.json(
       {
@@ -130,7 +126,7 @@ export async function PUT(
         message: "Submission graded successfully",
         data: {
           ...updatedSubmission,
-          submittedAt: new Date((updatedSubmission as any).submittedAt).toISOString(),
+          submittedAt: updatedSubmission.submittedAt.toISOString(),
         },
       },
       { status: 200 }
@@ -140,11 +136,7 @@ export async function PUT(
       "[ERROR] [PUT] /api/assignments/[id]/submissions/[submissionId] - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 
@@ -158,13 +150,9 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const assignmentId = params.id;
     const submissionId = params.submissionId;
@@ -172,10 +160,7 @@ export async function GET(
     // Kiểm tra teacher có sở hữu assignment không
     const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
     if (!isOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your assignment" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your assignment");
     }
 
     // Lấy submission chi tiết
@@ -184,7 +169,7 @@ export async function GET(
         id: submissionId,
         assignmentId,
       },
-      select: ({
+      select: {
         id: true,
         content: true,
         grade: true,
@@ -226,19 +211,16 @@ export async function GET(
             email: true,
           },
         },
-      } as any),
+      },
     });
 
     if (!submission) {
-      return NextResponse.json(
-        { success: false, message: "Submission not found" },
-        { status: 404 }
-      );
+      return errorResponse(404, "Submission not found");
     }
 
     // Parse quiz answers nếu là quiz assignment
     let parsedAnswers = null;
-    if ((submission as any).assignment.type === "QUIZ") {
+    if (submission.assignment.type === "QUIZ") {
       try {
         parsedAnswers = JSON.parse(submission.content);
       } catch {
@@ -252,9 +234,9 @@ export async function GET(
         success: true,
         data: {
           ...submission,
-          submittedAt: new Date((submission as any).submittedAt).toISOString(),
-          presentation: (submission as any).presentation ?? null,
-          contentSnapshot: (submission as any).contentSnapshot ?? null,
+          submittedAt: submission.submittedAt.toISOString(),
+          presentation: submission.presentation ?? null,
+          contentSnapshot: submission.contentSnapshot ?? null,
           answers: parsedAnswers, // Thêm parsed answers cho quiz
         },
       },
@@ -265,11 +247,7 @@ export async function GET(
       "[ERROR] [GET] /api/assignments/[id]/submissions/[submissionId] - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

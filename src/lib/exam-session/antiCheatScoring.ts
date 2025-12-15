@@ -22,6 +22,20 @@ export type ExamEventForScoring = {
   metadata: unknown;
 };
 
+function normalizeEventType(eventType: string): string {
+  const raw = (eventType || "").toString().trim();
+  if (!raw) return "";
+
+  switch (raw) {
+    case "TAB_SWITCH_DETECTED":
+      return "TAB_SWITCH";
+    case "COPY_PASTE_ATTEMPT":
+      return "CLIPBOARD";
+    default:
+      return raw;
+  }
+}
+
 function clampInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   const v = Math.floor(value);
@@ -63,7 +77,7 @@ export function computeQuizAntiCheatScore(events: ExamEventForScoring[]): AntiCh
   const countsByType: Record<string, number> = {};
 
   for (const ev of events) {
-    const type = (ev.eventType || "").toString();
+    const type = normalizeEventType(ev.eventType);
     if (!type) continue;
     countsByType[type] = (countsByType[type] ?? 0) + 1;
   }

@@ -1,38 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { Prisma } from '@prisma/client';
+import { z } from 'zod';
+
 import { prisma } from '@/lib/prisma';
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils';
+
+const querySchema = z.object({
+  q: z.string().optional().default(''),
+  status: z.enum(['all', 'active', 'completed', 'draft', 'needGrading']).optional().default('all'),
+  classId: z
+    .string()
+    .optional()
+    .transform((v) => {
+      const t = v?.trim();
+      if (!t || t === 'all') return undefined;
+      return t;
+    }),
+  take: z.coerce.number().int().min(1).max(100).optional().default(10),
+  skip: z.coerce.number().int().min(0).optional().default(0),
+  sortKey: z.enum(['createdAt', 'dueDate', 'lockAt', 'title']).optional().default('createdAt'),
+  sortDir: z.enum(['asc', 'desc']).optional().default('desc'),
+});
 
 // GET /api/teachers/assignments
 // Aggregator: pagination + filters + sorting for teacher assignments
+/**
+ * GET /api/teachers/assignments
+ * 
+ * @param req - NextRequest
+ * @returns Danh sách assignments của teacher (phân trang + filter + sort)
+ * @sideEffects Query database
+ */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return errorResponse(401, 'Unauthorized');
+    }
+    if (authUser.role !== 'TEACHER') {
+      return errorResponse(403, 'Forbidden - Only teachers can access this endpoint');
     }
 
-    const teacherId = session.user.id as string;
+    const parsed = querySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
+    if (!parsed.success) {
+      return errorResponse(400, 'Dữ liệu không hợp lệ', {
+        details: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+      });
+    }
 
-    const url = new URL(req.url!, 'http://localhost');
-    const q = (url.searchParams.get('q') || '').trim();
-    const status = url.searchParams.get('status') as 'all' | 'active' | 'completed' | 'draft' | 'needGrading' | null;
-    const classId = url.searchParams.get('classId') || undefined;
-    const take = Math.max(1, Math.min(100, Number(url.searchParams.get('take') || 10)));
-    const skip = Math.max(0, Number(url.searchParams.get('skip') || 0));
-    const sortKey = (url.searchParams.get('sortKey') || 'createdAt') as 'createdAt' | 'dueDate' | 'lockAt' | 'title';
-    const sortDir = (url.searchParams.get('sortDir') || 'desc') as 'asc' | 'desc';
+    const teacherId = authUser.id;
+    const q = parsed.data.q.trim();
+    const status = parsed.data.status;
+    const classId = parsed.data.classId;
+    const take = parsed.data.take;
+    const skip = parsed.data.skip;
+    const sortKey = parsed.data.sortKey;
+    const sortDir = parsed.data.sortDir;
 
     // Compute base where (search + author)
-    const whereBase: any = { authorId: teacherId };
+    const whereBase: Prisma.AssignmentWhereInput = { authorId: teacherId };
     if (q) {
       whereBase.title = { contains: q, mode: 'insensitive' };
     }
 
     // Class filter via intermediary table
-    if (classId && classId !== 'all') {
+    if (classId) {
       const rows = await prisma.assignmentClassroom.findMany({
-        where: { classroomId: classId },
+        where: { classroomId: classId, classroom: { teacherId } },
         select: { assignmentId: true },
       });
       const ids = rows.map((r) => r.assignmentId);
@@ -41,47 +75,63 @@ export async function GET(req: NextRequest) {
 
     // Build where for items based on status (effective date: lockAt for QUIZ else dueDate)
     const now = new Date();
-    const where = { ...whereBase } as any;
-    if (status && status !== 'all') {
+    let where: Prisma.AssignmentWhereInput = { ...whereBase };
+    if (status !== 'all') {
       if (status === 'active') {
-        where.OR = [
-          { AND: [{ lockAt: { gte: now } }] },
-          { AND: [{ lockAt: null }, { dueDate: { gte: now } }] },
-          { AND: [{ lockAt: null }, { dueDate: null }] },
-        ];
+        where = {
+          ...whereBase,
+          OR: [
+            { lockAt: { gte: now } },
+            { AND: [{ lockAt: null }, { dueDate: { gte: now } }] },
+            { AND: [{ lockAt: null }, { dueDate: null }] },
+          ],
+        };
       } else if (status === 'completed') {
-        where.OR = [
-          { AND: [{ lockAt: { lt: now } }] },
-          { AND: [{ lockAt: null }, { dueDate: { lt: now } }] },
-        ];
+        where = {
+          ...whereBase,
+          OR: [
+            { lockAt: { lt: now } },
+            { AND: [{ lockAt: null }, { dueDate: { lt: now } }] },
+          ],
+        };
       } else if (status === 'needGrading') {
-        where.submissions = { some: { grade: null } };
+        where = { ...whereBase, submissions: { some: { grade: null } } };
       } else if (status === 'draft') {
         // Hiện chưa có trạng thái draft rõ ràng -> không trả về gì
-        where.id = { in: ['__none__'] };
+        where = { ...whereBase, id: { in: ['__none__'] } };
       }
     }
 
     // Sorting
-    const orderBy: any = { [sortKey]: sortDir };
+    const orderBy: Prisma.AssignmentOrderByWithRelationInput =
+      sortKey === 'createdAt'
+        ? { createdAt: sortDir }
+        : sortKey === 'dueDate'
+        ? { dueDate: sortDir }
+        : sortKey === 'lockAt'
+        ? { lockAt: sortDir }
+        : { title: sortDir };
 
     // Compute counts for quick chips under current search/class filters
-    const whereActive: any = {
+    const whereActive: Prisma.AssignmentWhereInput = {
       ...whereBase,
       OR: [
-        { AND: [{ lockAt: { gte: now } }] },
+        { lockAt: { gte: now } },
         { AND: [{ lockAt: null }, { dueDate: { gte: now } }] },
         { AND: [{ lockAt: null }, { dueDate: null }] },
       ],
     };
-    const whereCompleted: any = {
+    const whereCompleted: Prisma.AssignmentWhereInput = {
       ...whereBase,
       OR: [
-        { AND: [{ lockAt: { lt: now } }] },
+        { lockAt: { lt: now } },
         { AND: [{ lockAt: null }, { dueDate: { lt: now } }] },
       ],
     };
-    const whereNeedGrading: any = { ...whereBase, submissions: { some: { grade: null } } };
+    const whereNeedGrading: Prisma.AssignmentWhereInput = {
+      ...whereBase,
+      submissions: { some: { grade: null } },
+    };
 
     const [items, total, countAll, countActive, countCompleted, countNeedGrading] = await Promise.all([
       prisma.assignment.findMany({
@@ -110,9 +160,24 @@ export async function GET(req: NextRequest) {
       prisma.assignment.count({ where: whereNeedGrading }),
     ]);
 
-    return NextResponse.json({ success: true, data: { items, total, counts: { all: countAll, active: countActive, completed: countCompleted, needGrading: countNeedGrading } } }, { status: 200 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          items,
+          total,
+          counts: {
+            all: countAll,
+            active: countActive,
+            completed: countCompleted,
+            needGrading: countNeedGrading,
+          },
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error('[GET /api/teachers/assignments] error', error);
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
+    console.error('[ERROR] [GET] /api/teachers/assignments', error);
+    return errorResponse(500, 'Internal server error');
   }
 }

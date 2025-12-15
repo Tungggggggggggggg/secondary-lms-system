@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { z } from "zod";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
 
 interface StudentClassroomAssignmentRow {
   addedAt: Date;
@@ -42,26 +48,20 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden - Student role required");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user || user.role !== "STUDENT") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Student role required" },
-        { status: 403 }
-      );
-    }
-
-    const classroomId = params.id;
+    const classroomId = parsedParams.data.id;
 
     // Kiểm tra student có tham gia classroom không
     const isMember = await prisma.classroomStudent.findFirst({
@@ -72,13 +72,7 @@ export async function GET(
     });
 
     if (!isMember) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Forbidden - Not a member of this classroom",
-        },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not a member of this classroom");
     }
 
     // Lấy danh sách assignments đã được thêm vào classroom
@@ -157,10 +151,6 @@ export async function GET(
       };
     });
 
-    console.log(
-      `[INFO] [GET] /api/students/classrooms/${classroomId}/assignments - Found ${assignments.length} assignments for student: ${user.id}`
-    );
-
     return NextResponse.json(
       { success: true, data: assignments },
       { status: 200 }
@@ -170,10 +160,6 @@ export async function GET(
       "[ERROR] [GET] /api/students/classrooms/[id]/assignments - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

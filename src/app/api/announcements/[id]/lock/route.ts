@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     // Audit log cho thao tác khóa/mở khóa bình luận
     try {
-      const ip = (req.headers.get("x-forwarded-for") || (req as any).ip || "").split(",")[0].trim();
+      const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
       const userAgent = req.headers.get("user-agent") || undefined;
       const classroom = await prisma.classroom.findUnique({ where: { id: ann.classroomId }, select: { organizationId: true } });
       await prisma.auditLog.create({

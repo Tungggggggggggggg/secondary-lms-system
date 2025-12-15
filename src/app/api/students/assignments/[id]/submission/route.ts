@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
 
 /**
  * GET /api/students/assignments/[id]/submission
@@ -13,26 +20,25 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "STUDENT");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
 
-    const assignmentId = params.id;
+    const assignmentId = parsedParams.data.id;
 
     // Optimize: Kiểm tra student có trong classroom nào có assignment này không (single query)
     const classroomId = await getStudentClassroomForAssignment(user.id, assignmentId);
     if (!classroomId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Forbidden - Not a member of this assignment's classroom",
-        },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not a member of this assignment's classroom");
     }
 
     // Lấy submission của student
@@ -42,7 +48,7 @@ export async function GET(
         studentId: user.id,
       },
       orderBy: { attempt: "desc" },
-      select: ({
+      select: {
         id: true,
         assignmentId: true,
         content: true,
@@ -60,7 +66,7 @@ export async function GET(
             dueDate: true,
           },
         },
-      } as any),
+      },
     });
 
     if (!submission) {
@@ -73,34 +79,27 @@ export async function GET(
     // Transform data
     const submissionData = {
       id: submission.id,
-      assignmentId: (submission as any).assignmentId,
+      assignmentId: submission.assignmentId,
       content: submission.content,
       grade: submission.grade,
       feedback: submission.feedback,
-      submittedAt: new Date((submission as any).submittedAt).toISOString(),
-      presentation: (submission as any).presentation ?? null,
-      contentSnapshot: (submission as any).contentSnapshot ?? null,
-      assignment: (submission as any).assignment,
+      submittedAt: submission.submittedAt.toISOString(),
+      presentation: submission.presentation ?? null,
+      contentSnapshot: submission.contentSnapshot ?? null,
+      assignment: submission.assignment,
       attempt: submission.attempt,
     };
-
-    console.log(
-      `[INFO] [GET] /api/students/assignments/${assignmentId}/submission - Found submission for student: ${user.id}`
-    );
 
     return NextResponse.json(
       { success: true, data: submissionData },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/students/assignments/[id]/submission - Error:",
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

@@ -1,8 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+import { z } from "zod";
+import { errorResponse, getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
 import { autoGradeQuiz, validateQuizSubmission } from "@/lib/auto-grade";
 import crypto from "crypto";
+import type { Prisma } from "@prisma/client";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
+
+const answerSchema = z
+  .object({
+    questionId: z.string().min(1).max(100),
+    optionIds: z.array(z.string().min(1).max(100)).default([]),
+  })
+  .strict();
+
+const presentationSchema = z
+  .object({
+    questionOrder: z.array(z.string().min(1).max(100)),
+    optionOrder: z.record(z.string(), z.array(z.string().min(1).max(100))),
+    seed: z.union([z.number(), z.string()]).optional(),
+    versionHash: z.string().min(1).max(100).optional(),
+  })
+  .strict();
+
+const postBodySchema = z
+  .object({
+    content: z.string().max(100_000).optional(),
+    answers: z.array(answerSchema).optional(),
+    presentation: presentationSchema.optional(),
+    newAttempt: z.boolean().optional(),
+  })
+  .strict();
+
+const putBodySchema = z
+  .object({
+    content: z.string().max(100_000).optional(),
+    answers: z.array(answerSchema).optional(),
+  })
+  .strict();
 
 /**
  * POST /api/students/assignments/[id]/submit
@@ -14,22 +54,32 @@ export async function POST(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "STUDENT");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden - Student role required");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
 
-    const assignmentId = params.id;
-    const body = await req.json();
-    const { content, answers, presentation } = body as {
-      content?: string;
-      answers?: Array<{ questionId: string; optionIds: string[] }>;
-      presentation?: { questionOrder: string[]; optionOrder: Record<string, string[]>; seed?: number | string; versionHash?: string };
-      newAttempt?: boolean;
-    };
+    const assignmentId = parsedParams.data.id;
+
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = postBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
+    }
+
+    const { content, answers, presentation } = parsedBody.data;
 
     // Optimize: Parallel queries - Kiểm tra classroom membership + lấy assignment
     const [classroomId, assignment] = await Promise.all([
@@ -66,45 +116,27 @@ export async function POST(
     ]);
 
     if (!classroomId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Forbidden - You are not a member of this assignment's classroom",
-        },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - You are not a member of this assignment's classroom");
     }
 
     if (!assignment) {
-      return NextResponse.json(
-        { success: false, message: "Assignment not found" },
-        { status: 404 }
-      );
+      return errorResponse(404, "Assignment not found");
     }
 
     // Validate dựa trên loại assignment
     if (assignment.type === "ESSAY") {
       if (!content || !content.trim()) {
-        return NextResponse.json(
-          { success: false, message: "Content is required for essay assignments" },
-          { status: 400 }
-        );
+        return errorResponse(400, "Content is required for essay assignments");
       }
     } else if (assignment.type === "QUIZ") {
       if (!answers || !Array.isArray(answers) || answers.length === 0) {
-        return NextResponse.json(
-          { success: false, message: "Answers are required for quiz assignments" },
-          { status: 400 }
-        );
+        return errorResponse(400, "Answers are required for quiz assignments");
       }
       // Validate số lượng câu trả lời phải bằng số lượng câu hỏi
       if (answers.length !== assignment.questions.length) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Expected ${assignment.questions.length} answers, got ${answers.length}`,
-          },
-          { status: 400 }
+        return errorResponse(
+          400,
+          `Expected ${assignment.questions.length} answers, got ${answers.length}`
         );
       }
       // Validate tất cả questions đều có answer
@@ -120,10 +152,7 @@ export async function POST(
           (id: string) => answeredQuestionIds.has(id),
         )
       ) {
-        return NextResponse.json(
-          { success: false, message: "All questions must be answered" },
-          { status: 400 }
-        );
+        return errorResponse(400, "All questions must be answered");
       }
     }
 
@@ -138,32 +167,23 @@ export async function POST(
     if (assignment.type === "QUIZ") {
       const maxAttempts = assignment.max_attempts ?? 1;
       if (nextAttempt > maxAttempts) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Bạn đã vượt quá số lần làm tối đa (${maxAttempts}). Không thể nộp thêm lần mới.`,
-          },
-          { status: 403 }
+        return errorResponse(
+          403,
+          `Bạn đã vượt quá số lần làm tối đa (${maxAttempts}). Không thể nộp thêm lần mới.`
         );
       }
     }
 
     // Kiểm tra deadline (nếu có)
     if (assignment.dueDate && new Date(assignment.dueDate) < new Date()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Assignment deadline has passed",
-        },
-        { status: 400 }
-      );
+      return errorResponse(400, "Assignment deadline has passed");
     }
 
     // Tính điểm tự động cho quiz bằng auto-grade utility
     let calculatedGrade: number | null = null;
     let autoFeedback: string | null = null;
     let submissionContent = "";
-    let contentSnapshot: any = null;
+    let contentSnapshot: Prisma.InputJsonValue | null = null;
 
     if (assignment.type === "QUIZ" && answers) {
       try {
@@ -185,8 +205,6 @@ export async function POST(
 
         // Lưu answers dưới dạng JSON string
         submissionContent = JSON.stringify(answers);
-
-        console.log(`[AUTO_GRADE] Quiz auto-graded: ${gradeResult.correctCount}/${gradeResult.totalQuestions} correct, grade: ${calculatedGrade}`);
 
       } catch (autoGradeError) {
         console.error('[AUTO_GRADE] Error auto-grading quiz:', autoGradeError);
@@ -246,14 +264,14 @@ export async function POST(
 
       // Tạo contentSnapshot để freeze nội dung đề tại thời điểm nộp
       try {
-        const snapshotQuestions = assignment.questions.map((q: any) => ({
+        const snapshotQuestions = assignment.questions.map((q) => ({
           id: q.id,
-          content: (q as any).content,
+          content: q.content,
           type: q.type,
-          options: (q.options || []).map((o: any) => ({
+          options: (q.options || []).map((o) => ({
             id: o.id,
-            label: (o as any).label,
-            content: (o as any).content,
+            label: o.label,
+            content: o.content,
             isCorrect: o.isCorrect,
           })),
         }));
@@ -262,7 +280,7 @@ export async function POST(
           .update(JSON.stringify({ assignmentId: assignment.id, questions: snapshotQuestions }))
           .digest("hex")
           .slice(0, 12);
-        contentSnapshot = { versionHash, questions: snapshotQuestions };
+        contentSnapshot = { versionHash, questions: snapshotQuestions } as Prisma.InputJsonValue;
       } catch (e) {
         console.error("[SUBMIT] Không thể tạo contentSnapshot:", e);
         contentSnapshot = null;
@@ -272,20 +290,16 @@ export async function POST(
     }
 
     // Tạo submission (multi-attempts: nếu đã có -> tăng attempt)
-    const dataToCreate: any = {
+    const dataToCreate: Prisma.AssignmentSubmissionUncheckedCreateInput = {
       assignmentId,
       studentId: user.id,
       content: submissionContent,
       grade: calculatedGrade, // Auto-grade cho quiz
       feedback: autoFeedback, // Auto-feedback cho quiz
       attempt: nextAttempt,
+      ...(presentation ? { presentation: presentation as Prisma.InputJsonValue } : {}),
+      ...(assignment.type === "QUIZ" && contentSnapshot ? { contentSnapshot } : {}),
     };
-    if (presentation) {
-      dataToCreate.presentation = presentation as any;
-    }
-    if (assignment.type === "QUIZ" && contentSnapshot) {
-      dataToCreate.contentSnapshot = contentSnapshot as any;
-    }
     const submission = await prisma.assignmentSubmission.create({
       data: dataToCreate,
       include: {
@@ -316,10 +330,6 @@ export async function POST(
       });
     } catch {}
 
-    console.log(
-      `[INFO] [POST] /api/students/assignments/${assignmentId}/submit - Student ${user.id} submitted attempt ${(latestSubmission?.attempt ?? 0) + 1} (${assignment.type})${calculatedGrade !== null ? ` with auto-grade: ${calculatedGrade.toFixed(2)}` : ""}`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -341,11 +351,7 @@ export async function POST(
       "[ERROR] [POST] /api/students/assignments/[id]/submit - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 
@@ -359,20 +365,37 @@ export async function PUT(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "STUDENT");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden - Student role required");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
     }
 
-    const assignmentId = params.id;
-    const body = await req.json();
-    const { content, answers } = body as {
-      content?: string;
-      answers?: Array<{ questionId: string; optionIds: string[] }>;
-    };
+    const assignmentId = parsedParams.data.id;
+
+    const classroomId = await getStudentClassroomForAssignment(user.id, assignmentId);
+    if (!classroomId) {
+      return errorResponse(403, "Forbidden - Not a member of this assignment's classroom");
+    }
+
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = putBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
+    }
+
+    const { content, answers } = parsedBody.data;
 
     // Tìm submission của student
     const submission = await prisma.assignmentSubmission.findFirst({
@@ -394,21 +417,12 @@ export async function PUT(
     });
 
     if (!submission) {
-      return NextResponse.json(
-        { success: false, message: "Submission not found" },
-        { status: 404 }
-      );
+      return errorResponse(404, "Submission not found");
     }
 
     // Không cho update nếu đã được chấm (có grade)
     if (submission.grade !== null) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Cannot update submission that has been graded",
-        },
-        { status: 403 }
-      );
+      return errorResponse(403, "Cannot update submission that has been graded");
     }
 
     // Validate dựa trên loại assignment
@@ -417,27 +431,18 @@ export async function PUT(
     let autoFeedback: string | null = null;
     if (submission.assignment.type === "ESSAY") {
       if (!content || !content.trim()) {
-        return NextResponse.json(
-          { success: false, message: "Content is required for essay assignments" },
-          { status: 400 }
-        );
+        return errorResponse(400, "Content is required for essay assignments");
       }
       submissionContent = content.trim();
     } else if (submission.assignment.type === "QUIZ") {
       if (!answers || !Array.isArray(answers) || answers.length === 0) {
-        return NextResponse.json(
-          { success: false, message: "Answers are required for quiz assignments" },
-          { status: 400 }
-        );
+        return errorResponse(400, "Answers are required for quiz assignments");
       }
       // Validate số lượng câu trả lời phải bằng số lượng câu hỏi
       if (answers.length !== submission.assignment.questions.length) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Expected ${submission.assignment.questions.length} answers, got ${answers.length}`,
-          },
-          { status: 400 }
+        return errorResponse(
+          400,
+          `Expected ${submission.assignment.questions.length} answers, got ${answers.length}`
         );
       }
       // Validate tất cả questions đều có answer (theo questionId)
@@ -485,7 +490,7 @@ export async function PUT(
     }
 
     // Update submission (và grade/feedback nếu là quiz)
-    const updateData: any = {
+    const updateData: Prisma.AssignmentSubmissionUncheckedUpdateInput = {
       content: submissionContent,
     };
     if (submission.assignment.type === "QUIZ") {
@@ -508,10 +513,6 @@ export async function PUT(
       },
     });
 
-    console.log(
-      `[INFO] [PUT] /api/students/assignments/${assignmentId}/submit - Student ${user.id} updated submission`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -525,11 +526,7 @@ export async function PUT(
       "[ERROR] [PUT] /api/students/assignments/[id]/submit - Error:",
       error
     );
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

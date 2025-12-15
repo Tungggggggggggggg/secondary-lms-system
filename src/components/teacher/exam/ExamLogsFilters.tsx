@@ -3,9 +3,17 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+
+type AssignmentOption = {
+  id: string;
+  title: string;
+};
 
 interface ExamLogsFiltersProps {
   assignmentId: string;
+  assignments?: AssignmentOption[];
+  assignmentDisabled?: boolean;
   studentId: string;
   attempt: string;
   from: string;
@@ -25,6 +33,8 @@ interface ExamLogsFiltersProps {
 
 export default function ExamLogsFilters({
   assignmentId,
+  assignments,
+  assignmentDisabled,
   studentId,
   attempt,
   from,
@@ -45,13 +55,29 @@ export default function ExamLogsFilters({
     <>
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         <div className="md:col-span-4">
-          <Label htmlFor="assignmentId">Assignment ID</Label>
-          <Input
-            id="assignmentId"
-            placeholder="assignment id"
-            value={assignmentId}
-            onChange={(e) => onAssignmentIdChange(e.target.value)}
-          />
+          <Label htmlFor="assignmentId">Bài Quiz</Label>
+          {assignments && assignments.length > 0 ? (
+            <Select
+              id="assignmentId"
+              value={assignmentId}
+              onChange={(e) => onAssignmentIdChange(e.target.value)}
+              disabled={loading || assignmentDisabled}
+            >
+              <option value="">Chọn bài Quiz...</option>
+              {assignments.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.title}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input
+              id="assignmentId"
+              placeholder="assignment id"
+              value={assignmentId}
+              onChange={(e) => onAssignmentIdChange(e.target.value)}
+            />
+          )}
         </div>
         <div className="md:col-span-4">
           <Label htmlFor="studentId">Student ID (tuỳ chọn)</Label>

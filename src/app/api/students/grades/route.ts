@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 
 interface StudentGradesSubmissionRow {
@@ -40,17 +40,11 @@ export async function GET(_req: NextRequest) {
   try {
     const authUser = await getAuthenticatedUser(_req);
     if (!authUser) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+      return errorResponse(401, "Unauthorized");
     }
 
     if (authUser.role !== "STUDENT") {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Student role required" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Student role required");
     }
 
     // Lấy danh sách classroom mà student đang tham gia
@@ -238,10 +232,6 @@ export async function GET(_req: NextRequest) {
           ) / gradedSubmissions.length
         : 0;
 
-    console.log(
-      `[INFO] [GET] /api/students/grades - Found ${grades.length} grade entries for student: ${authUser.id}`
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -255,10 +245,6 @@ export async function GET(_req: NextRequest) {
     );
   } catch (error: unknown) {
     console.error("[ERROR] [GET] /api/students/grades - Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { success: false, message: errorMessage },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

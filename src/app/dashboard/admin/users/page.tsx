@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import PageHeader from "@/components/shared/PageHeader";
 import { usePrompt } from "@/components/providers/PromptProvider";
@@ -515,9 +516,12 @@ export default function AdminUsersPage() {
                     <tr key={user.id} className="hover:bg-slate-50/60">
                       <td className="px-3 py-2 align-middle">
                         <div className="flex flex-col">
-                          <span className="font-medium text-slate-900 text-xs">
+                          <Link
+                            href={`/dashboard/admin/users/${user.id}`}
+                            className="font-medium text-slate-900 text-xs hover:underline"
+                          >
                             {user.email}
-                          </span>
+                          </Link>
                           <span className="text-[10px] text-slate-500">
                             ID: {user.id.slice(0, 8)}…
                           </span>

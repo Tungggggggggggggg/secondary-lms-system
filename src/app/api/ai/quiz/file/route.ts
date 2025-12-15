@@ -17,7 +17,7 @@ const formSchema = z.object({
 
 function rateLimitResponse(retryAfterSeconds: number) {
   return NextResponse.json(
-    { success: false, error: true, message: "Too many requests", retryAfterSeconds },
+    { success: false, error: true, message: "Too many requests", details: null, retryAfterSeconds },
     {
       status: 429,
       headers: {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isTeacherOfClassroom } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, isTeacherOfClassroom } from "@/lib/api-utils";
 
 interface ClassroomStudentRow {
   id: string;
@@ -49,23 +49,16 @@ export async function GET(
 ) {
   try {
     // Sử dụng getAuthenticatedUser với caching
-    const user = await getAuthenticatedUser(req, "TEACHER");
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const classroomId = params.id;
 
     // Optimize: Kiểm tra teacher có sở hữu classroom không (single query)
     const isOwner = await isTeacherOfClassroom(user.id, classroomId);
     if (!isOwner) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden - Not your classroom" },
-        { status: 403 }
-      );
+      return errorResponse(403, "Forbidden - Not your classroom");
     }
 
     // Lấy danh sách học sinh trong lớp với thông tin chi tiết
@@ -208,9 +201,11 @@ export async function GET(
         totalGrade: 0,
       };
 
+       const fullname = cs.student.fullname?.trim() || cs.student.email.split("@")[0] || "Học sinh";
+
       return {
         id: cs.student.id,
-        fullname: cs.student.fullname,
+        fullname,
         email: cs.student.email,
         joinedAt: cs.joinedAt.toISOString(),
         parents: parentsByStudent.get(cs.student.id) || [],
@@ -225,23 +220,16 @@ export async function GET(
       };
     });
 
-    console.log(
-      `[INFO] [GET] /api/classrooms/${classroomId}/students - Found ${students.length} students`
-    );
-
     return NextResponse.json(
       { success: true, data: students },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "[ERROR] [GET] /api/classrooms/[id]/students - Error:",
       error
     );
-    return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }
 

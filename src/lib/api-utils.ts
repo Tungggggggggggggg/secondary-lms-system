@@ -48,11 +48,10 @@ export async function getAuthenticatedUser(
 ): Promise<AuthUser | null> {
   // Kiểm tra cache trước
   if (userCache.has(req)) {
-    const cachedUser = userCache.get(req)!;
-    if (!requiredRole || cachedUser?.role === requiredRole) {
-      return cachedUser;
-    }
-    return null; // Role mismatch
+    const cachedUser = userCache.get(req) ?? null;
+    if (!cachedUser) return null;
+    if (requiredRole && cachedUser.role !== requiredRole) return null;
+    return cachedUser;
   }
 
   try {
@@ -76,12 +75,6 @@ export async function getAuthenticatedUser(
         updatedAt: true,
       },
     })) as AuthUser | null;
-
-    // Kiểm tra role nếu có yêu cầu
-    if (user && requiredRole && user.role !== requiredRole) {
-      userCache.set(req, null);
-      return null;
-    }
 
     // Chặn người dùng bị khoá theo system settings (disabled_users)
     if (user) {
@@ -115,6 +108,11 @@ export async function getAuthenticatedUser(
     // Cache user cho request này
     userCache.set(req, user);
 
+    // Kiểm tra role nếu có yêu cầu
+    if (user && requiredRole && user.role !== requiredRole) {
+      return null;
+    }
+
     return user;
   } catch (error) {
     console.error("[ERROR] [getAuthenticatedUser] Error:", error);
@@ -143,8 +141,23 @@ export function errorResponse(
   message: string,
   meta?: Record<string, unknown>
 ) {
+  const metaObj: Record<string, unknown> = meta ? { ...meta } : {};
+
+  // Không cho phép override các field chuẩn hoá
+  delete metaObj.success;
+  delete metaObj.error;
+  delete metaObj.message;
+
+  const detailsValue: unknown = metaObj.details === undefined ? null : metaObj.details;
+
   return NextResponse.json(
-    { success: false, ...(meta || {}), error: true, message },
+    {
+      ...metaObj,
+      success: false,
+      error: true,
+      message,
+      details: detailsValue,
+    },
     { status }
   );
 }

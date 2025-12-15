@@ -1,39 +1,64 @@
-import { BookOpen, Users, TrendingUp, Star } from "lucide-react";
+"use client";
 
-export default function CourseStats() {
+import { BookOpen, Layers, School, Clock } from "lucide-react";
+
+type CourseListItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  coverImage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    lessons?: number;
+    classrooms?: number;
+  };
+};
+
+export default function CourseStats({
+  courses,
+  isLoading,
+}: {
+  courses: CourseListItem[];
+  isLoading: boolean;
+}) {
+  const totalCourses = courses.length;
+  const totalLessons = courses.reduce((acc, c) => acc + (c._count?.lessons ?? 0), 0);
+  const totalClassrooms = courses.reduce((acc, c) => acc + (c._count?.classrooms ?? 0), 0);
+  const latestUpdatedAt = courses.reduce<string | null>((acc, c) => {
+    if (!acc) return c.updatedAt;
+    return new Date(c.updatedAt).getTime() > new Date(acc).getTime() ? c.updatedAt : acc;
+  }, null);
+
+  const latestUpdatedLabel = latestUpdatedAt
+    ? new Date(latestUpdatedAt).toLocaleDateString("vi-VN")
+    : "—";
+
   const stats = [
     {
       title: "Tổng số khóa học",
-      value: "12",
-      change: "+2",
-      changeType: "increase",
+      value: isLoading ? "—" : String(totalCourses),
       icon: <BookOpen className="h-5 w-5" />,
-      color: "from-blue-500 to-blue-600"
+      color: "from-blue-500 to-blue-600",
     },
     {
-      title: "Học sinh đang học",
-      value: "384",
-      change: "+28",
-      changeType: "increase", 
-      icon: <Users className="h-5 w-5" />,
-      color: "from-purple-500 to-purple-600"
+      title: "Tổng số bài học",
+      value: isLoading ? "—" : String(totalLessons),
+      icon: <Layers className="h-5 w-5" />,
+      color: "from-emerald-500 to-green-600",
     },
     {
-      title: "Tỷ lệ hoàn thành",
-      value: "86%",
-      change: "+5%",
-      changeType: "increase",
-      icon: <TrendingUp className="h-5 w-5" />,
-      color: "from-green-500 to-green-600"
+      title: "Số lớp đang sử dụng",
+      value: isLoading ? "—" : String(totalClassrooms),
+      icon: <School className="h-5 w-5" />,
+      color: "from-purple-500 to-violet-600",
     },
     {
-      title: "Đánh giá trung bình",
-      value: "4.8",
-      change: "+0.2",
-      changeType: "increase",
-      icon: <Star className="h-5 w-5" />,
-      color: "from-yellow-500 to-yellow-600"
-    }
+      title: "Cập nhật gần nhất",
+      value: isLoading ? "—" : latestUpdatedLabel,
+      icon: <Clock className="h-5 w-5" />,
+      color: "from-amber-500 to-orange-600",
+    },
   ];
 
   return (
@@ -51,12 +76,6 @@ export default function CourseStats() {
               <div className="text-3xl font-extrabold">{stat.value}</div>
               <div className="text-white/80 text-sm">{stat.title}</div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="bg-white/20 px-2 py-1 rounded-full">
-              {stat.changeType === "increase" ? "↑" : "↓"} {stat.change}
-            </span>
-            <span className="text-white/80">so với tháng trước</span>
           </div>
         </div>
       ))}

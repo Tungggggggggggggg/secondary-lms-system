@@ -1,8 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils';
 import { prisma } from '@/lib/prisma';
 import { AssignmentData } from '@/types/assignment-builder';
+
+const quizOptionSchema = z
+  .object({
+    id: z.string().min(1).max(100).optional(),
+    label: z.string().min(1).max(10).optional(),
+    content: z.string().min(1).max(5000),
+    isCorrect: z.boolean().optional(),
+    order: z.number().int().min(1).optional(),
+  })
+  .strict();
+
+const quizQuestionSchema = z
+  .object({
+    id: z.string().min(1).max(100).optional(),
+    content: z.string().min(1).max(20_000),
+    type: z.enum(['SINGLE', 'MULTIPLE', 'TRUE_FALSE', 'FILL_BLANK']),
+    order: z.number().int().min(1).optional(),
+    options: z.array(quizOptionSchema).min(1),
+  })
+  .strict();
+
+const baseSchema = z
+  .object({
+    type: z.enum(['ESSAY', 'QUIZ']),
+    title: z.string().min(1).max(200),
+    description: z.string().max(5000).optional(),
+    subject: z.string().max(200).optional(),
+    classrooms: z.array(z.string().min(1).max(100)).optional(),
+  })
+  .strict();
+
+const essaySchema = baseSchema.extend({
+  type: z.literal('ESSAY'),
+  essayContent: z
+    .object({
+      question: z.string().min(1).max(50_000),
+      submissionFormat: z.enum(['TEXT', 'FILE', 'BOTH']).default('BOTH'),
+      openAt: z.coerce.date(),
+      dueDate: z.coerce.date(),
+      attachments: z.array(z.unknown()).optional(),
+    })
+    .strict(),
+});
+
+const quizSchema = baseSchema.extend({
+  type: z.literal('QUIZ'),
+  quizContent: z
+    .object({
+      questions: z.array(quizQuestionSchema).min(1),
+      timeLimitMinutes: z.coerce.number().int().min(1).max(24 * 60),
+      openAt: z.coerce.date(),
+      lockAt: z.coerce.date(),
+      maxAttempts: z.coerce.number().int().min(1).max(100).default(1),
+      antiCheatConfig: z.unknown().optional(),
+    })
+    .strict(),
+});
+
+const assignmentCreateSchema = z.discriminatedUnion('type', [essaySchema, quizSchema]);
+
+type QuizOptionInput = z.infer<typeof quizOptionSchema>;
+type QuizQuestionInput = z.infer<typeof quizQuestionSchema>;
+
+function normalizeZodIssues(issues: z.ZodIssue[]): string {
+  return issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function toNestedJsonValue(value: unknown, depth = 0): Prisma.InputJsonValue | null | undefined {
+  if (depth > 20) return undefined;
+  if (value === null) return null;
+
+  const t = typeof value;
+  if (t === 'string' || t === 'number' || t === 'boolean') return value;
+  if (t === 'bigint' || t === 'symbol' || t === 'function' || t === 'undefined') return undefined;
+
+  if (Array.isArray(value)) {
+    const arr: Array<Prisma.InputJsonValue | null> = [];
+    for (const item of value) {
+      const v = toNestedJsonValue(item, depth + 1);
+      if (v === undefined) return undefined;
+      arr.push(v);
+    }
+    return arr;
+  }
+
+  if (isObjectRecord(value)) {
+    const obj: Record<string, Prisma.InputJsonValue | null> = {};
+    for (const [k, vUnknown] of Object.entries(value)) {
+      const v = toNestedJsonValue(vUnknown, depth + 1);
+      if (v === undefined) return undefined;
+      obj[k] = v;
+    }
+    return obj;
+  }
+
+  return undefined;
+}
+
+function coerceJsonForPrisma(
+  value: unknown,
+): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+  if (value === undefined) return undefined;
+  const nested = toNestedJsonValue(value);
+  if (nested === undefined) return undefined;
+  if (nested === null) return Prisma.JsonNull;
+  return nested;
+}
 
 /**
  * POST /api/assignments/create
@@ -12,109 +124,76 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
   try {
-    // Authentication check
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(request);
+    if (!user) return errorResponse(401, 'Unauthorized');
+    if (user.role !== 'TEACHER') return errorResponse(403, 'Forbidden - Teacher role required');
+
+    const rawBody: unknown = await request.json().catch(() => null);
+    const parsed = assignmentCreateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errorResponse(400, 'Dữ liệu không hợp lệ', {
+        details: normalizeZodIssues(parsed.error.issues),
+      });
     }
 
-    // Parse request body
-    const assignmentData: AssignmentData = await request.json();
-    console.log(`[CreateAssignment] Processing request for user ${session.user.id}:`, {
-      type: assignmentData.type,
-      title: assignmentData.title,
-      subject: assignmentData.subject
-    });
-
-    // Validation
-    if (!assignmentData.title?.trim()) {
-      return NextResponse.json(
-        { success: false, message: 'Tên bài tập là bắt buộc' },
-        { status: 400 }
-      );
-    }
-
-    if (!assignmentData.type || !['ESSAY', 'QUIZ'].includes(assignmentData.type)) {
-      return NextResponse.json(
-        { success: false, message: 'Loại bài tập không hợp lệ' },
-        { status: 400 }
-      );
-    }
+    const assignmentData: AssignmentData = parsed.data as unknown as AssignmentData;
 
     // Content validation
     if (assignmentData.type === 'ESSAY') {
-      if (!assignmentData.essayContent?.question?.trim()) {
-        return NextResponse.json(
-          { success: false, message: 'Câu hỏi tự luận là bắt buộc' },
-          { status: 400 }
-        );
-      }
-      if (!assignmentData.essayContent?.openAt || !assignmentData.essayContent?.dueDate) {
-        return NextResponse.json(
-          { success: false, message: 'Thời gian mở bài và hạn nộp là bắt buộc' },
-          { status: 400 }
-        );
-      }
-      const openAt = new Date(assignmentData.essayContent.openAt as any);
-      const dueDate = new Date(assignmentData.essayContent.dueDate as any);
-      if (!(openAt instanceof Date) || isNaN(openAt.getTime()) || !(dueDate instanceof Date) || isNaN(dueDate.getTime()) || openAt >= dueDate) {
-        return NextResponse.json(
-          { success: false, message: 'Thời gian mở bài phải trước hạn nộp bài' },
-          { status: 400 }
-        );
+      const openAt = assignmentData.essayContent?.openAt;
+      const dueDate = assignmentData.essayContent?.dueDate;
+      if (!(openAt instanceof Date) || !(dueDate instanceof Date) || isNaN(openAt.getTime()) || isNaN(dueDate.getTime()) || openAt >= dueDate) {
+        return errorResponse(400, 'Thời gian mở bài phải trước hạn nộp bài');
       }
     } else if (assignmentData.type === 'QUIZ') {
-      if (!assignmentData.quizContent?.questions?.length) {
-        return NextResponse.json(
-          { success: false, message: 'Cần ít nhất 1 câu hỏi trắc nghiệm' },
-          { status: 400 }
-        );
+      const openAt = assignmentData.quizContent?.openAt;
+      const lockAt = assignmentData.quizContent?.lockAt;
+      if (!(openAt instanceof Date) || !(lockAt instanceof Date) || isNaN(openAt.getTime()) || isNaN(lockAt.getTime()) || openAt >= lockAt) {
+        return errorResponse(400, 'Thời gian mở bài phải trước thời gian đóng bài');
       }
-      if (!assignmentData.quizContent?.openAt || !assignmentData.quizContent?.lockAt) {
-        return NextResponse.json(
-          { success: false, message: 'Thời gian mở bài và đóng bài là bắt buộc' },
-          { status: 400 }
-        );
-      }
-      const openAt = new Date(assignmentData.quizContent.openAt as any);
-      const lockAt = new Date(assignmentData.quizContent.lockAt as any);
-      if (!(openAt instanceof Date) || isNaN(openAt.getTime()) || !(lockAt instanceof Date) || isNaN(lockAt.getTime()) || openAt >= lockAt) {
-        return NextResponse.json(
-          { success: false, message: 'Thời gian mở bài phải trước thời gian đóng bài' },
-          { status: 400 }
-        );
+    }
+
+    const classroomIds = Array.from(new Set(assignmentData.classrooms ?? [])).filter(Boolean);
+    if (classroomIds.length > 0) {
+      const owned = await prisma.classroom.findMany({
+        where: { id: { in: classroomIds }, teacherId: user.id },
+        select: { id: true },
+      });
+      if (owned.length !== classroomIds.length) {
+        return errorResponse(403, 'Forbidden - Classroom access denied');
       }
     }
 
     // Prepare assignment data for database
-    const assignmentCreateData: any = {
+    const assignmentCreateData: Prisma.AssignmentUncheckedCreateInput = {
       title: assignmentData.title.trim(),
       description: assignmentData.description?.trim() || null,
       subject: assignmentData.subject?.trim() || null,
       type: assignmentData.type,
-      authorId: session.user.id,
+      authorId: user.id,
     };
 
     // Essay-specific fields
     if (assignmentData.type === 'ESSAY' && assignmentData.essayContent) {
-      assignmentCreateData.openAt = new Date(assignmentData.essayContent.openAt as any);
-      assignmentCreateData.dueDate = new Date(assignmentData.essayContent.dueDate as any);
+      assignmentCreateData.openAt = assignmentData.essayContent.openAt;
+      assignmentCreateData.dueDate = assignmentData.essayContent.dueDate;
       assignmentCreateData.submission_format = assignmentData.essayContent.submissionFormat || 'BOTH'; // Fix: use submission_format
     }
 
     // Quiz-specific fields
     if (assignmentData.type === 'QUIZ' && assignmentData.quizContent) {
-      assignmentCreateData.openAt = new Date(assignmentData.quizContent.openAt as any);
-      assignmentCreateData.lockAt = new Date(assignmentData.quizContent.lockAt as any);
+      assignmentCreateData.openAt = assignmentData.quizContent.openAt;
+      assignmentCreateData.lockAt = assignmentData.quizContent.lockAt;
       assignmentCreateData.timeLimitMinutes = assignmentData.quizContent.timeLimitMinutes;
       assignmentCreateData.max_attempts = assignmentData.quizContent.maxAttempts || 1; // Fix: use max_attempts
-      assignmentCreateData.anti_cheat_config = assignmentData.quizContent.antiCheatConfig || null; // Fix: use anti_cheat_config
+      if (assignmentData.quizContent.antiCheatConfig !== undefined) {
+        const coerced = coerceJsonForPrisma(assignmentData.quizContent.antiCheatConfig);
+        if (coerced === undefined) {
+          return errorResponse(400, 'antiCheatConfig không hợp lệ');
+        }
+        assignmentCreateData.anti_cheat_config = coerced;
+      }
     }
-
-    console.log(`[CreateAssignment] Creating assignment with data:`, assignmentCreateData);
 
     // Create assignment in database
     const assignment = await prisma.assignment.create({
@@ -130,8 +209,6 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`[CreateAssignment] Assignment created with ID: ${assignment.id}`);
-
     // Create question for Essay
     if (assignmentData.type === 'ESSAY' && assignmentData.essayContent?.question) {
       await prisma.question.create({
@@ -142,16 +219,15 @@ export async function POST(request: NextRequest) {
           assignmentId: assignment.id
         }
       });
-      console.log(`[CreateAssignment] Created essay question`);
     }
 
     // Create questions for Quiz
     if (assignmentData.type === 'QUIZ' && assignmentData.quizContent?.questions) {
       const normalize = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
-      const normalizedQuestions = assignmentData.quizContent.questions.map((q) => ({
+      const normalizedQuestions = assignmentData.quizContent.questions.map((q: QuizQuestionInput) => ({
         ...q,
         content: (q.content || '').trim(),
-        options: (q.options || []).map((opt) => ({
+        options: (q.options || []).map((opt: QuizOptionInput) => ({
           ...opt,
           label: opt.label,
           content: (opt.content || '').trim(),
@@ -162,15 +238,15 @@ export async function POST(request: NextRequest) {
       for (let i = 0; i < normalizedQuestions.length; i++) {
         const q = normalizedQuestions[i];
         if (q.type === 'SINGLE' || q.type === 'TRUE_FALSE') {
-          const correct = q.options.filter((o: any) => !!o.isCorrect);
+          const correct = q.options.filter((o: QuizOptionInput) => !!o.isCorrect);
           if (correct.length !== 1) {
             return NextResponse.json({ success: false, message: `Câu ${i + 1} (${q.type}) phải có đúng 1 đáp án đúng` }, { status: 400 });
           }
-          if (q.options.some((o: any) => !(o.content && o.content.trim()))) {
+          if (q.options.some((o: QuizOptionInput) => !(o.content && o.content.trim()))) {
             return NextResponse.json({ success: false, message: `Câu ${i + 1} có đáp án rỗng` }, { status: 400 });
           }
         } else if (q.type === 'FILL_BLANK') {
-          const contents = q.options.map((o: any) => (o.content || '').trim()).filter(Boolean);
+          const contents = q.options.map((o: QuizOptionInput) => (o.content || '').trim()).filter(Boolean);
           if (contents.length < 1) {
             return NextResponse.json({ success: false, message: `Câu ${i + 1} (FILL_BLANK) cần ít nhất 1 đáp án chấp nhận` }, { status: 400 });
           }
@@ -182,9 +258,9 @@ export async function POST(request: NextRequest) {
             }
             set.add(key);
           }
-          q.options = q.options.map((o: any) => ({ ...o, isCorrect: true }));
+          q.options = q.options.map((o) => ({ ...o, label: o.label, isCorrect: true }));
         } else {
-          if (q.options.some((o: any) => !(o.content && o.content.trim()))) {
+          if (q.options.some((o: QuizOptionInput) => !(o.content && o.content.trim()))) {
             return NextResponse.json({ success: false, message: `Câu ${i + 1} có đáp án rỗng` }, { status: 400 });
           }
         }
@@ -221,8 +297,11 @@ export async function POST(request: NextRequest) {
           const questionOrder = qIndex + 1;
           const questionId = questionIdByOrder.get(questionOrder);
           if (!questionId) return [];
-          return q.options.map((opt: any, optIndex: number) => ({
-            label: opt.label,
+          return q.options.map((opt: QuizOptionInput, optIndex: number) => ({
+            label:
+              typeof opt.label === 'string' && opt.label.trim()
+                ? opt.label.trim()
+                : String.fromCharCode(65 + (optIndex % 26)) + (optIndex >= 26 ? String(Math.floor(optIndex / 26) + 1) : ''),
             content: opt.content,
             isCorrect: !!opt.isCorrect,
             order: optIndex + 1,
@@ -235,57 +314,60 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log(`[CreateAssignment] Created ${questionsData.length} questions with options`);
     }
 
     // Create classroom assignments
-    if (assignmentData.classrooms && assignmentData.classrooms.length > 0) {
+    if (classroomIds.length > 0) {
       await prisma.assignmentClassroom.createMany({
-        data: assignmentData.classrooms.map((classroomId: string) => ({
+        data: classroomIds.map((classroomId: string) => ({
           assignmentId: assignment.id,
           classroomId: classroomId
         }))
       });
-      console.log(`[CreateAssignment] Assigned to ${assignmentData.classrooms.length} classrooms`);
     }
 
     // Handle file attachments for Essay (if any)
     if (assignmentData.type === 'ESSAY' && assignmentData.essayContent?.attachments?.length) {
-      console.log('[CreateAssignment] Essay attachments raw data:', assignmentData.essayContent.attachments);
-      // Filter out invalid files and create file records
-      const validFiles = assignmentData.essayContent.attachments.filter((file: any) => 
-        file && (file.name || file.fileName || file.originalName)
-      );
+      const validFiles = assignmentData.essayContent.attachments.filter((file: unknown) => {
+        if (!isObjectRecord(file)) return false;
+        const name = file.name ?? file.fileName ?? file.originalName;
+        return typeof name === 'string' && name.length > 0;
+      });
       
       if (validFiles.length > 0) {
-        const fileData = validFiles.map((file: any) => ({
-          name: file.name || file.fileName || file.originalName || 'Unknown File',
-          path: file.path || file.url || file.src || '', // File path or URL
-          size: file.size || 0,
-          mimeType: file.type || file.mimeType || 'application/octet-stream',
-          assignmentId: assignment.id,
-          uploadedById: session.user?.id || '',
-          file_type: 'ATTACHMENT' // Essay attachment type
-        }));
-        
-        console.log('[CreateAssignment] File data to create:', fileData);
+        const fileData = validFiles.map((file: unknown) => {
+          const f = file as Record<string, unknown>;
+          const nameRaw = f.name ?? f.fileName ?? f.originalName;
+          const pathRaw = f.path ?? f.url ?? f.src;
+          const sizeRaw = f.size;
+          const mimeTypeRaw = f.type ?? f.mimeType;
+
+          const name = typeof nameRaw === 'string' ? nameRaw : 'Unknown File';
+          const path = typeof pathRaw === 'string' ? pathRaw.slice(0, 1024) : '';
+          const size = typeof sizeRaw === 'number' && Number.isFinite(sizeRaw) ? Math.max(0, Math.floor(sizeRaw)) : 0;
+          const mimeType = typeof mimeTypeRaw === 'string' ? mimeTypeRaw : 'application/octet-stream';
+
+          return {
+            name,
+            path,
+            size,
+            mimeType,
+            assignmentId: assignment.id,
+            uploadedById: user.id,
+            file_type: 'ATTACHMENT',
+          };
+        });
         
         try {
           await prisma.assignmentFile.createMany({
             data: fileData
           });
-          console.log(`[CreateAssignment] Created ${fileData.length} file records for essay`);
         } catch (fileError) {
           console.error('[CreateAssignment] Error creating file records:', fileError);
           // Don't fail the entire assignment creation if file creation fails
         }
-      } else {
-        console.log('[CreateAssignment] No valid files found in attachments');
       }
     }
-
-    const responseTime = Date.now() - startTime;
-    console.log(`[CreateAssignment] Assignment created successfully in ${responseTime}ms`);
 
     return NextResponse.json({
       success: true,
@@ -300,17 +382,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    const responseTime = Date.now() - startTime;
-    console.error(`[CreateAssignment] Error after ${responseTime}ms:`, error);
-    const errorMessage = error instanceof Error ? error.message : 'Lỗi server khi tạo bài tập';
-
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: errorMessage,
-        error: process.env.NODE_ENV === 'development' ? String(error) : undefined
-      },
-      { status: 500 }
-    );
+    console.error(`[CreateAssignment] Error after ${Date.now() - startTime}ms:`, error);
+    return errorResponse(500, 'Lỗi server khi tạo bài tập');
   }
 }

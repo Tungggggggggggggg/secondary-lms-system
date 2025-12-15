@@ -12,8 +12,40 @@ interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   value?: number;
 }
 
+const widthSteps = [
+  "w-[0%]",
+  "w-[5%]",
+  "w-[10%]",
+  "w-[15%]",
+  "w-[20%]",
+  "w-[25%]",
+  "w-[30%]",
+  "w-[35%]",
+  "w-[40%]",
+  "w-[45%]",
+  "w-[50%]",
+  "w-[55%]",
+  "w-[60%]",
+  "w-[65%]",
+  "w-[70%]",
+  "w-[75%]",
+  "w-[80%]",
+  "w-[85%]",
+  "w-[90%]",
+  "w-[95%]",
+  "w-[100%]",
+] as const;
+
 const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
-  ({ className, value = 0, ...props }, ref) => (
+  ({ className, value = 0, ...props }, ref) => {
+    const clamped = Math.min(100, Math.max(0, value));
+    const stepIndex = Math.min(
+      widthSteps.length - 1,
+      Math.max(0, Math.round(clamped / 5))
+    );
+    const widthClass = widthSteps[stepIndex];
+
+    return (
     <div
       ref={ref}
       className={cn(
@@ -23,11 +55,14 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
       {...props}
     >
       <div
-        className="h-full bg-gradient-to-r from-violet-500 to-violet-600 transition-all duration-500 ease-out"
-        style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+        className={cn(
+          "h-full bg-gradient-to-r from-violet-500 to-violet-600 transition-all duration-500 ease-out",
+          widthClass
+        )}
       />
     </div>
-  )
+    );
+  }
 );
 
 Progress.displayName = "Progress";

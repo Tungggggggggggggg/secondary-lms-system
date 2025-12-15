@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils';
 
 /**
  * API: GET /api/teachers/dashboard/stats
@@ -14,31 +13,15 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET(req: NextRequest) {
   try {
-    console.log('[API /api/teachers/dashboard/stats] Bắt đầu xử lý request...');
-
-    // Xác thực người dùng
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      console.error('[API /api/teachers/dashboard/stats] Không có session');
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return errorResponse(401, 'Unauthorized');
+    }
+    if (authUser.role !== 'TEACHER') {
+      return errorResponse(403, 'Forbidden - Only teachers can access this endpoint');
     }
 
-    const userId = session.user.id;
-    const userRole = session.user.role;
-
-    // Kiểm tra role teacher
-    if (userRole !== 'TEACHER') {
-      console.error('[API /api/teachers/dashboard/stats] User không phải teacher');
-      return NextResponse.json(
-        { success: false, message: 'Forbidden - Only teachers can access this endpoint' },
-        { status: 403 }
-      );
-    }
-
-    console.log(`[API /api/teachers/dashboard/stats] Teacher ID: ${userId}`);
+    const userId = authUser.id;
 
     // Lấy thời gian hiện tại và thời gian 1 tháng trước
     const now = new Date();
@@ -115,22 +98,13 @@ export async function GET(req: NextRequest) {
       lessonsChange: newLessonsThisMonth,
     };
 
-    console.log('[API /api/teachers/dashboard/stats] Thống kê:', stats);
-
     return NextResponse.json({
       success: true,
       data: stats,
     });
 
   } catch (error) {
-    console.error('[API /api/teachers/dashboard/stats] Lỗi:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Internal server error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    console.error('[ERROR] [GET] /api/teachers/dashboard/stats', error);
+    return errorResponse(500, 'Internal server error');
   }
 }

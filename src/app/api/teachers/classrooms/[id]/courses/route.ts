@@ -12,8 +12,9 @@ const addSchema = z.object({
 
 export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const classroomId = ctx?.params?.id;
     if (!classroomId) return errorResponse(400, "Missing classroomId");
@@ -59,8 +60,9 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
 
 export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   try {
-    const user = await getAuthenticatedUser(req, "TEACHER");
+    const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden");
 
     const classroomId = ctx?.params?.id;
     if (!classroomId) return errorResponse(400, "Missing classroomId");

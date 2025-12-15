@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
 import { prisma } from '@/lib/prisma'
-import { getCachedUser } from '@/lib/user-cache'
+import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
 
 interface TeacherClassroomRow {
   id: string
@@ -23,31 +21,19 @@ interface TeacherClassroomRow {
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id && !session?.user?.email) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Unauthorized' 
-      }, { status: 401 })
+    const authUser = await getAuthenticatedUser(req)
+    if (!authUser) {
+      return errorResponse(401, 'Unauthorized')
     }
 
-    // ✅ SỬ DỤNG CACHE CHO USER LOOKUP
-    const user = await getCachedUser(
-      session.user.id || undefined, 
-      session.user.email || undefined
-    )
-
-    if (!user || user.role !== 'TEACHER') {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Forbidden - Teacher only' 
-      }, { status: 403 })
+    if (authUser.role !== 'TEACHER') {
+      return errorResponse(403, 'Forbidden - Teacher only')
     }
 
     // Lấy danh sách lớp học của teacher với số lượng học sinh
     const classrooms = (await prisma.classroom.findMany({
       where: {
-        teacherId: user.id,
+        teacherId: authUser.id,
         isActive: true
       },
       select: {
@@ -78,9 +64,7 @@ export async function GET(req: NextRequest) {
       icon: cls.icon,
       maxStudents: cls.maxStudents,
       studentCount: cls._count.students,
-      createdAt: cls.createdAt,
-      // Màu sắc ngẫu nhiên cho UI badge (có thể tinh chỉnh sau)
-      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+      createdAt: cls.createdAt
     }));
 
     return NextResponse.json({ 
@@ -89,10 +73,7 @@ export async function GET(req: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('[TEACHERS CLASSROOMS GET] Error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Internal server error' 
-    }, { status: 500 });
+    console.error('[ERROR] [GET] /api/teachers/classrooms', error)
+    return errorResponse(500, 'Internal server error')
   }
 }

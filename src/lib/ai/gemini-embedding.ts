@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { TaskType } from "@google/generative-ai";
 import { z } from "zod";
 
 const EmbedContentResultSchema = z.object({
@@ -7,15 +8,7 @@ const EmbedContentResultSchema = z.object({
   }),
 });
 
-export type GeminiEmbeddingTaskType =
-  | "RETRIEVAL_QUERY"
-  | "RETRIEVAL_DOCUMENT"
-  | "SEMANTIC_SIMILARITY"
-  | "CLASSIFICATION"
-  | "CLUSTERING"
-  | "QUESTION_ANSWERING"
-  | "FACT_VERIFICATION"
-  | "CODE_RETRIEVAL_QUERY";
+export type GeminiEmbeddingTaskType = TaskType;
 
 export type EmbedTextParams = {
   text: string;
@@ -48,11 +41,15 @@ export async function embedTextWithGemini(params: EmbedTextParams): Promise<numb
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
 
-  const result = (await model.embedContent({
-    content: { parts: [{ text }] },
+  const request = {
+    content: { role: "user", parts: [{ text }] },
     taskType: params.taskType,
     outputDimensionality: params.outputDimensionality ?? DEFAULT_EMBEDDING_DIMENSIONALITY,
-  })) as unknown;
+  };
+
+  const result = (await model.embedContent(
+    request as unknown as Parameters<typeof model.embedContent>[0]
+  )) as unknown;
   const validated = EmbedContentResultSchema.safeParse(result);
   if (!validated.success) {
     throw new Error("Phản hồi embedding không đúng định dạng.");
