@@ -46,7 +46,12 @@ export const GET = withApiLogging(async (req: NextRequest) => {
           announcement: normalizeAnnouncement(a),
         },
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
     );
   } catch (error) {
     console.error("[GET /api/system/settings] Error", error);

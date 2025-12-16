@@ -82,10 +82,71 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       (rel: { studentId: string }) => rel.studentId,
     );
 
-    // Lấy tất cả submissions của tất cả con
+    const now = new Date();
+
+    const classroomLinks = await prisma.classroomStudent.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { studentId: true, classroomId: true },
+    });
+
+    const classroomIds = Array.from(new Set(classroomLinks.map((x) => x.classroomId)));
+    if (classroomIds.length === 0) {
+      return NextResponse.json(
+        {
+          success: true,
+          data: Object.values(relationships).map((rel: any) => ({
+            student: rel.student,
+            grades: [],
+            statistics: {
+              totalSubmissions: 0,
+              totalGraded: 0,
+              totalPending: 0,
+              averageGrade: 0,
+            },
+          })),
+          statistics: {
+            totalChildren: relationships.length,
+            totalSubmissions: 0,
+            totalGraded: 0,
+            totalPending: 0,
+            overallAverage: 0,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
+    const assignmentClassrooms = (await prisma.assignmentClassroom.findMany({
+      where: { classroomId: { in: classroomIds } },
+      select: {
+        assignmentId: true,
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            dueDate: true,
+          },
+        },
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+            icon: true,
+            teacher: { select: { id: true, fullname: true, email: true } },
+          },
+        },
+      },
+      orderBy: { addedAt: "desc" },
+    })) as unknown as Array<ParentChildAssignmentClassroomRow & { assignment: ParentChildAssignmentRow }>;
+
+    const assignmentIdSet = new Set<string>(assignmentClassrooms.map((x) => x.assignmentId));
+    const assignmentIds = Array.from(assignmentIdSet);
+
     const submissions = (await prisma.assignmentSubmission.findMany({
       where: {
         studentId: { in: studentIds },
+        assignmentId: { in: assignmentIds },
       },
       select: {
         id: true,
@@ -98,42 +159,30 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       orderBy: { submittedAt: "desc" },
     })) as ParentChildSubmissionRow[];
 
-    const assignmentIds: string[] = Array.from(
-      new Set(submissions.map((s: ParentChildSubmissionRow) => s.assignmentId))
-    );
+    const studentClassroomIds = new Map<string, Set<string>>();
+    for (const link of classroomLinks) {
+      if (!studentClassroomIds.has(link.studentId)) studentClassroomIds.set(link.studentId, new Set());
+      studentClassroomIds.get(link.studentId)!.add(link.classroomId);
+    }
 
-    const [assignments, assignmentClassrooms] = await Promise.all([
-      prisma.assignment.findMany({
-        where: { id: { in: assignmentIds } },
-        select: { id: true, title: true, type: true, dueDate: true },
-      }) as unknown as ParentChildAssignmentRow[],
+    const classroomAssignmentIds = new Map<string, string[]>();
+    for (const row of assignmentClassrooms) {
+      const cid = row.classroom.id;
+      if (!classroomAssignmentIds.has(cid)) classroomAssignmentIds.set(cid, []);
+      classroomAssignmentIds.get(cid)!.push(row.assignmentId);
+    }
 
-      prisma.assignmentClassroom.findMany({
-        where: { assignmentId: { in: assignmentIds } },
-        select: {
-          assignmentId: true,
-          classroom: {
-            select: {
-              id: true,
-              name: true,
-              icon: true,
-              teacher: { select: { id: true, fullname: true, email: true } },
-            },
-          },
-        },
-        orderBy: { addedAt: "desc" },
-      }) as unknown as ParentChildAssignmentClassroomRow[],
-    ]);
-
-    const assignmentById = new Map<string, ParentChildAssignmentRow>(
-      assignments.map((a: ParentChildAssignmentRow) => [a.id, a])
-    );
-
+    const assignmentById = new Map<string, ParentChildAssignmentRow>();
     const classroomByAssignmentId = new Map<string, ParentChildAssignmentClassroomRow["classroom"]>();
     for (const row of assignmentClassrooms) {
-      if (!classroomByAssignmentId.has(row.assignmentId)) {
-        classroomByAssignmentId.set(row.assignmentId, row.classroom);
-      }
+      if (!assignmentById.has(row.assignmentId)) assignmentById.set(row.assignmentId, row.assignment);
+      if (!classroomByAssignmentId.has(row.assignmentId)) classroomByAssignmentId.set(row.assignmentId, row.classroom);
+    }
+
+    const submissionByStudent = new Map<string, Map<string, ParentChildSubmissionRow>>();
+    for (const sub of submissions) {
+      if (!submissionByStudent.has(sub.studentId)) submissionByStudent.set(sub.studentId, new Map());
+      submissionByStudent.get(sub.studentId)!.set(sub.assignmentId, sub);
     }
 
     // Transform data và nhóm theo student
@@ -154,7 +203,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
           dueDate: string | null;
           grade: number | null;
           feedback: string | null;
-          submittedAt: string;
+          submittedAt: string | null;
           status: "pending" | "submitted" | "graded";
           classroom: {
             id: string;
@@ -201,35 +250,74 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     );
 
     // Phân loại submissions theo student
-    submissions.forEach((sub: ParentChildSubmissionRow) => {
-      const assignment = assignmentById.get(sub.assignmentId);
-      if (!assignment) return;
-      const classroom = classroomByAssignmentId.get(sub.assignmentId) ?? null;
-
-      const gradeEntry = {
-        id: sub.id,
-        assignmentId: assignment.id,
-        assignmentTitle: assignment.title,
-        assignmentType: assignment.type,
-        dueDate: assignment.dueDate?.toISOString() || null,
-        grade: sub.grade,
-        feedback: sub.feedback,
-        submittedAt: sub.submittedAt.toISOString(),
-        status: (sub.grade !== null ? "graded" : "submitted") as "pending" | "submitted" | "graded",
-        classroom: classroom
-          ? {
-              id: classroom.id,
-              name: classroom.name,
-              icon: classroom.icon,
-              teacher: classroom.teacher,
-            }
-          : null,
-      };
-
-      if (gradesByStudent[sub.studentId]) {
-        gradesByStudent[sub.studentId].grades.push(gradeEntry);
+    for (const studentId of Object.keys(gradesByStudent)) {
+      const clsIds = studentClassroomIds.get(studentId) ?? new Set<string>();
+      const assignmentIdsForStudent = new Set<string>();
+      for (const cid of clsIds) {
+        const aIds = classroomAssignmentIds.get(cid) ?? [];
+        for (const aid of aIds) assignmentIdsForStudent.add(aid);
       }
-    });
+
+      const subMap = submissionByStudent.get(studentId) ?? new Map<string, ParentChildSubmissionRow>();
+
+      for (const assignmentId of assignmentIdsForStudent) {
+        const assignment = assignmentById.get(assignmentId);
+        if (!assignment) continue;
+        const classroom = classroomByAssignmentId.get(assignmentId) ?? null;
+        const sub = subMap.get(assignmentId);
+
+        if (sub) {
+          gradesByStudent[studentId].grades.push({
+            id: sub.id,
+            assignmentId: assignment.id,
+            assignmentTitle: assignment.title,
+            assignmentType: assignment.type,
+            dueDate: assignment.dueDate?.toISOString() || null,
+            grade: sub.grade,
+            feedback: sub.feedback,
+            submittedAt: sub.submittedAt.toISOString(),
+            status: (sub.grade !== null ? "graded" : "submitted") as "pending" | "submitted" | "graded",
+            classroom: classroom
+              ? {
+                  id: classroom.id,
+                  name: classroom.name,
+                  icon: classroom.icon,
+                  teacher: classroom.teacher,
+                }
+              : null,
+          });
+        } else {
+          const isPastDue = assignment.dueDate !== null && assignment.dueDate < now;
+          if (isPastDue) {
+            gradesByStudent[studentId].grades.push({
+              id: `virtual-${assignment.id}`,
+              assignmentId: assignment.id,
+              assignmentTitle: assignment.title,
+              assignmentType: assignment.type,
+              dueDate: assignment.dueDate?.toISOString() || null,
+              grade: 0,
+              feedback: null,
+              submittedAt: null,
+              status: "graded" as "pending" | "submitted" | "graded",
+              classroom: classroom
+                ? {
+                    id: classroom.id,
+                    name: classroom.name,
+                    icon: classroom.icon,
+                    teacher: classroom.teacher,
+                  }
+                : null,
+            });
+          }
+        }
+      }
+
+      gradesByStudent[studentId].grades.sort((a, b) => {
+        const ta = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+        const tb = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+        return tb - ta;
+      });
+    }
 
     // Tính thống kê cho mỗi student
     const result = Object.values(gradesByStudent).map((studentData) => {

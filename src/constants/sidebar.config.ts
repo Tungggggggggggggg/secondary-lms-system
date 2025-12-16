@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
-  Briefcase,
   LayoutDashboard,
   School,
   MessagesSquare,
@@ -129,7 +128,6 @@ export const sidebarConfig: SidebarConfig = {
       title: "Người dùng & Lớp học",
       items: [
         { icon: Users, label: "Users", href: "/dashboard/admin/users" },
-        { icon: Briefcase, label: "Organizations", href: "/dashboard/admin/organizations" },
         { icon: School, label: "Classes", href: "/dashboard/admin/classrooms" },
       ],
     },

@@ -174,7 +174,7 @@ export async function GET(
         dueDate: assignment.dueDate
           ? assignment.dueDate.toISOString()
           : null,
-        grade: 0,
+        grade: isPastDue ? 0 : null,
         feedback: null,
         submittedAt: null as string | null,
         status: isPastDue ? "graded" : "pending",
@@ -183,27 +183,32 @@ export async function GET(
 
     const grades = [...submissionGrades, ...missingGrades];
 
-    // Tính điểm trung bình (chỉ tính các bài đã chấm)
+    // Tính điểm trung bình: chỉ tính bài đã chấm + bài quá hạn chưa nộp (0). Không tính bài chưa đến hạn hoặc dueDate=null.
     const gradedSubmissions = submissions.filter(
       (sub: StudentClassroomGradeSubmissionRow) => sub.grade !== null,
     );
-    const averageGrade =
-      gradedSubmissions.length > 0
-        ? gradedSubmissions.reduce(
-            (sum: number, sub: StudentClassroomGradeSubmissionRow) =>
-              sum + (sub.grade || 0),
-            0,
-          ) / gradedSubmissions.length
-        : 0;
+    const overdueMissingCount = missingAssignments.filter(
+      (a) => a.dueDate !== null && a.dueDate < now
+    ).length;
+    const denom = gradedSubmissions.length + overdueMissingCount;
+    const sumGrades = gradedSubmissions.reduce(
+      (sum: number, sub: StudentClassroomGradeSubmissionRow) => sum + (sub.grade || 0),
+      0
+    );
+    const averageGrade = denom > 0 ? sumGrades / denom : 0;
+
+    const totalAssignments = assignmentIdList.length;
+    const totalGraded = denom;
+    const totalPending = Math.max(0, totalAssignments - totalGraded);
 
     return NextResponse.json(
       {
         success: true,
         data: grades,
         statistics: {
-          totalSubmissions: submissions.length,
-          totalGraded: gradedSubmissions.length,
-          totalPending: submissions.length - gradedSubmissions.length,
+          totalSubmissions: totalAssignments,
+          totalGraded,
+          totalPending,
           averageGrade: Math.round(averageGrade * 10) / 10,
         },
       },

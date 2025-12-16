@@ -183,7 +183,7 @@ export const GET = withApiLogging(async (
         dueDate: assignment.dueDate
           ? assignment.dueDate.toISOString()
           : null,
-        grade: 0,
+        grade: isPastDue ? 0 : null,
         feedback: null,
         submittedAt: null as string | null,
         status: isPastDue ? "graded" : "pending",
@@ -193,17 +193,15 @@ export const GET = withApiLogging(async (
 
     const grades = [...submissionGrades, ...missingGrades];
 
-    // Tính điểm trung bình (chỉ tính các bài đã chấm)
-    const gradedSubmissions = submissions.filter(
-      (sub: ChildSubmissionRow) => sub.grade !== null,
-    );
-    const totalSubmissions = submissions.length;
-    const totalGraded = gradedSubmissions.length;
-    const totalPending = totalSubmissions - totalGraded;
+    // Tính điểm trung bình: tính cả bài quá hạn chưa nộp (0), không tính bài chưa đến hạn hoặc dueDate=null
+    const gradedEntries = grades.filter((g) => g.grade !== null);
+    const totalAssignments = assignmentIdList.length;
+    const totalGraded = gradedEntries.length;
+    const totalPending = Math.max(0, totalAssignments - totalGraded);
 
     const averageGrade =
       totalGraded > 0
-        ? gradedSubmissions.reduce((sum, sub) => sum + (sub.grade || 0), 0) / totalGraded
+        ? gradedEntries.reduce((sum, g) => sum + (g.grade || 0), 0) / totalGraded
         : 0;
 
     return NextResponse.json(
@@ -211,7 +209,7 @@ export const GET = withApiLogging(async (
         success: true,
         data: grades,
         statistics: {
-          totalSubmissions,
+          totalSubmissions: totalAssignments,
           totalGraded,
           totalPending,
           averageGrade: Math.round(averageGrade * 10) / 10,

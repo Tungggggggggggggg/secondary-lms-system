@@ -182,7 +182,7 @@ export default function StudentClassroomGradesPage() {
             icon: <Award className="h-6 w-6 text-green-600" />,
             color: "from-green-200 to-emerald-100",
             label: "Điểm trung bình",
-            value: statistics.averageGrade > 0 ? statistics.averageGrade.toFixed(1) : "N/A",
+            value: (statistics.totalGraded ?? 0) > 0 ? statistics.averageGrade.toFixed(1) : "N/A",
           },
           {
             icon: <CheckCircle2 className="h-6 w-6 text-emerald-600" />,

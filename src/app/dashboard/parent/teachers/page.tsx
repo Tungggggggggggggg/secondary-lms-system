@@ -43,11 +43,11 @@ export default function ParentTeachersPage() {
 
   const teachers: TeacherItem[] = data?.success && Array.isArray(data.data) ? data.data : [];
 
-  const handleMessageTeacher = async (teacherId: string, classroomId: string, studentId: string) => {
-    const key = `${teacherId}-${classroomId}-${studentId}`;
+  const handleMessageTeacher = async (teacherId: string, classroomId?: string) => {
+    const key = `${teacherId}-${classroomId || ""}`;
     try {
       setSendingKey(key);
-      const res = await createConversationGeneric([teacherId, studentId], classroomId, studentId);
+      const res = await createConversationGeneric([teacherId], classroomId, undefined);
       const id =
         typeof res === "object" &&
         res !== null &&

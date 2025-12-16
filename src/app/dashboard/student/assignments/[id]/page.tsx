@@ -18,6 +18,7 @@ import QuizAssignmentForm from "@/components/student/assignments/QuizAssignmentF
 import SubmissionReview from "@/components/student/assignments/SubmissionReview";
 import FileSubmissionPanel from "@/components/student/assignments/FileSubmissionPanel";
 import AssignmentComments from "@/components/student/assignments/AssignmentComments";
+import RichTextPreview from "@/components/shared/RichTextPreview";
 // Helpers for image preview signed URLs
 const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -412,9 +413,10 @@ export default function StudentAssignmentDetailPage({
                         <span className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-bold">
                           {idx + 1}
                         </span>
-                        <div className="flex-1 text-slate-800 whitespace-pre-wrap">
-                          {q.content}
-                        </div>
+                        <RichTextPreview
+                          html={q.content || ""}
+                          className="flex-1 text-slate-800"
+                        />
                       </div>
                     ))}
                   </div>

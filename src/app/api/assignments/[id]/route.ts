@@ -417,9 +417,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           include: { questions: { include: { options: true } }, _count: { select: { submissions: true } }, classrooms: true },
         });
       }, { timeout: 30000, maxWait: 5000 });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[ASSIGNMENT PUT] Lỗi khi cập nhật assignment:', err);
-      return errorResponse(500, 'Lỗi hệ thống khi cập nhật bài tập');
+      const msg = err instanceof Error ? err.message : 'Lỗi hệ thống khi cập nhật bài tập';
+      if (typeof msg === 'string' && msg.includes('Forbidden - Classroom access denied')) {
+        return errorResponse(403, 'Bạn không có quyền giao bài cho một hoặc nhiều lớp đã chọn');
+      }
+      if (typeof msg === 'string' && msg.toLowerCase().includes('timeout')) {
+        return errorResponse(504, 'Cập nhật quá lâu, vui lòng thử lại');
+      }
+      return errorResponse(500, msg);
     }
     return NextResponse.json({ success: true, message: 'Cập nhật bài tập thành công', data: updatedAssignment }, { status: 200 });
   } catch (error: unknown) {

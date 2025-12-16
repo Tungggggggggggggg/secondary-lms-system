@@ -95,13 +95,7 @@ export default function MyChildren() {
                 </Button>
               </Link>
             )}
-            {children.length <= 3 && (
-              <Link href="/dashboard/parent/children">
-                <Button color="amber" variant="outline" className="w-full" size="sm">
-                  Xem chi tiết
-                </Button>
-              </Link>
-            )}
+           
           </div>
         )}
     </SectionCard>

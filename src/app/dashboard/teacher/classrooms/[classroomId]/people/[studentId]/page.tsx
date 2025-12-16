@@ -13,7 +13,7 @@ type GradeRow = {
   assignmentType: string;
   grade: number | null;
   feedback: string | null;
-  submittedAt: string;
+  submittedAt: string | null;
   dueDate?: string | null;
   status: "pending" | "submitted" | "graded";
 };
@@ -48,14 +48,22 @@ export default function TeacherStudentDetailPage() {
     const copy = [...rows];
     switch (sortBy) {
       case "oldest":
-        copy.sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime());
+        copy.sort((a, b) => {
+          const ta = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+          const tb = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+          return ta - tb;
+        });
         break;
       case "grade":
         copy.sort((a, b) => (b.grade ?? 0) - (a.grade ?? 0));
         break;
       case "newest":
       default:
-        copy.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+        copy.sort((a, b) => {
+          const ta = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+          const tb = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+          return tb - ta;
+        });
         break;
     }
     return copy;
@@ -102,7 +110,7 @@ export default function TeacherStudentDetailPage() {
                 <TableCell className="font-medium">{g.assignmentTitle}</TableCell>
                 <TableCell>{g.assignmentType}</TableCell>
                 <TableCell>{g.dueDate ? new Date(g.dueDate).toLocaleString() : "—"}</TableCell>
-                <TableCell>{new Date(g.submittedAt).toLocaleString()}</TableCell>
+                <TableCell>{g.submittedAt ? new Date(g.submittedAt).toLocaleString() : "Chưa nộp"}</TableCell>
                 <TableCell>{g.grade ?? "—"}</TableCell>
                 <TableCell className="max-w-[320px] truncate" title={g.feedback || undefined}>{g.feedback || ""}</TableCell>
               </TableRow>

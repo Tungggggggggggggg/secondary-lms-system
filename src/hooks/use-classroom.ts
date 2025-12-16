@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 import { CreateClassroomDTO, ClassroomResponse } from '@/types/classroom';
 import { SearchClassesQuery, SearchClassesResponse } from '@/types/api';
@@ -6,6 +6,7 @@ import { SearchClassesQuery, SearchClassesResponse } from '@/types/api';
 export const useClassroom = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const lastActionErrorRef = useRef<string | null>(null);
 
   type ClassroomsApiResponse = {
     success?: boolean;
@@ -77,6 +78,7 @@ export const useClassroom = () => {
   // Hàm lấy danh sách lớp học, bọc useCallback để tránh vòng lặp useEffect
   const fetchClassrooms = useCallback(async (): Promise<void> => {
     setActionError(null);
+    lastActionErrorRef.current = null;
     await mutate();
   }, [mutate]);
 
@@ -85,6 +87,7 @@ export const useClassroom = () => {
     try {
       setActionLoading(true);
       setActionError(null);
+      lastActionErrorRef.current = null;
       if (isDevelopment) console.log('[createClassroom] Bắt đầu tạo lớp học...');
       const response = await fetch('/api/classrooms', {
         method: 'POST',
@@ -99,7 +102,6 @@ export const useClassroom = () => {
           typeof (result as { message?: unknown } | null)?.message === 'string'
             ? String((result as { message?: unknown }).message)
             : response.statusText;
-        if (isDevelopment) console.error('[createClassroom] Lỗi response:', message);
         throw new Error(message || 'Có lỗi xảy ra khi tạo lớp học');
       }
       const created =
@@ -112,6 +114,7 @@ export const useClassroom = () => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
       setActionError(msg);
+      lastActionErrorRef.current = msg;
       if (isDevelopment) console.error('[createClassroom] Lỗi:', msg);
       return null;
     } finally {
@@ -124,7 +127,9 @@ export const useClassroom = () => {
     try {
       setActionLoading(true);
       setActionError(null);
+      lastActionErrorRef.current = null;
       if (isDevelopment) console.log('[joinClassroom] Tham gia lớp học với mã:', code);
+
       const response = await fetch('/api/classrooms/join', {
         method: 'POST',
         headers: {
@@ -138,9 +143,9 @@ export const useClassroom = () => {
           typeof (result as { message?: unknown } | null)?.message === 'string'
             ? String((result as { message?: unknown }).message)
             : response.statusText;
-        if (isDevelopment) console.error('[joinClassroom] Lỗi response:', message);
         throw new Error(message || 'Có lỗi xảy ra khi tham gia lớp học');
       }
+
       const payload = result && typeof result === 'object' ? (result as { data?: unknown }).data : undefined;
       const joined =
         payload && typeof payload === 'object' && 'classroom' in payload
@@ -152,7 +157,7 @@ export const useClassroom = () => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
       setActionError(msg);
-      if (isDevelopment) console.error('[joinClassroom] Lỗi:', msg);
+      lastActionErrorRef.current = msg;
       return null;
     } finally {
       setActionLoading(false);
@@ -164,6 +169,7 @@ export const useClassroom = () => {
     fetchClassrooms,
     createClassroom,
     joinClassroom,
+    getLastError: () => lastActionErrorRef.current,
     searchClassrooms: useCallback(
       async (
         params: SearchClassesQuery,

@@ -49,7 +49,6 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [banLoadingId, setBanLoadingId] = useState<string | null>(null);
-  const [resetLoadingId, setResetLoadingId] = useState<string | null>(null);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminUserItem | null>(null);
@@ -58,17 +57,24 @@ export default function AdminUsersPage() {
   const [createFullname, setCreateFullname] = useState("");
   const [createEmail, setCreateEmail] = useState("");
   const [createPassword, setCreatePassword] = useState("");
+  const [createRole, setCreateRole] = useState<"TEACHER" | "STUDENT" | "PARENT">("TEACHER");
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [bulkDefaultPassword, setBulkDefaultPassword] = useState("");
+  const [bulkRole, setBulkRole] = useState<"TEACHER" | "STUDENT" | "PARENT">("TEACHER");
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
-  const [bulkResult, setBulkResult] = useState<{ created: number; failed: number } | null>(
-    null
-  );
+  const [bulkResult, setBulkResult] = useState<
+    | {
+        created: number;
+        failed: number;
+        failedDetails: { index: number; email: string; reason: string }[];
+      }
+    | null
+  >(null);
   const [bulkFileName, setBulkFileName] = useState<string | null>(null);
   const [bulkDragOver, setBulkDragOver] = useState(false);
   const prompt = usePrompt();
@@ -150,52 +156,6 @@ export default function AdminUsersPage() {
       });
     } finally {
       setDeleteLoadingId(null);
-    }
-  };
-
-  const resetPassword = async (user: AdminUserItem) => {
-    if (user.role === "ADMIN") return;
-
-    const input = await prompt({
-      title: "Reset mật khẩu",
-      description: `Gửi mã đặt lại mật khẩu tới email ${user.email}. Bạn có muốn ghi lý do không? (tùy chọn)`,
-      placeholder: "Ví dụ: Người dùng quên mật khẩu…",
-      type: "textarea",
-      confirmText: "Gửi mã reset",
-      cancelText: "Hủy",
-      validate: (v) => (v.length > 500 ? "Vui lòng nhập tối đa 500 ký tự" : null),
-    });
-    if (input === null) {
-      return;
-    }
-
-    const reason = input.trim() || undefined;
-
-    try {
-      setResetLoadingId(user.id);
-      const res = await fetch(`/api/admin/users/${user.id}/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể gửi mã reset password");
-      }
-      toast({
-        title: "Đã gửi mã reset",
-        description: `Đã gửi mã reset password tới ${user.email}`,
-        variant: "success",
-      });
-    } catch (e) {
-      console.error("[AdminUsersPage] resetPassword error", e);
-      toast({
-        title: "Không thể gửi mã reset",
-        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi reset mật khẩu",
-        variant: "destructive",
-      });
-    } finally {
-      setResetLoadingId(null);
     }
   };
 
@@ -298,33 +258,35 @@ export default function AdminUsersPage() {
           fullname: createFullname,
           email: createEmail,
           password: createPassword,
+          role: createRole,
         }),
       });
       const json = await res.json();
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tạo giáo viên mới");
+        throw new Error(json?.message || "Không thể tạo người dùng mới");
       }
 
       setCreateFullname("");
       setCreateEmail("");
       setCreatePassword("");
+      setCreateRole("TEACHER");
 
-      setRoleFilter("TEACHER");
-      await fetchUsers(1, "TEACHER", search);
+      setRoleFilter(createRole);
+      await fetchUsers(1, createRole, search);
 
       setCreateOpen(false);
       toast({
-        title: "Tạo giáo viên thành công",
-        description: createEmail.trim() ? `Đã tạo tài khoản: ${createEmail.trim()}` : "Đã tạo tài khoản giáo viên.",
+        title: "Tạo người dùng thành công",
+        description: createEmail.trim() ? `Đã tạo tài khoản: ${createEmail.trim()}` : "Đã tạo tài khoản người dùng.",
         variant: "success",
       });
     } catch (e) {
       setCreateError(
-        e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo giáo viên mới"
+        e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo người dùng mới"
       );
       toast({
-        title: "Không thể tạo giáo viên",
-        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo giáo viên mới",
+        title: "Không thể tạo người dùng",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo người dùng mới",
         variant: "destructive",
       });
     } finally {
@@ -344,7 +306,7 @@ export default function AdminUsersPage() {
         .map((l) => l.trim())
         .filter(Boolean);
       if (lines.length === 0) {
-        setBulkError("Vui lòng nhập danh sách giáo viên, mỗi dòng một người.");
+        setBulkError("Vui lòng nhập danh sách người dùng, mỗi dòng một người.");
         return;
       }
 
@@ -353,7 +315,8 @@ export default function AdminUsersPage() {
         const fullname = parts[0] || "";
         const email = parts[1] || "";
         const password = parts[2] || undefined;
-        return { fullname, email, password };
+        const role = parts[3] || undefined;
+        return { fullname, email, password, role };
       });
 
       const res = await fetch("/api/admin/users/bulk", {
@@ -362,38 +325,53 @@ export default function AdminUsersPage() {
         body: JSON.stringify({
           entries,
           defaultPassword: bulkDefaultPassword,
+          defaultRole: bulkRole,
         }),
       });
       const json = await res.json();
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tạo giáo viên hàng loạt");
+        throw new Error(json?.message || "Không thể tạo người dùng hàng loạt");
       }
 
       const data = json.data as { created: unknown[]; failed: unknown[] };
+      const failedDetailsRaw = Array.isArray(data?.failed) ? data.failed : [];
+      const failedDetails = failedDetailsRaw
+        .filter((item) => typeof item === "object" && item !== null)
+        .map((item) => {
+          const record = item as Record<string, unknown>;
+          return {
+            index: typeof record.index === "number" ? record.index : Number(record.index ?? 0),
+            email: typeof record.email === "string" ? record.email : String(record.email ?? ""),
+            reason: typeof record.reason === "string" ? record.reason : String(record.reason ?? "Lỗi không xác định"),
+          };
+        });
       setBulkResult({
         created: Array.isArray(data?.created) ? data.created.length : 0,
-        failed: Array.isArray(data?.failed) ? data.failed.length : 0,
+        failed: failedDetails.length,
+        failedDetails,
       });
 
-      setRoleFilter("TEACHER");
-      await fetchUsers(1, "TEACHER", search);
+      setRoleFilter(bulkRole);
+      await fetchUsers(1, bulkRole, search);
 
-      setBulkOpen(false);
+      if (failedDetails.length === 0) {
+        setBulkOpen(false);
+      }
 
       toast({
-        title: "Đã xử lý danh sách giáo viên",
-        description: `Tạo thành công ${Array.isArray(data?.created) ? data.created.length : 0} giáo viên, ${
+        title: "Đã xử lý danh sách người dùng",
+        description: `Tạo thành công ${Array.isArray(data?.created) ? data.created.length : 0} người dùng, ${
           Array.isArray(data?.failed) ? data.failed.length : 0
         } dòng lỗi.`,
         variant: "success",
       });
     } catch (e) {
       setBulkError(
-        e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo giáo viên hàng loạt"
+        e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo người dùng hàng loạt"
       );
       toast({
-        title: "Không thể tạo giáo viên hàng loạt",
-        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo giáo viên hàng loạt",
+        title: "Không thể tạo người dùng hàng loạt",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra khi tạo người dùng hàng loạt",
         variant: "destructive",
       });
     } finally {
@@ -471,7 +449,7 @@ export default function AdminUsersPage() {
                   setCreateOpen(true);
                 }}
               >
-                Tạo giáo viên
+                Tạo người dùng
               </Button>
               <Button
                 type="button"
@@ -535,7 +513,7 @@ export default function AdminUsersPage() {
                                 setCreateOpen(true);
                               }}
                             >
-                              Tạo giáo viên
+                              Tạo người dùng
                             </Button>
                           </div>
                         }
@@ -545,12 +523,11 @@ export default function AdminUsersPage() {
                 ) : (
                   items.map((user) => {
                     const isProcessing = banLoadingId === user.id;
-                    const isResetting = resetLoadingId === user.id;
                     const isDeleting = deleteLoadingId === user.id;
                     const isAdminRole = user.role === "ADMIN";
                     const disabledReason = user.isDisabled
-                      ? user.disabledReason || "Không có lý do cụ thể"
-                      : "—";
+                      ? user.disabledReason || "(Không có lý do)"
+                      : "";
                     return (
                       <tr key={user.id} className="hover:bg-slate-50/60">
                         <td className="px-4 py-3 align-middle">
@@ -597,11 +574,10 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-4 py-3 align-middle text-right">
                           <UserRowActionsMenu
-                            disabled={isProcessing || isResetting || isDeleting}
-                            disableReset={isAdminRole}
+                            detailHref={`/dashboard/admin/users/${user.id}`}
+                            disabled={isProcessing || isDeleting}
                             disableToggle={isAdminRole}
                             disableDelete={isAdminRole}
-                            onResetPassword={() => resetPassword(user)}
                             onToggleBan={() => toggleBan(user)}
                             onDeleteUser={() => requestDeleteUser(user)}
                             toggleLabel={
@@ -639,6 +615,7 @@ export default function AdminUsersPage() {
             setCreateFullname("");
             setCreateEmail("");
             setCreatePassword("");
+            setCreateRole("TEACHER");
           }
         }}
       >
@@ -647,9 +624,9 @@ export default function AdminUsersPage() {
           onClose={() => setCreateOpen(false)}
         >
           <DialogHeader className="shrink-0">
-            <DialogTitle>Tạo giáo viên mới</DialogTitle>
+            <DialogTitle>Tạo người dùng mới</DialogTitle>
             <DialogDescription>
-              Nhập thông tin cơ bản để tạo tài khoản giáo viên. Mật khẩu tối thiểu 6 ký tự.
+              Nhập thông tin cơ bản để tạo tài khoản. Mật khẩu tối thiểu 6 ký tự.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
@@ -659,6 +636,18 @@ export default function AdminUsersPage() {
               </div>
             )}
             <form id="create-teacher-form" onSubmit={handleCreateTeacher} className="grid gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-1 md:col-span-2">
+                <label className="text-[11px] font-semibold text-slate-600">Vai trò</label>
+                <select
+                  value={createRole}
+                  onChange={(e) => setCreateRole(e.target.value as "TEACHER" | "STUDENT" | "PARENT")}
+                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                >
+                  <option value="TEACHER">TEACHER</option>
+                  <option value="STUDENT">STUDENT</option>
+                  <option value="PARENT">PARENT</option>
+                </select>
+              </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-semibold text-slate-600">Họ và tên</label>
                 <input
@@ -699,7 +688,7 @@ export default function AdminUsersPage() {
               Hủy
             </Button>
             <Button form="create-teacher-form" type="submit" disabled={createLoading}>
-              {createLoading ? "Đang tạo..." : "Tạo giáo viên"}
+              {createLoading ? "Đang tạo..." : "Tạo người dùng"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -716,6 +705,7 @@ export default function AdminUsersPage() {
             setBulkFileName(null);
             setBulkText("");
             setBulkDefaultPassword("");
+            setBulkRole("TEACHER");
           }
         }}
       >
@@ -724,10 +714,10 @@ export default function AdminUsersPage() {
           onClose={() => setBulkOpen(false)}
         >
           <DialogHeader className="shrink-0">
-            <DialogTitle>Tạo giáo viên hàng loạt</DialogTitle>
+            <DialogTitle>Tạo người dùng hàng loạt</DialogTitle>
             <DialogDescription>
-              Mỗi dòng một giáo viên theo định dạng: Họ tên, email[, mật khẩu]. Nếu không có mật khẩu riêng, hệ thống
-              dùng mật khẩu mặc định.
+              Mỗi dòng một người dùng theo định dạng: Họ tên, email[, mật khẩu][, role]. Nếu không có mật khẩu riêng,
+              hệ thống dùng mật khẩu mặc định.
             </DialogDescription>
           </DialogHeader>
 
@@ -739,18 +729,64 @@ export default function AdminUsersPage() {
             )}
             {bulkResult && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
-                Đã tạo {bulkResult.created} giáo viên, {bulkResult.failed} dòng lỗi.
+                Đã tạo {bulkResult.created} người dùng, {bulkResult.failed} dòng lỗi.
               </div>
             )}
 
+            {bulkResult && bulkResult.failedDetails.length > 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <div className="text-sm font-semibold text-slate-900">Danh sách dòng không tạo được</div>
+                  <div className="text-xs text-slate-600">Sửa lại các dòng này rồi chạy lại bulk import.</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">#</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Email</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Lý do</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {bulkResult.failedDetails.map((row) => (
+                        <tr key={`${row.index}-${row.email}`} className="hover:bg-slate-50/60">
+                          <td className="px-4 py-2 text-slate-700">{Number.isFinite(row.index) ? row.index + 1 : ""}</td>
+                          <td className="px-4 py-2 text-slate-700 max-w-[240px] truncate" title={row.email}>
+                            {row.email || <span className="text-slate-400">(Trống)</span>}
+                          </td>
+                          <td className="px-4 py-2 text-slate-700 max-w-[520px] truncate" title={row.reason}>
+                            {row.reason}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+
             <form id="bulk-create-teachers-form" onSubmit={handleBulkCreateTeachers} className="grid gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-3 flex flex-col gap-1">
+                <label className="text-[11px] font-semibold text-slate-600">Vai trò mặc định</label>
+                <select
+                  value={bulkRole}
+                  onChange={(e) => setBulkRole(e.target.value as "TEACHER" | "STUDENT" | "PARENT")}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                >
+                  <option value="TEACHER">TEACHER</option>
+                  <option value="STUDENT">STUDENT</option>
+                  <option value="PARENT">PARENT</option>
+                </select>
+                <div className="text-[10px] text-slate-500">Nếu mỗi dòng có cột role thứ 4, hệ thống sẽ ưu tiên theo dòng.</div>
+              </div>
               <div className="lg:col-span-2 flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-600">Danh sách giáo viên</label>
+                <label className="text-[11px] font-semibold text-slate-600">Danh sách người dùng</label>
                 <textarea
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   rows={12}
-                  placeholder={"VD:\nNguyễn Văn A, a@example.com\nTrần Thị B, b@example.com, MatKhau123"}
+                  placeholder={"VD:\nNguyễn Văn A, a@example.com\nTrần Thị B, b@example.com, MatKhau123, STUDENT"}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 resize-y"
                 />
               </div>

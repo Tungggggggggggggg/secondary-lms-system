@@ -13,7 +13,7 @@ import { PageHeader } from "@/components/shared";
 import { Hash } from "lucide-react";
 
 export default function JoinClassPage() {
-    const { joinClassroom, isLoading } = useClassroom();
+    const { joinClassroom, isLoading, getLastError } = useClassroom();
     const [code, setCode] = useState("");
     const router = useRouter();
     const { toast } = useToast();
@@ -38,7 +38,11 @@ export default function JoinClassPage() {
             });
             router.push(`/dashboard/student/classes/${classroom.id}`);
         } else {
-            // Error đã được xử lý trong hook
+            toast({
+                title: "Tham gia thất bại",
+                description: getLastError() || "Không thể tham gia lớp học",
+                variant: "destructive",
+            });
         }
     };
 

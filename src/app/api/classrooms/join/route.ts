@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!classroom.isActive) {
-      return errorResponse(400, "Lớp học đang bị khóa");
+      return errorResponse(400, "Không thể tham gia lớp học đã lưu trữ");
     }
 
     const existing = await prisma.classroomStudent.findUnique({

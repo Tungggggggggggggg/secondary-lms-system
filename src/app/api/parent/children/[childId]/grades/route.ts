@@ -190,22 +190,8 @@ export const GET = withApiLogging(async (
     }
 
     if (assignments.length === 0) {
-      const [totalSubmissions, totalGraded, avgGrade] = await Promise.all([
-        prisma.assignmentSubmission.count({
-          where: {
-            studentId: childId,
-            ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
-            assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
-          },
-        }),
-        prisma.assignmentSubmission.count({
-          where: {
-            studentId: childId,
-            grade: { not: null },
-            ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
-            assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
-          },
-        }),
+      const [totalAssignments, gradeAgg, overdueMissingCount] = await Promise.all([
+        prisma.assignment.count({ where: assignmentWhere }),
         prisma.assignmentSubmission.aggregate({
           where: {
             studentId: childId,
@@ -213,19 +199,40 @@ export const GET = withApiLogging(async (
             ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
             assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
           },
-          _avg: { grade: true },
+          _sum: { grade: true },
+          _count: { grade: true },
+        }),
+        prisma.assignment.count({
+          where: {
+            classrooms: { some: { classroomId: { in: classroomIds } } },
+            dueDate: {
+              not: null,
+              lt: now,
+              ...(fromDate ? { gte: fromDate } : {}),
+            },
+            submissions: {
+              none: {
+                studentId: childId,
+              },
+            },
+          },
         }),
       ]);
+
+      const denom = (gradeAgg._count.grade ?? 0) as number;
+      const sum = (gradeAgg._sum.grade ?? 0) as number;
+      const denomWithMissing = denom + (overdueMissingCount ?? 0);
+      const average = denomWithMissing > 0 ? sum / denomWithMissing : 0;
 
       return NextResponse.json(
         {
           success: true,
           data: [],
           statistics: {
-            totalSubmissions,
-            totalGraded,
-            totalPending: totalSubmissions - totalGraded,
-            averageGrade: Math.round(((avgGrade._avg.grade ?? 0) as number) * 10) / 10,
+            totalSubmissions: totalAssignments,
+            totalGraded: denomWithMissing,
+            totalPending: Math.max(0, totalAssignments - denomWithMissing),
+            averageGrade: Math.round(average * 10) / 10,
           },
           pageInfo: {
             nextCursor: null,
@@ -239,7 +246,7 @@ export const GET = withApiLogging(async (
 
     const assignmentIdList = assignments.map((a) => a.id);
 
-    const [assignmentClassrooms, submissions, totalSubmissions, totalGraded, avgGrade] = await Promise.all([
+    const [assignmentClassrooms, submissions, gradeAgg, overdueMissingCount, totalAssignments] = await Promise.all([
       (await prisma.assignmentClassroom.findMany({
         where: {
           classroomId: { in: classroomIds },
@@ -284,21 +291,6 @@ export const GET = withApiLogging(async (
         orderBy: { submittedAt: "desc" },
       })) as unknown as ParentChildSubmissionRow[],
 
-      prisma.assignmentSubmission.count({
-        where: {
-          studentId: childId,
-          ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
-          assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
-        },
-      }),
-      prisma.assignmentSubmission.count({
-        where: {
-          studentId: childId,
-          grade: { not: null },
-          ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
-          assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
-        },
-      }),
       prisma.assignmentSubmission.aggregate({
         where: {
           studentId: childId,
@@ -306,8 +298,25 @@ export const GET = withApiLogging(async (
           ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
           assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
         },
-        _avg: { grade: true },
+        _sum: { grade: true },
+        _count: { grade: true },
       }),
+      prisma.assignment.count({
+        where: {
+          classrooms: { some: { classroomId: { in: classroomIds } } },
+          dueDate: {
+            not: null,
+            lt: now,
+            ...(fromDate ? { gte: fromDate } : {}),
+          },
+          submissions: {
+            none: {
+              studentId: childId,
+            },
+          },
+        },
+      }),
+      prisma.assignment.count({ where: assignmentWhere }),
     ]);
 
     const assignmentById = new Map<string, ParentChildAssignmentRow>(
@@ -368,7 +377,7 @@ export const GET = withApiLogging(async (
           assignmentTitle: assignment.title,
           assignmentType: assignment.type,
           dueDate: assignment.dueDate ? assignment.dueDate.toISOString() : null,
-          grade: 0,
+          grade: isPastDue ? 0 : null,
           feedback: null,
           submittedAt: null as string | null,
           status: isPastDue ? "graded" : "pending",
@@ -386,17 +395,19 @@ export const GET = withApiLogging(async (
 
     const grades = [...submissionGrades, ...missingGrades];
 
-    const totalPending = totalSubmissions - totalGraded;
-    const averageGrade = (avgGrade._avg.grade ?? 0) as number;
+    const gradedCount = (gradeAgg._count.grade ?? 0) as number;
+    const gradedSum = (gradeAgg._sum.grade ?? 0) as number;
+    const denom = gradedCount + (overdueMissingCount ?? 0);
+    const averageGrade = denom > 0 ? gradedSum / denom : 0;
 
     return NextResponse.json(
       {
         success: true,
         data: grades,
         statistics: {
-          totalSubmissions,
-          totalGraded,
-          totalPending,
+          totalSubmissions: totalAssignments,
+          totalGraded: denom,
+          totalPending: Math.max(0, totalAssignments - denom),
           averageGrade: Math.round(averageGrade * 10) / 10, // Làm tròn 1 chữ số thập phân
         },
         pageInfo: {

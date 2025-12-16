@@ -12,6 +12,7 @@ import AssignmentCommentsView from "@/components/teacher/comments/AssignmentComm
 import type { AssignmentDetail } from "@/types/api";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { AssignmentTypeBadge, EmptyState, PageHeader } from "@/components/shared";
+import RichTextPreview from "@/components/shared/RichTextPreview";
 import { AlertTriangle, Loader2, Trash2, PenLine, FileText, Paperclip, Image as ImageIcon, Video as VideoIcon, Clock, Shield } from "lucide-react";
 
 // Helper hiển thị Chip loại bài tập
@@ -382,9 +383,16 @@ export default function AssignmentDetailPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-gray-700 text-base mb-1 whitespace-pre-line">
-                                                {stripHtml(q.content)}
-                                            </div>
+                                            {q.type === "ESSAY" ? (
+                                                <RichTextPreview
+                                                    html={q.content || ""}
+                                                    className="text-gray-700 text-base mb-1"
+                                                />
+                                            ) : (
+                                                <div className="text-gray-700 text-base mb-1 whitespace-pre-line">
+                                                    {stripHtml(q.content)}
+                                                </div>
+                                            )}
                                             {/* Hiển thị options nếu là trắc nghiệm */}
                                             {q.type !== "ESSAY" &&
                                                 q.options &&

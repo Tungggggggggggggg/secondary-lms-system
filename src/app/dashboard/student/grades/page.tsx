@@ -229,7 +229,7 @@ export default function GradesPage() {
               Điểm trung bình
             </div>
             <div className="text-2xl font-semibold text-slate-900">
-              {statistics.averageGrade > 0
+              {(statistics.totalGraded ?? 0) > 0
                 ? statistics.averageGrade.toFixed(1)
                 : "N/A"}
             </div>

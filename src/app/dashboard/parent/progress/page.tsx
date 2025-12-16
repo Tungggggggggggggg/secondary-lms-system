@@ -35,7 +35,7 @@ interface GradeEntry {
   dueDate: string | null;
   grade: number | null;
   feedback: string | null;
-  submittedAt: string;
+  submittedAt: string | null;
   status: "pending" | "submitted" | "graded";
   classroom: {
     id: string;
@@ -310,7 +310,7 @@ export default function ParentProgressPage() {
                       <div className="text-center hidden sm:block">
                         <div className="text-xs text-gray-500 font-semibold">Điểm TB</div>
                         <div className="text-lg font-bold text-amber-700">
-                          {statistics.averageGrade > 0
+                          {statistics.totalGraded > 0
                             ? statistics.averageGrade.toFixed(1)
                             : "N/A"}
                         </div>
@@ -425,11 +425,13 @@ export default function ParentProgressPage() {
                                     )}
                                   </TableCell>
                                   <TableCell className="text-sm text-gray-600">
-                                    {new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
-                                      day: "2-digit",
-                                      month: "2-digit",
-                                      year: "numeric",
-                                    })}
+                                    {grade.submittedAt
+                                      ? new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                          year: "numeric",
+                                        })
+                                      : "—"}
                                   </TableCell>
                                   <TableCell>
                                     <span

@@ -11,6 +11,24 @@ type SystemSettings = {
   announcement: { enabled: boolean; message: string | null };
 };
 
+function notifySystemSettingsUpdated() {
+  try {
+    localStorage.setItem("system_settings_updated_at", String(Date.now()));
+  } catch {}
+
+  try {
+    window.dispatchEvent(new Event("system-settings-updated"));
+  } catch {}
+
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      const bc = new BroadcastChannel("system_settings");
+      bc.postMessage({ type: "updated", at: Date.now() });
+      bc.close();
+    }
+  } catch {}
+}
+
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,6 +86,7 @@ export default function AdminSettingsPage() {
       }
 
       await fetchSettings();
+      notifySystemSettingsUpdated();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Có lỗi xảy ra");
     } finally {

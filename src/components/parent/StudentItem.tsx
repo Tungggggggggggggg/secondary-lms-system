@@ -10,7 +10,7 @@ interface StudentItemProps {
   };
   teacherId: string;
   classroomId: string;
-  onMessageTeacher: (teacherId: string, classroomId: string, studentId: string) => void;
+  onMessageTeacher: (teacherId: string, classroomId?: string) => void;
   sendingKey: string | null;
 }
 
@@ -21,7 +21,7 @@ export default function StudentItem({
   onMessageTeacher,
   sendingKey,
 }: StudentItemProps) {
-  const key = `${teacherId}-${classroomId}-${student.id}`;
+  const key = `${teacherId}-${classroomId}`;
   const isSending = sendingKey === key;
 
   const initial = student.fullname?.charAt(0).toUpperCase() || "S";
@@ -42,7 +42,7 @@ export default function StudentItem({
       <Button
         color="amber"
         size="sm"
-        onClick={() => onMessageTeacher(teacherId, classroomId, student.id)}
+        onClick={() => onMessageTeacher(teacherId, classroomId)}
         disabled={isSending}
         className="flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
       >

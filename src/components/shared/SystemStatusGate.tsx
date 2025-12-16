@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +25,38 @@ export default function SystemStatusGate({
   role: DashboardRole;
   children: ReactNode;
 }) {
-  const { data, isLoading } = useSWR<SettingsResponse>("/api/system/settings");
+  const { data, isLoading, mutate } = useSWR<SettingsResponse>("/api/system/settings");
+
+  useEffect(() => {
+    const refresh = () => {
+      void mutate();
+    };
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "system_settings_updated_at") refresh();
+    };
+
+    window.addEventListener("system-settings-updated", refresh);
+    window.addEventListener("storage", onStorage);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        bc = new BroadcastChannel("system_settings");
+        bc.onmessage = (evt) => {
+          if (evt?.data?.type === "updated") refresh();
+        };
+      }
+    } catch {}
+
+    return () => {
+      window.removeEventListener("system-settings-updated", refresh);
+      window.removeEventListener("storage", onStorage);
+      try {
+        bc?.close();
+      } catch {}
+    };
+  }, [mutate]);
 
   const maintenanceEnabled = !!data?.data?.maintenance?.enabled;
   const maintenanceMessage = data?.data?.maintenance?.message || null;
@@ -45,7 +77,7 @@ export default function SystemStatusGate({
               <div className="mt-5 flex items-center justify-end">
                 <Button
                   onClick={() => {
-                    window.location.reload();
+                    void mutate();
                   }}
                 >
                   Tải lại

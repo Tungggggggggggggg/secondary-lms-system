@@ -591,9 +591,30 @@ export default function ExamMonitorPage() {
   };
 
   const parseSessionKey = (sessionKey: string): { studentId: string; attemptNumber: number | null } => {
-    const [studentId, attemptRaw] = sessionKey.split("|");
-    const attemptNumber = attemptRaw && attemptRaw !== "null" ? Number(attemptRaw) : null;
-    return { studentId, attemptNumber: Number.isNaN(attemptNumber as number) ? null : attemptNumber };
+    const raw = (sessionKey || "").trim();
+    if (!raw) return { studentId: "", attemptNumber: null };
+
+    // Expected: studentId|attempt (attempt can be number or 'null')
+    if (raw.includes("|")) {
+      const [studentId, attemptRaw] = raw.split("|");
+      const attemptNumber = attemptRaw && attemptRaw !== "null" ? Number(attemptRaw) : null;
+      return {
+        studentId: (studentId || "").trim(),
+        attemptNumber: attemptNumber != null && Number.isFinite(attemptNumber) ? attemptNumber : null,
+      };
+    }
+
+    // Fallback: treat whole key as studentId (demo sessions or other formats)
+    return { studentId: raw, attemptNumber: null };
+  };
+
+  const handleSelectStudent = (sessionKey: string) => {
+    setSelectedStudent(sessionKey);
+    const { studentId, attemptNumber } = parseSessionKey(sessionKey);
+    if (studentId) {
+      setStudentIdInput(studentId);
+    }
+    setAttemptInput(attemptNumber != null ? String(attemptNumber) : "");
   };
 
   const loadAntiCheatScore = async () => {
@@ -891,7 +912,7 @@ export default function ExamMonitorPage() {
                 <ExamMonitoringList
                   sessions={monitorSessions}
                   selectedId={selectedStudent}
-                  onSelect={setSelectedStudent}
+                  onSelect={handleSelectStudent}
                   renderStatusBadge={getStatusBadge}
                 />
               </CardContent>

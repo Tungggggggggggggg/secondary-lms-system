@@ -1,6 +1,24 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+async function readMaintenanceEnabled(req: NextRequest): Promise<boolean> {
+    try {
+        const url = new URL(req.url);
+        const base = `${url.protocol}//${url.host}`;
+        const res = await fetch(`${base}/api/system/settings`, {
+            cache: 'no-store',
+            headers: {
+                cookie: req.headers.get('cookie') || '',
+            },
+        });
+        if (!res.ok) return false;
+        const json = (await res.json().catch(() => null)) as any;
+        return !!json?.data?.maintenance?.enabled;
+    } catch {
+        return false;
+    }
+}
+
 const roleToDashboard: Record<string, string> = {
     TEACHER: "/dashboard/teacher/dashboard",
     STUDENT: "/dashboard/student/dashboard",
@@ -82,6 +100,21 @@ export async function middleware(req: NextRequest) {
             const target = role ? (roleToDashboard[role] ?? '/') : '/';
             return NextResponse.redirect(new URL(target, url));
         }
+    }
+
+    // Maintenance enforcement (dashboard only): block non-admin users
+    if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/admin')) {
+        if (token && role && role !== 'ADMIN') {
+            const maintenanceEnabled = await readMaintenanceEnabled(req);
+            if (maintenanceEnabled) {
+                return NextResponse.redirect(new URL('/maintenance', url));
+            }
+        }
+    }
+
+    // Always allow the maintenance page to render
+    if (pathname === '/maintenance') {
+        return NextResponse.next();
     }
 
     // Chặn truy cập cross-role: nếu vào teacher nhưng không phải TEACHER

@@ -9,8 +9,14 @@ import { errorResponse } from "@/lib/api-utils";
 
 const ALLOWED_ROLES = ["TEACHER", "STUDENT", "PARENT", "ADMIN"] as const;
 
+const CREATABLE_ROLES = ["TEACHER", "STUDENT", "PARENT"] as const;
+
 function isAllowedRole(value: string): value is (typeof ALLOWED_ROLES)[number] {
   return (ALLOWED_ROLES as readonly string[]).includes(value);
+}
+
+function isCreatableRole(value: string): value is (typeof CREATABLE_ROLES)[number] {
+  return (CREATABLE_ROLES as readonly string[]).includes(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -111,6 +117,8 @@ export async function POST(req: NextRequest) {
     const fullname = (body?.fullname || "").toString().trim();
     const email = (body?.email || "").toString().trim().toLowerCase();
     const password = (body?.password || "").toString();
+    const roleRaw = (body?.role || "TEACHER").toString().trim().toUpperCase();
+    const role = isCreatableRole(roleRaw) ? roleRaw : null;
 
     if (!fullname) {
       return errorResponse(400, "Vui lòng nhập họ và tên.");
@@ -129,6 +137,10 @@ export async function POST(req: NextRequest) {
       return errorResponse(400, "Mật khẩu phải có ít nhất 6 ký tự.");
     }
 
+    if (!role) {
+      return errorResponse(400, "Vai trò không hợp lệ. Chỉ hỗ trợ TEACHER, STUDENT, PARENT.");
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return errorResponse(409, "Email đã được sử dụng.");
@@ -140,7 +152,7 @@ export async function POST(req: NextRequest) {
       email,
       fullname,
       passwordHash,
-      globalRole: "TEACHER",
+      globalRole: role,
       organizationId: null,
     });
 

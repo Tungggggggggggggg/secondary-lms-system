@@ -598,83 +598,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
           )}
         </CardContent>
       </Card>
-
-      {/* Time Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Timer className="w-5 h-5" />
-            Thời gian làm bài
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Time Presets */}
-          <div>
-            <Label className="text-base font-medium mb-4 block">
-              Chọn thời gian nhanh
-            </Label>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {TIME_PRESETS.map((preset) => (
-                <div
-                  key={preset.value}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-center ${
-                    currentContent.timeLimitMinutes === preset.value && !customTime
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => {
-                    setCustomTime(false);
-                    updateTimeLimit(preset.value);
-                  }}
-                >
-                  <div className="font-bold text-lg text-blue-600">{preset.label}</div>
-                  <div className="text-xs text-gray-500 mt-1">{preset.description}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Custom Time */}
-          <div className="flex items-center gap-4">
-            <Switch
-              checked={customTime}
-              onCheckedChange={setCustomTime}
-            />
-            <Label className="text-base">Tùy chỉnh thời gian</Label>
-          </div>
-
-          {customTime && (
-            <div className="max-w-xs">
-              <Label htmlFor="customTime">Thời gian (phút)</Label>
-              <Input
-                id="customTime"
-                type="number"
-                min="5"
-                max="300"
-                value={currentContent.timeLimitMinutes}
-                onChange={(e) => updateTimeLimit(parseInt(e.target.value) || 30)}
-                className="mt-2"
-              />
-            </div>
-          )}
-
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-blue-700">
-              ⏱️ <strong>Thời gian hiện tại:</strong> {currentContent.timeLimitMinutes} phút
-              {currentContent.questions.length > 0 && (
-                <span className="ml-2">
-                  (~{Math.round(currentContent.timeLimitMinutes / currentContent.questions.length)} phút/câu)
-                </span>
-              )}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      
-
-      {/* Security Settings (Collapsible) */}
-      <AccordionItem title="Cài đặt bảo mật" defaultOpen={false} className="bg-white border rounded-lg">
+<AccordionItem title="Cài đặt bảo mật" defaultOpen={false} className="bg-white border rounded-lg">
         <div className="p-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
@@ -763,6 +687,82 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
           </div>
         </div>
       </AccordionItem>
+      {/* Time Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Timer className="w-5 h-5" />
+            Thời gian làm bài
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Time Presets */}
+          <div>
+            <Label className="text-base font-medium mb-4 block">
+              Chọn thời gian nhanh
+            </Label>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {TIME_PRESETS.map((preset) => (
+                <div
+                  key={preset.value}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-center ${
+                    currentContent.timeLimitMinutes === preset.value && !customTime
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => {
+                    setCustomTime(false);
+                    updateTimeLimit(preset.value);
+                  }}
+                >
+                  <div className="font-bold text-lg text-blue-600">{preset.label}</div>
+                  <div className="text-xs text-gray-500 mt-1">{preset.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Time */}
+          <div className="flex items-center gap-4">
+            <Switch
+              checked={customTime}
+              onCheckedChange={setCustomTime}
+            />
+            <Label className="text-base">Tùy chỉnh thời gian</Label>
+          </div>
+
+          {customTime && (
+            <div className="max-w-xs">
+              <Label htmlFor="customTime">Thời gian (phút)</Label>
+              <Input
+                id="customTime"
+                type="number"
+                min="5"
+                max="300"
+                value={currentContent.timeLimitMinutes}
+                onChange={(e) => updateTimeLimit(parseInt(e.target.value) || 30)}
+                className="mt-2"
+              />
+            </div>
+          )}
+
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <p className="text-sm text-blue-700">
+              ⏱️ <strong>Thời gian hiện tại:</strong> {currentContent.timeLimitMinutes} phút
+              {currentContent.questions.length > 0 && (
+                <span className="ml-2">
+                  (~{Math.round(currentContent.timeLimitMinutes / currentContent.questions.length)} phút/câu)
+                </span>
+              )}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      
+
+      {/* Security Settings (Collapsible) */}
+      
 
       {/* Schedule Settings (Collapsible) */}
       <AccordionItem title="Lịch trình thi" defaultOpen={false} className="bg-white border rounded-lg">

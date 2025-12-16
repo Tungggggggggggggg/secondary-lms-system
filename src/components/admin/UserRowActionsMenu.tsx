@@ -1,30 +1,29 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface UserRowActionsMenuProps {
+  detailHref: string;
   disabled?: boolean;
-  disableReset?: boolean;
   disableToggle?: boolean;
   disableDelete?: boolean;
-  onResetPassword: () => void;
   onToggleBan: () => void;
   onDeleteUser: () => void;
   toggleLabel: string;
 }
 
 export default function UserRowActionsMenu({
+  detailHref,
   disabled,
-  disableReset,
   disableToggle,
   disableDelete,
-  onResetPassword,
   onToggleBan,
   onDeleteUser,
   toggleLabel,
 }: UserRowActionsMenuProps) {
-  const isResetDisabled = !!disabled || !!disableReset;
+  const router = useRouter();
   const isToggleDisabled = !!disabled || !!disableToggle;
   const isDeleteDisabled = !!disabled || !!disableDelete;
 
@@ -37,14 +36,15 @@ export default function UserRowActionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem
-          aria-disabled={isResetDisabled}
-          className={isResetDisabled ? "opacity-60 cursor-not-allowed" : undefined}
+          aria-disabled={!!disabled}
+          className={disabled ? "opacity-60 cursor-not-allowed" : undefined}
           onClick={() => {
-            if (!isResetDisabled) onResetPassword();
+            if (!disabled) router.push(detailHref);
           }}
         >
-          Reset mật khẩu
+          Xem chi tiết
         </DropdownMenuItem>
+
         <DropdownMenuSeparator />
         <DropdownMenuItem
           aria-disabled={isToggleDisabled}

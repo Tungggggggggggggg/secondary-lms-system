@@ -27,6 +27,7 @@ interface SubmissionRow {
 
 interface AssignmentRow {
   id: string;
+  dueDate: Date | null;
 }
 
 interface ParentLinkRow {
@@ -109,13 +110,14 @@ export async function GET(
               grade: true,
               submittedAt: true,
             },
+            orderBy: { submittedAt: "desc" },
           })
         : [],
       // Lấy thông tin assignments để tính tổng số bài
       assignmentIdList.length > 0
         ? prisma.assignment.findMany({
             where: { id: { in: assignmentIdList } },
-            select: { id: true },
+            select: { id: true, dueDate: true },
           })
         : [],
       // Lấy danh sách phụ huynh của các học sinh trong lớp (1 query)
@@ -133,6 +135,22 @@ export async function GET(
     const submissions = submissionsRaw as SubmissionRow[];
     const assignments = assignmentsRaw as AssignmentRow[];
     const parentLinks = parentLinksRaw as ParentLinkRow[];
+
+    const now = new Date();
+    const overdueAssignmentIds = new Set(
+      assignments
+        .filter((a) => a.dueDate !== null && a.dueDate < now)
+        .map((a) => a.id)
+    );
+
+    // Lấy submission mới nhất cho mỗi (student, assignment) để tránh đếm sai theo attempt
+    const latestSubmissionByKey = new Map<string, SubmissionRow>();
+    for (const s of submissions) {
+      const key = `${s.studentId}-${s.assignmentId}`;
+      if (!latestSubmissionByKey.has(key)) {
+        latestSubmissionByKey.set(key, s);
+      }
+    }
 
     // Tính toán thống kê cho từng học sinh
     const studentStats = new Map<
@@ -157,11 +175,16 @@ export async function GET(
       });
     });
 
-    // Tính toán từ submissions
-    submissions.forEach((submission: SubmissionRow) => {
+    // Tính toán từ latest submissions (distinct assignment)
+    const submittedAssignmentsByStudent = new Map<string, Set<string>>();
+    latestSubmissionByKey.forEach((submission) => {
+      if (!submittedAssignmentsByStudent.has(submission.studentId)) {
+        submittedAssignmentsByStudent.set(submission.studentId, new Set());
+      }
+      submittedAssignmentsByStudent.get(submission.studentId)!.add(submission.assignmentId);
+
       const stats = studentStats.get(submission.studentId);
       if (stats) {
-        stats.submittedCount += 1;
         if (submission.grade !== null) {
           stats.gradedCount += 1;
           stats.totalGrade += submission.grade;
@@ -169,10 +192,25 @@ export async function GET(
       }
     });
 
-    // Tính điểm trung bình
-    studentStats.forEach((stats) => {
-      if (stats.gradedCount > 0) {
-        stats.averageGrade = stats.totalGrade / stats.gradedCount;
+    // Tính submittedCount (distinct assignment)
+    studentStats.forEach((stats, studentId) => {
+      const submittedSet = submittedAssignmentsByStudent.get(studentId) ?? new Set<string>();
+      stats.submittedCount = submittedSet.size;
+    });
+
+    // Tính điểm trung bình theo rule: graded submissions + overdue missing (0)
+    studentStats.forEach((stats, studentId) => {
+      const submittedSet = submittedAssignmentsByStudent.get(studentId) ?? new Set<string>();
+      let missingOverdueCount = 0;
+      overdueAssignmentIds.forEach((aid) => {
+        if (!submittedSet.has(aid)) missingOverdueCount += 1;
+      });
+
+      const denom = stats.gradedCount + missingOverdueCount;
+      if (denom > 0) {
+        stats.averageGrade = stats.totalGrade / denom;
+      } else {
+        stats.averageGrade = null;
       }
     });
 

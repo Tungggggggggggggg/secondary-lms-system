@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logging/logger";
 import { ensureTeacherStudentConversation, listConversations, createConversation } from "@/lib/repositories/chat";
+import prisma from "@/lib/prisma";
 import { z } from "zod";
 
 const postBodySchema = z
@@ -54,6 +55,46 @@ export async function POST(req: NextRequest) {
       // Nhánh generic: tạo hội thoại theo tập participants (đảm bảo self included)
       const unique: string[] = Array.from(new Set([...participantIds, user.id]));
       const t: "DM" | "TRIAD" | "GROUP" = type ?? (unique.length > 2 ? "GROUP" : "DM");
+
+      if (user.role === "PARENT") {
+        const others = unique.filter((id) => id !== user.id);
+        if (others.length !== 1) {
+          return errorResponse(403, "Chỉ hỗ trợ nhắn tin trực tiếp với giáo viên");
+        }
+        const teacherId = others[0];
+
+        const teacher = await prisma.user.findUnique({
+          where: { id: teacherId },
+          select: { id: true, role: true },
+        });
+        if (!teacher || teacher.role !== "TEACHER") {
+          return errorResponse(403, "Chỉ hỗ trợ nhắn tin trực tiếp với giáo viên");
+        }
+
+        const children = await prisma.parentStudent.findMany({
+          where: { parentId: user.id, status: "ACTIVE" },
+          select: { studentId: true },
+        });
+        const studentIds = children.map((c) => c.studentId);
+        if (studentIds.length === 0) {
+          return errorResponse(403, "Không có quyền nhắn tin với giáo viên này");
+        }
+
+        const related = await prisma.classroomStudent.findFirst({
+          where: {
+            studentId: { in: studentIds },
+            classroom: {
+              teacherId,
+              isActive: true,
+            },
+          },
+          select: { id: true },
+        });
+        if (!related) {
+          return errorResponse(403, "Không có quyền nhắn tin với giáo viên này");
+        }
+      }
+
       conversationId = await createConversation({
         type: t,
         createdById: user.id,

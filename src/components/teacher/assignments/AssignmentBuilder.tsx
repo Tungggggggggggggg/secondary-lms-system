@@ -32,6 +32,7 @@
  import { WizardStepper, StepFooter, OptionTile } from "@/components/shared";
  import { useAutoSave, generateDraftKey } from "@/hooks/useAutoSave";
  import { buildStepValidation } from "@/validation/assignmentBuilder";
+ import RichTextPreview from "@/components/shared/RichTextPreview";
 
  type Mode = "create" | "edit";
  type Step = "type" | "basic" | "content" | "classrooms" | "preview";
@@ -184,9 +185,16 @@
         </h3>
 
         {isEssay ? (
-          <p className="text-sm text-slate-700 whitespace-pre-line">
-            {stripHtml(essay?.question) || "Chưa nhập câu hỏi tự luận."}
-          </p>
+          (essay?.question ? (
+            <RichTextPreview
+              html={essay.question}
+              className="text-sm text-slate-700"
+            />
+          ) : (
+            <p className="text-sm text-slate-700 whitespace-pre-line">
+              Chưa nhập câu hỏi tự luận.
+            </p>
+          ))
         ) : (
           <div className="space-y-2 text-sm text-slate-700">
             <div>
@@ -411,14 +419,18 @@
          body: JSON.stringify(payload),
        });
 
-       const j = await res.json();
-       if (!res.ok || !j?.success) throw new Error(j?.message || "Tạo bài tập thất bại");
+       const j = await res.json().catch(() => null);
+       if (!res.ok || !j?.success) {
+         const details = j?.details ? ` - ${typeof j.details === "string" ? j.details : JSON.stringify(j.details)}` : "";
+         throw new Error(`${j?.message || "Tạo bài tập thất bại"}${details}`);
+       }
 
        autoSave.clearDraft();
        const id = j?.data?.id as string | undefined;
        router.push(id ? `/dashboard/teacher/assignments/${id}` : "/dashboard/teacher/assignments");
-     } catch {
-       toast({ title: "Lỗi tạo bài tập", variant: "destructive" });
+     } catch (err: unknown) {
+       const msg = err instanceof Error ? err.message : "Tạo bài tập thất bại";
+       toast({ title: "Lỗi tạo bài tập", description: msg, variant: "destructive" });
      }
    }, [data, autoSave, router, toast]);
 
@@ -437,10 +449,11 @@
          base.submissionFormat = data.essayContent.submissionFormat;
          base.openAt = data.essayContent.openAt?.toISOString() || null;
          base.dueDate = data.essayContent.dueDate?.toISOString() || null;
-         base.timeLimitMinutes = null;
-         base.lockAt = null;
-         base.maxAttempts = null;
-         base.antiCheatConfig = null;
+         // Không gửi các field quiz-only để tránh zod reject (vd maxAttempts=null)
+         delete (base as Record<string, unknown>).timeLimitMinutes;
+         delete (base as Record<string, unknown>).lockAt;
+         delete (base as Record<string, unknown>).maxAttempts;
+         delete (base as Record<string, unknown>).antiCheatConfig;
          base.questions = [
            {
              id: "",
@@ -478,12 +491,16 @@
          body: JSON.stringify(base),
        });
 
-       const j = await res.json();
-       if (!res.ok || !j?.success) throw new Error(j?.message || "Cập nhật thất bại");
+       const j = await res.json().catch(() => null);
+       if (!res.ok || !j?.success) {
+         const details = j?.details ? ` - ${typeof j.details === "string" ? j.details : JSON.stringify(j.details)}` : "";
+         throw new Error(`${j?.message || "Cập nhật thất bại"}${details}`);
+       }
 
        router.push(`/dashboard/teacher/assignments/${assignmentId}`);
-     } catch {
-       toast({ title: "Lỗi khi lưu", variant: "destructive" });
+     } catch (err: unknown) {
+       const msg = err instanceof Error ? err.message : "Cập nhật thất bại";
+       toast({ title: "Lỗi khi lưu", description: msg, variant: "destructive" });
      }
    }, [mode, assignmentId, data, router, toast]);
 

@@ -30,6 +30,31 @@ type ListResponse = {
  * - Create organization
  */
 export default function AdminOrganizationsPage() {
+  const orgDisabled = (globalThis as unknown as { __lms_disable_org__?: boolean }).__lms_disable_org__ !== false;
+  if (orgDisabled) {
+    return (
+      <div className="p-8 space-y-6">
+        <PageHeader
+          title="Organizations"
+          subtitle="Tính năng Organizations đã được gỡ bỏ (phase 1)."
+        />
+        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
+          <div className="text-sm font-semibold text-slate-900">Không khả dụng</div>
+          <div className="text-sm text-slate-600">
+            Trang này đã được ẩn khỏi hệ thống. Nếu bạn cần quản lý tổ chức, vui lòng liên hệ đội phát triển.
+          </div>
+          <div>
+            <Link
+              href="/dashboard/admin/dashboard"
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Quay về Overview
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const { toast } = useToast();
 
   const [items, setItems] = useState<OrgItem[]>([]);

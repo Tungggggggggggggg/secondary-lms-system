@@ -4,6 +4,7 @@ import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom
 
 interface TeacherStudentSubmissionRow {
   id: string;
+  assignmentId: string;
   grade: number | null;
   feedback: string | null;
   submittedAt: Date;
@@ -14,6 +15,13 @@ interface TeacherStudentSubmissionRow {
     dueDate: Date | null;
   };
 }
+
+type AssignmentSummaryRow = {
+  id: string;
+  title: string | null;
+  type: string;
+  dueDate: Date | null;
+};
 
 // GET: Điểm chi tiết của một học sinh trong lớp (teacher view)
 export async function GET(
@@ -62,7 +70,17 @@ export async function GET(
 
     const submissions = submissionsRaw as TeacherStudentSubmissionRow[];
 
-    const grades = submissions.map((sub: TeacherStudentSubmissionRow) => ({
+    // Giữ lại submission mới nhất cho mỗi assignment
+    const latestByAssignmentId = new Map<string, TeacherStudentSubmissionRow>();
+    for (const s of submissions) {
+      if (!latestByAssignmentId.has(s.assignmentId)) {
+        latestByAssignmentId.set(s.assignmentId, s);
+      }
+    }
+
+    const latestSubmissions = Array.from(latestByAssignmentId.values());
+
+    const grades = latestSubmissions.map((sub: TeacherStudentSubmissionRow) => ({
       id: sub.id,
       assignmentId: sub.assignment.id,
       assignmentTitle: sub.assignment.title,
@@ -79,23 +97,49 @@ export async function GET(
           : "pending",
     }));
 
-    const graded = submissions.filter(
-      (s: TeacherStudentSubmissionRow) => s.grade !== null,
-    );
-    const averageGrade =
-      graded.length > 0
-        ? graded.reduce(
-            (sum: number, s: TeacherStudentSubmissionRow) =>
-              sum + (s.grade || 0),
-            0,
-          ) / graded.length
-        : 0;
+    const submittedAssignmentIds = new Set<string>(latestSubmissions.map((s) => s.assignmentId));
+    const missingAssignmentIds = assignmentIds.filter((aid) => !submittedAssignmentIds.has(aid));
+
+    const assignments = (await prisma.assignment.findMany({
+      where: { id: { in: missingAssignmentIds } },
+      select: { id: true, title: true, type: true, dueDate: true },
+    })) as AssignmentSummaryRow[];
+
+    const now = new Date();
+    const missingRows = assignments.map((a) => {
+      const isPastDue = a.dueDate !== null && a.dueDate < now;
+      return {
+        id: `virtual-${studentId}-${a.id}`,
+        assignmentId: a.id,
+        assignmentTitle: a.title ?? "",
+        assignmentType: a.type,
+        dueDate: a.dueDate ? a.dueDate.toISOString() : null,
+        grade: isPastDue ? 0 : null,
+        feedback: null as string | null,
+        submittedAt: null as string | null,
+        status: isPastDue ? "graded" : "pending",
+      };
+    });
+
+    const allRows = [...grades, ...missingRows];
+
+    const gradedRows = allRows.filter((r) => r.grade !== null);
+    const totalAssignments = assignmentIds.length;
+    const totalGraded = gradedRows.length;
+    const totalPending = Math.max(0, totalAssignments - totalGraded);
+    const sumGrades = gradedRows.reduce((sum, r) => sum + (r.grade || 0), 0);
+    const averageGrade = totalGraded > 0 ? sumGrades / totalGraded : 0;
 
     return NextResponse.json(
       {
         success: true,
-        data: grades,
-        statistics: { totalGraded: graded.length, averageGrade },
+        data: allRows,
+        statistics: {
+          totalSubmissions: totalAssignments,
+          totalGraded,
+          totalPending,
+          averageGrade: Math.round(averageGrade * 10) / 10,
+        },
         requestId,
       },
       { status: 200 }

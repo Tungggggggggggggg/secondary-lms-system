@@ -15,7 +15,7 @@ interface Classroom {
 interface ClassroomItemProps {
   classroom: Classroom;
   teacherId: string;
-  onMessageTeacher: (teacherId: string, classroomId: string, studentId: string) => void;
+  onMessageTeacher: (teacherId: string, classroomId?: string) => void;
   sendingKey: string | null;
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { Mail, Users } from "lucide-react";
+import { Mail, Users, MessageCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import ClassroomItem from "./ClassroomItem";
 
 interface Classroom {
@@ -21,7 +22,7 @@ interface TeacherCardProps {
     fullname: string;
   };
   classrooms: Classroom[];
-  onMessageTeacher: (teacherId: string, classroomId: string, studentId: string) => void;
+  onMessageTeacher: (teacherId: string, classroomId?: string) => void;
   sendingKey: string | null;
   className?: string;
 }
@@ -34,6 +35,9 @@ export default function TeacherCard({
   className = "",
 }: TeacherCardProps) {
   const initial = teacher.fullname?.charAt(0).toUpperCase() || "T";
+  const primaryClassId = classrooms[0]?.id;
+  const directKey = `${teacher.id}-${primaryClassId || ""}`;
+  const isSending = sendingKey === directKey;
 
   return (
     <Card className={`border-amber-100 hover:shadow-lg hover:border-amber-200 transition-all duration-300 hover:scale-102 group ${className}`}>
@@ -52,6 +56,25 @@ export default function TeacherCard({
               {teacher.email}
             </CardDescription>
           </div>
+          <Button
+            color="amber"
+            size="sm"
+            onClick={() => onMessageTeacher(teacher.id, primaryClassId)}
+            disabled={isSending}
+            className="flex items-center gap-1.5 whitespace-nowrap"
+          >
+            {isSending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="hidden sm:inline text-xs">Mở...</span>
+              </>
+            ) : (
+              <>
+                <MessageCircle className="h-4 w-4" />
+                <span className="hidden sm:inline text-xs">Nhắn tin</span>
+              </>
+            )}
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

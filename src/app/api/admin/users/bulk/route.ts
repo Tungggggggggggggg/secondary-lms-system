@@ -10,7 +10,15 @@ type BulkEntryInput = {
   fullname?: string;
   email?: string;
   password?: string;
+  role?: string;
 };
+
+const CREATABLE_ROLES = ["TEACHER", "STUDENT", "PARENT"] as const;
+
+function normalizeRole(value: unknown): (typeof CREATABLE_ROLES)[number] | null {
+  const raw = (value ?? "").toString().trim().toUpperCase();
+  return (CREATABLE_ROLES as readonly string[]).includes(raw) ? (raw as (typeof CREATABLE_ROLES)[number]) : null;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,13 +30,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     const entriesRaw = (body?.entries || []) as BulkEntryInput[];
     const defaultPassword = (body?.defaultPassword || "").toString();
+    const defaultRole = normalizeRole(body?.defaultRole ?? body?.role) ?? "TEACHER";
 
     if (!Array.isArray(entriesRaw) || entriesRaw.length === 0) {
-      return errorResponse(400, "Danh sách giáo viên trống.");
+      return errorResponse(400, "Danh sách người dùng trống.");
     }
 
     if (entriesRaw.length > 100) {
-      return errorResponse(400, "Tối đa 100 giáo viên mỗi lần tạo.");
+      return errorResponse(400, "Tối đa 100 người dùng mỗi lần tạo.");
     }
 
     type Candidate = {
@@ -36,6 +45,7 @@ export async function POST(req: NextRequest) {
       fullname: string;
       email: string;
       password: string;
+      role: (typeof CREATABLE_ROLES)[number];
     };
 
     const candidates: Candidate[] = [];
@@ -47,6 +57,7 @@ export async function POST(req: NextRequest) {
       const fullname = (entry.fullname || "").toString().trim();
       const email = (entry.email || "").toString().trim().toLowerCase();
       const password = (entry.password || defaultPassword || "").toString();
+      const role = normalizeRole(entry.role) ?? defaultRole;
 
       if (!fullname || !email) {
         failed.push({ index, email, reason: "Thiếu họ tên hoặc email" });
@@ -61,11 +72,16 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      candidates.push({ index, fullname, email, password });
+      if (!role) {
+        failed.push({ index, email, reason: "Vai trò không hợp lệ" });
+        return;
+      }
+
+      candidates.push({ index, fullname, email, password, role });
     });
 
     if (candidates.length === 0) {
-      return errorResponse(400, "Không có dòng hợp lệ để tạo giáo viên.", {
+      return errorResponse(400, "Không có dòng hợp lệ để tạo người dùng.", {
         data: { created: [], failed },
         details: { failedCount: failed.length },
       });
@@ -115,7 +131,7 @@ export async function POST(req: NextRequest) {
           email: c.email,
           fullname: c.fullname,
           passwordHash,
-          globalRole: "TEACHER",
+          globalRole: c.role,
           organizationId: null,
         });
         created.push({

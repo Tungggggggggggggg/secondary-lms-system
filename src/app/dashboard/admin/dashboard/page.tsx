@@ -36,13 +36,6 @@ export default function AdminDashboardPage() {
           subtitle: "Tổng số bài tập/quiz",
         },
         {
-          icon: <InitialBadge text="O" tone="violet" size="sm" />,
-          color: "from-violet-300 to-fuchsia-200",
-          label: "Tổ chức",
-          value: formatNumber(totals.organizations),
-          subtitle: "Đơn vị/Trường/Org",
-        },
-        {
           icon: <InitialBadge text="!" tone="red" size="sm" />,
           color: "from-red-300 to-rose-200",
           label: "Tài khoản khoá",
@@ -81,7 +74,7 @@ export default function AdminDashboardPage() {
 
         {error ? <ErrorBanner message={error} onRetry={() => mutate()} /> : null}
 
-        {isLoading && !totals ? <KpiSkeletonGrid count={5} /> : <StatsGrid items={kpiItems} />}
+        {isLoading && !totals ? <KpiSkeletonGrid count={4} /> : <StatsGrid items={kpiItems} />}
 
         <div className="mx-auto w-full max-w-3xl">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

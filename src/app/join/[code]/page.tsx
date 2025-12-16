@@ -15,7 +15,7 @@ interface JoinByCodePageProps {
 
 export default function JoinByCodePage({ params }: JoinByCodePageProps) {
   const router = useRouter();
-  const { joinClassroom, isLoading } = useClassroom();
+  const { joinClassroom, isLoading, getLastError } = useClassroom();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +39,11 @@ export default function JoinByCodePage({ params }: JoinByCodePageProps) {
         });
         router.replace(`/dashboard/student/classes/${classroom.id}`);
       } else {
-        setError("Không thể tham gia lớp học. Vui lòng kiểm tra lại mã hoặc đăng nhập bằng tài khoản học sinh.");
+        const msg =
+          getLastError() ||
+          "Không thể tham gia lớp học. Vui lòng kiểm tra lại mã hoặc đăng nhập bằng tài khoản học sinh.";
+        toast({ title: "Tham gia thất bại", description: msg, variant: "destructive" });
+        setError(msg);
       }
     };
 

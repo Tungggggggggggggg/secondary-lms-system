@@ -54,13 +54,14 @@ export async function GET(req: NextRequest) {
         WHERE c."teacherId" = ${teacherId} AND c."isActive" = true
       ),
       class_assignments AS (
-        SELECT ac."assignmentId", ac."classroomId"
+        SELECT ac."assignmentId", ac."classroomId", a."dueDate" as "dueDate"
         FROM "assignment_classrooms" ac
         JOIN "classrooms" c ON c."id" = ac."classroomId"
+        JOIN "assignments" a ON a."id" = ac."assignmentId"
         WHERE c."teacherId" = ${teacherId} AND c."isActive" = true
       ),
       pairs AS (
-        SELECT cs."studentId", cs."classroomId", ca."assignmentId"
+        SELECT cs."studentId", cs."classroomId", ca."assignmentId", ca."dueDate" as "dueDate"
         FROM class_students cs
         LEFT JOIN class_assignments ca ON ca."classroomId" = cs."classroomId"
       ),
@@ -81,7 +82,22 @@ export async function GET(req: NextRequest) {
         c."code" as "classroomCode",
         COUNT(DISTINCT p."assignmentId")::bigint as "totalAssignments",
         COUNT(DISTINCT ls."assignmentId")::bigint as "submittedCount",
-        AVG(ls."grade") FILTER (WHERE ls."grade" IS NOT NULL) as "averageGrade"
+        (
+          SUM(ls."grade") FILTER (WHERE ls."grade" IS NOT NULL)
+          /
+          NULLIF(
+            (
+              COUNT(ls."grade") FILTER (WHERE ls."grade" IS NOT NULL)
+              +
+              COUNT(DISTINCT p."assignmentId") FILTER (
+                WHERE ls."assignmentId" IS NULL
+                  AND p."dueDate" IS NOT NULL
+                  AND p."dueDate" < NOW()
+              )
+            )::double precision,
+            0
+          )
+        ) as "averageGrade"
       FROM class_students cs
       JOIN "classrooms" c ON c."id" = cs."classroomId"
       JOIN "users" u ON u."id" = cs."studentId"
