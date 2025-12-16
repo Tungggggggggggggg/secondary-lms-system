@@ -13,7 +13,7 @@ export type StudentSortKey = "name" | "grade" | "attendance";
 interface ClassroomOption {
   id: string;
   name: string;
-  code: string;
+  code?: string;
 }
 
 interface StudentFiltersToolbarProps {
@@ -80,7 +80,8 @@ export default function StudentFiltersToolbar({
             <option value="all">Tất cả lớp</option>
             {classrooms.map((classroom) => (
               <option key={classroom.id} value={classroom.id}>
-                {classroom.name} ({classroom.code})
+                {classroom.name}
+                {classroom.code ? ` (${classroom.code})` : ""}
               </option>
             ))}
           </Select>

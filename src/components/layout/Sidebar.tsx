@@ -157,9 +157,10 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
 
   const isActive = (href: string) => isActivePath(pathname, href);
 
-  const containerVars: CSSProperties = {
-    ["--sb-w-expanded" as any]: "280px",
-    ["--sb-w-collapsed" as any]: "64px",
+  type CSSVars = CSSProperties & Record<`--${string}`, string>;
+  const containerVars: CSSVars = {
+    "--sb-w-expanded": "280px",
+    "--sb-w-collapsed": "64px",
   };
 
   const unreadBadge = unreadTotal > 9 ? "9+" : unreadTotal || undefined;

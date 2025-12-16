@@ -62,9 +62,16 @@ export default function AssignmentList({
             const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
+                let message: string | undefined;
+                if (typeof data === "object" && data !== null && "message" in data) {
+                    const rawMessage = (data as Record<string, unknown>).message;
+                    if (typeof rawMessage === "string") {
+                        message = rawMessage;
+                    }
+                }
                 toast({
                     title: "Xoá bài tập thất bại",
-                    description: (data as any)?.message,
+                    description: message,
                     variant: "destructive",
                 });
                 return;
@@ -162,10 +169,10 @@ export default function AssignmentList({
                                 <span className="font-medium text-gray-800">
                                     {(() => {
                                         const effective = assignment.type === "QUIZ"
-                                            ? (assignment as any).lockAt || assignment.dueDate
+                                            ? assignment.lockAt ?? assignment.dueDate
                                             : assignment.dueDate;
                                         return effective
-                                            ? new Date(effective as any).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                            ? new Date(effective).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
                                             : "Không rõ";
                                     })()}
                                 </span>

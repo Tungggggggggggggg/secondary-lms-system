@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const querySchema = z
   .object({
-    q: z.string().max(200).optional(),
+    q: z.string().trim().min(2).max(200),
     limit: z.coerce.number().int().min(1).max(50).optional(),
     skip: z.coerce.number().int().min(0).max(10_000).optional(),
   })
@@ -46,15 +46,17 @@ export const GET = withApiLogging(async (req: NextRequest) => {
 
     const { searchParams } = new URL(req.url);
     const parsedQuery = querySchema.safeParse({
-      q: searchParams.get("q") || undefined,
+      q: searchParams.get("q") || "",
       limit: searchParams.get("limit") || undefined,
       skip: searchParams.get("skip") || undefined,
     });
     if (!parsedQuery.success) {
-      return errorResponse(400, "Dữ liệu không hợp lệ");
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedQuery.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
 
-    const query = parsedQuery.data.q ?? "";
+    const query = parsedQuery.data.q;
     const limit = parsedQuery.data.limit ?? 20;
     const skip = parsedQuery.data.skip ?? 0;
 
@@ -118,14 +120,10 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     ]);
 
     const linkedStudentIds = new Set(
-      (existingLinks as ParentStudentLinkRow[]).map(
-        (l: ParentStudentLinkRow) => l.studentId,
-      ),
+      (existingLinks as ParentStudentLinkRow[]).map((l) => l.studentId),
     );
     const requestedStudentIds = new Set(
-      (existingRequests as ParentStudentLinkRow[]).map(
-        (r: ParentStudentLinkRow) => r.studentId,
-      ),
+      (existingRequests as ParentStudentLinkRow[]).map((r) => r.studentId),
     );
 
     // Format kết quả

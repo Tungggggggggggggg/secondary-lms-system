@@ -36,7 +36,6 @@ export default function ClassesPage() {
       filtered = filtered.filter(
         (c) =>
           c.name.toLowerCase().includes(query) ||
-          c.code.toLowerCase().includes(query) ||
           c.teacher?.fullname?.toLowerCase().includes(query) ||
           c.description?.toLowerCase().includes(query)
       );

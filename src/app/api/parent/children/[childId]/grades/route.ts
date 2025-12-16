@@ -24,7 +24,6 @@ interface ParentChildAssignmentClassroomRow {
   classroom: {
     id: string;
     name: string;
-    code: string;
     icon: string | null;
     teacher: {
       id: string;
@@ -261,7 +260,6 @@ export const GET = withApiLogging(async (
             select: {
               id: true,
               name: true,
-              code: true,
               icon: true,
               teacher: { select: { id: true, fullname: true, email: true } },
             },
@@ -344,7 +342,6 @@ export const GET = withApiLogging(async (
             ? {
                 id: classroom.id,
                 name: classroom.name,
-                code: classroom.code,
                 icon: classroom.icon,
                 teacher: classroom.teacher,
               }
@@ -379,7 +376,6 @@ export const GET = withApiLogging(async (
             ? {
                 id: classroom.id,
                 name: classroom.name,
-                code: classroom.code,
                 icon: classroom.icon,
                 teacher: classroom.teacher,
               }

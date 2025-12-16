@@ -27,9 +27,12 @@ export default function DashboardLayout({
   lockContentScroll = false,
 }: DashboardLayoutProps) {
   const { expanded, toggle } = useSidebarState(sidebarStateKey);
-  const containerVars: CSSProperties = {
-    ["--sb-w-expanded" as any]: "280px",
-    ["--sb-w-collapsed" as any]: "64px",
+  type CSSVars = CSSProperties & Record<`--${string}`,
+    string
+  >;
+  const containerVars: CSSVars = {
+    "--sb-w-expanded": "280px",
+    "--sb-w-collapsed": "64px",
   };
 
   useEffect(() => {

@@ -33,7 +33,7 @@ export default function AssignmentTypeBadge({ type, variant = "teacher" }: Props
     QUIZ: { cls: "bg-pink-50 text-pink-700 border-pink-200", Icon: Brain, label: "Trắc nghiệm" },
   } as const;
 
-  const cur = (cfg as any)[t] || cfg.ESSAY;
+  const cur = t in cfg ? cfg[t as keyof typeof cfg] : cfg.ESSAY;
   const Icon = cur.Icon;
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cur.cls}`}>

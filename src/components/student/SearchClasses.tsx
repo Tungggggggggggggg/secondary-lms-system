@@ -33,18 +33,18 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
     const controllerRef = useRef<AbortController | null>(null);
     const debouncedQ = useDebouncedValue(q, 300, isComposing);
 
-    const hasQuery = useMemo(() => (debouncedQ || "").trim().length > 0, [debouncedQ]);
+    const hasQuery = useMemo(() => (debouncedQ || "").trim().length >= 2, [debouncedQ]);
 
     // GSAP micro animation for result cards
     useEffect(() => {
-        let ctx: any;
+        let ctx: { revert?: () => void } | null = null;
         (async () => {
             if (items.length === 0) return;
             try {
                 const gsap = (await import("gsap")).default;
-                ctx = gsap.context(() => {
+                ctx = (gsap.context(() => {
                     gsap.from("[data-card]", { opacity: 0, y: 8, stagger: 0.03, duration: 0.25, ease: "power1.out" });
-                });
+                }) as unknown) as { revert?: () => void };
             } catch {}
         })();
         return () => {
@@ -95,20 +95,26 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
         }
     };
 
-    const onJoin = async (classId: string, code: string) => {
+    const onJoin = async (classId: string) => {
         try {
             const res = await fetch("/api/classrooms/join", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code }),
+                body: JSON.stringify({ classroomId: classId }),
             });
-            const data = await res.json();
+            const data = (await res.json().catch(() => null)) as unknown;
             if (!res.ok) {
-                throw new Error(data?.error || "Không thể tham gia lớp học");
+                const msg =
+                    typeof data === "object" &&
+                    data !== null &&
+                    typeof (data as { message?: unknown }).message === "string"
+                        ? (data as { message: string }).message
+                        : "Không thể tham gia lớp học";
+                throw new Error(msg);
             }
             // Đánh dấu đã tham gia
             setItems((prev) => prev.map((it) => (it.id === classId ? { ...it, joined: true } : it)));
-            toast({ title: "Đã tham gia lớp", description: `Bạn đã tham gia lớp bằng mã ${code}`, variant: "success" });
+            toast({ title: "Đã tham gia lớp", description: "Bạn đã tham gia lớp thành công.", variant: "success" });
         } catch (err) {
             const message = err instanceof Error ? err.message : "Có lỗi xảy ra";
             toast({ title: "Tham gia thất bại", description: message, variant: "destructive" });
@@ -125,7 +131,7 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
                     <input
                         id="class-search"
                         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
-                        placeholder="Nhập tên lớp, mã lớp hoặc giáo viên... (/ để focus)"
+                        placeholder="Nhập tên lớp hoặc giáo viên... (/ để focus)"
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
                         onKeyDown={(e) => {
@@ -161,7 +167,7 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
 
             {!isLoading && hasQuery && items.length === 0 && !error && (
                 <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-600">
-                    Không tìm thấy lớp phù hợp. Thử từ khóa khác hoặc kiểm tra lại mã lớp.
+                    Không tìm thấy lớp phù hợp. Thử từ khóa khác.
                 </div>
             )}
 
@@ -172,7 +178,6 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <div className="text-sm font-semibold">{c.name}</div>
-                                    <div className="mt-1 text-xs text-gray-500">Mã: {c.code}</div>
                                     <div className="mt-1 text-xs text-gray-500">GV: {c.teacherName}</div>
                                 </div>
                             </div>
@@ -184,7 +189,7 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
                                     <span className="rounded-lg bg-green-50 px-3 py-1 text-xs font-medium text-green-700">Đã tham gia</span>
                                 ) : (
                                     <button
-                                        onClick={() => onJoin(c.id, c.code)}
+                                        onClick={() => onJoin(c.id)}
                                         className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
                                     >
                                         Tham gia

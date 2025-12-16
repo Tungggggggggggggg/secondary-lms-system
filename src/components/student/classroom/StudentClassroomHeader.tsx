@@ -8,7 +8,7 @@ import { createConversationGeneric } from "@/hooks/use-chat";
 import { MessageCircle } from "lucide-react";
 
 type Props = {
-    classroom: Pick<ClassroomResponse, "id" | "name" | "code" | "icon" | "teacher" | "_count">;
+    classroom: Pick<ClassroomResponse, "id" | "name" | "icon" | "teacher" | "_count">;
 };
 
 export default function StudentClassroomHeader({ classroom }: Props) {
@@ -33,7 +33,12 @@ export default function StudentClassroomHeader({ classroom }: Props) {
         try {
             setIsCreatingConversation(true);
             const res = await createConversationGeneric([teacherId], classroom.id);
-            const id = res?.conversationId as string | undefined;
+            const id =
+                typeof res === "object" &&
+                res !== null &&
+                typeof (res as { conversationId?: unknown }).conversationId === "string"
+                    ? (res as { conversationId: string }).conversationId
+                    : undefined;
             if (id) {
                 router.push(`/dashboard/student/messages?open=${encodeURIComponent(id)}`);
             }
@@ -56,7 +61,7 @@ export default function StudentClassroomHeader({ classroom }: Props) {
                             {classroom.name}
                         </h1>
                         <p className="text-xs sm:text-sm text-slate-600 truncate">
-                            GV: {classroom.teacher?.fullname || "Giáo viên"} • Mã: {classroom.code}
+                            GV: {classroom.teacher?.fullname || "Giáo viên"}
                         </p>
                         <p className="text-xs text-slate-500">
                             {classroom._count?.students ?? 0} học sinh

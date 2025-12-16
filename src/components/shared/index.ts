@@ -19,7 +19,6 @@ export { default as FilterBar } from './FilterBar';
 export { default as ActivityList } from './ActivityList';
 export type { ActivityItem } from './ActivityList';
 export { default as AssignmentTypeBadge } from './AssignmentTypeBadge';
-export { default as AssignmentTypeBadgeShared } from './AssignmentTypeBadge';
 export { default as DateTimePopover } from './DateTimePopover';
 export { default as FormField } from './FormField';
 export { default as FormSwitchRow } from './FormSwitchRow';

@@ -181,9 +181,15 @@ export const useClassroom = () => {
             method: 'GET',
             signal: options?.signal,
           });
-          const data = await res.json();
+          const data = (await res.json().catch(() => null)) as unknown;
           if (!res.ok) {
-            throw new Error(data?.error || 'Không thể tìm kiếm lớp học');
+            const msg =
+              typeof data === 'object' &&
+              data !== null &&
+              typeof (data as { message?: unknown }).message === 'string'
+                ? (data as { message: string }).message
+                : 'Không thể tìm kiếm lớp học';
+            throw new Error(msg);
           }
           return data as SearchClassesResponse;
         } catch (err) {
@@ -199,9 +205,15 @@ export const useClassroom = () => {
         setActionLoading(true);
         setActionError(null);
         const res = await fetch(`/api/classrooms/${id}`, { cache: 'no-store' });
-        const data = await res.json();
+        const data = (await res.json().catch(() => null)) as unknown;
         if (!res.ok) {
-          throw new Error(data?.error || 'Không thể tải lớp học');
+          const msg =
+            typeof data === 'object' &&
+            data !== null &&
+            typeof (data as { message?: unknown }).message === 'string'
+              ? (data as { message: string }).message
+              : 'Không thể tải lớp học';
+          throw new Error(msg);
         }
         return data as ClassroomResponse;
       } catch (err) {

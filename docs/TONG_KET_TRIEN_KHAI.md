@@ -101,7 +101,9 @@ npx tsc --noEmit
 
 ### P2 — mở rộng
 
--   [ ] Anti-cheat summary bằng AI.
+-   [x] Anti-cheat summary bằng AI.
+    -   Test nhanh (teacher-only): mở `/dashboard/teacher/exams/monitor?assignmentId=<ASSIGNMENT_ID>` → nhập `studentId` + `attempt` (tuỳ) → bấm **AI tóm tắt**.
+    -   API: `POST /api/ai/anti-cheat/summary` body `{ assignmentId, studentId, attempt }`.
 
 ---
 

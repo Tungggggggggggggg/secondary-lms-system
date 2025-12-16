@@ -442,18 +442,6 @@ export async function logExamEvent(
   severity: 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL' = 'INFO',
   notes?: string
 ): Promise<void> {
-  const event: Omit<ExamEventLog, 'id' | 'createdAt'> = {
-    sessionId,
-    eventType,
-    timestamp: new Date(),
-    data: JSON.stringify(data), // Convert to string for storage
-    severity,
-    notes
-  }
-  
-  // TODO: Lưu vào database
-  console.log(`[EXAM_EVENT] ${eventType}:`, event)
-
   // Nếu chạy trên client, cố gắng gửi log lên API /api/exam-events
   try {
     if (typeof window !== 'undefined') {

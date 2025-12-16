@@ -92,7 +92,9 @@ export default function RecentClasses() {
                                             >
                                                 {classroom.isActive ? "Đang hoạt động" : "Đã lưu trữ"}
                                             </span>
-                                            <div className="text-[11px] text-slate-500">Mã: {classroom.code}</div>
+                                            {classroom.code ? (
+                                                <div className="text-[11px] text-slate-500">Mã: {classroom.code}</div>
+                                            ) : null}
                                         </div>
                                     </div>
 

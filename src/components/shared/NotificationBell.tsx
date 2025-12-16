@@ -18,10 +18,27 @@ interface NotificationBellProps {
   panelClassName?: string;
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isNotificationItem(value: unknown): value is NotificationItem {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string" && typeof value.title === "string" && typeof value.createdAt === "string";
+}
+
+function getNotificationItemsFromResponse(data: unknown): NotificationItem[] {
+  if (!isRecord(data)) return [];
+
+  const payload = Array.isArray(data.data) ? data.data : Array.isArray(data.items) ? data.items : [];
+  return payload.filter(isNotificationItem);
+}
+
+const fetcher = async (url: string): Promise<unknown> => {
+  const r = await fetch(url);
   if (!r.ok) throw new Error("fetch error");
   return r.json();
-});
+};
 
 export default function NotificationBell(props?: NotificationBellProps) {
   const { className, buttonClassName, panelClassName } = props || {};
@@ -29,7 +46,7 @@ export default function NotificationBell(props?: NotificationBellProps) {
   const [localItems, setLocalItems] = useState<NotificationItem[] | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<unknown>(
     "/api/notifications",
     fetcher,
     {
@@ -43,9 +60,7 @@ export default function NotificationBell(props?: NotificationBellProps) {
 
   const items: NotificationItem[] = useMemo(() => {
     if (localItems) return localItems;
-    const payload = (data as any)?.data || (data as any)?.items || [];
-    if (Array.isArray(payload)) return payload as NotificationItem[];
-    return [];
+    return getNotificationItemsFromResponse(data);
   }, [data, localItems]);
 
   const unreadCount = useMemo(() => items.filter((i) => !i.read).length, [items]);

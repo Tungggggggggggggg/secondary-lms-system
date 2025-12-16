@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { coercePrismaJson } from "@/lib/prisma-json";
 import {
   errorResponse,
   getAuthenticatedUser,
@@ -13,9 +13,9 @@ const getQuerySchema = z.object({
   assignmentId: z.string().min(1),
   studentId: z.string().min(1).optional(),
   attempt: z.coerce.number().int().min(1).max(999).optional(),
-  limit: z.coerce.number().int().min(1).max(500).optional().default(200),
-  from: z.string().optional(),
-  to: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional().default(100),
+  from: z.string().datetime({ offset: true }).optional(),
+  to: z.string().datetime({ offset: true }).optional(),
 });
 
 const postBodySchema = z.object({
@@ -73,11 +73,8 @@ export async function GET(req: NextRequest) {
 
     const fromDate = from ? new Date(from) : undefined;
     const toDate = to ? new Date(to) : undefined;
-    if (fromDate && Number.isNaN(fromDate.getTime())) {
-      return errorResponse(400, "Dữ liệu không hợp lệ", { details: "from: Invalid date" });
-    }
-    if (toDate && Number.isNaN(toDate.getTime())) {
-      return errorResponse(400, "Dữ liệu không hợp lệ", { details: "to: Invalid date" });
+    if (fromDate && toDate && fromDate.getTime() > toDate.getTime()) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", { details: "from: must be <= to" });
     }
     if (fromDate || toDate) {
       where.createdAt = {};
@@ -97,7 +94,7 @@ export async function GET(req: NextRequest) {
         eventType: true,
         createdAt: true,
         metadata: true,
-        student: { select: { id: true, fullname: true, email: true } },
+        student: { select: { id: true, fullname: true } },
       },
     });
 
@@ -146,8 +143,10 @@ export async function POST(req: NextRequest) {
       return errorResponse(400, "Dữ liệu không hợp lệ", { details: "metadata: Payload too large" });
     }
 
-    const prismaMetadata: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined =
-      metadata === undefined ? undefined : metadata === null ? Prisma.JsonNull : (metadata as Prisma.InputJsonValue);
+    const prismaMetadata = coercePrismaJson(metadata);
+    if (metadata !== undefined && prismaMetadata === undefined) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", { details: "metadata: Invalid JSON" });
+    }
 
     await prisma.examEvent.create({
       data: {

@@ -4,13 +4,14 @@ export interface CreateClassroomDTO {
   description?: string;
   icon: string;
   maxStudents: number;
+  code?: string;
 }
 
 export interface ClassroomResponse {
   id: string;
   name: string;
   description?: string;
-  code: string;
+  code?: string;
   icon: string;
   maxStudents: number;
   isActive: boolean;

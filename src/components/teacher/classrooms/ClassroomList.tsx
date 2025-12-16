@@ -157,10 +157,12 @@ export default function ClassroomList() {
 
               <div className="mt-2 flex items-center justify-between gap-3 text-[11px] sm:text-xs text-slate-600">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 border border-slate-200">
-                    <span className="text-xs">#</span>
-                    <span>Mã lớp: {classroom.code}</span>
-                  </span>
+                  {classroom.code ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 border border-slate-200">
+                      <span className="text-xs">#</span>
+                      <span>Mã lớp: {classroom.code}</span>
+                    </span>
+                  ) : null}
                 </div>
                 <span className="font-semibold text-emerald-700 whitespace-nowrap">
                   {classroom._count?.students ?? 0} học sinh

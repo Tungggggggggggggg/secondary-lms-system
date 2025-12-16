@@ -46,7 +46,6 @@ export type SearchClassesQuery = {
 export type SearchClassItem = {
   id: string;
   name: string;
-  code: string;
   subject?: string;
   teacherName: string;
   createdAt: string;

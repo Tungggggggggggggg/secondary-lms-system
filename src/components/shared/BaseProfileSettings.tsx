@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Label from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import type { ButtonProps } from "@/components/ui/button";
+import type { InputProps } from "@/components/ui/input";
 
 export type ProfileRole = "teacher" | "student" | "parent";
 
@@ -71,8 +73,9 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
 
       await update?.();
       toast({ title: "✅ Đã lưu", description: "Thông tin hồ sơ đã được cập nhật" });
-    } catch (err: any) {
-      toast({ title: "❌ Lỗi", description: err?.message || "Vui lòng thử lại", variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Vui lòng thử lại";
+      toast({ title: "❌ Lỗi", description: message, variant: "destructive" });
     } finally {
       setIsSavingProfile(false);
     }
@@ -105,8 +108,9 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
 
       toast({ title: "✅ Đã đổi mật khẩu" });
       setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (err: any) {
-      toast({ title: "❌ Lỗi", description: err?.message || "Vui lòng thử lại", variant: "destructive" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Vui lòng thử lại";
+      toast({ title: "❌ Lỗi", description: message, variant: "destructive" });
     } finally {
       setIsChangingPassword(false);
     }
@@ -125,7 +129,17 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
     parent: "from-amber-400 to-orange-500",
   };
 
-  const roleColors: Record<ProfileRole, { card: string; border: string; title: string; label: string; input: string; button: string }> = {
+  const roleColors: Record<
+    ProfileRole,
+    {
+      card: string;
+      border: string;
+      title: string;
+      label: string;
+      input: NonNullable<InputProps["color"]>;
+      button: NonNullable<ButtonProps["color"]>;
+    }
+  > = {
     teacher: {
       card: "bg-gradient-to-br from-blue-50/50 to-indigo-50/30 border-blue-100 hover:border-blue-200",
       border: "border-blue-200/50",
@@ -181,7 +195,7 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
                 type="text"
                 value={profile.fullname}
                 onChange={(e) => setProfile({ ...profile, fullname: e.target.value })}
-                color={colors.input as any}
+                color={colors.input}
                 required
               />
             </div>
@@ -192,14 +206,14 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
                 type="email"
                 value={profile.email}
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                color={colors.input as any}
+                color={colors.input}
                 required
               />
             </div>
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={isSavingProfile} color={colors.button as any}>
+            <Button type="submit" disabled={isSavingProfile} color={colors.button}>
               {isSavingProfile ? "Đang cập nhật..." : "Lưu thay đổi"}
             </Button>
           </div>
@@ -217,7 +231,7 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
               type="password"
               value={passwords.currentPassword}
               onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
-              color={colors.input as any}
+              color={colors.input}
               required
             />
           </div>
@@ -229,7 +243,7 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
                 type="password"
                 value={passwords.newPassword}
                 onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
-                color={colors.input as any}
+                color={colors.input}
                 required
               />
             </div>
@@ -242,13 +256,13 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
                 onChange={(e) =>
                   setPasswords({ ...passwords, confirmPassword: e.target.value })
                 }
-                color={colors.input as any}
+                color={colors.input}
                 required
               />
             </div>
           </div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={isChangingPassword} color={colors.button as any}>
+            <Button type="submit" disabled={isChangingPassword} color={colors.button}>
               {isChangingPassword ? "Đang đổi mật khẩu..." : "Đổi mật khẩu"}
             </Button>
           </div>

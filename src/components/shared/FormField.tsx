@@ -21,7 +21,7 @@ export default function FormField({ label, htmlFor, required, hint, error, class
         {label}{required && <span className="text-red-600 font-bold"> *</span>}
       </label>
       {React.isValidElement(children)
-        ? React.cloneElement(children as any, {
+        ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
             "aria-invalid": error ? true : undefined,
             "aria-describedby": describedById,
           })

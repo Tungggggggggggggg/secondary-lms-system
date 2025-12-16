@@ -20,7 +20,6 @@ interface StudentClassroomRow {
     id: string;
     name: string;
     description: string | null;
-    code: string;
     icon: string;
     maxStudents: number;
     teacherId: string;
@@ -79,7 +78,6 @@ export async function GET(req: NextRequest) {
               id: true,
               name: true,
               description: true,
-              code: true,
               icon: true,
               maxStudents: true,
               teacherId: true,

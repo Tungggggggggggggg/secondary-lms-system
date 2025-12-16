@@ -28,7 +28,6 @@ interface StudentAssignmentRow {
   classroom: {
     id: string;
     name: string;
-    code: string;
     icon: string | null;
     teacher: {
       id: string;
@@ -94,7 +93,6 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             name: true,
-            code: true,
             icon: true,
             teacher: {
               select: { id: true, fullname: true, email: true },
@@ -167,7 +165,6 @@ export async function GET(req: NextRequest) {
         classroom: {
           id: classroom.id,
           name: classroom.name,
-          code: classroom.code,
           icon: classroom.icon,
           teacher: classroom.teacher,
         },

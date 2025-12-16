@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TeacherSubmission } from "@/hooks/use-teacher-submissions";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 interface SubmissionCardProps {
   submission: TeacherSubmission;
   assignmentType: "ESSAY" | "QUIZ";
@@ -31,7 +35,7 @@ export default function SubmissionCard({
             <h3 className="text-lg font-bold text-gray-800">
               {submission.student.fullname}
             </h3>
-            <Badge className="bg-gray-200 text-gray-700">Lần nộp #{(submission as any).attempt ?? 1}</Badge>
+            <Badge className="bg-gray-200 text-gray-700">Lần nộp #{submission.attempt ?? 1}</Badge>
             {isGraded && (
               <Badge className="bg-green-600 text-white">Đã chấm</Badge>
             )}
@@ -90,15 +94,23 @@ export default function SubmissionCard({
               onClick={async () => {
                 try {
                   const resp = await fetch(`/api/submissions/${submission.id}/files`);
-                  const j = await resp.json();
-                  if (j.success && Array.isArray(j.data.files)) {
+                  const raw: unknown = await resp.json().catch(() => null);
+                  if (
+                    isRecord(raw) &&
+                    raw.success === true &&
+                    isRecord(raw.data) &&
+                    Array.isArray(raw.data.files)
+                  ) {
+                    const files = raw.data.files.filter((f) => isRecord(f));
                     let delay = 0;
-                    for (const f of j.data.files) {
-                      if (!f.url) continue;
+                    for (const f of files) {
+                      const url = typeof f.url === "string" ? f.url : null;
+                      const fileName = typeof f.fileName === "string" ? f.fileName : "file";
+                      if (!url) continue;
                       setTimeout(() => {
                         const a = document.createElement("a");
-                        a.href = f.url;
-                        a.download = f.fileName || "file";
+                        a.href = url;
+                        a.download = fileName;
                         a.target = "_blank";
                         document.body.appendChild(a);
                         a.click();

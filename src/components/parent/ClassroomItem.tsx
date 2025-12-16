@@ -5,7 +5,6 @@ import StudentItem from "./StudentItem";
 interface Classroom {
   id: string;
   name: string;
-  code: string;
   icon: string;
   students: Array<{
     id: string;
@@ -36,7 +35,6 @@ export default function ClassroomItem({
           <div className="font-bold text-gray-900 group-hover:text-amber-800 transition-colors duration-300 text-base">
             {classroom.name}
           </div>
-          <div className="text-sm text-gray-600 font-semibold">Mã: {classroom.code}</div>
         </div>
       </div>
 

@@ -17,7 +17,6 @@ type TeacherClassroomStudent = {
 type TeacherClassroom = {
   id: string;
   name: string;
-  code: string;
   icon: string;
   students: TeacherClassroomStudent[];
 };
@@ -49,7 +48,12 @@ export default function ParentTeachersPage() {
     try {
       setSendingKey(key);
       const res = await createConversationGeneric([teacherId, studentId], classroomId, studentId);
-      const id = (res as any)?.conversationId as string | undefined;
+      const id =
+        typeof res === "object" &&
+        res !== null &&
+        typeof (res as { conversationId?: unknown }).conversationId === "string"
+          ? (res as { conversationId: string }).conversationId
+          : undefined;
       if (id) {
         router.push(`/dashboard/parent/messages?open=${encodeURIComponent(id)}`);
       }

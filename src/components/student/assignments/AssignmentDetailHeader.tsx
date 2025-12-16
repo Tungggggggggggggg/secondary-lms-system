@@ -13,6 +13,7 @@ interface AssignmentDetailHeaderProps {
     submittedAt: string;
     grade: number | null;
     feedback: string | null;
+    attempt?: number | null;
   } | null;
 }
 
@@ -25,11 +26,10 @@ export default function AssignmentDetailHeader({
 }: AssignmentDetailHeaderProps) {
   const now = new Date();
   const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
-  const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
-  const lockAt = (assignment as any).lockAt ? new Date((assignment as any).lockAt) : (dueDate || null);
-  const timeLimitMinutes = (assignment as any).timeLimitMinutes as number | null | undefined;
+  const openAt = assignment.openAt ? new Date(assignment.openAt) : null;
+  const lockAt = assignment.lockAt ? new Date(assignment.lockAt) : (dueDate || null);
+  const timeLimitMinutes = assignment.timeLimitMinutes;
   const isOverdue = dueDate && dueDate < now && !submission;
-  const isUpcoming = dueDate && dueDate > now;
   const effectiveDue = assignment.type === "QUIZ" ? (lockAt || dueDate) : dueDate;
 
   return (
@@ -37,7 +37,7 @@ export default function AssignmentDetailHeader({
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
-            <AssignmentTypeBadge type={assignment.type as any} variant="student" />
+            <AssignmentTypeBadge type={assignment.type ? String(assignment.type) : undefined} variant="student" />
             {submission && (
               <Badge className="bg-green-600 text-white shadow-sm ring-1 ring-green-600/15 inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -46,7 +46,7 @@ export default function AssignmentDetailHeader({
             )}
             {submission && (
               <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border">
-                Lần nộp #{(submission as any).attempt ?? 1}
+                Lần nộp #{submission.attempt ?? 1}
               </span>
             )}
             {isOverdue && !submission && (

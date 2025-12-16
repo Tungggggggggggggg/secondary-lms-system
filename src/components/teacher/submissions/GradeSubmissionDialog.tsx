@@ -19,6 +19,33 @@ import RateLimitDialog, {
   getRetryAfterSecondsFromResponse,
 } from "@/components/shared/RateLimitDialog";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+type ApiEnvelope = {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+};
+
+function toApiEnvelope(value: unknown): ApiEnvelope | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.success !== "boolean") return null;
+  return {
+    success: value.success,
+    message: typeof value.message === "string" ? value.message : undefined,
+    data: value.data,
+  };
+}
+
+type AiSuggestion = { score: number; feedback: string; corrections?: Array<{ excerpt: string; suggestion: string }> };
+
+function isAiSuggestion(value: unknown): value is AiSuggestion {
+  if (!isRecord(value)) return false;
+  return typeof value.score === "number" && typeof value.feedback === "string";
+}
+
 interface GradeSubmissionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -89,9 +116,10 @@ export default function GradeSubmissionDialog({
           submissionId: submission.id,
         }),
       });
-      const json = await res.json().catch(() => ({}));
+      const raw: unknown = await res.json().catch(() => null);
+      const json = toApiEnvelope(raw);
       if (res.status === 429) {
-        const retryAfterSeconds = getRetryAfterSecondsFromResponse(res, json) ?? 60;
+        const retryAfterSeconds = getRetryAfterSecondsFromResponse(res, raw) ?? 60;
         setRateLimitRetryAfterSeconds(retryAfterSeconds);
         setRateLimitOpen(true);
         return;
@@ -99,7 +127,12 @@ export default function GradeSubmissionDialog({
       if (!res.ok || json?.success === false) {
         throw new Error(json?.message || "Không thể lấy gợi ý chấm từ AI");
       }
-      setAiSuggestion(json.data);
+
+      const next = isAiSuggestion(json?.data) ? json?.data : null;
+      if (!next) {
+        throw new Error("Không thể lấy gợi ý chấm từ AI");
+      }
+      setAiSuggestion(next);
     } catch (e) {
       setAiSuggestion(null);
       setAiError(e instanceof Error ? e.message : "Có lỗi xảy ra khi gọi AI");
@@ -271,45 +304,66 @@ export default function GradeSubmissionDialog({
             ) : (
               // Quiz: Hiển thị theo snapshot presentation (ưu tiên contentSnapshot nếu có)
               <div className="space-y-4">
-                {submission && submission.answers && (submission.assignment.questions || (submission as any).contentSnapshot) ? (
+                {submission.answers && (submission.assignment.questions || submission.contentSnapshot) ? (
                   (() => {
-                    const snapshot = (submission as any).contentSnapshot as
-                      | { versionHash?: string; questions?: Array<{ id: string; content: string; type: string; options?: Array<{ id: string; label: string; content: string; isCorrect: boolean }> }> }
-                      | null
-                      | undefined;
-                    const baseQuestions = (snapshot?.questions && snapshot.questions.length)
-                      ? (snapshot.questions as any[])
-                      : (submission.assignment.questions || []) as any[];
-                    const questionMap = new Map(
-                      baseQuestions.map((q: any) => [q.id, q])
-                    );
+                    type QuestionVM = {
+                      id: string;
+                      content: string;
+                      type: string;
+                      options: Array<{ id: string; label: string; content: string; isCorrect: boolean }>;
+                    };
+
+                    const snapshot = submission.contentSnapshot;
+                    const baseQuestions: QuestionVM[] = (snapshot?.questions && snapshot.questions.length)
+                      ? snapshot.questions.map((q) => ({
+                          id: q.id,
+                          content: q.content,
+                          type: q.type,
+                          options: (q.options ?? []).map((o) => ({
+                            id: o.id,
+                            label: o.label,
+                            content: o.content,
+                            isCorrect: Boolean(o.isCorrect),
+                          })),
+                        }))
+                      : (submission.assignment.questions || []).map((q) => ({
+                          id: q.id,
+                          content: q.content,
+                          type: q.type,
+                          options: (q.options ?? []).map((o) => ({
+                            id: o.id,
+                            label: o.label,
+                            content: o.content,
+                            isCorrect: o.isCorrect,
+                          })),
+                        }));
+
+                    const questionMap = new Map<string, QuestionVM>(baseQuestions.map((q) => [q.id, q]));
                     const answersMap = new Map(
                       submission.answers.map((a) => [a.questionId, a.optionIds])
                     );
-                    const presentation = (submission as any).presentation as
-                      | { questionOrder?: string[]; optionOrder?: Record<string, string[]> }
-                      | null
-                      | undefined;
+
+                    const presentation = submission.presentation;
                     const orderedQids = (presentation?.questionOrder && presentation.questionOrder.length)
-                      ? presentation.questionOrder!
-                      : (baseQuestions || []).map((q: any) => q.id);
+                      ? presentation.questionOrder
+                      : baseQuestions.map((q) => q.id);
 
                     return orderedQids.map((qid, qIdx) => {
                       const q = questionMap.get(qid);
                       if (!q) return null;
                       const selected = new Set(answersMap.get(qid) || []);
                       const correctSet = new Set(
-                        ((q.options || []) as any[]).filter((o: any) => o.isCorrect).map((o: any) => o.id)
+                        q.options.filter((o) => o.isCorrect).map((o) => o.id)
                       );
                       const isCorrect =
                         selected.size === correctSet.size &&
                         Array.from(selected).every((id) => correctSet.has(id));
 
-                    const orderedOids = presentation?.optionOrder?.[qid]?.length
-                        ? presentation.optionOrder![qid]!
-                        : ((q.options || []) as any[]).map((o: any) => o.id);
-                      const optionById: Record<string, any> = {};
-                      ((q.options || []) as any[]).forEach((o: any) => (optionById[o.id] = o));
+                      const orderedOids = presentation?.optionOrder?.[qid]?.length
+                        ? presentation.optionOrder[qid]
+                        : q.options.map((o) => o.id);
+                      const optionById: Record<string, { id: string; label: string; content: string; isCorrect: boolean }> = {};
+                      q.options.forEach((o) => (optionById[o.id] = o));
 
                       return (
                         <div

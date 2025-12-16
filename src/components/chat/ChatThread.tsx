@@ -8,6 +8,18 @@ import { getChatFileUrl } from "@/lib/supabase-upload";
 import { cn } from "@/lib/utils";
 import { formatDateLabel, formatTimeLabel } from "@/lib/date";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getSessionUserId(session: unknown): string | undefined {
+  if (!isRecord(session)) return undefined;
+  const user = session.user;
+  if (!isRecord(user)) return undefined;
+  const id = user.id;
+  return typeof id === "string" ? id : undefined;
+}
+
 type Participant = {
   userId: string;
   fullname: string;
@@ -24,7 +36,7 @@ type Props = {
 
 export default function ChatThread({ color = "amber", messages, participants, onReply, selfUserId }: Props) {
   const { data: session } = useSession();
-  const me = (selfUserId || (session?.user as any)?.id) as string | undefined;
+  const me = selfUserId || getSessionUserId(session);
   const endRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 

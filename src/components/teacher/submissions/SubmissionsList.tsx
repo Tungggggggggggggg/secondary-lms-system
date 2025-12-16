@@ -15,6 +15,15 @@ import { FilterBar } from "@/components/shared";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Inbox, CheckCircle2, Clock, Award } from "lucide-react";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseStatusFilter(value: string): "all" | "graded" | "ungraded" {
+  if (value === "all" || value === "graded" || value === "ungraded") return value;
+  return "all";
+}
+
 interface SubmissionsListProps {
   assignmentId: string;
   assignmentType: "ESSAY" | "QUIZ";
@@ -77,19 +86,30 @@ export default function SubmissionsList({
     if (submission.isFileSubmission) {
       try {
         const resp = await fetch(`/api/submissions/${submission.id}/files`);
-        const j = await resp.json();
-        if (j.success) {
-          setFileList(j.data.files || []);
+        const raw: unknown = await resp.json().catch(() => null);
+        if (isRecord(raw) && raw.success === true && isRecord(raw.data) && Array.isArray(raw.data.files)) {
+          const files = raw.data.files
+            .filter((f) => isRecord(f))
+            .map((f) => ({
+              fileName: typeof f.fileName === "string" ? f.fileName : "file",
+              mimeType: typeof f.mimeType === "string" ? f.mimeType : "application/octet-stream",
+              url: typeof f.url === "string" ? f.url : null,
+            }));
+          setFileList(files);
         } else {
           setFileList(undefined);
         }
       } catch {
         setFileList(undefined);
       }
+
       const mock: SubmissionDetail = {
         ...submission,
         assignment: { id: assignmentId, title: "", type: "ESSAY", dueDate: null },
-      } as any;
+        presentation: null,
+        contentSnapshot: null,
+        answers: [],
+      };
       setSelectedSubmission(mock);
       setIsDialogOpen(true);
       return;
@@ -106,15 +126,17 @@ export default function SubmissionsList({
   const handleGradeSubmit = async (grade: number, feedback?: string) => {
     if (!selectedSubmission) return false;
     try {
-      if ((selectedSubmission as any).isFileSubmission) {
+      if (selectedSubmission.isFileSubmission) {
         // Grade file-based submission via file-grade endpoint
         const res = await fetch(`/api/assignments/${assignmentId}/file-grade`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentId: (selectedSubmission as any).student.id, grade, feedback }),
+          body: JSON.stringify({ studentId: selectedSubmission.student.id, grade, feedback }),
         });
-        const j = await res.json();
-        if (!res.ok || !j.success) throw new Error(j?.message || "Chấm điểm thất bại");
+        const raw: unknown = await res.json().catch(() => null);
+        const ok = isRecord(raw) && raw.success === true;
+        const message = isRecord(raw) && typeof raw.message === "string" ? raw.message : undefined;
+        if (!res.ok || !ok) throw new Error(message || "Chấm điểm thất bại");
       } else {
         const ok = await gradeSubmission(assignmentId, selectedSubmission.id, grade, feedback);
         if (!ok) return false;
@@ -162,7 +184,7 @@ export default function SubmissionsList({
         color="blue"
         placeholder="Tìm kiếm theo tên học sinh..."
         bottom={
-          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(parseStatusFilter(v))}>
             <TabsList className="grid w-full grid-cols-3 rounded-xl bg-blue-100/60 text-blue-700">
               <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-blue-900">Tất cả</TabsTrigger>
               <TabsTrigger value="graded" className="data-[state=active]:bg-white data-[state=active]:text-blue-900">Đã chấm</TabsTrigger>

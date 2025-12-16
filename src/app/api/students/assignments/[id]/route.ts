@@ -124,7 +124,6 @@ export async function GET(
         select: {
           id: true,
           name: true,
-          code: true,
           icon: true,
           teacher: {
             select: {
@@ -175,7 +174,6 @@ export async function GET(
       classroom: {
         id: classroom.id,
         name: classroom.name,
-        code: classroom.code,
         icon: classroom.icon,
         teacher: {
           id: classroom.teacher.id,

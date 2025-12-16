@@ -11,6 +11,32 @@ export type Paginated<T> = {
   total: number;
 };
 
+type ParentStudentLinkRequestWithStudent = Prisma.ParentStudentLinkRequestGetPayload<{
+  include: {
+    student: {
+      select: {
+        id: true;
+        email: true;
+        fullname: true;
+        role: true;
+      };
+    };
+  };
+}>;
+
+type ParentStudentLinkRequestWithParent = Prisma.ParentStudentLinkRequestGetPayload<{
+  include: {
+    parent: {
+      select: {
+        id: true;
+        email: true;
+        fullname: true;
+        role: true;
+      };
+    };
+  };
+}>;
+
 export const parentStudentLinkRequestRepo = {
   /**
    * Tạo link request mới từ phụ huynh
@@ -113,7 +139,7 @@ export const parentStudentLinkRequestRepo = {
           },
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[parentStudentLinkRequestRepo.create] Error:", error);
       throw error;
     }
@@ -145,7 +171,7 @@ export const parentStudentLinkRequestRepo = {
           },
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[parentStudentLinkRequestRepo.getById] Error:", error);
       throw error;
     }
@@ -242,7 +268,7 @@ export const parentStudentLinkRequestRepo = {
 
         return { link, request };
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[parentStudentLinkRequestRepo.approve] Error:", error);
       throw error;
     }
@@ -276,7 +302,7 @@ export const parentStudentLinkRequestRepo = {
           respondedAt: new Date(),
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[parentStudentLinkRequestRepo.reject] Error:", error);
       throw error;
     }
@@ -307,7 +333,7 @@ export const parentStudentLinkRequestRepo = {
         where: { id: requestId },
         data: { status: "REJECTED" },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[parentStudentLinkRequestRepo.cancel] Error:", error);
       throw error;
     }
@@ -321,12 +347,13 @@ export const parentStudentLinkRequestRepo = {
     status?: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
     limit?: number;
     skip?: number;
-  }): Promise<Paginated<any>> {
+  }): Promise<Paginated<ParentStudentLinkRequestWithStudent>> {
     const { parentId, status, limit = 20, skip = 0 } = params;
 
     try {
       // CRITICAL FIX: Check if model exists (Prisma Client might not be generated yet)
-      if (!(prisma as any).parentStudentLinkRequest) {
+      const prismaClient = prisma as unknown as Record<string, unknown>;
+      if (!("parentStudentLinkRequest" in prismaClient)) {
         console.error("[parentStudentLinkRequestRepo.listByParent] ERROR: Prisma Client not generated! Run: npx prisma generate");
         throw new Error("Database model not available. Please run: npx prisma generate");
       }
@@ -360,7 +387,7 @@ export const parentStudentLinkRequestRepo = {
       ]);
 
       return { items, total };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[parentStudentLinkRequestRepo.listByParent] Error:", error);
       throw error;
     }
@@ -374,7 +401,7 @@ export const parentStudentLinkRequestRepo = {
     status?: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
     limit?: number;
     skip?: number;
-  }): Promise<Paginated<any>> {
+  }): Promise<Paginated<ParentStudentLinkRequestWithParent>> {
     const { studentId, status, limit = 20, skip = 0 } = params;
 
     try {
@@ -407,7 +434,7 @@ export const parentStudentLinkRequestRepo = {
       ]);
 
       return { items, total };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[parentStudentLinkRequestRepo.listByStudent] Error:", error);
       throw error;
     }
@@ -433,7 +460,7 @@ export const parentStudentLinkRequestRepo = {
 
       console.log(`[parentStudentLinkRequestRepo.expireOldRequests] Expired ${result.count} requests`);
       return result.count;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[parentStudentLinkRequestRepo.expireOldRequests] Error:", error);
       throw error;
     }

@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import crypto from "crypto";
-
-import { TaskType } from "@google/generative-ai";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, withApiLogging } from "@/lib/api-utils";
 import { auditRepo } from "@/lib/repositories/audit-repo";
-import { chunkText } from "@/lib/rag/chunkText";
-import { DEFAULT_EMBEDDING_DIMENSIONALITY, embedTextWithGemini } from "@/lib/ai/gemini-embedding";
+import { indexLessonEmbeddings } from "@/lib/rag/indexLessonEmbeddings";
 
 export const runtime = "nodejs";
 
@@ -35,65 +31,6 @@ function isAuthorizedCron(req: NextRequest, expectedSecret: string): boolean {
   return m[1] === expectedSecret;
 }
 
-function sha256Hex(text: string): string {
-  return crypto.createHash("sha256").update(text, "utf8").digest("hex");
-}
-
-function toVectorLiteral(values: number[]): string {
-  return `[${values.join(",")}]`;
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function isRetryableEmbeddingError(error: unknown): boolean {
-  const msg = error instanceof Error ? error.message : String(error);
-  return /429|rate|too many|resource_exhausted|timeout|temporarily|503|502/i.test(msg);
-}
-
-async function embedTextWithRetry(params: {
-  text: string;
-  outputDimensionality: 768 | 1536 | 3072;
-  taskType: TaskType;
-  retryAttempts: number;
-}): Promise<number[]> {
-  const { retryAttempts, ...embedParams } = params;
-
-  for (let attempt = 0; attempt <= retryAttempts; attempt += 1) {
-    try {
-      return await embedTextWithGemini(embedParams);
-    } catch (e: unknown) {
-      if (attempt >= retryAttempts || !isRetryableEmbeddingError(e)) {
-        throw e;
-      }
-      const backoffMs = Math.min(10_000, 600 * Math.pow(2, attempt));
-      await sleep(backoffMs);
-    }
-  }
-
-  throw new Error("Embedding retry exceeded");
-}
-
-async function runWithConcurrency<T>(
-  tasks: Array<() => Promise<T>>,
-  concurrency: number
-): Promise<T[]> {
-  const results: T[] = [];
-  let idx = 0;
-
-  const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, async () => {
-    while (idx < tasks.length) {
-      const current = idx;
-      idx += 1;
-      results[current] = await tasks[current]();
-    }
-  });
-
-  await Promise.all(workers);
-  return results;
-}
-
 const handler = withApiLogging(async (req: NextRequest) => {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
@@ -103,13 +40,6 @@ const handler = withApiLogging(async (req: NextRequest) => {
   if (!isAuthorizedCron(req, cronSecret)) {
     const isDev = process.env.NODE_ENV === "development";
     if (isDev) {
-      const header = req.headers.get("x-cron-secret");
-      const auth = req.headers.get("authorization");
-      console.warn("[CRON_INDEX_LESSON_EMBEDDINGS] Unauthorized", {
-        hasXChronSecretHeader: Boolean(header),
-        xCronSecretLength: header?.length ?? 0,
-        hasAuthorizationHeader: Boolean(auth),
-      });
       return errorResponse(401, "Unauthorized", {
         details:
           "Thiếu hoặc sai CRON_SECRET. PowerShell không tự đọc .env → hãy set `$env:CRON_SECRET='...'` hoặc truyền trực tiếp header `x-cron-secret: <CRON_SECRET>`.",
@@ -169,9 +99,16 @@ const handler = withApiLogging(async (req: NextRequest) => {
 
   const errors: Array<{ lessonId: string; message: string }> = [];
 
+  let remainingEmbeddings = maxEmbeddings;
+
   for (const lesson of lessons) {
     if (stoppedReason) break;
     processedLessons += 1;
+
+    if (remainingEmbeddings <= 0) {
+      stoppedReason = "MAX_EMBEDDINGS";
+      break;
+    }
 
     if (!dryRun && !force && skipUnchangedLessons) {
       const agg = await prisma.lessonEmbeddingChunk.aggregate({
@@ -189,105 +126,35 @@ const handler = withApiLogging(async (req: NextRequest) => {
       }
     }
 
-    let embeddedThisLesson = 0;
-    let skippedThisLesson = 0;
-    let deletedThisLesson = 0;
-
-    const fullText = `# ${lesson.title}\n\n${lesson.content || ""}`.trim();
-    const chunks = chunkText({ text: fullText, maxChars });
-    totalChunks += chunks.length;
-
-    const existingRows = await prisma.$queryRaw<Array<{ chunkIndex: number; contentHash: string }>>`
-      SELECT "chunkIndex", "contentHash"
-      FROM "lesson_embedding_chunks"
-      WHERE "lessonId" = ${lesson.id}
-      ORDER BY "chunkIndex" ASC;
-    `;
-
-    const existingByIndex = new Map<number, string>(existingRows.map((r) => [r.chunkIndex, r.contentHash]));
-
     try {
-      const tasks: Array<() => Promise<void>> = [];
-      let embeddingsQueued = 0;
+      const result = await indexLessonEmbeddings({
+        lessonId: lesson.id,
+        courseId: lesson.courseId,
+        title: lesson.title,
+        content: lesson.content ?? "",
+        options: {
+          dryRun,
+          force,
+          maxChars,
+          maxEmbeddings: remainingEmbeddings,
+          concurrency,
+          retryAttempts,
+        },
+      });
 
-      for (const ch of chunks) {
-        if (!dryRun && embeddedChunks + embeddingsQueued >= maxEmbeddings) {
-          stoppedReason = "MAX_EMBEDDINGS";
-          break;
-        }
+      totalChunks += result.totalChunks;
+      embeddedChunks += result.embeddedChunks;
+      skippedChunks += result.skippedChunks;
+      deletedChunks += result.deletedChunks;
 
-        if (dryRun && embeddedChunks >= maxEmbeddings) {
-          stoppedReason = "MAX_EMBEDDINGS";
-          break;
-        }
-
-        const contentHash = sha256Hex(ch.content);
-        const existingHash = existingByIndex.get(ch.index);
-
-        if (!force && existingHash && existingHash === contentHash) {
-          skippedChunks += 1;
-          skippedThisLesson += 1;
-          continue;
-        }
-
-        if (dryRun) {
-          embeddedChunks += 1;
-          embeddedThisLesson += 1;
-          continue;
-        }
-
-        embeddingsQueued += 1;
-        tasks.push(async () => {
-          const embedding = await embedTextWithRetry({
-            text: ch.content,
-            outputDimensionality: DEFAULT_EMBEDDING_DIMENSIONALITY,
-            taskType: TaskType.RETRIEVAL_DOCUMENT,
-            retryAttempts,
-          });
-
-          if (embedding.length !== DEFAULT_EMBEDDING_DIMENSIONALITY) {
-            throw new Error(`Embedding dimension không hợp lệ: ${embedding.length}`);
-          }
-
-          const vec = toVectorLiteral(embedding);
-          const id = `lec_${lesson.id}_${ch.index}`;
-
-          await prisma.$executeRaw`
-            INSERT INTO "lesson_embedding_chunks" (
-              "id", "lessonId", "courseId", "chunkIndex", "content", "contentHash", "embedding", "updatedAt"
-            )
-            VALUES (
-              ${id}, ${lesson.id}, ${lesson.courseId}, ${ch.index}, ${ch.content}, ${contentHash}, ${vec}::vector, NOW()
-            )
-            ON CONFLICT ("lessonId", "chunkIndex")
-            DO UPDATE SET
-              "content" = EXCLUDED."content",
-              "contentHash" = EXCLUDED."contentHash",
-              "embedding" = EXCLUDED."embedding",
-              "updatedAt" = NOW();
-          `;
-
-          embeddedChunks += 1;
-          embeddedThisLesson += 1;
-        });
+      remainingEmbeddings -= result.embeddedChunks;
+      if (remainingEmbeddings <= 0) {
+        stoppedReason = "MAX_EMBEDDINGS";
       }
 
-      if (tasks.length > 0) {
-        await runWithConcurrency(tasks, concurrency);
-      }
-
-      const maxIndex = chunks.length > 0 ? Math.max(...chunks.map((c) => c.index)) : -1;
-      if (!dryRun) {
-        const res = await prisma.$executeRaw`
-          DELETE FROM "lesson_embedding_chunks"
-          WHERE "lessonId" = ${lesson.id}
-            AND "chunkIndex" > ${maxIndex};
-        `;
-        if (typeof res === "number" && Number.isFinite(res)) {
-          deletedChunks += res;
-          deletedThisLesson += res;
-        }
-      }
+      const embeddedThisLesson = result.embeddedChunks;
+      const skippedThisLesson = result.skippedChunks;
+      const deletedThisLesson = result.deletedChunks;
 
       try {
         const course = await prisma.course.findUnique({
@@ -307,7 +174,7 @@ const handler = withApiLogging(async (req: NextRequest) => {
               dryRun,
               force,
               courseId: lesson.courseId,
-              chunkCount: chunks.length,
+              chunkCount: result.totalChunks,
               embeddedChunks: embeddedThisLesson,
               skippedChunks: skippedThisLesson,
               deletedChunks: deletedThisLesson,
@@ -321,6 +188,8 @@ const handler = withApiLogging(async (req: NextRequest) => {
       errors.push({ lessonId: lesson.id, message: msg });
       continue;
     }
+
+    if (stoppedReason) break;
   }
 
   return NextResponse.json(

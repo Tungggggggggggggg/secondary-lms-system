@@ -181,7 +181,7 @@ export default function ExamMonitorPage() {
       eventType: string;
       createdAt: string;
       metadata: unknown;
-      student?: { id: string; fullname: string; email: string };
+      student?: { id: string; fullname: string };
     }>
   >([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
@@ -288,7 +288,6 @@ export default function ExamMonitorPage() {
             ? {
                 id: typeof item.student.id === "string" ? item.student.id : "",
                 fullname: typeof item.student.fullname === "string" ? item.student.fullname : "",
-                email: typeof item.student.email === "string" ? item.student.email : "",
               }
             : undefined;
 

@@ -9,6 +9,16 @@ import { cn } from "@/lib/utils";
 export type GradeSortKey = "recent" | "due" | "grade";
 export type GradeStatus = "all" | "graded" | "ungraded";
 
+function parseGradeStatus(value: string): GradeStatus {
+  if (value === "all" || value === "graded" || value === "ungraded") return value;
+  return "all";
+}
+
+function parseGradeSortKey(value: string): GradeSortKey {
+  if (value === "recent" || value === "due" || value === "grade") return value;
+  return "recent";
+}
+
 interface GradeFiltersToolbarProps {
   assignments: Array<{ id: string; title: string }>;
   assignmentId: string | "all";
@@ -61,7 +71,10 @@ export default function GradeFiltersToolbar({
       <div className="flex flex-wrap items-center gap-3 justify-start md:justify-end">
         <Select
           value={assignmentId}
-          onChange={(e) => onAssignmentChange(e.target.value as any)}
+          onChange={(e) => {
+            const v = e.target.value;
+            onAssignmentChange(v === "all" ? "all" : v);
+          }}
           color="blue"
           className="h-11 min-w-[200px]"
           aria-label="Lọc theo bài tập"
@@ -74,7 +87,7 @@ export default function GradeFiltersToolbar({
 
         <Select
           value={status}
-          onChange={(e) => onStatusChange(e.target.value as any)}
+          onChange={(e) => onStatusChange(parseGradeStatus(e.target.value))}
           color="blue"
           className="h-11 min-w-[160px]"
           aria-label="Lọc theo trạng thái chấm"
@@ -86,7 +99,7 @@ export default function GradeFiltersToolbar({
 
         <Select
           value={sortKey}
-          onChange={(e) => onSortChange(e.target.value as any)}
+          onChange={(e) => onSortChange(parseGradeSortKey(e.target.value))}
           color="blue"
           className="h-11 min-w-[180px]"
           aria-label="Sắp xếp"

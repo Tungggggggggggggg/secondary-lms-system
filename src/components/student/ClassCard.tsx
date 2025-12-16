@@ -8,7 +8,6 @@ interface ClassCardProps {
   id: string;
   name: string;
   icon?: ReactNode;
-  code: string;
   teacherName: string;
   studentCount: number;
   joinedAt?: string | Date;
@@ -19,7 +18,6 @@ export default function ClassCard({
   id,
   name,
   icon,
-  code,
   teacherName,
   studentCount,
   joinedAt,
@@ -90,10 +88,6 @@ export default function ClassCard({
 
           <div className="flex items-center justify-between gap-3 text-[11px] sm:text-xs text-slate-600">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 border border-slate-200">
-                <span className="text-xs">#</span>
-                <span>Mã: {code}</span>
-              </span>
               {joinedAt && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600 border border-slate-200">
                   <Calendar className="h-3 w-3" />

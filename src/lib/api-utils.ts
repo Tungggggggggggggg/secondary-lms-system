@@ -165,28 +165,22 @@ export function errorResponse(
 /**
  * Wrapper thêm logging quanh handler.
  */
-export function withApiLogging<T extends (...args: any[]) => Promise<Response>>(
-  handler: T,
+export function withApiLogging<Args extends unknown[]>(
+  handler: (...args: Args) => Promise<Response>,
   action: string
-): T {
-  return (async (...args: any[]) => {
-    const isDevelopment = process.env.NODE_ENV === "development";
-    const req: NextRequest | undefined = args[0];
+): (...args: Args) => Promise<Response> {
+  return async (...args: Args) => {
+    const req = args[0] as NextRequest | undefined;
     const requestId = getRequestId(req);
     const start = Date.now();
     try {
-      const res = await handler(...args);
-      const ms = Date.now() - start;
-      if (isDevelopment) {
-        console.log(`[INFO] ${action} OK {requestId:${requestId}, ms:${ms}}`);
-      }
-      return res;
-    } catch (err) {
+      return await handler(...args);
+    } catch (err: unknown) {
       const ms = Date.now() - start;
       console.error(`[ERROR] ${action} FAIL {requestId:${requestId}, ms:${ms}}`, err);
       throw err;
     }
-  }) as T;
+  };
 }
 
 /**

@@ -34,7 +34,6 @@ async function indexLessonEmbeddingsForLesson(params: {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.error("[LessonEmbedding] Missing GEMINI_API_KEY, skip indexing", { lessonId, courseId });
     return;
   }
 
@@ -116,9 +115,7 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
     // Upload original file as attachment for students to download (non-fatal on failure)
     try {
       const admin = supabaseAdmin;
-      if (!admin) {
-        console.error("[LessonAttachment] supabaseAdmin not initialized");
-      } else {
+      if (admin) {
         const originalName = file.name?.trim() ? file.name : created.title;
         const safeName = slugifyFileName(originalName);
         const key = `lesson/${created.id}/${crypto.randomUUID()}-${safeName}`;
@@ -131,9 +128,7 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
             upsert: false,
           });
 
-        if (error) {
-          console.error("[LessonAttachment] Upload failed", error);
-        } else if (data?.path) {
+        if (!error && data?.path) {
           await prisma.lessonAttachment.create({
             data: {
               lessonId: created.id,
@@ -145,9 +140,7 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
           });
         }
       }
-    } catch (err) {
-      console.error("[LessonAttachment] Error while uploading/creating attachment", err);
-    }
+    } catch {}
 
     // Tự động index embeddings cho bài học vừa tạo (không dry run, luôn embed)
     try {
@@ -157,13 +150,7 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
         title: created.title,
         content: extracted.text,
       });
-    } catch (err) {
-      console.error("[LessonEmbedding] Failed to index lesson", {
-        lessonId: created.id,
-        courseId,
-        error: err,
-      });
-    }
+    } catch {}
 
     return NextResponse.json(
       {

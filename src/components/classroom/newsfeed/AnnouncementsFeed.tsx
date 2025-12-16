@@ -88,7 +88,7 @@ export default function AnnouncementsFeed({
                 content: ann.content,
                 createdAt: ann.createdAt,
                 author: ann.author,
-                pinnedAt: (ann as any).pinnedAt ?? null,
+                pinnedAt: ann.pinnedAt ?? null,
                 attachments: ann.attachments?.map((att) => ({
                     id: att.id,
                     name: att.name,

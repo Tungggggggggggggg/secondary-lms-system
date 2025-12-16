@@ -214,8 +214,8 @@ export default function EssayQuestionEditor({
     let el: HTMLElement | null = null;
     if (node.nodeType === Node.ELEMENT_NODE) {
       el = node as HTMLElement;
-    } else if ((node as any).parentElement) {
-      el = (node as any).parentElement as HTMLElement;
+    } else if (node.parentElement) {
+      el = node.parentElement;
     } else if (node.parentNode && node.parentNode.nodeType === Node.ELEMENT_NODE) {
       el = node.parentNode as HTMLElement;
     }
@@ -411,8 +411,7 @@ export default function EssayQuestionEditor({
   }, [maxChars]);
 
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const nev: any = (e as any).nativeEvent;
-    if ((nev && nev.isComposing) || composingRef.current) return;
+    if (e.nativeEvent.isComposing || composingRef.current) return;
     if (e.ctrlKey || e.metaKey) {
       if (e.key.toLowerCase() === "b") { e.preventDefault(); applyCmd("bold"); }
       if (e.key.toLowerCase() === "i") { e.preventDefault(); applyCmd("italic"); }

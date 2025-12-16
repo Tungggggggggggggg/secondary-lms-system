@@ -110,7 +110,6 @@ export default function MyClasses() {
             id={classroom.id}
             name={classroom.name}
             icon={classroom.icon}
-            code={classroom.code}
             teacherName={classroom.teacher?.fullname || "Giáo viên"}
             studentCount={classroom._count?.students || 0}
             joinedAt={classroom.joinedAt}

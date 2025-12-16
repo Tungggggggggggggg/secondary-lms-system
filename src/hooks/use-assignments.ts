@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 export interface AssignmentT {
   id: string;
   title: string;
-  description?: string;
-  dueDate?: string;
+  description?: string | null;
+  dueDate?: string | null;
   openAt?: string | null;
   lockAt?: string | null;
   timeLimitMinutes?: number | null;

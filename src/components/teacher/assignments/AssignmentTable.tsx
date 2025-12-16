@@ -86,7 +86,7 @@ export default function AssignmentTable({ items, onView, onEdit, onSubmissions, 
             )}
             {slice.map((a) => {
               const effective = a.type === "QUIZ" ? (a.lockAt || a.dueDate) : a.dueDate;
-              const dueStr = effective ? new Date(effective as any).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Không rõ";
+              const dueStr = effective ? new Date(effective).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Không rõ";
               return (
                 <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50">
                   {columns.title && (

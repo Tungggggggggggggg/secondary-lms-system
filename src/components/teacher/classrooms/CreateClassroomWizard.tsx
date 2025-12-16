@@ -159,8 +159,8 @@ export default function CreateClassroomWizard() {
   const onSubmit = async () => {
     try {
       setSaving(true);
-      const payload: any = { ...form };
-      if (code.trim()) payload.code = code.trim();
+      const trimmedCode = code.trim();
+      const payload: CreateClassroomDTO = trimmedCode ? { ...form, code: trimmedCode } : form;
       const created = await createClassroom(payload);
       if (created?.id) {
         toast({ title: "Tạo lớp thành công", variant: "success" });

@@ -72,6 +72,7 @@ export type IndexLessonEmbeddingsOptions = {
   concurrency?: number;
   retryAttempts?: number;
   force?: boolean;
+  dryRun?: boolean;
 };
 
 export type IndexLessonEmbeddingsResult = {
@@ -81,6 +82,22 @@ export type IndexLessonEmbeddingsResult = {
   deletedChunks: number;
 };
 
+/**
+ * Index embeddings cho 1 lesson vào bảng `lesson_embedding_chunks`.
+ *
+ * Input:
+ * - `lessonId`, `courseId`, `title`, `content`
+ * - `options`:
+ *   - `dryRun`: chỉ tính toán thống kê (không gọi Gemini/không ghi DB)
+ *   - `maxEmbeddings`: giới hạn số chunk sẽ embed (budget theo lesson)
+ *   - `concurrency`, `retryAttempts`, `force`
+ *
+ * Output:
+ * - Thống kê (total/embedded/skipped/deleted).
+ *
+ * Side effects:
+ * - Khi `dryRun=false`: ghi/overwrite embeddings theo (lessonId, chunkIndex) và dọn chunk thừa.
+ */
 export async function indexLessonEmbeddings(params: {
   lessonId: string;
   courseId: string;
@@ -96,6 +113,7 @@ export async function indexLessonEmbeddings(params: {
   const concurrency = Math.max(1, Math.min(5, options.concurrency ?? 2));
   const retryAttempts = Math.max(0, Math.min(5, options.retryAttempts ?? 2));
   const force = options.force ?? false;
+  const dryRun = options.dryRun ?? false;
 
   const fullText = `# ${title}\n\n${content || ""}`.trim();
   if (!fullText || fullText.length < 10) {
@@ -118,6 +136,29 @@ export async function indexLessonEmbeddings(params: {
 
   let embeddedChunks = 0;
   let skippedChunks = 0;
+
+  if (dryRun) {
+    for (const ch of chunks) {
+      if (embeddedChunks >= maxEmbeddings) break;
+
+      const contentHash = sha256Hex(ch.content);
+      const existingHash = existingByIndex.get(ch.index);
+
+      if (!force && existingHash && existingHash === contentHash) {
+        skippedChunks += 1;
+        continue;
+      }
+
+      embeddedChunks += 1;
+    }
+
+    return {
+      totalChunks: chunks.length,
+      embeddedChunks,
+      skippedChunks,
+      deletedChunks: 0,
+    };
+  }
 
   const tasks: Array<() => Promise<void>> = [];
   let embeddingsQueued = 0;

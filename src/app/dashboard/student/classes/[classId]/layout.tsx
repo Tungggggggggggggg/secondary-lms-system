@@ -44,7 +44,16 @@ export default async function StudentClassroomLayout({ children, params }: Props
     // Fetch classroom with teacher info
     const classroom = await prisma.classroom.findUnique({
         where: { id: classId },
-        include: {
+        select: {
+            id: true,
+            name: true,
+            description: true,
+            icon: true,
+            maxStudents: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+            teacherId: true,
             teacher: { select: { id: true, fullname: true, email: true } },
             _count: { select: { students: true } },
         },

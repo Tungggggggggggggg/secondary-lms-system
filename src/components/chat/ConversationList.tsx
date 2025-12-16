@@ -8,6 +8,37 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 
+type SearchResultItem = {
+  id: string;
+  conversationId: string;
+  conversationName: string;
+  senderName: string;
+  content: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getSessionUserId(session: unknown): string | undefined {
+  if (!isRecord(session)) return undefined;
+  const user = session.user;
+  if (!isRecord(user)) return undefined;
+  const id = user.id;
+  return typeof id === "string" ? id : undefined;
+}
+
+function isSearchResultItem(value: unknown): value is SearchResultItem {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === "string" &&
+    typeof value.conversationId === "string" &&
+    typeof value.conversationName === "string" &&
+    typeof value.senderName === "string" &&
+    typeof value.content === "string"
+  );
+}
+
 type Props = {
   color?: "green" | "blue" | "amber";
   items: ConversationItem[];
@@ -17,9 +48,9 @@ type Props = {
 
 export default function ConversationList({ color = "amber", items, selectedId, onSelect }: Props) {
   const { data: session } = useSession();
-  const me = (session?.user as any)?.id as string | undefined;
+  const me = getSessionUserId(session);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
@@ -29,19 +60,32 @@ export default function ConversationList({ color = "amber", items, selectedId, o
       return;
     }
 
+    let cancelled = false;
+
     const debounce = setTimeout(() => {
       setIsSearching(true);
-      fetch(`/api/chat/search?q=${query}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setResults(data.data);
+      fetch(`/api/chat/search?q=${encodeURIComponent(query)}`)
+        .then((res) => res.json() as Promise<unknown>)
+        .then((raw) => {
+          if (cancelled) return;
+          if (!isRecord(raw) || raw.success !== true || !Array.isArray(raw.data)) {
+            setResults([]);
+            return;
           }
+          setResults(raw.data.filter(isSearchResultItem));
         })
-        .finally(() => setIsSearching(false));
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setIsSearching(false);
+        });
     }, 500);
 
-    return () => clearTimeout(debounce);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounce);
+    };
   }, [query]);
 
   const palette = {

@@ -9,7 +9,6 @@ export interface StudentAssignment extends AssignmentT {
   classroom?: {
     id: string;
     name: string;
-    code: string;
     icon: string;
     teacher?: {
       id: string;
@@ -60,12 +59,26 @@ export interface SubmissionResponse {
   grade: number | null;
   feedback: string | null;
   submittedAt: string;
-  attempt?: number;
+  attempt?: number | null;
   presentation?: {
     questionOrder: string[];
     optionOrder: Record<string, string[]>;
     seed?: number | string;
     versionHash?: string;
+  } | null;
+  contentSnapshot?: {
+    versionHash?: string;
+    questions?: Array<{
+      id: string;
+      content: string;
+      type: string;
+      options?: Array<{
+        id: string;
+        label: string;
+        content: string;
+        isCorrect?: boolean;
+      }>;
+    }>;
   } | null;
   assignment: {
     id: string;
@@ -392,7 +405,6 @@ export interface StudentAssignmentDetail {
   classroom: {
     id: string;
     name: string;
-    code: string;
     icon: string;
     teacher: {
       id: string;

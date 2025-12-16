@@ -19,13 +19,23 @@ import type { ParentStudentRelationship } from "@/types/parent";
 // types and SWR fetcher now provided globally
 
 export default function ParentChildrenPage() {
+  type SearchStudentItem = {
+    id: string;
+    email: string;
+    fullname: string | null;
+    role: string;
+    classrooms?: Array<{ id: string; name: string }>;
+    isLinked?: boolean;
+    hasExistingRequest?: boolean;
+  };
+
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [invitationCode, setInvitationCode] = useState("");
   const [isAccepting, setIsAccepting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchStudentItem[]>([]);
 
   const { data, error, isLoading, mutate } = useSWR<{
     success?: boolean;
@@ -85,16 +95,36 @@ export default function ParentChildrenPage() {
       return;
     }
 
+    if (searchQuery.trim().length < 2) {
+      toast.error("Vui lòng nhập ít nhất 2 ký tự để tìm kiếm");
+      return;
+    }
+
     setIsSearching(true);
     try {
       const res = await fetch(
         `/api/parent/link-requests/search-students?q=${encodeURIComponent(searchQuery)}`
       );
-      const data = await res.json();
+      const data = (await res.json()) as unknown;
+
+      if (!res.ok) {
+        const msg =
+          typeof data === "object" &&
+          data !== null &&
+          typeof (data as { message?: unknown }).message === "string"
+            ? (data as { message: string }).message
+            : "Không thể tìm kiếm";
+        toast.error(msg);
+        return;
+      }
       
-      if (data.success) {
-        setSearchResults(data.items || []);
-        if (data.items.length === 0) {
+      if (typeof data === "object" && data !== null && (data as { success?: unknown }).success === true) {
+        const items =
+          Array.isArray((data as { items?: unknown }).items)
+            ? ((data as { items: SearchStudentItem[] }).items as SearchStudentItem[])
+            : [];
+        setSearchResults(items);
+        if (items.length === 0) {
           toast.info("Không tìm thấy học sinh nào");
         }
       }

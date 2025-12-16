@@ -30,7 +30,7 @@ export default function StudentAssignmentListItem({ item, href }: Props) {
     >
       <div className="p-4 flex items-center gap-3">
         <div className="shrink-0">
-          <AssignmentTypeBadge type={item.type as any} variant="student" />
+          <AssignmentTypeBadge type={String(item.type)} variant="student" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">

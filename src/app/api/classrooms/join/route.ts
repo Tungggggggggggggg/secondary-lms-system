@@ -1,106 +1,108 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth-options";
+import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
+
+const bodySchema = z
+  .object({
+    code: z.string().max(50).optional(),
+    classroomId: z.string().max(100).optional(),
+  })
+  .strict()
+  .refine((v) => Boolean(v.code) !== Boolean(v.classroomId), {
+    message: "Cần cung cấp code hoặc classroomId",
+  });
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return errorResponse(401, "Unauthorized");
+    }
+    if (authUser.role !== "STUDENT") {
+      return errorResponse(403, "Forbidden - STUDENT role required");
     }
 
-    // Kiểm tra role phải là học sinh
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-    });
-    if (!user || user.role !== "STUDENT") {
-
-      return NextResponse.json(
-        { success: false, message: "Chỉ học sinh mới có thể tham gia lớp học" },
-        { status: 403 }
-      );
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = bodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
     }
 
-    const body = await req.json();
-    const { code } = body;
+    const code = (parsedBody.data.code ?? "").trim().toUpperCase();
+    const classroomId = (parsedBody.data.classroomId ?? "").trim();
 
-    if (!code) {
-      return NextResponse.json(
-        { success: false, message: "Mã lớp học không được để trống" },
-        { status: 400 }
-      );
-    }
+    const selectClassroom: Prisma.ClassroomSelect = {
+      id: true,
+      name: true,
+      description: true,
+      icon: true,
+      maxStudents: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+      teacherId: true,
+      teacher: { select: { id: true, fullname: true, email: true } },
+      _count: { select: { students: true } },
+    };
 
-    // Tìm lớp học theo mã
-    const classroom = await prisma.classroom.findUnique({
-      where: { code },
-      include: {
-        students: true,
-        _count: {
-          select: {
-            students: true
-          }
-        }
-      }
-    });
+    const classroom = classroomId
+      ? await prisma.classroom.findUnique({ where: { id: classroomId }, select: selectClassroom })
+      : await prisma.classroom.findUnique({ where: { code }, select: selectClassroom });
 
     if (!classroom) {
-      return NextResponse.json(
-        { success: false, message: "Không tìm thấy lớp học với mã này" },
-        { status: 404 }
-      );
+      return errorResponse(404, "Không tìm thấy lớp học");
     }
 
-    // Kiểm tra xem đã là thành viên chưa
-    const isMember = classroom.students.some(
-      (student: { studentId: string }) => student.studentId === user.id,
-    );
-    if (isMember) {
-      return NextResponse.json(
-        { success: false, message: "Bạn đã là thành viên của lớp học này" },
-        { status: 400 }
-      );
+    if (!classroom.isActive) {
+      return errorResponse(400, "Lớp học đang bị khóa");
     }
 
-    // Kiểm tra số lượng học sinh tối đa
+    const existing = await prisma.classroomStudent.findUnique({
+      where: {
+        classroomId_studentId: {
+          classroomId: classroom.id,
+          studentId: authUser.id,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return errorResponse(400, "Bạn đã là thành viên của lớp học này");
+    }
+
     if (classroom._count.students >= classroom.maxStudents) {
-      return NextResponse.json(
-        { success: false, message: "Lớp học đã đạt số lượng học sinh tối đa" },
-        { status: 400 }
-      );
+      return errorResponse(400, "Lớp học đã đạt số lượng học sinh tối đa");
     }
 
-    // Thêm học sinh vào lớp
     const classroomStudent = await prisma.classroomStudent.create({
       data: {
         classroomId: classroom.id,
-        studentId: user.id
+        studentId: authUser.id,
       },
-      include: {
+      select: {
+        id: true,
+        joinedAt: true,
         classroom: {
-          include: {
-            teacher: { select: { id: true, fullname: true, email: true } },
-          }
-        }
-      }
+          select: selectClassroom,
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
       message: "Tham gia lớp học thành công",
-      data: classroomStudent
+      data: {
+        ...classroomStudent,
+        classroom: classroomStudent.classroom,
+      },
     });
-
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("[CLASSROOM_JOIN]", error);
-    return NextResponse.json(
-      { success: false, message: "Internal Error" },
-      { status: 500 }
-    );
+    return errorResponse(500, "Internal server error");
   }
 }

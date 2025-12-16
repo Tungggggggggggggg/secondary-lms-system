@@ -7,7 +7,6 @@ import ClassroomItem from "./ClassroomItem";
 interface Classroom {
   id: string;
   name: string;
-  code: string;
   icon: string;
   students: Array<{
     id: string;

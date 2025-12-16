@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import Input from "@/components/ui/input";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getSessionUserRole(session: unknown): string | undefined {
+  if (!isRecord(session)) return undefined;
+  const user = session.user;
+  if (!isRecord(user)) return undefined;
+  const role = user.role;
+  return typeof role === "string" ? role : undefined;
+}
 
 interface CommandItem {
   id: string;
@@ -16,7 +28,7 @@ interface CommandItem {
 export default function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = getSessionUserRole(session);
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -106,7 +118,11 @@ export default function CommandPaletteProvider({ children }: { children: React.R
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xl" onClose={() => setOpen(false)}>
           <div className="p-4 border-b">
-            <Input placeholder="Tìm kiếm... (Ctrl+K)" value={query} onChange={(e: any) => setQuery(e.target.value)} />
+            <Input
+              placeholder="Tìm kiếm... (Ctrl+K)"
+              value={query}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+            />
           </div>
           <div className="max-h-[60vh] overflow-y-auto">
             {commands.length === 0 ? (

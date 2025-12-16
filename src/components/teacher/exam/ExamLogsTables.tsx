@@ -27,7 +27,7 @@ interface LogEvent {
   attempt: number | null;
   eventType: string;
   metadata: unknown;
-  student?: { id: string; fullname: string; email: string };
+  student?: { id: string; fullname: string };
 }
 
 interface ExamLogsTablesProps {

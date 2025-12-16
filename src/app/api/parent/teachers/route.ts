@@ -6,7 +6,6 @@ interface ParentTeacherClassroomRow {
   classroom: {
     id: string;
     name: string;
-    code: string;
     icon: string | null;
     teacher: {
       id: string;
@@ -61,9 +60,12 @@ export async function GET(req: NextRequest) {
     // Lấy tất cả các lớp mà các con đã tham gia
     const studentClassrooms = await prisma.classroomStudent.findMany({
       where: { studentId: { in: studentIds } },
-      include: {
+      select: {
         classroom: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            icon: true,
             teacher: {
               select: {
                 id: true,
@@ -92,7 +94,6 @@ export async function GET(req: NextRequest) {
         classrooms: Array<{
           id: string;
           name: string;
-          code: string;
           icon: string | null;
           students: Array<{
             id: string;
@@ -110,7 +111,6 @@ export async function GET(req: NextRequest) {
         const classroom = {
           id: sc.classroom.id,
           name: sc.classroom.name,
-          code: sc.classroom.code,
           icon: sc.classroom.icon,
           students: [{ id: student.id, fullname: student.fullname }],
         };

@@ -27,6 +27,38 @@ import { AntiCheatConfig } from '@/types/exam-system';
 import QuestionTemplates from './QuestionTemplates';
 import QuestionItem from './QuestionItem';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+type ApiEnvelope = {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+};
+
+function toApiEnvelope(value: unknown): ApiEnvelope | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.success !== "boolean") return null;
+  return {
+    success: value.success,
+    message: typeof value.message === "string" ? value.message : undefined,
+    data: value.data,
+  };
+}
+
+function getAiQuestionsFromEnvelope(envelope: ApiEnvelope | null): QuizQuestion[] {
+  if (!envelope?.data || !isRecord(envelope.data)) return [];
+  const questions = envelope.data.questions;
+  if (!Array.isArray(questions)) return [];
+  return questions as QuizQuestion[];
+}
+
+function parseShowCorrectMode(value: string): AntiCheatConfig["showCorrectMode"] {
+  if (value === "never" || value === "afterSubmit" || value === "afterLock") return value;
+  return "never";
+}
+
 interface QuizContent {
   questions: QuizQuestion[];
   timeLimitMinutes: number;
@@ -337,16 +369,17 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
           numQuestions: aiNumQuestions,
         }),
       });
-      const json = await res.json().catch(() => ({}));
+      const raw: unknown = await res.json().catch(() => null);
+      const json = toApiEnvelope(raw);
       if (res.status === 429) {
-        openRateLimitDialog(getRetryAfterSecondsFromResponse(res, json) ?? 60);
+        openRateLimitDialog(getRetryAfterSecondsFromResponse(res, raw) ?? 60);
         return;
       }
-      if (!res.ok || (json as any)?.success === false) {
-        throw new Error((json as any)?.message || "Không thể sinh câu hỏi bằng AI");
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể sinh câu hỏi bằng AI");
       }
 
-      const aiQuestions = (((json as any)?.data?.questions || []) as QuizQuestion[]) ?? [];
+      const aiQuestions = getAiQuestionsFromEnvelope(json);
       applyAiQuestions(aiQuestions);
     } catch (e) {
       console.error("[QuizContentBuilder] AI quiz error", e);
@@ -370,16 +403,17 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
       fd.append("numQuestions", String(aiNumQuestions));
 
       const res = await fetch("/api/ai/quiz/file", { method: "POST", body: fd });
-      const json = await res.json().catch(() => ({}));
+      const raw: unknown = await res.json().catch(() => null);
+      const json = toApiEnvelope(raw);
       if (res.status === 429) {
-        openRateLimitDialog(getRetryAfterSecondsFromResponse(res, json) ?? 60);
+        openRateLimitDialog(getRetryAfterSecondsFromResponse(res, raw) ?? 60);
         return;
       }
-      if (!res.ok || (json as any)?.success === false) {
-        throw new Error((json as any)?.message || "Không thể sinh câu hỏi bằng AI");
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể sinh câu hỏi bằng AI");
       }
 
-      const aiQuestions = (((json as any)?.data?.questions || []) as QuizQuestion[]) ?? [];
+      const aiQuestions = getAiQuestionsFromEnvelope(json);
       applyAiQuestions(aiQuestions);
     } catch (e) {
       console.error("[QuizContentBuilder] AI quiz file error", e);
@@ -671,7 +705,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                   <select
                     className="w-full border rounded-md px-3 py-2 text-sm"
                     value={currentContent.antiCheatConfig?.showCorrectMode || 'never'}
-                    onChange={(e) => updateAntiCheat('showCorrectMode', e.target.value as any)}
+                    onChange={(e) => updateAntiCheat('showCorrectMode', parseShowCorrectMode(e.target.value))}
                   >
                     <option value="never">Không bao giờ (khuyến nghị)</option>
                     <option value="afterSubmit">Sau khi học sinh nộp bài</option>
@@ -719,7 +753,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                       max={0.5}
                       step={0.05}
                       value={typeof currentContent.antiCheatConfig?.fuzzyThreshold === 'number' ? currentContent.antiCheatConfig?.fuzzyThreshold : 0.2}
-                      onChange={(e) => updateAntiCheat('fuzzyThreshold', Math.max(0, Math.min(0.5, parseFloat(e.target.value) || 0)) as any)}
+                      onChange={(e) => updateAntiCheat('fuzzyThreshold', Math.max(0, Math.min(0.5, parseFloat(e.target.value) || 0)))}
                       className="mt-2 max-w-[160px] h-9 text-sm"
                     />
                   </div>

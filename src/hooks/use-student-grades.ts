@@ -16,7 +16,6 @@ export interface GradeEntry {
   classroom?: {
     id: string;
     name: string;
-    code: string;
     icon: string;
     teacher?: {
       id: string;

@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { StudentAssignmentDetail, SubmissionResponse } from "@/hooks/use-student-assignments";
 import QuestionComments from "./QuestionComments";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 interface SubmissionReviewProps {
   assignment: StudentAssignmentDetail;
   submission: SubmissionResponse;
@@ -16,6 +20,13 @@ export default function SubmissionReview({
   assignment,
   submission,
 }: SubmissionReviewProps) {
+  type QuestionVM = {
+    id: string;
+    content: string;
+    type: string;
+    options: Array<{ id: string; label: string; content: string }>;
+  };
+
   // Parse quiz answers nếu là quiz
   let quizAnswers: Array<{ questionId: string; optionIds: string[] }> | null = null;
   if (assignment.type === "QUIZ") {
@@ -32,10 +43,7 @@ export default function SubmissionReview({
     : null;
 
   // Presentation snapshot (nếu có)
-  const presentation = (submission as any).presentation as
-    | { questionOrder?: string[]; optionOrder?: Record<string, string[]> }
-    | null
-    | undefined;
+  const presentation = submission.presentation;
 
   // Tải đáp án đúng (nếu chính sách cho phép)
   const [correctMap, setCorrectMap] = useState<Map<string, Set<string>> | null>(null);
@@ -45,14 +53,23 @@ export default function SubmissionReview({
     (async () => {
       try {
         const res = await fetch(`/api/students/assignments/${assignment.id}/answers`);
-        const j = await res.json().catch(() => null);
-        if (!res.ok || !j?.success || !Array.isArray(j?.data?.questions)) {
+        const raw: unknown = await res.json().catch(() => null);
+        if (!res.ok || !isRecord(raw) || raw.success !== true) {
           return; // Không được phép xem đáp án hoặc lỗi -> bỏ qua
         }
+        const data = isRecord(raw.data) ? raw.data : null;
+        const questions = data && Array.isArray(data.questions) ? data.questions : null;
+        if (!questions) return;
         if (cancelled) return;
         const map = new Map<string, Set<string>>();
-        for (const q of j.data.questions as Array<{ questionId: string; correctOptionIds: string[] }>) {
-          map.set(q.questionId, new Set(q.correctOptionIds || []));
+        for (const q of questions) {
+          if (!isRecord(q)) continue;
+          const questionId = typeof q.questionId === "string" ? q.questionId : null;
+          const correctOptionIds = Array.isArray(q.correctOptionIds)
+            ? q.correctOptionIds.filter((x) => typeof x === "string")
+            : [];
+          if (!questionId) continue;
+          map.set(questionId, new Set(correctOptionIds));
         }
         setCorrectMap(map);
       } catch {}
@@ -61,10 +78,7 @@ export default function SubmissionReview({
   }, [assignment.id, assignment.type]);
 
   // Nguồn câu hỏi/đáp án: ưu tiên snapshot nếu có
-  const snapshot = (submission as any).contentSnapshot as
-    | { versionHash?: string; questions?: Array<{ id: string; content: string; type: string; options?: Array<{ id: string; label: string; content: string; isCorrect: boolean }> }> }
-    | null
-    | undefined;
+  const snapshot = submission.contentSnapshot;
 
   const currentHash = useMemo(() => {
     try {
@@ -94,7 +108,7 @@ export default function SubmissionReview({
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Bài nộp của bạn</h2>
         <div className="flex items-center gap-4 text-sm text-gray-600">
           <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border">
-            Lần nộp #{(submission as any).attempt ?? 1}
+            Lần nộp #{submission.attempt ?? 1}
           </span>
           <span>
             Nộp lúc:{" "}
@@ -138,22 +152,36 @@ export default function SubmissionReview({
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Câu trả lời của bạn:</h3>
           <div className="space-y-4">
             {(() => {
-              const baseQuestions = (snapshot?.questions && snapshot.questions.length)
-                ? snapshot.questions as any[]
-                : assignment.questions as any[];
-              const questionMap = new Map(baseQuestions.map((q: any) => [q.id, q]));
+              const baseQuestions: QuestionVM[] = (snapshot?.questions && snapshot.questions.length)
+                ? snapshot.questions
+                    .filter((q): q is NonNullable<(typeof snapshot.questions)[number]> => !!q)
+                    .map((q) => ({
+                      id: q.id,
+                      content: q.content,
+                      type: q.type,
+                      options: (q.options ?? []).map((o) => ({ id: o.id, label: o.label, content: o.content })),
+                    }))
+                : assignment.questions.map((q) => ({
+                    id: q.id,
+                    content: q.content,
+                    type: q.type,
+                    options: q.options.map((o) => ({ id: o.id, label: o.label, content: o.content })),
+                  }));
+
+              const questionMap = new Map<string, QuestionVM>(baseQuestions.map((q) => [q.id, q]));
               const orderedQids = presentation?.questionOrder?.length
-                ? presentation.questionOrder!
-                : baseQuestions.map((q: any) => q.id);
+                ? presentation.questionOrder
+                : baseQuestions.map((q) => q.id);
+
               return orderedQids.map((qid, index) => {
-                const question: any = questionMap.get(qid);
+                const question = questionMap.get(qid);
                 if (!question) return null;
                 const selectedOptionIds = answersMap?.get(question.id) || [];
                 const orderedOptionIds = presentation?.optionOrder?.[question.id]?.length
-                  ? presentation.optionOrder![question.id]!
-                  : ((question.options || []) as any[]).map((o: any) => o.id);
-                const optionById: Record<string, any> = {};
-                ((question.options || []) as any[]).forEach((o: any) => (optionById[o.id] = o));
+                  ? presentation.optionOrder[question.id]
+                  : question.options.map((o) => o.id);
+                const optionById: Record<string, { id: string; label: string; content: string }> = {};
+                question.options.forEach((o) => (optionById[o.id] = o));
 
                 return (
                   <div key={question.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -212,7 +240,7 @@ export default function SubmissionReview({
                             questionId={question.id}
                             questionContent={question.content}
                             questionOrder={index + 1}
-                            initialCommentsCount={(assignment.questions.find((q) => q.id === question.id)?._count?.comments as any) || 0}
+                            initialCommentsCount={assignment.questions.find((q) => q.id === question.id)?._count?.comments ?? 0}
                           />
                         </div>
                       </div>

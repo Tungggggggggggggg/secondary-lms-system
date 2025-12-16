@@ -15,6 +15,7 @@ type Props = {
 
 export default function AssignmentQuickPreview({ assignment, open, onOpenChange, onViewDetail, onEdit, onSubmissions }: Props) {
   const a = assignment;
+  const closeAt = typeof a?.lockAt === "string" && a.lockAt ? a.lockAt : typeof a?.dueDate === "string" && a.dueDate ? a.dueDate : null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
@@ -25,7 +26,7 @@ export default function AssignmentQuickPreview({ assignment, open, onOpenChange,
         <div className="p-6 space-y-3">
           <div className="text-sm text-slate-600"><span className="font-medium">Loại:</span> {a?.type === "ESSAY" ? "Tự luận" : "Trắc nghiệm"}</div>
           <div className="text-sm text-slate-600"><span className="font-medium">Mở:</span> {a?.openAt ? new Date(a.openAt).toLocaleString() : "—"}</div>
-          <div className="text-sm text-slate-600"><span className="font-medium">Đóng/Hạn:</span> {a?.lockAt || a?.dueDate ? new Date((a?.lockAt || a?.dueDate) as any).toLocaleString() : "—"}</div>
+          <div className="text-sm text-slate-600"><span className="font-medium">Đóng/Hạn:</span> {closeAt ? new Date(closeAt).toLocaleString() : "—"}</div>
           <div className="text-sm text-slate-600"><span className="font-medium">Đã nộp:</span> {a?._count?.submissions ?? 0}</div>
           <div className="text-xs text-slate-500">Tạo lúc: {a?.createdAt ? new Date(a.createdAt).toLocaleString() : "—"}</div>
         </div>

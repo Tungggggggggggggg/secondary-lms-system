@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,17 @@ interface QuizAssignmentFormProps {
   isSubmitted?: boolean;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function toApiEnvelope(value: unknown): { success: boolean; message?: string; data?: unknown } | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.success !== "boolean") return null;
+  const message = typeof value.message === "string" ? value.message : undefined;
+  return { success: value.success, message, data: value.data };
+}
+
 /**
  * Component form làm bài quiz
  * Hiển thị tất cả questions cùng lúc, có thể sửa đáp án trước khi submit
@@ -41,9 +52,9 @@ export default function QuizAssignmentForm({
   const confirm = useConfirm();
 
   // Timing: derive start/end/timeLimit
-  const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
-  const lockAt = (assignment as any).lockAt ? new Date((assignment as any).lockAt) : (dueDate ? new Date(dueDate) : null);
-  const timeLimitMinutes = (assignment as any).timeLimitMinutes as number | null | undefined;
+  const openAt = assignment.openAt ? new Date(assignment.openAt) : null;
+  const lockAt = assignment.lockAt ? new Date(assignment.lockAt) : (dueDate ? new Date(dueDate) : null);
+  const timeLimitMinutes = assignment.timeLimitMinutes;
   const storageKey = `quiz_started_at_${assignment.id}`;
   const draftKey = `quiz_draft_${assignment.id}`;
   const fillDraftKey = `quiz_fill_draft_${assignment.id}`;
@@ -52,25 +63,18 @@ export default function QuizAssignmentForm({
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const autoSubmittedRef = useRef(false);
   const terminatedByTeacherRef = useRef(false);
-  const anti = ((assignment as any).antiCheatConfig || {}) as {
-    requireFullscreen?: boolean;
-    detectTabSwitch?: boolean;
-    disableCopyPaste?: boolean;
-    shuffleQuestions?: boolean;
-    shuffleOptions?: boolean;
-    singleQuestionMode?: boolean;
-  };
-  const requireFullscreen = !!anti.requireFullscreen;
-  const detectTabSwitch = !!anti.detectTabSwitch;
-  const disableCopyPaste = !!anti.disableCopyPaste;
-  const shuffleQuestionsFlag = !!anti.shuffleQuestions;
-  const shuffleOptionsFlag = !!anti.shuffleOptions;
-  const singleQuestionMode = !!anti.singleQuestionMode;
-  const enableFuzzyFillBlank = !!(anti as any).enableFuzzyFillBlank;
-  const fuzzyThreshold: number = typeof (anti as any).fuzzyThreshold === 'number' ? Math.min(0.5, Math.max(0, (anti as any).fuzzyThreshold)) : 0.2;
-  const maxAttempts = (assignment as any).maxAttempts ?? null;
-  const latestAttempt = (assignment as any).latestAttempt ?? 0;
-  const allowNewAttempt = (assignment as any).allowNewAttempt ?? false;
+  const anti = assignment.antiCheatConfig ?? null;
+  const requireFullscreen = !!anti?.requireFullscreen;
+  const detectTabSwitch = !!anti?.detectTabSwitch;
+  const disableCopyPaste = !!anti?.disableCopyPaste;
+  const shuffleQuestionsFlag = !!anti?.shuffleQuestions;
+  const shuffleOptionsFlag = !!anti?.shuffleOptions;
+  const singleQuestionMode = !!anti?.singleQuestionMode;
+  const enableFuzzyFillBlank = !!anti?.enableFuzzyFillBlank;
+  const fuzzyThreshold: number = typeof anti?.fuzzyThreshold === "number" ? Math.min(0.5, Math.max(0, anti.fuzzyThreshold)) : 0.2;
+  const maxAttempts = assignment.maxAttempts ?? null;
+  const latestAttempt = assignment.latestAttempt ?? 0;
+  const allowNewAttempt = assignment.allowNewAttempt ?? false;
   const [gateOpen, setGateOpen] = useState<boolean>(Boolean((allowNewAttempt && isSubmitted) || requireFullscreen || detectTabSwitch || disableCopyPaste || shuffleQuestionsFlag || shuffleOptionsFlag || singleQuestionMode));
   const [isNewAttempt, setIsNewAttempt] = useState<boolean>(false);
   const [questionOrder, setQuestionOrder] = useState<string[] | null>(null);
@@ -272,7 +276,8 @@ export default function QuizAssignmentForm({
         const lsAttemptId = typeof window !== 'undefined' ? window.localStorage.getItem(attemptIdKey) : null;
         if (!lsAttemptId) return;
         const res = await fetch(`/api/students/assignments/${assignment.id}/attempts/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-        const result = await res.json().catch(() => null as any);
+        const raw: unknown = await res.json().catch(() => null);
+        const result = toApiEnvelope(raw);
         if (!res.ok || !result?.success) return;
         if (cancelled) return;
         const data = result.data as { attemptId: string; attemptNumber: number; shuffleSeed: number; startedAt: string };
@@ -344,7 +349,8 @@ export default function QuizAssignmentForm({
       try {
         const query = attemptNumberState != null ? `?attemptNumber=${attemptNumberState}` : "";
         const res = await fetch(`/api/students/assignments/${assignment.id}/attempts/status${query}`);
-        const j = await res.json().catch(() => null as any);
+        const raw: unknown = await res.json().catch(() => null);
+        const j = toApiEnvelope(raw);
         if (!res.ok || !j?.success || cancelled) return;
         const data = j.data as { timeLimitMinutes: number | null; status: string | null } | null;
         if (!data) return;
@@ -464,9 +470,9 @@ export default function QuizAssignmentForm({
       if (disableCopyPaste) {
         const prevent = (e: Event) => {
           e.preventDefault();
-          logEvent('CLIPBOARD', { type: (e as any).type || 'unknown' });
+          logEvent('CLIPBOARD', { type: e.type || 'unknown' });
         };
-        const onKey = (e: KeyboardEvent) => {
+        const onKey = (e: globalThis.KeyboardEvent) => {
           if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "a"].includes(e.key.toLowerCase())) {
             e.preventDefault();
             logEvent('SHORTCUT', { key: e.key, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey });
@@ -476,13 +482,13 @@ export default function QuizAssignmentForm({
         document.addEventListener("cut", prevent);
         document.addEventListener("paste", prevent);
         document.addEventListener("contextmenu", prevent);
-        document.addEventListener("keydown", onKey as any, true);
+        document.addEventListener("keydown", onKey, true);
         cleanupRef.current.push(() => {
           document.removeEventListener("copy", prevent);
           document.removeEventListener("cut", prevent);
           document.removeEventListener("paste", prevent);
           document.removeEventListener("contextmenu", prevent);
-          document.removeEventListener("keydown", onKey as any, true);
+          document.removeEventListener("keydown", onKey, true);
         });
       }
 
@@ -491,12 +497,13 @@ export default function QuizAssignmentForm({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      const result = await res.json().catch(() => null as any);
+      const raw: unknown = await res.json().catch(() => null);
+      const result = toApiEnvelope(raw);
       if (!res.ok || !result?.success) {
         toast({ title: "Không thể bắt đầu làm bài", description: result?.message || res.statusText, variant: "destructive" });
         return;
       }
-      const data = result.data as { attemptId: string; attemptNumber: number; shuffleSeed: number; startedAt: string; antiCheatConfig?: any; timeLimitMinutes?: number | null };
+      const data = result.data as { attemptId: string; attemptNumber: number; shuffleSeed: number; startedAt: string; antiCheatConfig?: unknown; timeLimitMinutes?: number | null };
 
       // Lưu attemptId & attemptNumber
       setAttemptId(data.attemptId);
@@ -578,7 +585,7 @@ export default function QuizAssignmentForm({
   };
 
   const handleOptionKeyDown = (
-    e: KeyboardEvent<HTMLInputElement>,
+    e: ReactKeyboardEvent<HTMLInputElement>,
     questionId: string,
     optionId: string,
     questionType: string
@@ -658,8 +665,9 @@ export default function QuizAssignmentForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Chỉ cho phép submit khi được kích hoạt bởi nút submit (tránh Enter trong input)
-    const submitter = (e as any).nativeEvent?.submitter as HTMLButtonElement | undefined;
-    if (!submitter) {
+    const native = e.nativeEvent;
+    const submitter = native instanceof SubmitEvent ? native.submitter : null;
+    if (!(submitter instanceof HTMLButtonElement)) {
       toast({ title: "Chưa nộp bài", description: "Vui lòng bấm nút 'Nộp bài' để xác nhận.", variant: "default" });
       return;
     }

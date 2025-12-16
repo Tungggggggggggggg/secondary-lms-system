@@ -7,7 +7,7 @@ interface SearchResultItemProps {
   student: {
     id: string;
     email: string;
-    fullname: string;
+    fullname: string | null;
     classrooms?: Array<{ name: string }>;
   };
   isLinked?: boolean;
@@ -27,7 +27,7 @@ export default function SearchResultItem({
     <div className="flex items-center justify-between p-4 border-l-4 border-l-transparent hover:border-l-amber-500 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 rounded-lg transition-all duration-300 hover:shadow-md hover:scale-102 group">
       <div className="flex-1">
         <div className="font-semibold text-gray-900 group-hover:text-amber-700 transition-colors duration-300">
-          {student.fullname}
+          {student.fullname || "Học sinh"}
         </div>
         <div className="text-sm text-gray-600 flex items-center gap-1 mt-0.5">
           <Mail className="h-3 w-3" />

@@ -15,7 +15,10 @@ interface Props {
 export default function StudentAssignmentCard({ assignment, onOpen }: Props) {
   const now = useMemo(() => new Date(), []);
 
-  const effectiveDueRaw = assignment.type === "QUIZ" ? (assignment as any).lockAt || assignment.dueDate : assignment.dueDate;
+  const effectiveDueRaw: string | Date | null =
+    assignment.type === "QUIZ"
+      ? assignment.lockAt ?? assignment.dueDate ?? null
+      : assignment.dueDate ?? null;
   const dueDate = useMemo(() => (effectiveDueRaw ? new Date(effectiveDueRaw) : null), [effectiveDueRaw]);
   const isOverdue = !!(dueDate && dueDate < now && !assignment.submission);
 
@@ -96,7 +99,7 @@ export default function StudentAssignmentCard({ assignment, onOpen }: Props) {
         </div>
 
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <AssignmentTypeBadge type={assignment.type as any} variant="student" />
+          <AssignmentTypeBadge type={assignment.type ? String(assignment.type) : undefined} variant="student" />
           <AssignmentStatusBadge status={assignment.status} />
         </div>
 
@@ -114,7 +117,7 @@ export default function StudentAssignmentCard({ assignment, onOpen }: Props) {
                 })}
               </span>
             </div>
-            <DueCountdownChip dueDate={effectiveDueRaw as any} />
+            <DueCountdownChip dueDate={effectiveDueRaw} />
           </div>
         )}
 

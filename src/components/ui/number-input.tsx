@@ -15,7 +15,7 @@ export interface NumberInputProps {
   ariaLabel?: string;
 }
 
-const ringByColor: Record<string, string> = {
+const ringByColor: Record<NonNullable<NumberInputProps["color"]>, string> = {
   default: "focus-within:ring-gray-500",
   amber: "focus-within:ring-amber-500",
   blue: "focus-within:ring-blue-500",
@@ -23,6 +23,7 @@ const ringByColor: Record<string, string> = {
 };
 
 export function NumberInput({ value, onChange, min = 0, max = 9999, step = 1, className, color = "blue", ariaLabel }: NumberInputProps) {
+  const buttonColor = color === "default" ? undefined : color;
   const clamp = useCallback((n: number) => {
     return Math.max(min, Math.min(max, n));
   }, [min, max]);
@@ -47,7 +48,7 @@ export function NumberInput({ value, onChange, min = 0, max = 9999, step = 1, cl
 
   return (
     <div className={cn("flex h-11 items-stretch rounded-xl border-2 bg-white overflow-hidden", ringByColor[color], className)}>
-      <Button type="button" variant="outline" color={color as any} onClick={dec} aria-label="Giảm" className="h-full w-12 rounded-none border-0">-</Button>
+      <Button type="button" variant="outline" color={buttonColor} onClick={dec} aria-label="Giảm" className="h-full w-12 rounded-none border-0">-</Button>
       <input
         inputMode="numeric"
         pattern="[0-9]*"
@@ -57,7 +58,7 @@ export function NumberInput({ value, onChange, min = 0, max = 9999, step = 1, cl
         aria-label={ariaLabel}
         className="flex-1 px-4 text-base font-medium text-gray-900 outline-none text-center"
       />
-      <Button type="button" variant="outline" color={color as any} onClick={inc} aria-label="Tăng" className="h-full w-12 rounded-none border-0">+</Button>
+      <Button type="button" variant="outline" color={buttonColor} onClick={inc} aria-label="Tăng" className="h-full w-12 rounded-none border-0">+</Button>
     </div>
   );
 }
