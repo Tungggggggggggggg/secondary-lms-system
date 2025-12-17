@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Award, CheckCircle2, Clock, MessageCircle, Search, BookOpen, FileText, ListChecks, BarChart3 } from "lucide-react";
+import { exportToXlsx } from "@/lib/excel";
 
 /**
  * Trang điểm số của tôi (student view - tất cả classrooms)
@@ -149,45 +150,17 @@ export default function GradesPage() {
     setFeedbackOpen(true);
   };
 
-  // Export CSV helper
-  function toCsvValue(v: unknown): string {
-    const s = v === null || v === undefined ? "" : String(v);
-    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  }
-
-  function downloadCsv() {
-    const rows: string[] = [];
-    rows.push([
-      "Classroom",
-      "Assignment",
-      "Type",
-      "Grade",
-      "Feedback",
-      "SubmittedAt",
-    ].map(toCsvValue).join(","));
-
-    for (const g of filteredAndSortedGrades) {
-      rows.push([
-        g.classroom?.name || "",
-        g.assignmentTitle,
-        g.assignmentType,
-        g.grade !== null && g.grade !== undefined ? g.grade.toFixed(1) : "",
-        g.feedback || "",
-        g.submittedAt ? new Date(g.submittedAt).toISOString() : "",
-      ].map(toCsvValue).join(","));
-    }
-
-    const csv = "\ufeff" + rows.join("\n"); // BOM UTF-8
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "grades.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  function downloadExcel() {
+    const header = ["Classroom", "Assignment", "Type", "Grade", "Feedback", "SubmittedAt"];
+    const rows = filteredAndSortedGrades.map((g) => [
+      g.classroom?.name || "",
+      g.assignmentTitle,
+      g.assignmentType,
+      g.grade !== null && g.grade !== undefined ? g.grade.toFixed(1) : "",
+      g.feedback || "",
+      g.submittedAt ? new Date(g.submittedAt).toISOString() : "",
+    ]);
+    exportToXlsx("grades", header, rows, { sheetName: "Grades" });
   }
 
   const breadcrumbItems: BreadcrumbItem[] = [
@@ -305,8 +278,8 @@ export default function GradesPage() {
             <option value="classroom">Theo lớp học</option>
           </Select>
 
-          <Button onClick={downloadCsv} color="green" className="rounded-xl h-12 px-5">
-            Xuất CSV
+          <Button onClick={downloadExcel} color="green" className="rounded-xl h-12 px-5">
+            Xuất Excel
           </Button>
         </div>
       </div>

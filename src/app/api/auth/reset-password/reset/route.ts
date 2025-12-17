@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { errorResponse } from '@/lib/api-utils';
 import { auditRepo } from '@/lib/repositories/audit-repo';
 import { checkRateLimit, getClientIp } from '@/lib/security/rateLimit';
+import { passwordSchema } from '@/lib/validation/password.schema';
 
 function rateLimitResponse(retryAfterSeconds: number) {
   return NextResponse.json(
@@ -22,11 +23,7 @@ function rateLimitResponse(retryAfterSeconds: number) {
 const resetSchema = z.object({
   email: z.string().email('Email không hợp lệ'),
   token: z.string().length(6, 'Mã xác nhận phải có 6 ký tự'),
-  password: z.string()
-    .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
-    .regex(/[A-Z]/, 'Mật khẩu phải chứa ít nhất 1 chữ hoa')
-    .regex(/[a-z]/, 'Mật khẩu phải chứa ít nhất 1 chữ thường')
-    .regex(/[0-9]/, 'Mật khẩu phải chứa ít nhất 1 số'),
+  password: passwordSchema,
 });
 
 export async function POST(req: Request) {

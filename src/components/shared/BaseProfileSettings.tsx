@@ -9,6 +9,7 @@ import Label from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { ButtonProps } from "@/components/ui/button";
 import type { InputProps } from "@/components/ui/input";
+import { passwordSchema } from "@/lib/validation/password.schema";
 
 export type ProfileRole = "teacher" | "student" | "parent";
 
@@ -91,8 +92,10 @@ export default function BaseProfileSettings({ role }: BaseProfileSettingsProps) 
       toast({ title: "⚠️ Mật khẩu xác nhận không khớp!", variant: "destructive" });
       return;
     }
-    if (passwords.newPassword.length < 6) {
-      toast({ title: "⚠️ Mật khẩu phải có ít nhất 6 ký tự!", variant: "destructive" });
+    const passwordParsed = passwordSchema.safeParse(passwords.newPassword);
+    if (!passwordParsed.success) {
+      const msg = passwordParsed.error.issues[0]?.message || "Mật khẩu không hợp lệ";
+      toast({ title: `⚠️ ${msg}!`, variant: "destructive" });
       return;
     }
 

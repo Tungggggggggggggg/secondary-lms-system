@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isTeacherOfClassroom } from "@/lib/api-utils";
+import { isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
 
 interface ClassroomStudentRow {
   id: string;
@@ -28,6 +29,7 @@ interface SubmissionRow {
 interface AssignmentRow {
   id: string;
   dueDate: Date | null;
+  lockAt: Date | null;
 }
 
 interface ParentLinkRow {
@@ -110,14 +112,14 @@ export async function GET(
               grade: true,
               submittedAt: true,
             },
-            orderBy: { submittedAt: "desc" },
+            orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
           })
         : [],
       // Lấy thông tin assignments để tính tổng số bài
       assignmentIdList.length > 0
         ? prisma.assignment.findMany({
             where: { id: { in: assignmentIdList } },
-            select: { id: true, dueDate: true },
+            select: { id: true, dueDate: true, lockAt: true },
           })
         : [],
       // Lấy danh sách phụ huynh của các học sinh trong lớp (1 query)
@@ -139,7 +141,7 @@ export async function GET(
     const now = new Date();
     const overdueAssignmentIds = new Set(
       assignments
-        .filter((a) => a.dueDate !== null && a.dueDate < now)
+        .filter((a) => isAssignmentOverdue(a, now))
         .map((a) => a.id)
     );
 

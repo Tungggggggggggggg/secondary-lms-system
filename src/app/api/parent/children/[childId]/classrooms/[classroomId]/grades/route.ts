@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
 
 interface ChildSubmissionRow {
   id: string;
@@ -8,11 +9,13 @@ interface ChildSubmissionRow {
   grade: number | null;
   feedback: string | null;
   submittedAt: Date;
+  attempt: number;
   assignment: {
     id: string;
     title: string;
     type: string;
     dueDate: Date | null;
+    lockAt: Date | null;
   };
 }
 
@@ -127,19 +130,29 @@ export const GET = withApiLogging(async (
             title: true,
             type: true,
             dueDate: true,
+            lockAt: true,
           },
         },
       },
-      orderBy: { submittedAt: "desc" },
+      orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
     })) as ChildSubmissionRow[];
 
+    // Giữ lại submission mới nhất cho mỗi assignment (tránh đếm sai theo attempt)
+    const latestByAssignmentId = new Map<string, ChildSubmissionRow>();
+    for (const s of submissions) {
+      if (!latestByAssignmentId.has(s.assignmentId)) {
+        latestByAssignmentId.set(s.assignmentId, s);
+      }
+    }
+    const latestSubmissions = Array.from(latestByAssignmentId.values());
+
     // Transform data cho các bài đã nộp (bao gồm cả chưa chấm)
-    const submissionGrades = submissions.map((sub: ChildSubmissionRow) => ({
+    const submissionGrades = latestSubmissions.map((sub: ChildSubmissionRow) => ({
       id: sub.id,
       assignmentId: sub.assignment.id,
       assignmentTitle: sub.assignment.title,
       assignmentType: sub.assignment.type,
-      dueDate: sub.assignment.dueDate?.toISOString() || null,
+      dueDate: getEffectiveDeadline(sub.assignment)?.toISOString() || null,
       grade: sub.grade,
       feedback: sub.feedback,
       submittedAt: sub.submittedAt.toISOString(),
@@ -148,7 +161,7 @@ export const GET = withApiLogging(async (
 
     // Tìm các assignments chưa có submission nào từ student
     const submittedAssignmentIds = new Set(
-      submissions.map((sub) => sub.assignmentId)
+      latestSubmissions.map((sub) => sub.assignmentId)
     );
 
     const missingAssignments = await prisma.assignment.findMany({
@@ -164,6 +177,7 @@ export const GET = withApiLogging(async (
         title: true,
         type: true,
         dueDate: true,
+        lockAt: true,
       },
     });
 
@@ -171,18 +185,16 @@ export const GET = withApiLogging(async (
 
     // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
     const missingGrades = missingAssignments.map(
-      (assignment: { id: string; title: string; type: string; dueDate: Date | null }) => {
-      const isPastDue =
-        assignment.dueDate !== null && assignment.dueDate < now;
+      (assignment: { id: string; title: string; type: string; dueDate: Date | null; lockAt: Date | null }) => {
+      const isPastDue = isAssignmentOverdue(assignment, now);
+      const effectiveDeadline = getEffectiveDeadline(assignment);
 
       return {
         id: `virtual-${assignment.id}`,
         assignmentId: assignment.id,
         assignmentTitle: assignment.title,
         assignmentType: assignment.type,
-        dueDate: assignment.dueDate
-          ? assignment.dueDate.toISOString()
-          : null,
+        dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
         grade: isPastDue ? 0 : null,
         feedback: null,
         submittedAt: null as string | null,

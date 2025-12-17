@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
 
 interface ParentChildSubmissionRow {
   id: string;
@@ -8,6 +9,7 @@ interface ParentChildSubmissionRow {
   grade: number | null;
   feedback: string | null;
   submittedAt: Date;
+  attempt: number;
 }
 
 interface ParentChildAssignmentRow {
@@ -15,6 +17,7 @@ interface ParentChildAssignmentRow {
   title: string;
   type: string;
   dueDate: Date | null;
+  lockAt: Date | null;
   createdAt: Date;
 }
 
@@ -145,6 +148,7 @@ export const GET = withApiLogging(async (
         ? {
             OR: [
               { dueDate: { gte: fromDate } },
+              { lockAt: { gte: fromDate } },
               { dueDate: null, createdAt: { gte: fromDate } },
               {
                 submissions: {
@@ -168,6 +172,7 @@ export const GET = withApiLogging(async (
         title: true,
         type: true,
         dueDate: true,
+        lockAt: true,
         createdAt: true,
       },
       orderBy: { id: "desc" },
@@ -190,39 +195,121 @@ export const GET = withApiLogging(async (
     }
 
     if (assignments.length === 0) {
-      const [totalAssignments, gradeAgg, overdueMissingCount] = await Promise.all([
-        prisma.assignment.count({ where: assignmentWhere }),
-        prisma.assignmentSubmission.aggregate({
-          where: {
-            studentId: childId,
-            grade: { not: null },
-            ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
-            assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
-          },
-          _sum: { grade: true },
-          _count: { grade: true },
-        }),
-        prisma.assignment.count({
-          where: {
-            classrooms: { some: { classroomId: { in: classroomIds } } },
-            dueDate: {
-              not: null,
-              lt: now,
-              ...(fromDate ? { gte: fromDate } : {}),
-            },
-            submissions: {
-              none: {
-                studentId: childId,
-              },
-            },
-          },
-        }),
-      ]);
+      const totalAssignments = await prisma.assignment.count({ where: assignmentWhere });
 
-      const denom = (gradeAgg._count.grade ?? 0) as number;
-      const sum = (gradeAgg._sum.grade ?? 0) as number;
-      const denomWithMissing = denom + (overdueMissingCount ?? 0);
-      const average = denomWithMissing > 0 ? sum / denomWithMissing : 0;
+      const gradeAggRows = fromDate
+        ? await prisma.$queryRaw<Array<{ grade_sum: number; grade_count: bigint }>>`
+            WITH relevant_assignments AS (
+              SELECT DISTINCT a."id"
+              FROM "assignments" a
+              JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+              WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+                AND (
+                  a."dueDate" >= ${fromDate}
+                  OR a."lockAt" >= ${fromDate}
+                  OR (a."dueDate" IS NULL AND a."createdAt" >= ${fromDate})
+                  OR EXISTS (
+                    SELECT 1
+                    FROM "assignment_submissions" s
+                    WHERE s."assignmentId" = a."id"
+                      AND s."studentId" = ${childId}
+                      AND s."submittedAt" >= ${fromDate}
+                  )
+                )
+            ),
+            latest_graded AS (
+              SELECT DISTINCT ON (s."assignmentId")
+                s."assignmentId",
+                s."grade"
+              FROM "assignment_submissions" s
+              JOIN relevant_assignments ra ON ra."id" = s."assignmentId"
+              WHERE s."studentId" = ${childId}
+                AND s."grade" IS NOT NULL
+              ORDER BY s."assignmentId", s."attempt" DESC, s."submittedAt" DESC
+            )
+            SELECT
+              COALESCE(SUM(latest_graded."grade"), 0)::double precision as grade_sum,
+              COUNT(*)::bigint as grade_count
+            FROM latest_graded;
+          `
+        : await prisma.$queryRaw<Array<{ grade_sum: number; grade_count: bigint }>>`
+            WITH relevant_assignments AS (
+              SELECT DISTINCT a."id"
+              FROM "assignments" a
+              JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+              WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+            ),
+            latest_graded AS (
+              SELECT DISTINCT ON (s."assignmentId")
+                s."assignmentId",
+                s."grade"
+              FROM "assignment_submissions" s
+              JOIN relevant_assignments ra ON ra."id" = s."assignmentId"
+              WHERE s."studentId" = ${childId}
+                AND s."grade" IS NOT NULL
+              ORDER BY s."assignmentId", s."attempt" DESC, s."submittedAt" DESC
+            )
+            SELECT
+              COALESCE(SUM(latest_graded."grade"), 0)::double precision as grade_sum,
+              COUNT(*)::bigint as grade_count
+            FROM latest_graded;
+          `;
+
+      const overdueMissingCountRows = fromDate
+        ? await prisma.$queryRaw<Array<{ total: bigint }>>`
+            WITH relevant_assignments AS (
+              SELECT DISTINCT a."id"
+              FROM "assignments" a
+              JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+              WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+                AND (
+                  a."dueDate" >= ${fromDate}
+                  OR a."lockAt" >= ${fromDate}
+                  OR (a."dueDate" IS NULL AND a."createdAt" >= ${fromDate})
+                  OR EXISTS (
+                    SELECT 1
+                    FROM "assignment_submissions" s
+                    WHERE s."assignmentId" = a."id"
+                      AND s."studentId" = ${childId}
+                      AND s."submittedAt" >= ${fromDate}
+                  )
+                )
+            )
+            SELECT COUNT(*)::bigint as total
+            FROM "assignments" a
+            JOIN relevant_assignments ra ON ra."id" = a."id"
+            WHERE COALESCE(a."lockAt", a."dueDate") IS NOT NULL
+              AND COALESCE(a."lockAt", a."dueDate") < ${now}
+              AND NOT EXISTS (
+                SELECT 1
+                FROM "assignment_submissions" s
+                WHERE s."assignmentId" = a."id" AND s."studentId" = ${childId}
+              );
+          `
+        : await prisma.$queryRaw<Array<{ total: bigint }>>`
+            WITH relevant_assignments AS (
+              SELECT DISTINCT a."id"
+              FROM "assignments" a
+              JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+              WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+            )
+            SELECT COUNT(*)::bigint as total
+            FROM "assignments" a
+            JOIN relevant_assignments ra ON ra."id" = a."id"
+            WHERE COALESCE(a."lockAt", a."dueDate") IS NOT NULL
+              AND COALESCE(a."lockAt", a."dueDate") < ${now}
+              AND NOT EXISTS (
+                SELECT 1
+                FROM "assignment_submissions" s
+                WHERE s."assignmentId" = a."id" AND s."studentId" = ${childId}
+              );
+          `;
+
+      const overdueMissingCount = Number(overdueMissingCountRows[0]?.total ?? 0);
+      const gradedCount = Number(gradeAggRows[0]?.grade_count ?? 0);
+      const gradedSum = Number(gradeAggRows[0]?.grade_sum ?? 0);
+      const denomWithMissing = gradedCount + overdueMissingCount;
+      const average = denomWithMissing > 0 ? gradedSum / denomWithMissing : 0;
 
       return NextResponse.json(
         {
@@ -246,7 +333,7 @@ export const GET = withApiLogging(async (
 
     const assignmentIdList = assignments.map((a) => a.id);
 
-    const [assignmentClassrooms, submissions, gradeAgg, overdueMissingCount, totalAssignments] = await Promise.all([
+    const [assignmentClassrooms, submissions, totalAssignments] = await Promise.all([
       (await prisma.assignmentClassroom.findMany({
         where: {
           classroomId: { in: classroomIds },
@@ -260,6 +347,7 @@ export const GET = withApiLogging(async (
               title: true,
               type: true,
               dueDate: true,
+              lockAt: true,
               createdAt: true,
             },
           },
@@ -287,37 +375,131 @@ export const GET = withApiLogging(async (
           grade: true,
           feedback: true,
           submittedAt: true,
+          attempt: true,
         },
-        orderBy: { submittedAt: "desc" },
+        orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
       })) as unknown as ParentChildSubmissionRow[],
-
-      prisma.assignmentSubmission.aggregate({
-        where: {
-          studentId: childId,
-          grade: { not: null },
-          ...(fromDate ? { submittedAt: { gte: fromDate } } : {}),
-          assignment: { classrooms: { some: { classroomId: { in: classroomIds } } } },
-        },
-        _sum: { grade: true },
-        _count: { grade: true },
-      }),
-      prisma.assignment.count({
-        where: {
-          classrooms: { some: { classroomId: { in: classroomIds } } },
-          dueDate: {
-            not: null,
-            lt: now,
-            ...(fromDate ? { gte: fromDate } : {}),
-          },
-          submissions: {
-            none: {
-              studentId: childId,
-            },
-          },
-        },
-      }),
       prisma.assignment.count({ where: assignmentWhere }),
     ]);
+
+    // Giữ lại submission mới nhất cho mỗi assignment (tránh đếm sai theo attempt)
+    const latestSubmissionByAssignmentId = new Map<string, ParentChildSubmissionRow>();
+    for (const s of submissions) {
+      if (!latestSubmissionByAssignmentId.has(s.assignmentId)) {
+        latestSubmissionByAssignmentId.set(s.assignmentId, s);
+      }
+    }
+    const latestSubmissions = Array.from(latestSubmissionByAssignmentId.values());
+
+    const gradeAggRows2 = fromDate
+      ? await prisma.$queryRaw<Array<{ grade_sum: number; grade_count: bigint }>>`
+          WITH relevant_assignments AS (
+            SELECT DISTINCT a."id"
+            FROM "assignments" a
+            JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+            WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+              AND (
+                a."dueDate" >= ${fromDate}
+                OR a."lockAt" >= ${fromDate}
+                OR (a."dueDate" IS NULL AND a."createdAt" >= ${fromDate})
+                OR EXISTS (
+                  SELECT 1
+                  FROM "assignment_submissions" s
+                  WHERE s."assignmentId" = a."id"
+                    AND s."studentId" = ${childId}
+                    AND s."submittedAt" >= ${fromDate}
+                )
+              )
+          ),
+          latest_graded AS (
+            SELECT DISTINCT ON (s."assignmentId")
+              s."assignmentId",
+              s."grade"
+            FROM "assignment_submissions" s
+            JOIN relevant_assignments ra ON ra."id" = s."assignmentId"
+            WHERE s."studentId" = ${childId}
+              AND s."grade" IS NOT NULL
+            ORDER BY s."assignmentId", s."attempt" DESC, s."submittedAt" DESC
+          )
+          SELECT
+            COALESCE(SUM(latest_graded."grade"), 0)::double precision as grade_sum,
+            COUNT(*)::bigint as grade_count
+          FROM latest_graded;
+        `
+      : await prisma.$queryRaw<Array<{ grade_sum: number; grade_count: bigint }>>`
+          WITH relevant_assignments AS (
+            SELECT DISTINCT a."id"
+            FROM "assignments" a
+            JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+            WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+          ),
+          latest_graded AS (
+            SELECT DISTINCT ON (s."assignmentId")
+              s."assignmentId",
+              s."grade"
+            FROM "assignment_submissions" s
+            JOIN relevant_assignments ra ON ra."id" = s."assignmentId"
+            WHERE s."studentId" = ${childId}
+              AND s."grade" IS NOT NULL
+            ORDER BY s."assignmentId", s."attempt" DESC, s."submittedAt" DESC
+          )
+          SELECT
+            COALESCE(SUM(latest_graded."grade"), 0)::double precision as grade_sum,
+            COUNT(*)::bigint as grade_count
+          FROM latest_graded;
+        `;
+
+    const overdueMissingCountRows2 = fromDate
+      ? await prisma.$queryRaw<Array<{ total: bigint }>>`
+          WITH relevant_assignments AS (
+            SELECT DISTINCT a."id"
+            FROM "assignments" a
+            JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+            WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+              AND (
+                a."dueDate" >= ${fromDate}
+                OR a."lockAt" >= ${fromDate}
+                OR (a."dueDate" IS NULL AND a."createdAt" >= ${fromDate})
+                OR EXISTS (
+                  SELECT 1
+                  FROM "assignment_submissions" s
+                  WHERE s."assignmentId" = a."id"
+                    AND s."studentId" = ${childId}
+                    AND s."submittedAt" >= ${fromDate}
+                )
+              )
+          )
+          SELECT COUNT(*)::bigint as total
+          FROM "assignments" a
+          JOIN relevant_assignments ra ON ra."id" = a."id"
+          WHERE COALESCE(a."lockAt", a."dueDate") IS NOT NULL
+            AND COALESCE(a."lockAt", a."dueDate") < ${now}
+            AND NOT EXISTS (
+              SELECT 1
+              FROM "assignment_submissions" s
+              WHERE s."assignmentId" = a."id" AND s."studentId" = ${childId}
+            );
+        `
+      : await prisma.$queryRaw<Array<{ total: bigint }>>`
+          WITH relevant_assignments AS (
+            SELECT DISTINCT a."id"
+            FROM "assignments" a
+            JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+            WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+          )
+          SELECT COUNT(*)::bigint as total
+          FROM "assignments" a
+          JOIN relevant_assignments ra ON ra."id" = a."id"
+          WHERE COALESCE(a."lockAt", a."dueDate") IS NOT NULL
+            AND COALESCE(a."lockAt", a."dueDate") < ${now}
+            AND NOT EXISTS (
+              SELECT 1
+              FROM "assignment_submissions" s
+              WHERE s."assignmentId" = a."id" AND s."studentId" = ${childId}
+            );
+        `;
+
+    const overdueMissingCount2 = Number(overdueMissingCountRows2[0]?.total ?? 0);
 
     const assignmentById = new Map<string, ParentChildAssignmentRow>(
       assignments.map((a) => [a.id, a])
@@ -331,18 +513,19 @@ export const GET = withApiLogging(async (
     }
 
     // Transform data cho các bài đã nộp
-    const submissionGrades = submissions
+    const submissionGrades = latestSubmissions
       .map((sub: ParentChildSubmissionRow) => {
         const assignment = assignmentById.get(sub.assignmentId);
         if (!assignment) return null;
         const classroom = classroomByAssignmentId.get(sub.assignmentId) ?? null;
+        const effectiveDeadline = getEffectiveDeadline(assignment);
 
         return {
           id: sub.id,
           assignmentId: assignment.id,
           assignmentTitle: assignment.title,
           assignmentType: assignment.type,
-          dueDate: assignment.dueDate?.toISOString() || null,
+          dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
           grade: sub.grade,
           feedback: sub.feedback,
           submittedAt: sub.submittedAt.toISOString(),
@@ -360,7 +543,7 @@ export const GET = withApiLogging(async (
       .filter((x): x is NonNullable<typeof x> => Boolean(x));
 
     // Tìm các assignments chưa có submission nào từ student
-    const submittedAssignmentIds = new Set<string>(submissions.map((sub) => sub.assignmentId));
+    const submittedAssignmentIds = new Set<string>(latestSubmissions.map((sub) => sub.assignmentId));
     const missingAssignmentIds = assignmentIdList.filter((id: string) => !submittedAssignmentIds.has(id));
 
     // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
@@ -369,14 +552,15 @@ export const GET = withApiLogging(async (
         const assignment = assignmentById.get(assignmentId);
         if (!assignment) return null;
         const classroom = classroomByAssignmentId.get(assignmentId) ?? null;
-        const isPastDue = assignment.dueDate !== null && assignment.dueDate < now;
+        const isPastDue = isAssignmentOverdue(assignment, now);
+        const effectiveDeadline = getEffectiveDeadline(assignment);
 
         return {
           id: `virtual-${assignment.id}`,
           assignmentId: assignment.id,
           assignmentTitle: assignment.title,
           assignmentType: assignment.type,
-          dueDate: assignment.dueDate ? assignment.dueDate.toISOString() : null,
+          dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
           grade: isPastDue ? 0 : null,
           feedback: null,
           submittedAt: null as string | null,
@@ -395,9 +579,9 @@ export const GET = withApiLogging(async (
 
     const grades = [...submissionGrades, ...missingGrades];
 
-    const gradedCount = (gradeAgg._count.grade ?? 0) as number;
-    const gradedSum = (gradeAgg._sum.grade ?? 0) as number;
-    const denom = gradedCount + (overdueMissingCount ?? 0);
+    const gradedCount = Number(gradeAggRows2[0]?.grade_count ?? 0);
+    const gradedSum = Number(gradeAggRows2[0]?.grade_sum ?? 0);
+    const denom = gradedCount + overdueMissingCount2;
     const averageGrade = denom > 0 ? gradedSum / denom : 0;
 
     return NextResponse.json(

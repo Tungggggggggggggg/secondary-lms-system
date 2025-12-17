@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, withApiLogging, errorResponse } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
 
 interface ParentChildSubmissionRow {
   id: string;
@@ -16,6 +17,7 @@ interface ParentChildAssignmentRow {
   title: string;
   type: string;
   dueDate: Date | null;
+  lockAt: Date | null;
 }
 
 interface ParentChildAssignmentClassroomRow {
@@ -31,6 +33,16 @@ interface ParentChildAssignmentClassroomRow {
     } | null;
   };
 }
+
+type ParentChildRelationshipRow = {
+  studentId: string;
+  student: {
+    id: string;
+    email: string;
+    fullname: string | null;
+    role: string;
+  };
+};
 
 /**
  * GET /api/parent/children/grades
@@ -50,7 +62,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     }
 
     // Lấy danh sách tất cả con của phụ huynh
-    const relationships = await prisma.parentStudent.findMany({
+    const relationships = (await prisma.parentStudent.findMany({
       where: {
         parentId: authUser.id,
         status: "ACTIVE",
@@ -65,14 +77,20 @@ export const GET = withApiLogging(async (req: NextRequest) => {
           },
         },
       },
-    });
+    })) as unknown as ParentChildRelationshipRow[];
 
     if (relationships.length === 0) {
       return NextResponse.json(
         {
           success: true,
           data: [],
-          statistics: {},
+          statistics: {
+            totalChildren: 0,
+            totalSubmissions: 0,
+            totalGraded: 0,
+            totalPending: 0,
+            overallAverage: 0,
+          },
         },
         { status: 200 }
       );
@@ -94,7 +112,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       return NextResponse.json(
         {
           success: true,
-          data: Object.values(relationships).map((rel: any) => ({
+          data: relationships.map((rel) => ({
             student: rel.student,
             grades: [],
             statistics: {
@@ -126,6 +144,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
             title: true,
             type: true,
             dueDate: true,
+            lockAt: true,
           },
         },
         classroom: {
@@ -156,7 +175,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
         feedback: true,
         submittedAt: true,
       },
-      orderBy: { submittedAt: "desc" },
+      orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
     })) as ParentChildSubmissionRow[];
 
     const studentClassroomIds = new Map<string, Set<string>>();
@@ -182,7 +201,10 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     const submissionByStudent = new Map<string, Map<string, ParentChildSubmissionRow>>();
     for (const sub of submissions) {
       if (!submissionByStudent.has(sub.studentId)) submissionByStudent.set(sub.studentId, new Map());
-      submissionByStudent.get(sub.studentId)!.set(sub.assignmentId, sub);
+      const map = submissionByStudent.get(sub.studentId)!;
+      if (!map.has(sub.assignmentId)) {
+        map.set(sub.assignmentId, sub);
+      }
     }
 
     // Transform data và nhóm theo student
@@ -250,6 +272,11 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     );
 
     // Phân loại submissions theo student
+    let overallTotalAssignments = 0;
+    let overallGradeSum = 0;
+    let overallGradedCount = 0;
+    let overallMissingOverdueCount = 0;
+
     for (const studentId of Object.keys(gradesByStudent)) {
       const clsIds = studentClassroomIds.get(studentId) ?? new Set<string>();
       const assignmentIdsForStudent = new Set<string>();
@@ -258,7 +285,14 @@ export const GET = withApiLogging(async (req: NextRequest) => {
         for (const aid of aIds) assignmentIdsForStudent.add(aid);
       }
 
+      const totalAssignments = assignmentIdsForStudent.size;
+      overallTotalAssignments += totalAssignments;
+
       const subMap = submissionByStudent.get(studentId) ?? new Map<string, ParentChildSubmissionRow>();
+
+      let gradeSum = 0;
+      let gradedCount = 0;
+      let missingOverdueCount = 0;
 
       for (const assignmentId of assignmentIdsForStudent) {
         const assignment = assignmentById.get(assignmentId);
@@ -267,12 +301,13 @@ export const GET = withApiLogging(async (req: NextRequest) => {
         const sub = subMap.get(assignmentId);
 
         if (sub) {
+          const effectiveDeadline = getEffectiveDeadline(assignment);
           gradesByStudent[studentId].grades.push({
             id: sub.id,
             assignmentId: assignment.id,
             assignmentTitle: assignment.title,
             assignmentType: assignment.type,
-            dueDate: assignment.dueDate?.toISOString() || null,
+            dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
             grade: sub.grade,
             feedback: sub.feedback,
             submittedAt: sub.submittedAt.toISOString(),
@@ -286,15 +321,21 @@ export const GET = withApiLogging(async (req: NextRequest) => {
                 }
               : null,
           });
+
+          if (sub.grade !== null) {
+            gradedCount += 1;
+            gradeSum += sub.grade;
+          }
         } else {
-          const isPastDue = assignment.dueDate !== null && assignment.dueDate < now;
+          const isPastDue = isAssignmentOverdue(assignment, now);
           if (isPastDue) {
+            const effectiveDeadline = getEffectiveDeadline(assignment);
             gradesByStudent[studentId].grades.push({
               id: `virtual-${assignment.id}`,
               assignmentId: assignment.id,
               assignmentTitle: assignment.title,
               assignmentType: assignment.type,
-              dueDate: assignment.dueDate?.toISOString() || null,
+              dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
               grade: 0,
               feedback: null,
               submittedAt: null,
@@ -308,6 +349,8 @@ export const GET = withApiLogging(async (req: NextRequest) => {
                   }
                 : null,
             });
+
+            missingOverdueCount += 1;
           }
         }
       }
@@ -317,48 +360,32 @@ export const GET = withApiLogging(async (req: NextRequest) => {
         const tb = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
         return tb - ta;
       });
+
+      const denom = gradedCount + missingOverdueCount;
+      const averageGrade = denom > 0 ? gradeSum / denom : 0;
+      const totalGraded = denom;
+      const totalPending = Math.max(0, totalAssignments - totalGraded);
+
+      gradesByStudent[studentId].statistics = {
+        totalSubmissions: totalAssignments,
+        totalGraded,
+        totalPending,
+        averageGrade: Math.round(averageGrade * 10) / 10,
+      };
+
+      overallGradeSum += gradeSum;
+      overallGradedCount += gradedCount;
+      overallMissingOverdueCount += missingOverdueCount;
     }
 
-    // Tính thống kê cho mỗi student
-    const result = Object.values(gradesByStudent).map((studentData) => {
-      const { grades } = studentData;
-      const totalSubmissions = grades.length;
-      const gradedSubmissions = grades.filter((g) => g.grade !== null);
-      const totalGraded = gradedSubmissions.length;
-      const totalPending = totalSubmissions - totalGraded;
-
-      const averageGrade =
-        totalGraded > 0
-          ? gradedSubmissions.reduce((sum, g) => sum + (g.grade || 0), 0) / totalGraded
-          : 0;
-
-      return {
-        student: studentData.student,
-        grades,
-        statistics: {
-          totalSubmissions,
-          totalGraded,
-          totalPending,
-          averageGrade: Math.round(averageGrade * 10) / 10,
-        },
-      };
-    });
-
-    // Tính thống kê tổng hợp
-    const allGradedSubmissions = result.flatMap((r) =>
-      r.grades.filter((g) => g.grade !== null)
-    );
-    const overallAverage =
-      allGradedSubmissions.length > 0
-        ? allGradedSubmissions.reduce((sum, g) => sum + (g.grade || 0), 0) /
-          allGradedSubmissions.length
-        : 0;
-
+    const result = Object.values(gradesByStudent);
+    const denom = overallGradedCount + overallMissingOverdueCount;
+    const overallAverage = denom > 0 ? overallGradeSum / denom : 0;
     const overallStatistics = {
       totalChildren: result.length,
-      totalSubmissions: result.reduce((sum, r) => sum + r.statistics.totalSubmissions, 0),
-      totalGraded: result.reduce((sum, r) => sum + r.statistics.totalGraded, 0),
-      totalPending: result.reduce((sum, r) => sum + r.statistics.totalPending, 0),
+      totalSubmissions: overallTotalAssignments,
+      totalGraded: denom,
+      totalPending: Math.max(0, overallTotalAssignments - denom),
       overallAverage: Math.round(overallAverage * 10) / 10,
     };
 

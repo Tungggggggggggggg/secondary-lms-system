@@ -87,28 +87,58 @@ export async function GET(req: NextRequest) {
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    const [totalSubmissions, totalGraded, overallAgg, lastMonthAgg] = await Promise.all([
-      prisma.assignmentSubmission.count({
-        where: {
-          studentId: { in: studentIds },
-        },
-      }),
-
-      prisma.assignmentSubmission.count({
-        where: {
-          studentId: { in: studentIds },
-          grade: { not: null },
-        },
-      }),
-
-      prisma.assignmentSubmission.aggregate({
-        where: {
-          studentId: { in: studentIds },
-          grade: { not: null },
-        },
-        _avg: { grade: true },
-      }),
-
+    const [pairsAggRows, lastMonthAgg] = await Promise.all([
+      prisma.$queryRaw<
+        Array<{
+          total_pairs: bigint;
+          submitted_pairs: bigint;
+          grade_sum: number;
+          grade_count: bigint;
+          missing_overdue: bigint;
+        }>
+      >`
+        WITH pairs AS (
+          SELECT DISTINCT cs."studentId", ac."assignmentId"
+          FROM "classroom_students" cs
+          JOIN "assignment_classrooms" ac ON ac."classroomId" = cs."classroomId"
+          WHERE cs."studentId" = ANY(${studentIds}::text[])
+        ),
+        submitted_pairs AS (
+          SELECT DISTINCT s."studentId", s."assignmentId"
+          FROM "assignment_submissions" s
+          JOIN pairs p ON p."studentId" = s."studentId" AND p."assignmentId" = s."assignmentId"
+        ),
+        latest_graded AS (
+          SELECT DISTINCT ON (s."studentId", s."assignmentId")
+            s."studentId",
+            s."assignmentId",
+            s."grade"
+          FROM "assignment_submissions" s
+          JOIN pairs p ON p."studentId" = s."studentId" AND p."assignmentId" = s."assignmentId"
+          WHERE s."grade" IS NOT NULL
+          ORDER BY s."studentId", s."assignmentId", s."attempt" DESC, s."submittedAt" DESC
+        ),
+        missing_overdue AS (
+          SELECT COUNT(*)::bigint as total
+          FROM pairs p
+          JOIN "assignments" a ON a."id" = p."assignmentId"
+          WHERE COALESCE(a."lockAt", a."dueDate") IS NOT NULL
+            AND COALESCE(a."lockAt", a."dueDate") < ${now}
+            AND NOT EXISTS (
+              SELECT 1
+              FROM "assignment_submissions" s
+              WHERE s."studentId" = p."studentId" AND s."assignmentId" = p."assignmentId"
+            )
+        )
+        SELECT
+          (SELECT COUNT(*)::bigint FROM pairs) as total_pairs,
+          (SELECT COUNT(*)::bigint FROM submitted_pairs) as submitted_pairs,
+          COALESCE(SUM(lg."grade"), 0)::double precision as grade_sum,
+          COUNT(lg."assignmentId")::bigint as grade_count,
+          (SELECT total FROM missing_overdue) as missing_overdue
+        FROM (SELECT 1) dummy
+        LEFT JOIN latest_graded lg ON true;
+      `,
       prisma.assignmentSubmission.aggregate({
         where: {
           studentId: { in: studentIds },
@@ -122,53 +152,60 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    const totalPending = totalSubmissions - totalGraded;
+    const totalPairs = Number(pairsAggRows[0]?.total_pairs ?? 0);
+    const totalSubmissions = Number(pairsAggRows[0]?.submitted_pairs ?? 0);
+    const gradedSum = Number(pairsAggRows[0]?.grade_sum ?? 0);
+    const gradedCount = Number(pairsAggRows[0]?.grade_count ?? 0);
+    const missingOverdue = Number(pairsAggRows[0]?.missing_overdue ?? 0);
+    const denom = gradedCount + missingOverdue;
 
-    // Tính điểm trung bình tổng
-    const overallAverage = Number(overallAgg._avg.grade ?? 0);
+    const totalGraded = denom;
+    const totalPending = Math.max(0, totalPairs - totalGraded);
 
-    // Tính điểm trung bình tháng trước để so sánh
+    const overallAverage = denom > 0 ? gradedSum / denom : 0;
+
+    // Tính điểm trung bình tháng trước để so sánh (giữ logic cũ theo graded submissions)
     const lastMonthAverage = Number(lastMonthAgg._avg.grade ?? 0);
 
     const averageChange = overallAverage - lastMonthAverage;
 
-    // Tính số assignments sắp đến hạn của tất cả con
+    // Tính số assignments sắp đến hạn của tất cả con (theo deadline hiệu lực)
     // Đếm theo cặp (studentId, assignmentId) để tránh sai số khi có nhiều con
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     let upcomingAssignments = 0;
 
     if (studentIds.length > 0) {
-      const [totalPairsRows, submittedPairsRows] = await Promise.all([
-        prisma.$queryRaw<Array<{ total: bigint }>>`
-          SELECT COUNT(*)::bigint as total
-          FROM (
-            SELECT DISTINCT cs."studentId", ac."assignmentId"
-            FROM "classroom_students" cs
-            JOIN "assignment_classrooms" ac ON ac."classroomId" = cs."classroomId"
-            JOIN "assignments" a ON a."id" = ac."assignmentId"
-            WHERE cs."studentId" = ANY(${studentIds}::text[])
-              AND a."dueDate" IS NOT NULL
-              AND a."dueDate" >= ${now}
-              AND a."dueDate" <= ${sevenDaysFromNow}
-          ) pairs;
-        `,
-        prisma.$queryRaw<Array<{ total: bigint }>>`
+      const upcomingRows = await prisma.$queryRaw<Array<{ total: bigint; submitted: bigint }>>`
+        WITH pairs AS (
+          SELECT DISTINCT cs."studentId", ac."assignmentId"
+          FROM "classroom_students" cs
+          JOIN "assignment_classrooms" ac ON ac."classroomId" = cs."classroomId"
+          WHERE cs."studentId" = ANY(${studentIds}::text[])
+        ),
+        upcoming AS (
+          SELECT DISTINCT p."studentId", p."assignmentId"
+          FROM pairs p
+          JOIN "assignments" a ON a."id" = p."assignmentId"
+          WHERE COALESCE(a."lockAt", a."dueDate") IS NOT NULL
+            AND COALESCE(a."lockAt", a."dueDate") >= ${now}
+            AND COALESCE(a."lockAt", a."dueDate") <= ${sevenDaysFromNow}
+        ),
+        submitted AS (
           SELECT COUNT(*)::bigint as total
           FROM (
             SELECT DISTINCT s."studentId", s."assignmentId"
             FROM "assignment_submissions" s
-            JOIN "assignments" a ON a."id" = s."assignmentId"
-            WHERE s."studentId" = ANY(${studentIds}::text[])
-              AND a."dueDate" IS NOT NULL
-              AND a."dueDate" >= ${now}
-              AND a."dueDate" <= ${sevenDaysFromNow}
-          ) submitted;
-        `,
-      ]);
+            JOIN upcoming u ON u."studentId" = s."studentId" AND u."assignmentId" = s."assignmentId"
+          ) t
+        )
+        SELECT
+          (SELECT COUNT(*)::bigint FROM upcoming) as total,
+          (SELECT total FROM submitted) as submitted;
+      `;
 
-      const totalPairs = Number(totalPairsRows[0]?.total ?? 0);
-      const submittedPairs = Number(submittedPairsRows[0]?.total ?? 0);
-      upcomingAssignments = Math.max(0, totalPairs - submittedPairs);
+      const totalUpcoming = Number(upcomingRows[0]?.total ?? 0);
+      const submittedUpcoming = Number(upcomingRows[0]?.submitted ?? 0);
+      upcomingAssignments = Math.max(0, totalUpcoming - submittedUpcoming);
     }
 
     return NextResponse.json({

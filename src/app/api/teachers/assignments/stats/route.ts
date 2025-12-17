@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
 
     const teacherId = authUser.id
 
+    const now = new Date()
+
     // ✅ TỐI ƯU: Sử dụng single raw query cho tất cả stats
     const statsResult = await prisma.$queryRaw<Array<{
       total_assignments: bigint,
@@ -57,7 +59,62 @@ export async function GET(req: NextRequest) {
     const totalSubmissions = Number(rawStats.total_submissions)
     const assignmentsWithSubmissions = Number(rawStats.assignments_with_submissions)
     const gradedSubmissions = Number(rawStats.graded_submissions)
-    const averageGrade = rawStats.avg_grade
+    // Align averageGrade theo rule P2: latest graded + overdue missing (0), deadline hiệu lực = lockAt ?? dueDate
+    const avgAggRows = await prisma.$queryRaw<
+      Array<{ grade_sum: number; grade_count: bigint; missing_overdue: bigint }>
+    >`
+      WITH class_students AS (
+        SELECT cs."studentId" as student_id, cs."classroomId" as classroom_id
+        FROM "classroom_students" cs
+        JOIN "classrooms" c ON c."id" = cs."classroomId"
+        WHERE c."teacherId" = ${teacherId} AND c."isActive" = true
+      ),
+      class_assignments AS (
+        SELECT ac."assignmentId" as assignment_id, ac."classroomId" as classroom_id
+        FROM "assignment_classrooms" ac
+        JOIN "classrooms" c ON c."id" = ac."classroomId"
+        WHERE c."teacherId" = ${teacherId} AND c."isActive" = true
+      ),
+      pairs AS (
+        SELECT DISTINCT cs.student_id, ca.assignment_id
+        FROM class_students cs
+        JOIN class_assignments ca ON ca.classroom_id = cs.classroom_id
+      ),
+      latest_graded AS (
+        SELECT DISTINCT ON (s."studentId", s."assignmentId")
+          s."studentId" as student_id,
+          s."assignmentId" as assignment_id,
+          s."grade" as grade
+        FROM "assignment_submissions" s
+        JOIN pairs p ON p.student_id = s."studentId" AND p.assignment_id = s."assignmentId"
+        WHERE s."grade" IS NOT NULL
+        ORDER BY s."studentId", s."assignmentId", s."attempt" DESC, s."submittedAt" DESC
+      ),
+      missing_overdue AS (
+        SELECT COUNT(*)::bigint as total
+        FROM pairs p
+        JOIN "assignments" a ON a."id" = p.assignment_id
+        WHERE COALESCE(a."lockAt", a."dueDate") IS NOT NULL
+          AND COALESCE(a."lockAt", a."dueDate") < ${now}
+          AND NOT EXISTS (
+            SELECT 1
+            FROM "assignment_submissions" s
+            WHERE s."studentId" = p.student_id AND s."assignmentId" = p.assignment_id
+          )
+      )
+      SELECT
+        COALESCE(SUM(lg.grade), 0)::double precision as grade_sum,
+        COUNT(lg.assignment_id)::bigint as grade_count,
+        (SELECT total FROM missing_overdue) as missing_overdue
+      FROM (SELECT 1) dummy
+      LEFT JOIN latest_graded lg ON true;
+    `
+
+    const gradeSum = Number(avgAggRows[0]?.grade_sum ?? 0)
+    const gradeCount = Number(avgAggRows[0]?.grade_count ?? 0)
+    const missingOverdue = Number(avgAggRows[0]?.missing_overdue ?? 0)
+    const denom = gradeCount + missingOverdue
+    const averageGrade = denom > 0 ? gradeSum / denom : null
 
     // Tính số assignments được assign vào classrooms
     const assignmentsInClassrooms = await prisma.assignmentClassroom.count({

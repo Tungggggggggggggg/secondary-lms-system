@@ -67,61 +67,97 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    // Tối ưu: gom query thay vì N+1 theo từng classroom
-    const assignmentClassrooms = await prisma.assignmentClassroom.findMany({
-      where: { classroomId: { in: classroomIds } },
-      select: { classroomId: true, assignmentId: true },
-    });
+    // Tính average theo rule P2 (latest graded + overdue missing 0) và deadline hiệu lực = lockAt ?? dueDate
+    const metricsRows = await prisma.$queryRaw<
+      Array<{
+        classroom_id: string;
+        grade_sum: number;
+        grade_count: bigint;
+        missing_overdue: bigint;
+        submitted_students: bigint;
+      }>
+    >`
+      WITH target_classrooms AS (
+        SELECT UNNEST(${classroomIds}::text[]) as classroom_id
+      ),
+      pairs AS (
+        SELECT DISTINCT cs."classroomId" as classroom_id, cs."studentId" as student_id, ac."assignmentId" as assignment_id
+        FROM "classroom_students" cs
+        JOIN "assignment_classrooms" ac ON ac."classroomId" = cs."classroomId"
+        JOIN target_classrooms tc ON tc.classroom_id = cs."classroomId"
+      ),
+      latest_graded AS (
+        SELECT DISTINCT ON (s."studentId", s."assignmentId")
+          s."studentId" as student_id,
+          s."assignmentId" as assignment_id,
+          s."grade" as grade
+        FROM "assignment_submissions" s
+        JOIN pairs p ON p.student_id = s."studentId" AND p.assignment_id = s."assignmentId"
+        WHERE s."grade" IS NOT NULL
+        ORDER BY s."studentId", s."assignmentId", s."attempt" DESC, s."submittedAt" DESC
+      ),
+      graded_by_classroom AS (
+        SELECT p.classroom_id,
+          COALESCE(SUM(lg.grade), 0)::double precision as grade_sum,
+          COUNT(lg.assignment_id)::bigint as grade_count
+        FROM pairs p
+        JOIN latest_graded lg ON lg.student_id = p.student_id AND lg.assignment_id = p.assignment_id
+        GROUP BY p.classroom_id
+      ),
+      missing_overdue AS (
+        SELECT p.classroom_id,
+          COUNT(*)::bigint as missing_overdue
+        FROM pairs p
+        JOIN "assignments" a ON a."id" = p.assignment_id
+        WHERE COALESCE(a."lockAt", a."dueDate") IS NOT NULL
+          AND COALESCE(a."lockAt", a."dueDate") < NOW()
+          AND NOT EXISTS (
+            SELECT 1
+            FROM "assignment_submissions" s
+            WHERE s."studentId" = p.student_id AND s."assignmentId" = p.assignment_id
+          )
+        GROUP BY p.classroom_id
+      ),
+      submitted_students AS (
+        SELECT p.classroom_id,
+          COUNT(DISTINCT s."studentId")::bigint as submitted_students
+        FROM "assignment_submissions" s
+        JOIN pairs p ON p.student_id = s."studentId" AND p.assignment_id = s."assignmentId"
+        GROUP BY p.classroom_id
+      )
+      SELECT
+        tc.classroom_id,
+        COALESCE(g.grade_sum, 0)::double precision as grade_sum,
+        COALESCE(g.grade_count, 0)::bigint as grade_count,
+        COALESCE(m.missing_overdue, 0)::bigint as missing_overdue,
+        COALESCE(ss.submitted_students, 0)::bigint as submitted_students
+      FROM target_classrooms tc
+      LEFT JOIN graded_by_classroom g ON g.classroom_id = tc.classroom_id
+      LEFT JOIN missing_overdue m ON m.classroom_id = tc.classroom_id
+      LEFT JOIN submitted_students ss ON ss.classroom_id = tc.classroom_id;
+    `;
 
-    const assignmentIdToClassroomIds = new Map<string, string[]>();
-    for (const row of assignmentClassrooms) {
-      const list = assignmentIdToClassroomIds.get(row.assignmentId) ?? [];
-      list.push(row.classroomId);
-      assignmentIdToClassroomIds.set(row.assignmentId, list);
-    }
-
-    const assignmentIds = Array.from(assignmentIdToClassroomIds.keys());
-    if (assignmentIds.length === 0) {
-      return NextResponse.json({ success: true, data: baseline });
-    }
-
-    const statsByClassroom = new Map<
-      string,
-      { gradeSum: number; gradeCount: number; studentIds: Set<string> }
-    >();
-    for (const id of classroomIds) {
-      statsByClassroom.set(id, { gradeSum: 0, gradeCount: 0, studentIds: new Set() });
-    }
-
-    const submissions = await prisma.assignmentSubmission.findMany({
-      where: {
-        assignmentId: { in: assignmentIds },
-        grade: { not: null },
-      },
-      select: { assignmentId: true, grade: true, studentId: true },
-    });
-
-    for (const sub of submissions) {
-      const grade = sub.grade;
-      if (grade === null) continue;
-      const mappedClassrooms = assignmentIdToClassroomIds.get(sub.assignmentId) ?? [];
-      for (const classroomId of mappedClassrooms) {
-        const st = statsByClassroom.get(classroomId);
-        if (!st) continue;
-        st.gradeSum += grade;
-        st.gradeCount += 1;
-        st.studentIds.add(sub.studentId);
-      }
-    }
+    const metricsByClassroomId = new Map(
+      metricsRows.map((r) => [
+        r.classroom_id,
+        {
+          gradeSum: Number(r.grade_sum ?? 0),
+          gradeCount: Number(r.grade_count ?? 0),
+          missingOverdue: Number(r.missing_overdue ?? 0),
+          submittedStudents: Number(r.submitted_students ?? 0),
+        },
+      ])
+    );
 
     const performanceData = baseline.map((row) => {
-      const st = statsByClassroom.get(row.classroomId);
-      if (!st || st.gradeCount === 0) return row;
-      const averageGrade = st.gradeSum / st.gradeCount;
+      const m = metricsByClassroomId.get(row.classroomId);
+      if (!m) return row;
+      const denom = m.gradeCount + m.missingOverdue;
+      const avg = denom > 0 ? m.gradeSum / denom : 0;
       return {
         ...row,
-        averageGrade: Math.round(averageGrade),
-        submittedCount: st.studentIds.size,
+        averageGrade: Math.round(avg),
+        submittedCount: m.submittedStudents,
       };
     });
 

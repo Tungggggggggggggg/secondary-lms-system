@@ -30,7 +30,6 @@ export async function GET(req: NextRequest) {
       totalClassrooms,
       newClassroomsThisWeek,
       studentClassrooms,
-      gradedAgg,
       lastMonthAgg,
     ] = await Promise.all([
       // 1. Đếm số lớp học đã tham gia
@@ -48,16 +47,6 @@ export async function GET(req: NextRequest) {
       prisma.classroomStudent.findMany({
         where: { studentId: user.id },
         select: { classroomId: true },
-      }),
-
-      // 4. Tính điểm trung bình từ các submissions đã được chấm (aggregate để giảm dữ liệu)
-      prisma.assignmentSubmission.aggregate({
-        where: {
-          studentId: user.id,
-          grade: { not: null },
-        },
-        _avg: { grade: true },
-        _count: { _all: true },
       }),
 
       // 5. Tính điểm trung bình tháng trước để so sánh (aggregate)
@@ -79,6 +68,7 @@ export async function GET(req: NextRequest) {
     let totalAssignments = 0;
     let submittedAssignments = 0;
     let upcomingAssignments = 0;
+    let averageGrade = 0;
 
     if (classroomIds.length > 0) {
       // Lấy tất cả assignments từ các lớp
@@ -87,52 +77,97 @@ export async function GET(req: NextRequest) {
         select: { assignmentId: true },
       });
 
-      const assignmentIds = assignmentClassrooms.map(
-        (ac: { assignmentId: string }) => ac.assignmentId,
+      const assignmentIds = Array.from(
+        new Set(assignmentClassrooms.map((ac: { assignmentId: string }) => ac.assignmentId))
       );
 
       if (assignmentIds.length > 0) {
         // Đếm tổng số assignments
         totalAssignments = assignmentIds.length;
 
-        // Đếm số assignments đã nộp
-        submittedAssignments = await prisma.assignmentSubmission.count({
-          where: {
-            assignmentId: { in: assignmentIds },
-            studentId: user.id,
-          },
-        });
+        // Đếm số assignments đã nộp (distinct assignmentId, tránh đếm theo attempt)
+        const submittedRows = await prisma.$queryRaw<Array<{ total: bigint }>>`
+          SELECT COUNT(DISTINCT s."assignmentId")::bigint as total
+          FROM "assignment_submissions" s
+          WHERE s."studentId" = ${user.id}
+            AND s."assignmentId" = ANY(${assignmentIds}::text[]);
+        `;
+        submittedAssignments = Number(submittedRows[0]?.total ?? 0);
 
-        // Đếm số assignments sắp đến hạn (trong 7 ngày tới)
+        // Tính điểm trung bình theo rule P2 + overdue missing (0), deadline hiệu lực = lockAt ?? dueDate
+        const avgAggRows = await prisma.$queryRaw<Array<{ grade_sum: number; grade_count: bigint; missing_overdue: bigint }>>`
+          WITH relevant_assignments AS (
+            SELECT DISTINCT a."id", a."dueDate", a."lockAt"
+            FROM "assignments" a
+            JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+            WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+          ),
+          latest_graded AS (
+            SELECT DISTINCT ON (s."assignmentId")
+              s."assignmentId",
+              s."grade"
+            FROM "assignment_submissions" s
+            JOIN relevant_assignments ra ON ra."id" = s."assignmentId"
+            WHERE s."studentId" = ${user.id}
+              AND s."grade" IS NOT NULL
+            ORDER BY s."assignmentId", s."attempt" DESC, s."submittedAt" DESC
+          ),
+          missing_overdue AS (
+            SELECT COUNT(*)::bigint as total
+            FROM relevant_assignments ra
+            WHERE COALESCE(ra."lockAt", ra."dueDate") IS NOT NULL
+              AND COALESCE(ra."lockAt", ra."dueDate") < ${now}
+              AND NOT EXISTS (
+                SELECT 1
+                FROM "assignment_submissions" s
+                WHERE s."assignmentId" = ra."id" AND s."studentId" = ${user.id}
+              )
+          )
+          SELECT
+            COALESCE(SUM(latest_graded."grade"), 0)::double precision as grade_sum,
+            COUNT(*)::bigint as grade_count,
+            (SELECT total FROM missing_overdue) as missing_overdue
+          FROM latest_graded;
+        `;
+
+        const gradeSum = Number(avgAggRows[0]?.grade_sum ?? 0);
+        const gradeCount = Number(avgAggRows[0]?.grade_count ?? 0);
+        const missingOverdue = Number(avgAggRows[0]?.missing_overdue ?? 0);
+        const denom = gradeCount + missingOverdue;
+        averageGrade = denom > 0 ? gradeSum / denom : 0;
+
+        // Đếm số assignments sắp đến hạn (trong 7 ngày tới) theo deadline hiệu lực
         const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const upcomingAssignmentsData = await prisma.assignment.findMany({
-          where: {
-            id: { in: assignmentIds },
-            dueDate: {
-              gte: now,
-              lte: sevenDaysFromNow,
-            },
-          },
-          select: { id: true },
-        });
+        const upcomingRows = await prisma.$queryRaw<Array<{ total: bigint; submitted: bigint }>>`
+          WITH relevant_assignments AS (
+            SELECT DISTINCT a."id", a."dueDate", a."lockAt"
+            FROM "assignments" a
+            JOIN "assignment_classrooms" ac ON ac."assignmentId" = a."id"
+            WHERE ac."classroomId" = ANY(${classroomIds}::text[])
+          ),
+          upcoming AS (
+            SELECT ra."id" as "assignmentId"
+            FROM relevant_assignments ra
+            WHERE COALESCE(ra."lockAt", ra."dueDate") IS NOT NULL
+              AND COALESCE(ra."lockAt", ra."dueDate") >= ${now}
+              AND COALESCE(ra."lockAt", ra."dueDate") <= ${sevenDaysFromNow}
+          ),
+          submitted AS (
+            SELECT COUNT(DISTINCT s."assignmentId")::bigint as total
+            FROM "assignment_submissions" s
+            JOIN upcoming u ON u."assignmentId" = s."assignmentId"
+            WHERE s."studentId" = ${user.id}
+          )
+          SELECT
+            (SELECT COUNT(*)::bigint FROM upcoming) as total,
+            (SELECT total FROM submitted) as submitted;
+        `;
 
-        // Kiểm tra xem học sinh đã nộp chưa
-        const upcomingIds = upcomingAssignmentsData.map(
-          (a: { id: string }) => a.id,
-        );
-        if (upcomingIds.length > 0) {
-          const submittedUpcoming = await prisma.assignmentSubmission.count({
-            where: {
-              assignmentId: { in: upcomingIds },
-              studentId: user.id,
-            },
-          });
-          upcomingAssignments = upcomingIds.length - submittedUpcoming;
-        }
+        const upcomingTotal = Number(upcomingRows[0]?.total ?? 0);
+        const upcomingSubmitted = Number(upcomingRows[0]?.submitted ?? 0);
+        upcomingAssignments = Math.max(0, upcomingTotal - upcomingSubmitted);
       }
     }
-
-    const averageGrade = gradedAgg._count._all > 0 ? Number(gradedAgg._avg.grade ?? 0) : 0;
     const lastMonthAverage = Number(lastMonthAgg._avg.grade ?? 0);
 
     const gradeChange = averageGrade - lastMonthAverage;

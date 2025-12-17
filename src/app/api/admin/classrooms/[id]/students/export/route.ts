@@ -3,14 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { errorResponse } from "@/lib/api-utils";
-
-function escapeCsv(val: unknown): string {
-  if (val == null) return "";
-  const s = String(val);
-  return s.includes(",") || s.includes("\"") || s.includes("\n")
-    ? `"${s.replace(/"/g, '""')}"`
-    : s;
-}
+import { toXlsxArrayBuffer } from "@/lib/excel";
 
 export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
@@ -43,23 +36,21 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       take: 10000,
     });
 
-    const header = ["studentId", "fullname", "email", "joinedAt"].join(",");
-    const rows = links.map((l) => {
-      return [
-        escapeCsv(l.student.id),
-        escapeCsv(l.student.fullname || ""),
-        escapeCsv(l.student.email),
-        escapeCsv(l.joinedAt.toISOString()),
-      ].join(",");
-    });
+    const headers = ["studentId", "fullname", "email", "joinedAt"];
+    const rows = links.map((l) => [
+      l.student.id,
+      l.student.fullname || "",
+      l.student.email,
+      l.joinedAt.toISOString(),
+    ]);
 
-    const csv = "\uFEFF" + [header, ...rows].join("\n");
-    const filename = `classroom-${classroom.code}-students.csv`;
+    const arrayBuffer = toXlsxArrayBuffer(headers, rows, { sheetName: "Students" });
+    const filename = `classroom-${classroom.code}-students.xlsx`;
 
-    return new NextResponse(csv, {
+    return new NextResponse(arrayBuffer, {
       status: 200,
       headers: {
-        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });

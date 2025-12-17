@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/shared";
 import { Users, NotebookText, BarChart3, GraduationCap } from "lucide-react";
 import StudentsTable from "@/components/teacher/students/StudentsTable";
 import type { StudentListItem } from "@/components/teacher/students/StudentList";
+import { exportToXlsx } from "@/lib/excel";
 
 export default function ClassroomPeople() {
     const params = useParams();
@@ -90,7 +91,7 @@ export default function ClassroomPeople() {
         setSelectedIds(checked ? tableStudents.map((s) => s.id) : []);
     };
 
-    const exportCsv = () => {
+    const exportExcel = () => {
         const header = [
             "id","fullname","averageGrade","submissionRate","submitted","totalAssignments"
         ];
@@ -98,20 +99,13 @@ export default function ClassroomPeople() {
             .filter((s) => selectedIds.length === 0 || selectedIds.includes(s.id))
             .map((s) => [
                 s.id,
-                s.fullname.replaceAll('"','""'),
+                s.fullname,
                 s.averageGrade ?? "",
                 Math.round(s.submissionRate),
                 s.submittedCount,
                 s.totalAssignments,
             ]);
-        const csv = [header.join(","), ...rows.map((r) => r.join(","))].join("\n");
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "students.csv";
-        a.click();
-        URL.revokeObjectURL(url);
+        exportToXlsx("students", header, rows, { sheetName: "Students" });
     };
 
     useEffect(() => {
@@ -174,7 +168,7 @@ export default function ClassroomPeople() {
                         </button>
                     </div>
                     {view === "table" && (
-                        <Button variant="outline" onClick={exportCsv}>Xuất CSV</Button>
+                        <Button variant="outline" onClick={exportExcel}>Xuất Excel</Button>
                     )}
                 </div>
             </div>
@@ -219,7 +213,7 @@ export default function ClassroomPeople() {
                             <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
                                 <div>{selectedIds.length} mục đã chọn</div>
                                 <div className="flex items-center gap-2">
-                                    <Button size="sm" onClick={exportCsv}>Xuất CSV</Button>
+                                    <Button size="sm" onClick={exportExcel}>Xuất Excel</Button>
                                     <Button size="sm" variant="outline" onClick={() => setSelectedIds([])}>Bỏ chọn</Button>
                                 </div>
                             </div>

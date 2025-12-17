@@ -8,6 +8,7 @@ import { signIn } from "next-auth/react";
 import Button from "../ui/button";
 import Input from "../ui/input";
 import Label from "../ui/label";
+import { passwordSchema } from "@/lib/validation/password.schema";
 
 function checkPasswordStrength(password: string) {
     let strength = 0;
@@ -63,9 +64,11 @@ export default function RegisterForm() {
             return;
         }
 
-        if (password.length < 6) {
+        const passwordParsed = passwordSchema.safeParse(password);
+        if (!passwordParsed.success) {
+            const msg = passwordParsed.error.issues[0]?.message || "Mật khẩu không hợp lệ";
             toast({
-                title: "⚠️ Mật khẩu phải có ít nhất 6 ký tự!",
+                title: `⚠️ ${msg}!`,
                 variant: "destructive",
             });
             return;

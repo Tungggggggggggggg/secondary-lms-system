@@ -54,14 +54,14 @@ export async function GET(req: NextRequest) {
         WHERE c."teacherId" = ${teacherId} AND c."isActive" = true
       ),
       class_assignments AS (
-        SELECT ac."assignmentId", ac."classroomId", a."dueDate" as "dueDate"
+        SELECT ac."assignmentId", ac."classroomId", a."dueDate" as "dueDate", a."lockAt" as "lockAt"
         FROM "assignment_classrooms" ac
         JOIN "classrooms" c ON c."id" = ac."classroomId"
         JOIN "assignments" a ON a."id" = ac."assignmentId"
         WHERE c."teacherId" = ${teacherId} AND c."isActive" = true
       ),
       pairs AS (
-        SELECT cs."studentId", cs."classroomId", ca."assignmentId", ca."dueDate" as "dueDate"
+        SELECT cs."studentId", cs."classroomId", ca."assignmentId", ca."dueDate" as "dueDate", ca."lockAt" as "lockAt"
         FROM class_students cs
         LEFT JOIN class_assignments ca ON ca."classroomId" = cs."classroomId"
       ),
@@ -91,8 +91,8 @@ export async function GET(req: NextRequest) {
               +
               COUNT(DISTINCT p."assignmentId") FILTER (
                 WHERE ls."assignmentId" IS NULL
-                  AND p."dueDate" IS NOT NULL
-                  AND p."dueDate" < NOW()
+                  AND COALESCE(p."lockAt", p."dueDate") IS NOT NULL
+                  AND COALESCE(p."lockAt", p."dueDate") < NOW()
               )
             )::double precision,
             0

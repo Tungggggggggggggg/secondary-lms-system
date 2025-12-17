@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
+import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
 
 interface TeacherClassroomAssignmentSummary {
   id: string;
   title: string | null;
   type: string;
   dueDate: Date | null;
+  lockAt: Date | null;
 }
 
 const querySchema = z.object({
@@ -95,7 +97,7 @@ export async function GET(
     // Lấy thông tin assignments
     const assignments = (await prisma.assignment.findMany({
       where: { id: { in: assignmentIds } },
-      select: { id: true, title: true, type: true, dueDate: true },
+      select: { id: true, title: true, type: true, dueDate: true, lockAt: true },
     })) as TeacherClassroomAssignmentSummary[];
     const assignmentMap = new Map<string, TeacherClassroomAssignmentSummary>(
       assignments.map((a: TeacherClassroomAssignmentSummary) => [a.id, a]),
@@ -111,7 +113,7 @@ export async function GET(
         assignment: { select: { id: true } },
         student: { select: { id: true, fullname: true, email: true } },
       },
-      orderBy: { submittedAt: "desc" },
+      orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
     });
 
     // Giữ lại submission mới nhất cho mỗi (student, assignment)
@@ -126,6 +128,7 @@ export async function GET(
 
     const submissionRows = latestSubmissions.map((s) => {
       const assignment = assignmentMap.get(s.assignment.id);
+      const effectiveDeadline = assignment ? getEffectiveDeadline(assignment) : null;
       return {
         id: s.id,
         student: {
@@ -137,7 +140,7 @@ export async function GET(
           id: assignment?.id ?? s.assignment.id,
           title: assignment?.title ?? "",
           type: assignment?.type ?? "ESSAY",
-          dueDate: assignment?.dueDate?.toISOString() || null,
+          dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
         },
         grade: s.grade,
         feedback: s.feedback,
@@ -160,10 +163,8 @@ export async function GET(
         .filter((assignmentId) => !existingKeys.has(`${cs.studentId}-${assignmentId}`))
         .map((assignmentId) => {
           const assignment = assignmentMap.get(assignmentId);
-          const isPastDue =
-            assignment?.dueDate !== null &&
-            assignment?.dueDate !== undefined &&
-            assignment.dueDate < now;
+          const isPastDue = assignment ? isAssignmentOverdue(assignment, now) : false;
+          const effectiveDeadline = assignment ? getEffectiveDeadline(assignment) : null;
 
           return {
             id: `virtual-${cs.studentId}-${assignmentId}`,
@@ -176,9 +177,7 @@ export async function GET(
               id: assignmentId,
               title: assignment?.title ?? "",
               type: assignment?.type ?? "ESSAY",
-              dueDate: assignment?.dueDate
-                ? assignment.dueDate.toISOString()
-                : null,
+              dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
             },
             grade: isPastDue ? 0 : null,
             feedback: null as string | null,

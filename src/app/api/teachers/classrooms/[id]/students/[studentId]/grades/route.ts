@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
+import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
 
 interface TeacherStudentSubmissionRow {
   id: string;
@@ -13,6 +14,7 @@ interface TeacherStudentSubmissionRow {
     title: string;
     type: string;
     dueDate: Date | null;
+    lockAt: Date | null;
   };
 }
 
@@ -21,6 +23,7 @@ type AssignmentSummaryRow = {
   title: string | null;
   type: string;
   dueDate: Date | null;
+  lockAt: Date | null;
 };
 
 // GET: Điểm chi tiết của một học sinh trong lớp (teacher view)
@@ -63,9 +66,9 @@ export async function GET(
     const submissionsRaw = await prisma.assignmentSubmission.findMany({
       where: { studentId, assignmentId: { in: assignmentIds } },
       include: {
-        assignment: { select: { id: true, title: true, type: true, dueDate: true } },
+        assignment: { select: { id: true, title: true, type: true, dueDate: true, lockAt: true } },
       },
-      orderBy: { submittedAt: "desc" },
+      orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
     });
 
     const submissions = submissionsRaw as TeacherStudentSubmissionRow[];
@@ -85,7 +88,7 @@ export async function GET(
       assignmentId: sub.assignment.id,
       assignmentTitle: sub.assignment.title,
       assignmentType: sub.assignment.type,
-      dueDate: sub.assignment.dueDate?.toISOString() || null,
+      dueDate: getEffectiveDeadline(sub.assignment)?.toISOString() || null,
       grade: sub.grade,
       feedback: sub.feedback,
       submittedAt: sub.submittedAt.toISOString(),
@@ -102,18 +105,19 @@ export async function GET(
 
     const assignments = (await prisma.assignment.findMany({
       where: { id: { in: missingAssignmentIds } },
-      select: { id: true, title: true, type: true, dueDate: true },
+      select: { id: true, title: true, type: true, dueDate: true, lockAt: true },
     })) as AssignmentSummaryRow[];
 
     const now = new Date();
     const missingRows = assignments.map((a) => {
-      const isPastDue = a.dueDate !== null && a.dueDate < now;
+      const isPastDue = isAssignmentOverdue(a, now);
+      const effectiveDeadline = getEffectiveDeadline(a);
       return {
         id: `virtual-${studentId}-${a.id}`,
         assignmentId: a.id,
         assignmentTitle: a.title ?? "",
         assignmentType: a.type,
-        dueDate: a.dueDate ? a.dueDate.toISOString() : null,
+        dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
         grade: isPastDue ? 0 : null,
         feedback: null as string | null,
         submittedAt: null as string | null,

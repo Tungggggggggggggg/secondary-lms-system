@@ -20,6 +20,7 @@ import { ArrowLeft, Award, CheckCircle2, Clock, ChevronDown, MessageCircle, Spar
 import Link from "next/link";
 import { useParentGrades, GradeEntry } from "@/hooks/use-parent-grades";
 import type { ParentStudentRelationship } from "@/types/parent";
+import { exportToXlsx } from "@/lib/excel";
 
 // types imported from shared module; SWR fetcher is provided globally
 
@@ -240,45 +241,18 @@ export default function ParentChildGradesPage() {
     }
   };
 
-  // Export CSV helper
-  function toCsvValue(v: unknown): string {
-    const s = v === null || v === undefined ? "" : String(v);
-    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-    return s;
-  }
-
-  function downloadCsv() {
-    const rows: string[] = [];
-    rows.push([
-      "Lớp học",
-      "Bài tập",
-      "Loại",
-      "Điểm",
-      "Nhận xét",
-      "Ngày nộp",
-    ].map(toCsvValue).join(","));
-
-    for (const g of filteredAndSortedGrades) {
-      rows.push([
-        g.classroom?.name || "",
-        g.assignmentTitle,
-        g.assignmentType,
-        g.grade !== null && g.grade !== undefined ? g.grade.toFixed(1) : "",
-        g.feedback || "",
-        g.submittedAt ? new Date(g.submittedAt).toISOString() : "",
-      ].map(toCsvValue).join(","));
-    }
-
-    const csv = "\ufeff" + rows.join("\n"); // BOM UTF-8
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `diem-so-${selectedChild?.student.fullname || childId}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  // Export Excel helper
+  function downloadExcel() {
+    const header = ["Lớp học", "Bài tập", "Loại", "Điểm", "Nhận xét", "Nộp lúc"];
+    const rows = filteredAndSortedGrades.map((g) => [
+      g.classroom?.name || "",
+      g.assignmentTitle,
+      g.assignmentType,
+      g.grade !== null && g.grade !== undefined ? g.grade.toFixed(1) : "",
+      g.feedback || "",
+      g.submittedAt ? new Date(g.submittedAt).toISOString() : "",
+    ]);
+    exportToXlsx(`diem-so-${selectedChild?.student.fullname || childId}`, header, rows, { sheetName: "Grades" });
   }
 
   if (childrenLoading) {
@@ -392,8 +366,8 @@ export default function ParentChildGradesPage() {
               </span>
             )}
           </Button>
-          <Button onClick={downloadCsv} className="rounded-full px-5">
-            Xuất CSV
+          <Button onClick={downloadExcel} className="rounded-full px-5">
+            Xuất Excel
           </Button>
         </div>
       </div>

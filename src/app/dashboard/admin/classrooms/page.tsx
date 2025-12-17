@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { generateClassroomCode } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { passwordSchema } from "@/lib/validation/password.schema";
 
 type ClassroomItem = {
   id: string;
@@ -247,24 +248,24 @@ export default function AdminClassroomsPage() {
     }
   };
 
-  const exportStudentsCsv = async () => {
+  const exportStudentsExcel = async () => {
     if (!studentsTarget) return;
     try {
       const res = await fetch(`/api/admin/classrooms/${studentsTarget.id}/students/export`, { cache: "no-store" });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.message || "Không thể xuất CSV");
+        throw new Error(json?.message || "Không thể xuất Excel");
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `classroom-${studentsTarget.code}-students.csv`;
+      a.download = `classroom-${studentsTarget.code}-students.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
       toast({
-        title: "Không thể xuất CSV",
+        title: "Không thể xuất Excel",
         description: e instanceof Error ? e.message : "Có lỗi xảy ra",
         variant: "destructive",
       });
@@ -557,8 +558,12 @@ export default function AdminClassroomsPage() {
 
     if (bulkCreateMissing) {
       const pwd = bulkDefaultPassword.toString();
-      if (!pwd || pwd.length < 6) {
-        setBulkError("Mật khẩu mặc định phải có ít nhất 6 ký tự.");
+      const passwordParsed = passwordSchema.safeParse(pwd);
+      if (!passwordParsed.success) {
+        setBulkError(
+          passwordParsed.error.issues.map((i) => i.message).join("; ") ||
+            "Mật khẩu mặc định không hợp lệ."
+        );
         return;
       }
     }
@@ -1313,8 +1318,8 @@ export default function AdminClassroomsPage() {
             <Button variant="outline" onClick={() => setStudentsOpen(false)} disabled={studentsLoading}>
               Đóng
             </Button>
-            <Button variant="outline" onClick={exportStudentsCsv} disabled={studentsLoading || !studentsTarget}>
-              Xuất CSV
+            <Button variant="outline" onClick={exportStudentsExcel} disabled={studentsLoading || !studentsTarget}>
+              Xuất Excel
             </Button>
             <Button onClick={() => fetchClassroomStudents({ page: 1, q: studentsSearch })} disabled={studentsLoading || !studentsTarget}>
               {studentsLoading ? "Đang tải..." : "Tải lại"}
@@ -1532,14 +1537,14 @@ export default function AdminClassroomsPage() {
                     <div className="flex flex-col gap-1">
                       <div className="text-xs font-semibold text-slate-600">Mật khẩu mặc định</div>
                       <input
-                        type="text"
+                        type="password"
                         value={bulkDefaultPassword}
                         onChange={(e) => setBulkDefaultPassword(e.target.value)}
-                        placeholder="VD: 123456"
+                        placeholder="Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số"
                         className="rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                         disabled={bulkSubmitting}
                       />
-                      <div className="text-[11px] text-slate-500">Tối thiểu 6 ký tự. Không lưu/hiển thị lại trong kết quả.</div>
+                      <div className="text-[11px] text-slate-500">Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường và số. Không lưu/hiển thị lại trong kết quả.</div>
                     </div>
                     <div className="hidden md:block" />
                   </div>

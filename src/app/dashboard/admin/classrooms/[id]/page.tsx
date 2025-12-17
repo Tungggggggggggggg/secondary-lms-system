@@ -729,26 +729,26 @@ export default function AdminClassroomDetailPage() {
     }
   };
 
-  const exportStudents = async () => {
+  const exportStudentsExcel = async () => {
     if (!classroomId) return;
     try {
       const res = await fetch(`/api/admin/classrooms/${classroomId}/students/export`, { cache: "no-store" });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.message || "Không thể export CSV");
+        throw new Error(json?.message || "Không thể export Excel");
       }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `classroom_students_${classroom?.code || classroomId}.csv`;
+      a.download = `classroom_students_${classroom?.code || classroomId}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
       toast({
-        title: "Không thể export CSV",
+        title: "Không thể export Excel",
         description: err instanceof Error ? err.message : "Có lỗi xảy ra",
         variant: "destructive",
       });
@@ -871,8 +871,8 @@ export default function AdminClassroomDetailPage() {
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
-              <Button variant="outline" onClick={exportStudents}>
-                Export CSV
+              <Button variant="outline" onClick={exportStudentsExcel}>
+                Xuất Excel
               </Button>
               <Button variant="outline" onClick={toggleArchive}>
                 {classroom.isActive ? "Lưu trữ" : "Khôi phục"}
@@ -1321,7 +1321,7 @@ export default function AdminClassroomDetailPage() {
                       type="password"
                       value={bulkDefaultPassword}
                       onChange={(e) => setBulkDefaultPassword(e.target.value)}
-                      placeholder="Tối thiểu 6 ký tự"
+                      placeholder="Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số"
                       className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     />
                   </div>

@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { errorResponse } from '@/lib/api-utils';
+import { passwordSchema } from '@/lib/validation/password.schema';
 
 const ALLOWED_USER_ROLES = [
   'TEACHER',
@@ -17,7 +18,7 @@ const registerSchema = z
   .object({
     fullname: z.string().min(1).max(200),
     email: z.string().email().max(320),
-    password: z.string().min(6).max(200),
+    password: passwordSchema,
     role: z.string().optional().nullable(),
   })
   .strict();

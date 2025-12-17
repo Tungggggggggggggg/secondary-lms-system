@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
 
 const paramsSchema = z
   .object({
@@ -16,11 +17,13 @@ interface StudentClassroomGradeSubmissionRow {
   grade: number | null;
   feedback: string | null;
   submittedAt: Date;
+  attempt: number;
   assignment: {
     id: string;
     title: string;
     type: string;
     dueDate: Date | null;
+    lockAt: Date | null;
   };
 }
 
@@ -94,30 +97,47 @@ export async function GET(
         studentId: user.id,
         assignmentId: { in: assignmentIdList },
       },
-      include: {
+      select: {
+        id: true,
+        assignmentId: true,
+        content: true,
+        grade: true,
+        feedback: true,
+        submittedAt: true,
+        attempt: true,
         assignment: {
           select: {
             id: true,
             title: true,
             type: true,
             dueDate: true,
+            lockAt: true,
           },
         },
       },
-      orderBy: { submittedAt: "desc" },
+      orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
     });
 
     const submissions =
       submissionsRaw as StudentClassroomGradeSubmissionRow[];
 
+    // Giữ lại submission mới nhất cho mỗi assignment (tránh đếm sai theo attempt)
+    const latestByAssignmentId = new Map<string, StudentClassroomGradeSubmissionRow>();
+    for (const s of submissions) {
+      if (!latestByAssignmentId.has(s.assignmentId)) {
+        latestByAssignmentId.set(s.assignmentId, s);
+      }
+    }
+    const latestSubmissions = Array.from(latestByAssignmentId.values());
+
     // Transform data cho các bài đã nộp (bao gồm cả chưa chấm)
-    const submissionGrades = submissions.map(
+    const submissionGrades = latestSubmissions.map(
       (sub: StudentClassroomGradeSubmissionRow) => ({
         id: sub.id,
         assignmentId: sub.assignment.id,
         assignmentTitle: sub.assignment.title,
         assignmentType: sub.assignment.type,
-        dueDate: sub.assignment.dueDate?.toISOString() || null,
+        dueDate: getEffectiveDeadline(sub.assignment)?.toISOString() || null,
         grade: sub.grade,
         feedback: sub.feedback,
         submittedAt: sub.submittedAt.toISOString(),
@@ -132,7 +152,7 @@ export async function GET(
 
     // Tìm các assignments chưa có submission nào từ student
     const submittedAssignmentIds = new Set(
-      submissions.map(
+      latestSubmissions.map(
         (sub: StudentClassroomGradeSubmissionRow) => sub.assignmentId,
       ),
     );
@@ -150,6 +170,7 @@ export async function GET(
         title: true,
         type: true,
         dueDate: true,
+        lockAt: true,
       },
     });
 
@@ -162,18 +183,17 @@ export async function GET(
         title: string;
         type: string;
         dueDate: Date | null;
+        lockAt: Date | null;
       }) => {
-      const isPastDue =
-        assignment.dueDate !== null && assignment.dueDate < now;
+      const isPastDue = isAssignmentOverdue(assignment, now);
+      const effectiveDeadline = getEffectiveDeadline(assignment);
 
       return {
         id: `virtual-${assignment.id}`,
         assignmentId: assignment.id,
         assignmentTitle: assignment.title,
         assignmentType: assignment.type,
-        dueDate: assignment.dueDate
-          ? assignment.dueDate.toISOString()
-          : null,
+        dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
         grade: isPastDue ? 0 : null,
         feedback: null,
         submittedAt: null as string | null,
@@ -184,14 +204,12 @@ export async function GET(
     const grades = [...submissionGrades, ...missingGrades];
 
     // Tính điểm trung bình: chỉ tính bài đã chấm + bài quá hạn chưa nộp (0). Không tính bài chưa đến hạn hoặc dueDate=null.
-    const gradedSubmissions = submissions.filter(
+    const gradedLatestSubmissions = latestSubmissions.filter(
       (sub: StudentClassroomGradeSubmissionRow) => sub.grade !== null,
     );
-    const overdueMissingCount = missingAssignments.filter(
-      (a) => a.dueDate !== null && a.dueDate < now
-    ).length;
-    const denom = gradedSubmissions.length + overdueMissingCount;
-    const sumGrades = gradedSubmissions.reduce(
+    const overdueMissingCount = missingGrades.filter((g) => g.grade === 0).length;
+    const denom = gradedLatestSubmissions.length + overdueMissingCount;
+    const sumGrades = gradedLatestSubmissions.reduce(
       (sum: number, sub: StudentClassroomGradeSubmissionRow) => sum + (sub.grade || 0),
       0
     );

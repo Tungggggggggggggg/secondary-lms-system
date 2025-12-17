@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { userRepo } from "@/lib/repositories/user-repo";
 import { errorResponse } from "@/lib/api-utils";
+import { passwordSchema } from "@/lib/validation/password.schema";
 
 type BulkEntryInput = {
   fullname?: string;
@@ -67,8 +68,13 @@ export async function POST(req: NextRequest) {
         failed.push({ index, email, reason: "Email không hợp lệ" });
         return;
       }
-      if (!password || password.length < 6) {
-        failed.push({ index, email, reason: "Mật khẩu phải có ít nhất 6 ký tự" });
+      const passwordParsed = passwordSchema.safeParse(password);
+      if (!passwordParsed.success) {
+        failed.push({
+          index,
+          email,
+          reason: passwordParsed.error.issues.map((i) => i.message).join("; ") || "Mật khẩu không hợp lệ",
+        });
         return;
       }
 

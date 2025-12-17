@@ -626,7 +626,7 @@ export default function AdminUsersPage() {
           <DialogHeader className="shrink-0">
             <DialogTitle>Tạo người dùng mới</DialogTitle>
             <DialogDescription>
-              Nhập thông tin cơ bản để tạo tài khoản. Mật khẩu tối thiểu 6 ký tự.
+              Nhập thông tin cơ bản để tạo tài khoản. Mật khẩu tối thiểu 8 ký tự, gồm chữ hoa, chữ thường và số.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
@@ -676,7 +676,7 @@ export default function AdminUsersPage() {
                   type="password"
                   value={createPassword}
                   onChange={(e) => setCreatePassword(e.target.value)}
-                  placeholder="Tối thiểu 6 ký tự"
+                  placeholder="Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số"
                   className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   required
                 />

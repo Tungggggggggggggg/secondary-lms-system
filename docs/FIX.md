@@ -34,8 +34,10 @@ Ghi chú trạng thái (đã triển khai trong codebase):
 - A3 ✅
 - A4 ✅
 - A5 ✅
-- UX bổ sung ✅ (join archived class hiển thị toast; system settings propagate realtime)
-- Còn lại: (3) Align avg score Student/Teacher, AUTH1, EXP1
+- AUTH1 ✅
+- EXP1 ✅
+- (3) Align avg score Student/Teacher ✅
+- Còn lại: (không)
 
 ---
 
@@ -97,9 +99,9 @@ Ghi chú trạng thái (đã triển khai trong codebase):
     - Tạo “grade entries” để tính average:
       - Nếu có submission và `grade != null` → include grade
       - Nếu không có submission:
-        - Nếu `dueDate != null` và `dueDate < now` → include grade=0
+        - Nếu `effectiveDeadline = lockAt ?? dueDate` và `effectiveDeadline < now` → include grade=0
         - Nếu `dueDate == null` → exclude
-        - Nếu `dueDate >= now` → exclude
+        - Nếu `effectiveDeadline >= now` → exclude
   - Đảm bảo cả endpoint “tổng quan” và “chi tiết 1 con” dùng cùng logic để tránh lệch số.
 - **Acceptance Criteria**
   - Điểm TB thay đổi đúng theo rule trên các case:
@@ -286,7 +288,7 @@ Ghi chú trạng thái (đã triển khai trong codebase):
 ### 3.5 Auth / Validation
 
 #### AUTH1. Thống nhất policy mật khẩu giữa Register và Reset Password
-- **Trạng thái**: ⏳ Chưa triển khai.
+- **Trạng thái**: ✅ Đã triển khai.
 - **Hiện trạng**
   - Register API đang min(6); Reset password API min(8 + uppercase/lowercase/number).
 - **File liên quan**
@@ -309,7 +311,7 @@ Ghi chú trạng thái (đã triển khai trong codebase):
 ### 3.6 Export
 
 #### EXP1. Thay CSV export → Excel export (.xlsx)
-- **Trạng thái**: ⏳ Chưa triển khai.
+- **Trạng thái**: ✅ Đã triển khai.
 - **Hiện trạng**
   - Có util `src/lib/csv.ts` và các page dùng `exportToCsv`.
 - **File liên quan**
@@ -328,20 +330,14 @@ Ghi chú trạng thái (đã triển khai trong codebase):
 ---
 
 ## 4) Thứ tự ưu tiên triển khai (khuyến nghị)
-1. (3) Align avg score Student/Teacher theo rule overdue/missing (còn lại)
-2. AUTH1 (unify password policy)
-3. EXP1 (Excel export)
-
-Các mục đã hoàn thành: P1, P2, S1, T1, T2, A1, A2, A3, A4, A5.
+Các mục đã hoàn thành: P1, P2, (3), S1, T1, T2, A1, A2, A3, A4, A5, AUTH1, EXP1.
 
 Các mục còn lại cần triển khai:
-- (3) Align avg score Student/Teacher theo rule overdue/missing
-- AUTH1: Thống nhất policy mật khẩu giữa Register và Reset Password
-- EXP1: Thay CSV export → Excel export (.xlsx)
+- (không)
 
 ---
 
 ## 5) Ghi chú triển khai
 - Khi chỉnh permission chat cho parent, cần test cả trường hợp:
 - Với avg score, cần thống nhất cách xác định “quá hạn”:
-  - ưu tiên `dueDate`, nếu có field `lockAt` thì cần quyết định rule.
+  - ưu tiên `lockAt`, fallback `dueDate` (deadline hiệu lực = `lockAt ?? dueDate`).

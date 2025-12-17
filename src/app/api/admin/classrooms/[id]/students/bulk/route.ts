@@ -8,6 +8,7 @@ import { errorResponse } from "@/lib/api-utils";
 import bcrypt from "bcryptjs";
 import { userRepo } from "@/lib/repositories/user-repo";
 import type { UserRole } from "@prisma/client";
+import { passwordSchema } from "@/lib/validation/password.schema";
 
 const requestSchema = z
   .object({
@@ -82,8 +83,14 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     const defaultPassword = (parsed.data.defaultPassword || "").toString();
 
     if (createMissing) {
-      if (!defaultPassword || defaultPassword.length < 6) {
-        return errorResponse(400, "Mật khẩu mặc định phải có ít nhất 6 ký tự.");
+      const passwordParsed = passwordSchema.safeParse(defaultPassword);
+      if (!passwordParsed.success) {
+        return errorResponse(400, "Mật khẩu mặc định không hợp lệ.", {
+          details: passwordParsed.error.issues.map((issue) => ({
+            field: issue.path.join("."),
+            message: issue.message,
+          })),
+        });
       }
     }
     const entries = Array.isArray(parsed.data.entries)

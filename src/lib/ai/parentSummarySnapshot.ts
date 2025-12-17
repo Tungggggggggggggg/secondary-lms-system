@@ -3,6 +3,7 @@ import type {
   GenerateParentSummaryParams,
   ParentGradeSnapshotItem,
 } from "@/lib/ai/gemini-parent-summary";
+import { getEffectiveDeadline } from "@/lib/grades/assignmentDeadline";
 
 function clipText(input: string, maxLen: number): string {
   const s = input.trim();
@@ -67,13 +68,14 @@ export async function buildParentSummarySnapshot(params: {
     prisma.assignment.findMany({
       where: {
         id: { in: assignmentIds },
-        OR: [{ dueDate: { gte: fromDate } }, { dueDate: null }],
+        OR: [{ dueDate: { gte: fromDate } }, { lockAt: { gte: fromDate } }, { dueDate: null }],
       },
       select: {
         id: true,
         title: true,
         type: true,
         dueDate: true,
+        lockAt: true,
       },
     }),
     prisma.assignmentClassroom.findMany({
@@ -116,18 +118,19 @@ export async function buildParentSummarySnapshot(params: {
   const pendingItems: ParentGradeSnapshotItem[] = [];
   for (const a of assignments) {
     if (submittedAssignmentIds.has(a.id)) continue;
-    if (!a.dueDate) continue;
-    if (a.dueDate < fromDate) continue;
+    const deadline = getEffectiveDeadline(a);
+    if (!deadline) continue;
+    if (deadline < fromDate) continue;
 
     pendingItems.push({
       assignmentTitle: a.title,
       assignmentType: a.type,
       classroomName: classroomNameByAssignmentId.get(a.id) ?? null,
-      dueDate: a.dueDate.toISOString(),
+      dueDate: deadline.toISOString(),
       submittedAt: null,
       grade: null,
       feedback: null,
-      status: a.dueDate < params.now ? "overdue" : "pending",
+      status: deadline < params.now ? "overdue" : "pending",
     });
   }
 
@@ -135,11 +138,12 @@ export async function buildParentSummarySnapshot(params: {
     .map((s): ParentGradeSnapshotItem | null => {
       const a = assignmentById.get(s.assignmentId);
       if (!a) return null;
+      const deadline = getEffectiveDeadline(a);
       return {
         assignmentTitle: a.title,
         assignmentType: a.type,
         classroomName: classroomNameByAssignmentId.get(a.id) ?? null,
-        dueDate: a.dueDate ? a.dueDate.toISOString() : null,
+        dueDate: deadline ? deadline.toISOString() : null,
         submittedAt: s.submittedAt.toISOString(),
         grade: s.grade,
         feedback: s.feedback,

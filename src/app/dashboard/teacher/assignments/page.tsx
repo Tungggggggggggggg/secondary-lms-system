@@ -10,7 +10,7 @@ import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { PageHeader } from "@/components/shared";
 import { FilterBar } from "@/components/shared";
 import { Plus } from "lucide-react";
-import { exportToCsv } from "@/lib/csv";
+import { exportToXlsx } from "@/lib/excel";
 import AssignmentTable from "@/components/teacher/assignments/AssignmentTable";
 import AssignmentQuickPreview from "@/components/teacher/assignments/AssignmentQuickPreview";
 import { useAssignmentsQuery } from "@/hooks/use-assignments-query";
@@ -130,12 +130,12 @@ export default function AssignmentsPage() {
                   a._count?.submissions ?? 0,
                   a.createdAt,
                 ]);
-                exportToCsv("assignments", headers, rows);
+                exportToXlsx("assignments", headers, rows, { sheetName: "Assignments" });
               }}
               className="inline-flex items-center gap-2 h-11 rounded-xl border border-blue-200 px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-              aria-label="Xuất CSV theo bộ lọc"
+              aria-label="Xuất Excel theo bộ lọc"
             >
-              Export CSV
+              Xuất Excel
             </button>
             <ViewToggle value={view} onChange={setView} />
           </>

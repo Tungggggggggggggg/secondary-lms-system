@@ -3,13 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { errorResponse } from '@/lib/api-utils';
+import { passwordSchema } from '@/lib/validation/password.schema';
 
 export async function PATCH(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.id) {
-      return NextResponse.json({ message: 'Chưa xác thực.' }, { status: 401 });
+      return errorResponse(401, 'Chưa xác thực.');
     }
 
     const body = await req.json();
@@ -20,18 +22,17 @@ export async function PATCH(req: Request) {
 
     // Validate input
     if (!currentPassword || !newPassword) {
-      return NextResponse.json(
-        { message: 'Vui lòng điền đầy đủ thông tin.' },
-        { status: 400 }
-      );
+      return errorResponse(400, 'Vui lòng điền đầy đủ thông tin.');
     }
 
-    // Check password length
-    if (newPassword.length < 6) {
-      return NextResponse.json(
-        { message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' },
-        { status: 400 }
-      );
+    const newPasswordParsed = passwordSchema.safeParse(newPassword);
+    if (!newPasswordParsed.success) {
+      return errorResponse(400, 'Mật khẩu không hợp lệ.', {
+        details: newPasswordParsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        })),
+      });
     }
 
     // Get user from database
@@ -41,20 +42,14 @@ export async function PATCH(req: Request) {
     });
 
     if (!user || !user.password) {
-      return NextResponse.json(
-        { message: 'Người dùng không tồn tại.' },
-        { status: 404 }
-      );
+      return errorResponse(404, 'Người dùng không tồn tại.');
     }
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
     if (!isPasswordValid) {
-      return NextResponse.json(
-        { message: 'Mật khẩu hiện tại không đúng.' },
-        { status: 401 }
-      );
+      return errorResponse(401, 'Mật khẩu hiện tại không đúng.');
     }
 
     // Hash new password
@@ -66,15 +61,10 @@ export async function PATCH(req: Request) {
       data: { password: hashedPassword },
     });
 
-    return NextResponse.json({
-      message: 'Đổi mật khẩu thành công!',
-    });
+    return NextResponse.json({ success: true, message: 'Đổi mật khẩu thành công!' }, { status: 200 });
   } catch (error) {
     console.error('[API Change Password] Error:', error);
-    return NextResponse.json(
-      { message: 'Có lỗi xảy ra khi đổi mật khẩu.' },
-      { status: 500 }
-    );
+    return errorResponse(500, 'Có lỗi xảy ra khi đổi mật khẩu.');
   }
 }
 

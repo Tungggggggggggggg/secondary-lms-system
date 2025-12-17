@@ -36,6 +36,7 @@ import {
 import { StatsGrid } from "@/components/shared";
 import { EmptyState } from "@/components/shared";
 import GradeFiltersToolbar, { GradeSortKey, GradeStatus } from "@/components/teacher/grades/GradeFiltersToolbar";
+import { exportToXlsx } from "@/lib/excel";
 
 type Row = {
   id: string;
@@ -209,29 +210,18 @@ export default function ClassroomGrades() {
     return Array.from(map.entries());
   }, [rows]);
 
-  const exportCsv = () => {
+  const exportExcel = () => {
     const header = ["student", "email", "assignment", "type", "due", "submitted", "grade"];
-    const csv = [
-      header.join(","),
-      ...visibleRows.map((r) =>
-        [
-          r.student.fullname.replaceAll('"', '""'),
-          r.student.email,
-          r.assignment.title.replaceAll('"', '""'),
-          r.assignment.type,
-          r.assignment.dueDate ?? "",
-          r.submittedAt ?? "",
-          r.grade ?? "",
-        ].join(",")
-      ),
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "grades.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    const rows = visibleRows.map((r) => [
+      r.student.fullname,
+      r.student.email,
+      r.assignment.title,
+      r.assignment.type,
+      r.assignment.dueDate ?? "",
+      r.submittedAt ?? "",
+      r.grade ?? "",
+    ]);
+    exportToXlsx("grades", header, rows, { sheetName: "Grades" });
   };
 
   const visibleRows = useMemo(
@@ -252,9 +242,9 @@ export default function ClassroomGrades() {
           <h2 className="text-xl sm:text-2xl font-semibold text-slate-900">Bảng điểm lớp học</h2>
           <p className="text-sm text-slate-600">Theo dõi điểm và tình trạng chấm bài.</p>
         </div>
-        <Button variant="outline" onClick={exportCsv}>
+        <Button variant="outline" onClick={exportExcel}>
           <Download className="h-4 w-4 mr-2" />
-          Xuất CSV
+          Xuất Excel
         </Button>
       </div>
 

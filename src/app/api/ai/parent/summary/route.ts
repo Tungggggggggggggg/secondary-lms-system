@@ -13,6 +13,7 @@ import {
   readParentSummaryCache,
   writeParentSummaryCache,
 } from "@/lib/ai/parentSummaryCache";
+import { getEffectiveDeadline } from "@/lib/grades/assignmentDeadline";
 
 const requestSchema = z.object({
   childId: z.string().min(1),
@@ -214,6 +215,7 @@ export const POST = withApiLogging(async (req: NextRequest) => {
           id: { in: assignmentIds },
           OR: [
             { dueDate: { gte: fromDate } },
+            { lockAt: { gte: fromDate } },
             { dueDate: null },
           ],
         },
@@ -222,6 +224,7 @@ export const POST = withApiLogging(async (req: NextRequest) => {
           title: true,
           type: true,
           dueDate: true,
+          lockAt: true,
         },
       }),
       prisma.assignmentClassroom.findMany({
@@ -264,18 +267,19 @@ export const POST = withApiLogging(async (req: NextRequest) => {
     const pendingItems: ParentGradeSnapshotItem[] = [];
     for (const a of assignments) {
       if (submittedAssignmentIds.has(a.id)) continue;
-      if (!a.dueDate) continue;
-      if (a.dueDate < fromDate) continue;
+      const deadline = getEffectiveDeadline(a);
+      if (!deadline) continue;
+      if (deadline < fromDate) continue;
 
       pendingItems.push({
         assignmentTitle: a.title,
         assignmentType: a.type,
         classroomName: classroomNameByAssignmentId.get(a.id) ?? null,
-        dueDate: a.dueDate.toISOString(),
+        dueDate: deadline.toISOString(),
         submittedAt: null,
         grade: null,
         feedback: null,
-        status: a.dueDate < now ? "overdue" : "pending",
+        status: deadline < now ? "overdue" : "pending",
       });
     }
 
@@ -283,11 +287,12 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       .map((s): ParentGradeSnapshotItem | null => {
         const a = assignmentById.get(s.assignmentId);
         if (!a) return null;
+        const deadline = getEffectiveDeadline(a);
         return {
           assignmentTitle: a.title,
           assignmentType: a.type,
           classroomName: classroomNameByAssignmentId.get(a.id) ?? null,
-          dueDate: a.dueDate ? a.dueDate.toISOString() : null,
+          dueDate: deadline ? deadline.toISOString() : null,
           submittedAt: s.submittedAt.toISOString(),
           grade: s.grade,
           feedback: s.feedback,

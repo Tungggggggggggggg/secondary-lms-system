@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/shared";
 import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { StatsGrid } from "@/components/shared";
 import StudentsTable from "@/components/teacher/students/StudentsTable";
+import { exportToXlsx } from "@/lib/excel";
 
 type TeacherStudentsApiResponse = {
   success?: boolean;
@@ -146,7 +147,7 @@ export default function StudentsPage() {
     try { window.localStorage.setItem("teacher:students:view", view); } catch {}
   }, [view]);
 
-  // Export CSV theo bộ lọc hiện tại
+  // Export Excel theo bộ lọc hiện tại
   const onExportFiltered = () => {
     const header = [
       "id",
@@ -172,14 +173,7 @@ export default function StudentsPage() {
       s.totalAssignments,
       s.status,
     ]);
-    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `students-${rows.length}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportToXlsx(`students-${rows.length}`, header, rows, { sheetName: "Students" });
   };
  const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
@@ -248,9 +242,9 @@ export default function StudentsPage() {
             type="button"
             onClick={onExportFiltered}
             className="inline-flex items-center gap-2 rounded-xl border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-            aria-label="Xuất CSV theo bộ lọc"
+            aria-label="Xuất Excel theo bộ lọc"
           >
-            Export CSV
+            Xuất Excel
           </button>
           {/* View toggle */}
           <div className="inline-flex rounded-xl border border-blue-200 overflow-hidden">

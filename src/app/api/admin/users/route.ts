@@ -6,6 +6,7 @@ import { settingsRepo } from "@/lib/repositories/settings-repo";
 import bcrypt from "bcryptjs";
 import { userRepo } from "@/lib/repositories/user-repo";
 import { errorResponse } from "@/lib/api-utils";
+import { passwordSchema } from "@/lib/validation/password.schema";
 
 const ALLOWED_ROLES = ["TEACHER", "STUDENT", "PARENT", "ADMIN"] as const;
 
@@ -133,8 +134,14 @@ export async function POST(req: NextRequest) {
       return errorResponse(400, "Email không hợp lệ.");
     }
 
-    if (!password || password.length < 6) {
-      return errorResponse(400, "Mật khẩu phải có ít nhất 6 ký tự.");
+    const passwordParsed = passwordSchema.safeParse(password);
+    if (!passwordParsed.success) {
+      return errorResponse(400, "Mật khẩu không hợp lệ.", {
+        details: passwordParsed.error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+        })),
+      });
     }
 
     if (!role) {
