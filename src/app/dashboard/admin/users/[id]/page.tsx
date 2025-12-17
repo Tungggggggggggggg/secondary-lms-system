@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import PageHeader from "@/components/shared/PageHeader";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminUserOverview from "@/components/admin/AdminUserOverview";
+import AdminUserSectionCard from "@/components/admin/AdminUserSectionCard";
 import { useToast } from "@/hooks/use-toast";
 import { usePrompt } from "@/components/providers/PromptProvider";
 import Button from "@/components/ui/button";
@@ -252,47 +254,24 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
     }
   };
 
+  const userRole = user ? String(user.role) : "";
+
   return (
     <div className="p-8 space-y-6">
-      <PageHeader
-        title="Chi tiết người dùng"
-        subtitle="Xem thông tin tài khoản, tổ chức tham gia và audit logs liên quan"
+      <AdminPageHeader
+        title={user ? user.fullname || user.email : "Chi tiết người dùng"}
+        subtitle={
+          user
+            ? `${user.email} — ${String(user.role)}`
+            : "Xem thông tin tài khoản, tổ chức tham gia và audit logs liên quan"
+        }
+        label="Quản lý người dùng"
+        actions={
+          <Button asChild variant="outline" size="sm" color="slate">
+            <Link href="/dashboard/admin/users">Quay lại danh sách</Link>
+          </Button>
+        }
       />
-
-      <div className="flex items-center justify-between">
-        <Link
-          href="/dashboard/admin/users"
-          className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
-        >
-          Quay lại danh sách
-        </Link>
-
-        {user && (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={loading || String(user.role) === "ADMIN"}
-              onClick={openEdit}
-            >
-              Chỉnh sửa
-            </Button>
-            <button
-              type="button"
-              disabled={loading || String(user.role) === "ADMIN"}
-              onClick={() => void toggleBan()}
-              className={`inline-flex items-center rounded-xl px-4 py-2 text-[12px] font-semibold border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-                user.isDisabled
-                  ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                  : "border-red-200 text-red-700 hover:bg-red-50"
-              }`}
-            >
-              {user.isDisabled ? "Mở khoá" : "Khoá tài khoản"}
-            </button>
-          </div>
-        )}
-      </div>
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -304,102 +283,62 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
         <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 text-sm text-slate-600">
           Đang tải...
         </div>
-      ) : user ? (
+      ) : null}
+
+      {user ? (
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-1 space-y-6">
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
-              <div className="text-sm font-semibold text-slate-900">Thông tin cơ bản</div>
-              <div className="space-y-2 text-[12px] text-slate-700">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Email</span>
-                  <span className="font-semibold text-slate-900 truncate" title={user.email}>
-                    {user.email}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Họ tên</span>
-                  <span className="font-semibold text-slate-900 truncate" title={user.fullname}>
-                    {user.fullname}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Role</span>
-                  <span className="font-semibold text-slate-900">{String(user.role)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Trạng thái</span>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                      user.isDisabled ? "bg-red-100 text-red-700" : "bg-emerald-50 text-emerald-700"
-                    }`}
+          <div className="lg:col-span-1">
+            <AdminUserOverview
+              email={user.email}
+              fullname={user.fullname}
+              role={userRole}
+              createdAt={formatTime(user.createdAt)}
+              updatedAt={formatTime(user.updatedAt)}
+              roleSelectedAt={user.roleSelectedAt ? formatTime(user.roleSelectedAt) : null}
+              isDisabled={user.isDisabled}
+              disabledReason={user.disabledReason}
+              teacherClassrooms={user.stats.teacherClassrooms}
+              studentEnrollments={user.stats.studentEnrollments}
+              parentRelations={user.stats.parentRelations}
+              actions={
+                <div className="flex flex-col items-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    color="slate"
+                    disabled={loading || userRole === "ADMIN"}
+                    onClick={openEdit}
                   >
-                    {user.isDisabled ? "Đã khoá" : "Hoạt động"}
-                  </span>
+                    Chỉnh sửa
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    color="slate"
+                    disabled={loading || userRole === "ADMIN"}
+                    onClick={() => void toggleBan()}
+                    className={
+                      user.isDisabled
+                        ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        : "border-red-200 text-red-700 hover:bg-red-50"
+                    }
+                  >
+                    {user.isDisabled ? "Mở khoá" : "Khoá tài khoản"}
+                  </Button>
                 </div>
-                {user.isDisabled && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                    {user.disabledReason || "Không có lý do cụ thể"}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
-              <div className="text-sm font-semibold text-slate-900">Thông tin hệ thống</div>
-              <div className="space-y-2 text-[12px] text-slate-700">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">User ID</span>
-                  <span className="font-mono text-[11px] text-slate-900 truncate max-w-[220px]" title={user.id}>
-                    {user.id}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Created</span>
-                  <span className="text-[11px] text-slate-700">{formatTime(user.createdAt)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Updated</span>
-                  <span className="text-[11px] text-slate-700">{formatTime(user.updatedAt)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Role selected</span>
-                  <span className="text-[11px] text-slate-700">
-                    {user.roleSelectedAt ? formatTime(user.roleSelectedAt) : "—"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
-              <div className="text-sm font-semibold text-slate-900">Thống kê nhanh</div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
-                  <div className="text-lg font-extrabold text-slate-900">{user.stats.teacherClassrooms}</div>
-                  <div className="text-[10px] font-semibold text-slate-600">Lớp (GV)</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
-                  <div className="text-lg font-extrabold text-slate-900">{user.stats.studentEnrollments}</div>
-                  <div className="text-[10px] font-semibold text-slate-600">Lớp (HS)</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
-                  <div className="text-lg font-extrabold text-slate-900">{user.stats.parentRelations}</div>
-                  <div className="text-[10px] font-semibold text-slate-600">Liên kết (PH)</div>
-                </div>
-              </div>
-            </div>
+              }
+            />
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            {user && String(user.role) === "TEACHER" && related?.teacherClassrooms ? (
-              <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Lớp đang dạy</div>
-                    <div className="text-xs text-slate-500 mt-1">Danh sách lớp (GV)</div>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-600">{related.teacherClassrooms.length} mục</span>
-                </div>
-
+            {user && userRole === "TEACHER" && related?.teacherClassrooms ? (
+              <AdminUserSectionCard
+                title="Lớp đang dạy"
+                description="Danh sách lớp (GV)"
+                count={related.teacherClassrooms.length}
+              >
                 {related.teacherClassrooms.length === 0 ? (
                   <div className="text-sm text-slate-500">Chưa có lớp nào.</div>
                 ) : (
@@ -419,7 +358,7 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                               <Link href={`/dashboard/admin/classrooms/${c.id}`} className="font-semibold text-slate-800 hover:underline">
                                 {c.name}
                               </Link>
-                              <div className="text-[10px] text-slate-500 truncate max-w-[320px]">{c.id}</div>
+                              <div className="text-[10px] text-slate-500">{c.id}</div>
                             </td>
                             <td className="px-3 py-2 text-slate-700">{c.code}</td>
                             <td className="px-3 py-2 text-[10px] font-semibold text-slate-700">{c.isActive ? "ACTIVE" : "INACTIVE"}</td>
@@ -429,19 +368,15 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                     </table>
                   </div>
                 )}
-              </div>
+              </AdminUserSectionCard>
             ) : null}
 
-            {user && String(user.role) === "STUDENT" && related?.studentClassrooms ? (
-              <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Lớp đang học</div>
-                    <div className="text-xs text-slate-500 mt-1">Danh sách lớp (HS)</div>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-600">{related.studentClassrooms.length} mục</span>
-                </div>
-
+            {user && userRole === "STUDENT" && related?.studentClassrooms ? (
+              <AdminUserSectionCard
+                title="Lớp đang học"
+                description="Danh sách lớp (HS)"
+                count={related.studentClassrooms.length}
+              >
                 {related.studentClassrooms.length === 0 ? (
                   <div className="text-sm text-slate-500">Chưa tham gia lớp nào.</div>
                 ) : (
@@ -476,19 +411,15 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                     </table>
                   </div>
                 )}
-              </div>
+              </AdminUserSectionCard>
             ) : null}
 
-            {user && String(user.role) === "STUDENT" && related?.studentParents ? (
-              <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Phụ huynh liên kết</div>
-                    <div className="text-xs text-slate-500 mt-1">Danh sách PH liên kết với học sinh</div>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-600">{related.studentParents.length} mục</span>
-                </div>
-
+            {user && userRole === "STUDENT" && related?.studentParents ? (
+              <AdminUserSectionCard
+                title="Phụ huynh liên kết"
+                description="Danh sách PH liên kết với học sinh"
+                count={related.studentParents.length}
+              >
                 {related.studentParents.length === 0 ? (
                   <div className="text-sm text-slate-500">Chưa có phụ huynh liên kết.</div>
                 ) : (
@@ -518,19 +449,15 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                     </table>
                   </div>
                 )}
-              </div>
+              </AdminUserSectionCard>
             ) : null}
 
-            {user && String(user.role) === "PARENT" && related?.parentChildren ? (
-              <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Con liên kết</div>
-                    <div className="text-xs text-slate-500 mt-1">Danh sách học sinh liên kết với phụ huynh</div>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-600">{related.parentChildren.length} mục</span>
-                </div>
-
+            {user && userRole === "PARENT" && related?.parentChildren ? (
+              <AdminUserSectionCard
+                title="Con liên kết"
+                description="Danh sách học sinh liên kết với phụ huynh"
+                count={related.parentChildren.length}
+              >
                 {related.parentChildren.length === 0 ? (
                   <div className="text-sm text-slate-500">Chưa có học sinh liên kết.</div>
                 ) : (
@@ -560,7 +487,7 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                     </table>
                   </div>
                 )}
-              </div>
+              </AdminUserSectionCard>
             ) : null}
           </div>
         </div>
