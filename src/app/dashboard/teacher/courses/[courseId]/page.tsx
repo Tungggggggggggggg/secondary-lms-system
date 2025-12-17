@@ -3,7 +3,6 @@
 import useSWR from "swr";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { FileText, Loader2, Plus, RefreshCw, Trash2, Upload, Wand2 } from "lucide-react";
 
 import { ConfirmDialog, PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
@@ -273,41 +272,6 @@ export default function Page() {
     }
   };
 
-  const [indexDryRun, setIndexDryRun] = useState(false);
-  const [indexForce, setIndexForce] = useState(false);
-  const [indexing, setIndexing] = useState(false);
-
-  const triggerIndex = async () => {
-    try {
-      setIndexing(true);
-      const qs = new URLSearchParams();
-      // Chỉ gửi các tham số true, để z.coerce.boolean trên server hiểu đúng
-      // Nếu gửi "false" (string), Boolean("false") sẽ thành true
-      if (indexDryRun) qs.set("dryRun", "true");
-      if (indexForce) qs.set("force", "true");
-      const res = await fetch(`/api/teachers/courses/${courseId}/index-embeddings?${qs.toString()}`, {
-        method: "POST",
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể index embeddings");
-      }
-      toast({
-        title: "Đã chạy index embeddings",
-        description: `Lessons: ${json?.data?.processedLessons ?? 0}, chunks: ${json?.data?.embeddedChunks ?? 0}`,
-        variant: "success",
-      });
-    } catch (e) {
-      toast({
-        title: "Index thất bại",
-        description: e instanceof Error ? e.message : "Có lỗi xảy ra",
-        variant: "destructive",
-      });
-    } finally {
-      setIndexing(false);
-    }
-  };
-
   if (courseLoading) {
     return (
       <div className="p-8">
@@ -342,18 +306,17 @@ export default function Page() {
       <PageHeader
         role="teacher"
         title={course.title}
-        subtitle={course.description || "Quản lý bài học và index embeddings cho Tutor."}
+        subtitle={course.description || "Quản lý bài học trong khóa học này."}
+        showIcon={false}
         actions={
           <div className="hidden sm:flex items-center gap-2">
             <Button variant="outline" onClick={() => router.push("/dashboard/teacher/courses")}>
               Quay lại
             </Button>
-            <Button variant="outline" onClick={openCreateFromFileDialog} className="gap-2">
-              <Upload className="h-4 w-4" />
+            <Button variant="outline" onClick={openCreateFromFileDialog}>
               Tạo từ file
             </Button>
-            <Button onClick={openCreateDialog} className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button onClick={openCreateDialog}>
               Thêm bài học
             </Button>
           </div>
@@ -361,45 +324,10 @@ export default function Page() {
       />
 
       <div className="bg-white rounded-2xl border border-slate-100 p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-slate-900">Index embeddings (Tutor)</div>
-            <div className="text-xs text-slate-500 mt-1">
-              Chạy sau khi tạo/sửa bài học để học sinh hỏi Tutor có nguồn dữ liệu.
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={indexDryRun}
-                  onChange={(e) => setIndexDryRun(e.target.checked)}
-                />
-                Dry run
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={indexForce}
-                  onChange={(e) => setIndexForce(e.target.checked)}
-                />
-                Force
-              </label>
-            </div>
-          </div>
-
-          <Button onClick={triggerIndex} disabled={indexing} className="gap-2">
-            {indexing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-            {indexing ? "Đang index..." : "Index embeddings"}
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-100 p-5">
         <div className="flex items-center justify-between gap-4 mb-4">
           <div className="text-sm font-semibold text-slate-900">Bài học</div>
-          <Button variant="outline" onClick={() => mutateLessons()} disabled={lessonsLoading} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${lessonsLoading ? "animate-spin" : ""}`} />
-            Tải lại
+          <Button variant="outline" onClick={() => mutateLessons()} disabled={lessonsLoading}>
+            {lessonsLoading ? "Đang tải..." : "Tải lại"}
           </Button>
         </div>
 
@@ -422,8 +350,8 @@ export default function Page() {
             {lessons.map((l) => (
               <div key={l.id} className="flex items-start justify-between gap-3 rounded-2xl border border-slate-100 p-4">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
-                    <FileText className="h-5 w-5" />
+                  <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center text-[11px] font-extrabold">
+                    BÀI
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-900 truncate">{l.title}</div>
@@ -436,8 +364,7 @@ export default function Page() {
                   <Button variant="outline" onClick={() => openEditDialog(l)} disabled={saving}>
                     Sửa
                   </Button>
-                  <Button variant="outline" onClick={() => askDelete(l)} disabled={saving} className="gap-2">
-                    <Trash2 className="h-4 w-4" />
+                  <Button variant="outline" onClick={() => askDelete(l)} disabled={saving}>
                     Xóa
                   </Button>
                 </div>

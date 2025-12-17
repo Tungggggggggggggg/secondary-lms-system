@@ -25,7 +25,7 @@ export default function ClassroomRowActionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" disabled={disabled}>
+        <Button type="button" variant="outline" size="sm" color="slate" disabled={disabled} className="min-w-24">
           Thao tác
         </Button>
       </DropdownMenuTrigger>

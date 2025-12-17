@@ -11,10 +11,16 @@ export interface ButtonProps
     className?: string;
     variant?: "default" | "outline" | "ghost" | "primary";
     size?: "sm" | "default" | "lg";
-    color?: "violet" | "amber" | "blue" | "green";
+    color?: "violet" | "amber" | "blue" | "green" | "slate";
 }
 
 const colorStyles = {
+  slate: {
+    default: "bg-slate-900 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-slate-500",
+    outline: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-500",
+    ghost: "text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-500",
+    primary: "bg-slate-900 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-slate-500",
+  },
   violet: {
     default: "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-violet-500",
     outline: "border-2 border-violet-500 text-violet-600 hover:bg-violet-50 focus-visible:ring-violet-500",

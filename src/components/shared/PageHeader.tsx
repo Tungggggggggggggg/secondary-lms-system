@@ -11,6 +11,7 @@ interface PageHeaderProps {
   size?: "sm" | "md";
   actions?: ReactNode;
   label?: string;
+  showIcon?: boolean;
 }
 
 const roleStyles = {
@@ -40,7 +41,7 @@ const roleStyles = {
   },
 };
 
-export default function PageHeader({ title, subtitle, role = "teacher", badge, size = "md", actions, label }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, role = "teacher", badge, size = "md", actions, label, showIcon = true }: PageHeaderProps) {
   const style = roleStyles[role];
   const Icon = style.icon;
   const pad = size === "sm" ? "px-5 py-4 sm:px-6 sm:py-5" : "px-6 py-6 sm:px-8 sm:py-7";
@@ -72,13 +73,15 @@ export default function PageHeader({ title, subtitle, role = "teacher", badge, s
               </div>
             )}
             {actions}
-            <div className="relative">
-              <div className={`${iconBox} rounded-2xl bg-white/80 backdrop-blur flex items-center justify-center shadow-[0_10px_30px_rgba(15,23,42,0.12)] transition-transform duration-300 hover:scale-110`}>
-                <Icon className={`${iconSize} text-slate-700`} />
+            {showIcon ? (
+              <div className="relative">
+                <div className={`${iconBox} rounded-2xl bg-white/80 backdrop-blur flex items-center justify-center shadow-[0_10px_30px_rgba(15,23,42,0.12)] transition-transform duration-300 hover:scale-110`}>
+                  <Icon className={`${iconSize} text-slate-700`} />
+                </div>
+                <div className={`pointer-events-none absolute -bottom-3 -left-4 h-10 w-10 rounded-2xl bg-gradient-to-br ${style.accentFrom} opacity-60 blur-[2px]`} />
+                <div className={`pointer-events-none absolute -top-4 -right-6 h-12 w-12 rounded-full bg-gradient-to-br ${style.accentTo} opacity-40 blur-sm`} />
               </div>
-              <div className={`pointer-events-none absolute -bottom-3 -left-4 h-10 w-10 rounded-2xl bg-gradient-to-br ${style.accentFrom} opacity-60 blur-[2px]`} />
-              <div className={`pointer-events-none absolute -top-4 -right-6 h-12 w-12 rounded-full bg-gradient-to-br ${style.accentTo} opacity-40 blur-sm`} />
-            </div>
+            ) : null}
           </div>
         </div>
       </div>

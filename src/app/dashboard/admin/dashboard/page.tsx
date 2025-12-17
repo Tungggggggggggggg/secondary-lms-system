@@ -11,6 +11,7 @@ export default function AdminDashboardPage() {
   const totals = stats?.totals;
 
   const formatNumber = (n: number) => n.toLocaleString("vi-VN");
+  const formatPercent = (n: number) => `${Math.round(n)}%`;
 
   const kpiItems: StatItem[] = totals
     ? [
@@ -54,19 +55,26 @@ export default function AdminDashboardPage() {
     { key: "ADMIN", label: "Admin", tone: "slate" },
   ];
 
+  const toneMeta: Record<"blue" | "green" | "amber" | "slate", { bar: string; softBg: string }> = {
+    blue: { bar: "bg-blue-500", softBg: "bg-blue-50" },
+    green: { bar: "bg-emerald-500", softBg: "bg-emerald-50" },
+    amber: { bar: "bg-amber-500", softBg: "bg-amber-50" },
+    slate: { bar: "bg-slate-500", softBg: "bg-slate-100" },
+  };
+
   return (
     <div className="p-6 sm:p-8">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <AdminPageHeader
-          title="Admin Overview"
-          subtitle="Giám sát tổng quan hệ thống LMS"
+          title="Tổng quan quản trị"
+          subtitle="Theo dõi chỉ số hệ thống và phân bố người dùng."
           actions={
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Button asChild variant="outline" size="sm">
-                <Link href="/dashboard/admin/users">Users</Link>
+                <Link href="/dashboard/admin/users">Quản lý người dùng</Link>
               </Button>
               <Button asChild variant="default" size="sm">
-                <Link href="/dashboard/admin/settings">System Settings</Link>
+                <Link href="/dashboard/admin/settings">Cài đặt hệ thống</Link>
               </Button>
             </div>
           }
@@ -76,35 +84,68 @@ export default function AdminDashboardPage() {
 
         {isLoading && !totals ? <KpiSkeletonGrid count={4} /> : <StatsGrid items={kpiItems} />}
 
-        <div className="mx-auto w-full max-w-3xl">
+        <div className="mx-auto w-full max-w-6xl">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-extrabold text-slate-900">Phân bố theo vai trò</h2>
-                <p className="text-sm text-slate-600">Tỷ lệ người dùng theo nhóm quyền.</p>
+                <p className="text-sm text-slate-600">Số lượng và tỷ lệ người dùng theo nhóm quyền.</p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => mutate()}>
                 Làm mới
               </Button>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {roleItems.map((r) => {
-                const value = roleCounts[r.key] ?? 0;
-                return (
-                  <div key={r.key} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                    <div className="flex items-center gap-3">
-                      <InitialBadge text={r.label.slice(0, 1)} size="sm" tone={r.tone} />
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold text-slate-600 uppercase tracking-[0.12em]">
-                          {r.label}
+            <div className="mt-5">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold text-slate-600 uppercase tracking-[0.12em]">
+                  Tỷ lệ người dùng
+                </div>
+
+                <div className="mt-3 h-4 rounded-full bg-white overflow-hidden border border-slate-200" role="img" aria-label="Thanh phân bố người dùng theo vai trò">
+                  {roleItems.map((r) => {
+                    const value = roleCounts[r.key] ?? 0;
+                    const base = totals?.users ?? 0;
+                    const pct = base > 0 ? (value / base) * 100 : 0;
+                    return (
+                      <div
+                        key={r.key}
+                        className={`h-full ${toneMeta[r.tone].bar} float-left`}
+                        style={{ width: `${pct}%` }}
+                        title={`${r.label}: ${formatNumber(value)} (${formatPercent(pct)})`}
+                      />
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {roleItems.map((r) => {
+                    const value = roleCounts[r.key] ?? 0;
+                    const base = totals?.users ?? 0;
+                    const pct = base > 0 ? (value / base) * 100 : 0;
+                    return (
+                      <div key={r.key} className="flex items-center justify-between gap-4 rounded-xl bg-white/70 border border-slate-200 px-3 py-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`h-2.5 w-2.5 rounded-full ${toneMeta[r.tone].bar}`} aria-hidden="true" />
+                          <InitialBadge text={r.label.slice(0, 1)} size="sm" tone={r.tone} />
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-slate-700 truncate">
+                              {r.label}
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {formatPercent(pct)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-2xl font-extrabold text-slate-900">{formatNumber(value)}</div>
+
+                        <div className="text-sm font-extrabold text-slate-900 tabular-nums">
+                          {formatNumber(value)}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -3,11 +3,11 @@
 import useSWR from "swr";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { BookOpen, Trash2 } from "lucide-react";
 
 import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 type TeacherCourse = {
   id: string;
@@ -47,9 +47,11 @@ export default function TeacherClassroomCoursesPage() {
   const params = useParams();
   const classroomId = params.classroomId as string;
   const router = useRouter();
+  const { toast } = useToast();
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const { data: allCoursesRes } = useSWR<CoursesApi>("/api/teachers/courses?take=200", fetcher);
   const { data: assignedRes, isLoading, error, mutate } = useSWR<AssignedApi>(
@@ -69,13 +71,24 @@ export default function TeacherClassroomCoursesPage() {
     if (!selectedCourseId) return;
     try {
       setSaving(true);
-      await fetch(`/api/teachers/classrooms/${classroomId}/courses`, {
+      const res = await fetch(`/api/teachers/classrooms/${classroomId}/courses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ courseId: selectedCourseId }),
       });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể gán khóa học vào lớp");
+      }
       setSelectedCourseId("");
       await mutate();
+      toast({ title: "Đã gán khóa học", variant: "success" });
+    } catch (e) {
+      toast({
+        title: "Gán thất bại",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -84,12 +97,25 @@ export default function TeacherClassroomCoursesPage() {
   const removeCourse = async (courseId: string) => {
     try {
       setSaving(true);
-      await fetch(`/api/teachers/classrooms/${classroomId}/courses/${courseId}`, {
+      setRemovingId(courseId);
+      const res = await fetch(`/api/teachers/classrooms/${classroomId}/courses/${courseId}`, {
         method: "DELETE",
       });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể gỡ khóa học");
+      }
       await mutate();
+      toast({ title: "Đã gỡ khóa học", variant: "success" });
+    } catch (e) {
+      toast({
+        title: "Gỡ thất bại",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
+      setRemovingId(null);
     }
   };
 
@@ -99,6 +125,7 @@ export default function TeacherClassroomCoursesPage() {
         role="teacher"
         title="Khóa học trong lớp"
         subtitle="Gán khóa học để học sinh xem bài học và dùng Tutor."
+        showIcon={false}
       />
 
       <div className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5">
@@ -122,7 +149,7 @@ export default function TeacherClassroomCoursesPage() {
                 ))}
               </Select>
               <Button onClick={addCourse} disabled={!selectedCourseId || saving}>
-                Gán vào lớp
+                {saving && selectedCourseId ? "Đang gán..." : "Gán vào lớp"}
               </Button>
             </div>
           </div>
@@ -130,60 +157,81 @@ export default function TeacherClassroomCoursesPage() {
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 animate-pulse">
-          <div className="h-4 w-40 bg-slate-100 rounded" />
-          <div className="h-4 w-64 bg-slate-100 rounded mt-3" />
+        <div className="grid md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5 animate-pulse">
+              <div className="h-4 w-40 bg-slate-100 rounded" />
+              <div className="h-3 w-56 bg-slate-100 rounded mt-3" />
+              <div className="h-10 w-44 bg-slate-100 rounded-xl mt-4" />
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-700">
-          Không tải được danh sách khóa học trong lớp.
+          <div className="font-semibold">Không tải được danh sách khóa học trong lớp.</div>
+          <div className="mt-3">
+            <Button variant="outline" onClick={() => mutate()} disabled={saving}>
+              Thử lại
+            </Button>
+          </div>
         </div>
       ) : assigned.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-700">
-          Lớp chưa được gán khóa học nào.
+          <div className="text-sm font-semibold text-slate-900">Chưa có khóa học</div>
+          <div className="text-sm text-slate-600 mt-1">Hãy gán một khóa học để học sinh có thể bắt đầu học.</div>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {assigned.map((c) => (
-            <div key={c.id} className="bg-white rounded-2xl border border-slate-100 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
-                      <BookOpen className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-slate-900 truncate">{c.title}</div>
-                      <div className="text-xs text-slate-500">
-                        Gán lúc: {new Date(c.addedAt).toLocaleDateString("vi-VN")}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold text-slate-900">Khóa học đã gán</div>
+            <div className="text-xs text-slate-500">{assigned.length} khóa học</div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            {assigned.map((c) => (
+              <div key={c.id} className="bg-white rounded-2xl border border-slate-200 p-5 hover:border-blue-200 hover:bg-blue-50/20 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center text-[11px] font-extrabold shrink-0">
+                        KH
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 truncate">{c.title}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          Gán lúc: {new Date(c.addedAt).toLocaleDateString("vi-VN")}
+                        </div>
                       </div>
                     </div>
                   </div>
+
+                  <div className="shrink-0">
+                    <div className="inline-flex h-10 rounded-xl border border-slate-200 bg-white overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dashboard/teacher/courses/${c.id}`)}
+                        disabled={saving}
+                        className="h-10 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+                      >
+                        Quản lý
+                      </button>
+                      <div className="w-px bg-slate-200" aria-hidden="true" />
+                      <button
+                        type="button"
+                        onClick={() => removeCourse(c.id)}
+                        disabled={saving}
+                        className="h-10 px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+                      >
+                        {removingId === c.id ? "Đang gỡ..." : "Gỡ"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => removeCourse(c.id)}
-                  disabled={saving}
-                  className="gap-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Gỡ
-                </Button>
-              </div>
 
-              {c.description && <p className="text-sm text-slate-600 mt-3 line-clamp-3">{c.description}</p>}
-
-              <div className="mt-4 flex items-center justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => router.push(`/dashboard/teacher/courses/${c.id}`)}
-                  disabled={saving}
-                >
-                  Quản lý bài học
-                </Button>
+                {c.description && <p className="text-sm text-slate-600 mt-3 line-clamp-3">{c.description}</p>}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -38,26 +38,35 @@ export default function AdminClassroomsToolbar({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="flex flex-wrap gap-2">
-        {statusOptions.map((opt) => {
-          const active = statusValue === opt.value;
-          return (
-            <button
-              key={opt.label}
-              type="button"
-              onClick={() => onStatusChange(opt.value)}
-              aria-pressed={active}
-              className={cn(
-                "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border transition-colors",
-                active
-                  ? "bg-slate-900 text-white border-transparent"
-                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-              )}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
+      <div className="flex items-center justify-between gap-3">
+        <div
+          className="inline-flex max-w-full items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 overflow-x-auto"
+          role="group"
+          aria-label="Lọc theo trạng thái lớp"
+        >
+          {statusOptions.map((opt) => {
+            const active = statusValue === opt.value;
+            return (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => onStatusChange(opt.value)}
+                aria-pressed={active}
+                className={cn(
+                  "h-9 px-3 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400",
+                  active
+                    ? "bg-slate-900 text-white border border-transparent"
+                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {right ? <div className="hidden md:flex items-center gap-2 justify-end">{right}</div> : null}
       </div>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -80,7 +89,7 @@ export default function AdminClassroomsToolbar({
           ) : null}
         </div>
 
-        {right ? <div className="flex items-center gap-2 justify-end">{right}</div> : null}
+        {right ? <div className="flex md:hidden items-center gap-2 justify-end">{right}</div> : null}
       </div>
     </div>
   );

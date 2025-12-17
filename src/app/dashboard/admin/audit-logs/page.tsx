@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PageHeader from "@/components/shared/PageHeader";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminAuditFilterBar from "@/components/admin/AdminAuditFilterBar";
+import AuditMetadataPreview from "@/components/admin/AuditMetadataPreview";
+import Button from "@/components/ui/button";
 
 type AuditLogItem = {
   id: string;
@@ -31,6 +34,8 @@ export default function AdminAuditLogsPage() {
 
   const [actorFilter, setActorFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
+  const [fromFilter, setFromFilter] = useState("");
+  const [toFilter, setToFilter] = useState("");
 
   const fetchLogs = async (opts?: { reset?: boolean; cursor?: string | null }) => {
     const reset = opts?.reset ?? false;
@@ -44,6 +49,8 @@ export default function AdminAuditLogsPage() {
       params.set("limit", "50");
       if (actorFilter.trim()) params.set("actorId", actorFilter.trim());
       if (actionFilter.trim()) params.set("action", actionFilter.trim());
+      if (fromFilter) params.set("from", fromFilter);
+      if (toFilter) params.set("to", toFilter);
       if (cursorParam) params.set("cursor", cursorParam);
 
       const res = await fetch(`/api/admin/audit-logs?${params.toString()}`, {
@@ -75,11 +82,6 @@ export default function AdminAuditLogsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleFilterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchLogs({ reset: true, cursor: null });
-  };
-
   const formatTime = (iso: string) => {
     try {
       const d = new Date(iso);
@@ -92,77 +94,34 @@ export default function AdminAuditLogsPage() {
     }
   };
 
-  const summarizeMetadata = (meta: unknown) => {
-    if (!meta || typeof meta !== "object") return "";
-    try {
-      const obj = meta as Record<string, unknown>;
-      const entries = Object.entries(obj);
-      if (!entries.length) return "";
-      const preview = entries
-        .slice(0, 3)
-        .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
-        .join("; ");
-      return entries.length > 3 ? preview + "; …" : preview;
-    } catch {
-      return "";
-    }
-  };
-
   return (
     <div className="p-8 space-y-6">
-      <PageHeader
-        title="Audit Logs"
-        subtitle="Nhật ký các hành động quan trọng trong hệ thống"
+      <AdminPageHeader
+        title="Nhật ký hệ thống"
+        subtitle="Nhật ký các hành động quan trọng và nhạy cảm trong toàn hệ thống."
+        label="Audit & giám sát"
       />
 
       <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-        <form
-          onSubmit={handleFilterSubmit}
-          className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"
-        >
-          <div className="flex flex-col md:flex-row gap-3 md:items-center">
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Actor ID</label>
-              <input
-                type="text"
-                value={actorFilter}
-                onChange={(e) => setActorFilter(e.target.value)}
-                placeholder="Lọc theo actorId (userId)"
-                className="w-full md:w-64 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Action</label>
-              <input
-                type="text"
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-                placeholder="VD: USER_BAN, USER_ROLE_CHANGE…"
-                className="w-full md:w-64 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                setActorFilter("");
-                setActionFilter("");
-                fetchLogs({ reset: true, cursor: null });
-              }}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              Làm mới
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800"
-            >
-              Lọc
-            </button>
-          </div>
-        </form>
+        <AdminAuditFilterBar
+          actor={actorFilter}
+          action={actionFilter}
+          onActorChange={setActorFilter}
+          onActionChange={setActionFilter}
+          from={fromFilter}
+          to={toFilter}
+          onFromChange={setFromFilter}
+          onToChange={setToFilter}
+          loading={loading}
+          onSubmit={() => fetchLogs({ reset: true, cursor: null })}
+          onReset={() => {
+            setActorFilter("");
+            setActionFilter("");
+            setFromFilter("");
+            setToFilter("");
+            fetchLogs({ reset: true, cursor: null });
+          }}
+        />
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
@@ -240,9 +199,7 @@ export default function AdminAuditLogsPage() {
                       </span>
                     </td>
                     <td className="px-3 py-2 align-middle max-w-[260px]">
-                      <span className="text-[10px] text-slate-600 truncate block">
-                        {summarizeMetadata(log.metadata) || ""}
-                      </span>
+                      <AuditMetadataPreview metadata={log.metadata} />
                     </td>
                   </tr>
                 ))
@@ -253,14 +210,17 @@ export default function AdminAuditLogsPage() {
 
         {hasMore && (
           <div className="flex justify-center pt-3">
-            <button
+            <Button
               type="button"
-              disabled={loading}
+              variant="outline"
+              size="sm"
+              color="slate"
+              disabled={loading || !cursor}
               onClick={() => cursor && fetchLogs({ reset: false, cursor })}
-              className="inline-flex items-center rounded-full border border-slate-200 px-4 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="rounded-full px-4"
             >
               {loading ? "Đang tải thêm..." : "Tải thêm"}
-            </button>
+            </Button>
           </div>
         )}
       </div>

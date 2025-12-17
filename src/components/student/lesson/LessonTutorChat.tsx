@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,137 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
   const [loading, setLoading] = useState(false);
 
   const [noEmbeddings, setNoEmbeddings] = useState(false);
+
+  const hydratedRef = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
+  const storageKey = useMemo(() => `lesson:tutorChat:${classId}:${lessonId}`, [classId, lessonId]);
+
+  useEffect(() => {
+    hydratedRef.current = false;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) {
+        setMessages([]);
+        setNoEmbeddings(false);
+        hydratedRef.current = true;
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as unknown;
+      const msgList =
+        typeof parsed === "object" &&
+        parsed !== null &&
+        Array.isArray((parsed as { messages?: unknown }).messages)
+          ? ((parsed as { messages: unknown[] }).messages as unknown[])
+          : [];
+
+      const nextMessages: ChatMessage[] = msgList
+        .map((m) => {
+          if (!m || typeof m !== "object") return null;
+          const role = (m as { role?: unknown }).role;
+          const content = (m as { content?: unknown }).content;
+          if (role !== "user" && role !== "assistant") return null;
+          if (typeof content !== "string") return null;
+
+          if (role === "user") {
+            return { role: "user", content } as ChatMessage;
+          }
+
+          const sourcesRaw = (m as { sources?: unknown }).sources;
+          const sources = Array.isArray(sourcesRaw)
+            ? sourcesRaw
+                .map((s) => {
+                  if (!s || typeof s !== "object") return null;
+                  const lessonId = typeof (s as { lessonId?: unknown }).lessonId === "string" ? (s as { lessonId: string }).lessonId : null;
+                  const chunkIndex = typeof (s as { chunkIndex?: unknown }).chunkIndex === "number" ? (s as { chunkIndex: number }).chunkIndex : null;
+                  const distance = typeof (s as { distance?: unknown }).distance === "number" ? (s as { distance: number }).distance : null;
+                  const excerpt = typeof (s as { excerpt?: unknown }).excerpt === "string" ? (s as { excerpt: string }).excerpt : "";
+                  const content = typeof (s as { content?: unknown }).content === "string" ? (s as { content: string }).content : "";
+                  const lessonTitle =
+                    (s as { lessonTitle?: unknown }).lessonTitle === null
+                      ? null
+                      : typeof (s as { lessonTitle?: unknown }).lessonTitle === "string"
+                      ? (s as { lessonTitle: string }).lessonTitle
+                      : null;
+                  if (!lessonId || chunkIndex === null || distance === null) return null;
+                  return { lessonId, chunkIndex, distance, excerpt, content, lessonTitle };
+                })
+                .filter(
+                  (v): v is { lessonId: string; chunkIndex: number; distance: number; excerpt: string; content: string; lessonTitle: string | null } =>
+                    v !== null
+                )
+            : undefined;
+
+          return { role: "assistant", content, sources } as ChatMessage;
+        })
+        .filter((v): v is ChatMessage => v !== null);
+
+      const noEmbeddingsStored =
+        typeof parsed === "object" &&
+        parsed !== null &&
+        typeof (parsed as { noEmbeddings?: unknown }).noEmbeddings === "boolean"
+          ? (parsed as { noEmbeddings: boolean }).noEmbeddings
+          : false;
+
+      setMessages(nextMessages);
+      setNoEmbeddings(noEmbeddingsStored);
+    } catch {
+      setMessages([]);
+      setNoEmbeddings(false);
+    } finally {
+      hydratedRef.current = true;
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
+    saveTimerRef.current = window.setTimeout(() => {
+      try {
+        const capped = messages.slice(-80).map((m) => {
+          if (m.role === "user") {
+            return { role: "user", content: m.content.slice(0, 8000) };
+          }
+          return {
+            role: "assistant",
+            content: m.content.slice(0, 8000),
+            sources: m.sources
+              ? m.sources.slice(0, 10).map((s) => ({
+                  lessonId: s.lessonId,
+                  chunkIndex: s.chunkIndex,
+                  distance: s.distance,
+                  excerpt: s.excerpt.slice(0, 1200),
+                  content: (typeof s.content === "string" ? s.content : "").slice(0, 4000),
+                  lessonTitle: s.lessonTitle,
+                }))
+              : undefined,
+          };
+        });
+
+        const payload = {
+          v: 1,
+          updatedAt: Date.now(),
+          classId,
+          lessonId,
+          noEmbeddings,
+          messages: capped,
+        };
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch {}
+    }, 600);
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+    };
+  }, [classId, lessonId, messages, noEmbeddings, storageKey]);
 
   const [sourceOpen, setSourceOpen] = useState(false);
   const [activeSources, setActiveSources] = useState<ChatSource[]>([]);

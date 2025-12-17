@@ -10,6 +10,8 @@ import AdminPagination from "@/components/admin/AdminPagination";
 import AdminTableSkeleton from "@/components/admin/AdminTableSkeleton";
 import ErrorBanner from "@/components/shared/ErrorBanner";
 import EmptyState from "@/components/shared/EmptyState";
+import AdminClassroomOverview from "@/components/admin/AdminClassroomOverview";
+import AdminStudentsSelectionBar from "@/components/admin/AdminStudentsSelectionBar";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usePrompt } from "@/components/providers/PromptProvider";
@@ -810,7 +812,7 @@ export default function AdminClassroomDetailPage() {
           subtitle={classroom ? `Mã lớp: ${classroom.code}` : "Xem thông tin và quản lý lớp học"}
           label="Quản trị lớp học"
           actions={
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm" color="slate">
               <Link href="/dashboard/admin/classrooms">Quay lại</Link>
             </Button>
           }
@@ -823,80 +825,23 @@ export default function AdminClassroomDetailPage() {
         ) : error ? (
           <ErrorBanner message={error} onRetry={fetchClassroom} />
         ) : classroom ? (
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-1">
-                <div className="text-xs text-slate-500">Giáo viên</div>
-                <div className="text-sm font-semibold text-slate-900">
-                  {classroom.teacher?.fullname || "(Chưa cập nhật)"}
-                </div>
-                <div className="text-xs text-slate-600">{classroom.teacher?.email || "—"}</div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 md:justify-end">
-                <span
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border ${
-                    classroom.isActive
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                      : "bg-slate-100 text-slate-700 border-slate-200"
-                  }`}
-                >
-                  {classroom.isActive ? "Hoạt động" : "Đã lưu trữ"}
-                </span>
-                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border border-slate-200 text-slate-700">
-                  {classroom._count?.students ?? 0} / {classroom.maxStudents} học sinh
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-slate-100 p-4">
-                <div className="text-[11px] text-slate-500">Tên lớp</div>
-                <div className="text-sm font-semibold text-slate-900">{classroom.name}</div>
-              </div>
-              <div className="rounded-xl border border-slate-100 p-4">
-                <div className="text-[11px] text-slate-500">Mã lớp</div>
-                <div className="text-sm font-semibold text-slate-900">{classroom.code}</div>
-              </div>
-              <div className="rounded-xl border border-slate-100 p-4">
-                <div className="text-[11px] text-slate-500">Sĩ số tối đa</div>
-                <div className="text-sm font-semibold text-slate-900">{classroom.maxStudents}</div>
-              </div>
-            </div>
-
-            {isArchived && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-700">
-                Lớp đã lưu trữ: cho phép xem, export, khôi phục hoặc xóa vĩnh viễn.
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
-              <Button variant="outline" onClick={exportStudentsExcel}>
-                Xuất Excel
-              </Button>
-              <Button variant="outline" onClick={toggleArchive}>
-                {classroom.isActive ? "Lưu trữ" : "Khôi phục"}
-              </Button>
-              <Button variant="outline" onClick={openEdit} disabled={isArchived}>
-                Sửa lớp
-              </Button>
-              <Button variant="outline" onClick={openChangeTeacher} disabled={isArchived}>
-                Đổi GV
-              </Button>
-              <Button onClick={openBulkAdd} disabled={isArchived}>
-                Thêm HS
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={forceDeleteClassroom}
-                disabled={!isArchived || forceDeleting}
-                className="border-red-200 text-red-700 hover:bg-red-50"
-              >
-                {forceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
-              </Button>
-            </div>
-          </div>
+          <AdminClassroomOverview
+            name={classroom.name}
+            code={classroom.code}
+            maxStudents={classroom.maxStudents}
+            studentCount={classroom._count?.students ?? 0}
+            isActive={classroom.isActive}
+            teacherName={classroom.teacher?.fullname}
+            teacherEmail={classroom.teacher?.email}
+            onExportStudents={exportStudentsExcel}
+            onToggleArchive={toggleArchive}
+            onEdit={openEdit}
+            onChangeTeacher={openChangeTeacher}
+            onBulkAddStudents={openBulkAdd}
+            onForceDelete={forceDeleteClassroom}
+            isArchived={isArchived}
+            forceDeleting={forceDeleting}
+          />
         ) : (
           <EmptyState
             title="Không tìm thấy lớp"
@@ -924,7 +869,8 @@ export default function AdminClassroomDetailPage() {
                 value={studentsSearch}
                 onChange={(e) => setStudentsSearch(e.target.value)}
                 placeholder="Tìm theo email hoặc họ tên..."
-                className="flex-1 md:w-72 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                className="flex-1 md:w-72 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                style={{ fontSize: "13px" }}
               />
               <Button type="submit" size="sm">
                 Tìm
@@ -932,29 +878,13 @@ export default function AdminClassroomDetailPage() {
             </form>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-[11px] text-slate-600">
-              Đã chọn <span className="font-semibold text-slate-900">{selectedCount}</span> học sinh
-              {selectedCount > 0 && (
-                <span className="text-slate-500"> (chỉ chọn trong trang hiện tại hoặc chọn nhiều trang)</span>
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
-              <Button type="button" variant="outline" size="sm" onClick={clearSelection} disabled={selectedCount === 0 || bulkRemoving}>
-                Bỏ chọn
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={bulkRemoveSelected}
-                disabled={selectedCount === 0 || bulkRemoving || isArchived}
-                className="border-red-200 text-red-700 hover:bg-red-50"
-              >
-                {bulkRemoving ? "Đang xóa..." : "Xóa đã chọn"}
-              </Button>
-            </div>
-          </div>
+          <AdminStudentsSelectionBar
+            selectedCount={selectedCount}
+            isProcessing={bulkRemoving}
+            isArchived={isArchived}
+            onClear={clearSelection}
+            onBulkRemove={bulkRemoveSelected}
+          />
 
           {studentsError ? (
             <ErrorBanner message={studentsError} onRetry={() => fetchStudents(studentsPage, studentsSearch)} />
@@ -1057,6 +987,7 @@ export default function AdminClassroomDetailPage() {
                             type="button"
                             variant="outline"
                             size="sm"
+                            color="slate"
                             disabled={isRemoving || isArchived}
                             onClick={() => removeStudent(s.id)}
                             className="border-red-200 text-red-700 hover:bg-red-50"
@@ -1140,21 +1071,18 @@ export default function AdminClassroomDetailPage() {
             </form>
           </div>
           <DialogFooter className="shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              color="slate"
               onClick={() => setEditOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
             >
               Hủy
-            </button>
-            <button
-              form="edit-classroom-form"
-              type="submit"
-              disabled={editSubmitting}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button form="edit-classroom-form" type="submit" size="sm" disabled={editSubmitting}>
               {editSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1227,21 +1155,23 @@ export default function AdminClassroomDetailPage() {
           </div>
 
           <DialogFooter className="shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              color="slate"
               onClick={() => setChangeTeacherOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
             >
               Hủy
-            </button>
-            <button
+            </Button>
+            <Button
               form="change-teacher-form"
               type="submit"
+              size="sm"
               disabled={changeTeacherSubmitting}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {changeTeacherSubmitting ? "Đang đổi..." : "Đổi giáo viên"}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1331,21 +1261,23 @@ export default function AdminClassroomDetailPage() {
           </div>
 
           <DialogFooter className="shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              color="slate"
               onClick={() => setBulkOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
             >
               Đóng
-            </button>
-            <button
+            </Button>
+            <Button
               form="bulk-add-students-form"
               type="submit"
+              size="sm"
               disabled={bulkSubmitting}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {bulkSubmitting ? "Đang xử lý..." : "Thêm học sinh"}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1392,13 +1324,15 @@ export default function AdminClassroomDetailPage() {
           </div>
 
           <DialogFooter className="shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              color="slate"
               onClick={() => setBulkIssuesOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
             >
               Đóng
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

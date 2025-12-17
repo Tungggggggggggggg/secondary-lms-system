@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { BookOpen, ChevronRight } from "lucide-react";
 
 import { EmptyState, SectionHeader } from "@/components/shared";
 
@@ -38,6 +37,55 @@ export default function StudentClassroomLessonsPage() {
 
   const items = data?.data?.items ?? [];
 
+  const [doneMap, setDoneMap] = useState<Record<string, boolean>>({});
+
+  const readDone = (lessonId: string): boolean => {
+    try {
+      return localStorage.getItem(`lesson:done:${lessonId}`) === "1";
+    } catch {
+      return false;
+    }
+  };
+
+  const refreshDone = () => {
+    setDoneMap((prev) => {
+      const next = { ...prev };
+      for (const it of items) {
+        next[it.id] = readDone(it.id);
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    refreshDone();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.map((x) => x.id).join(",")]);
+
+  useEffect(() => {
+    const onFocus = () => refreshDone();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshDone();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.map((x) => x.id).join(",")]);
+
+  const toggleDone = (lessonId: string) => {
+    setDoneMap((prev) => {
+      const next = !prev[lessonId];
+      try {
+        localStorage.setItem(`lesson:done:${lessonId}`, next ? "1" : "0");
+      } catch {}
+      return { ...prev, [lessonId]: next };
+    });
+  };
+
   const courseOptions = useMemo(() => {
     const map = new Map<string, string>();
     for (const it of items) {
@@ -52,14 +100,22 @@ export default function StudentClassroomLessonsPage() {
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>("all");
 
+  const [statusFilter, setStatusFilter] = useState<"all" | "done" | "todo">("all");
+
   const visibleItems = useMemo(() => {
     if (selectedCourseId === "all") return items;
     return items.filter((x) => x.courseId === selectedCourseId);
   }, [items, selectedCourseId]);
 
+  const filteredItems = useMemo(() => {
+    if (statusFilter === "all") return visibleItems;
+    if (statusFilter === "done") return visibleItems.filter((x) => !!doneMap[x.id]);
+    return visibleItems.filter((x) => !doneMap[x.id]);
+  }, [doneMap, statusFilter, visibleItems]);
+
   const grouped = useMemo(() => {
     const groups = new Map<string, { courseId: string; courseTitle: string; lessons: LessonListItem[] }>();
-    for (const it of visibleItems) {
+    for (const it of filteredItems) {
       if (!groups.has(it.courseId)) {
         groups.set(it.courseId, { courseId: it.courseId, courseTitle: it.courseTitle, lessons: [] });
       }
@@ -69,32 +125,75 @@ export default function StudentClassroomLessonsPage() {
       g.lessons.sort((a, b) => a.order - b.order);
     }
     return Array.from(groups.values()).sort((a, b) => a.courseTitle.localeCompare(b.courseTitle, "vi"));
-  }, [visibleItems]);
+  }, [filteredItems]);
 
   return (
     <div className="space-y-6">
-      <SectionHeader title={<span className="text-green-700">Bài học</span>} />
+      <SectionHeader
+        title={<span className="text-green-700">Bài học</span>}
+        actions={
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {courseOptions.length > 1 && (
+              <select
+                value={selectedCourseId}
+                onChange={(e) => setSelectedCourseId(e.target.value)}
+                className="appearance-none px-3 sm:px-4 h-10 rounded-xl border border-slate-200 bg-white/90 text-sm text-slate-700 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                aria-label="Lọc theo khóa học"
+              >
+                <option value="all">Tất cả khóa học</option>
+                {courseOptions.map((c) => (
+                  <option key={c.courseId} value={c.courseId}>
+                    {c.courseTitle}
+                  </option>
+                ))}
+              </select>
+            )}
 
-      {courseOptions.length > 1 && (
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-            Lọc theo khóa học
+            <div
+              className="inline-flex h-10 rounded-xl border border-slate-200 bg-white p-1"
+              role="group"
+              aria-label="Lọc theo trạng thái học"
+            >
+              <button
+                type="button"
+                onClick={() => setStatusFilter("all")}
+                className={
+                  statusFilter === "all"
+                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
+                    : "px-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                }
+                aria-pressed={statusFilter === "all"}
+              >
+                Tất cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("todo")}
+                className={
+                  statusFilter === "todo"
+                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
+                    : "px-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                }
+                aria-pressed={statusFilter === "todo"}
+              >
+                Chưa học
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("done")}
+                className={
+                  statusFilter === "done"
+                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
+                    : "px-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                }
+                aria-pressed={statusFilter === "done"}
+              >
+                Đã học
+              </button>
+            </div>
           </div>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(e.target.value)}
-            className="appearance-none px-3 sm:px-4 py-2 rounded-xl border border-slate-200 bg-white/90 text-sm text-slate-700 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            aria-label="Lọc theo khóa học"
-          >
-            <option value="all">Tất cả</option>
-            {courseOptions.map((c) => (
-              <option key={c.courseId} value={c.courseId}>
-                {c.courseTitle}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+        }
+      />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -114,7 +213,6 @@ export default function StudentClassroomLessonsPage() {
         </div>
       ) : items.length === 0 ? (
         <EmptyState
-          icon={<BookOpen className="h-12 w-12 text-green-600" />}
           title="Chưa có bài học"
           description="Giáo viên chưa thêm bài học nào cho lớp này hoặc chưa gán khóa học."
         />
@@ -126,8 +224,26 @@ export default function StudentClassroomLessonsPage() {
                 <div className="text-sm font-semibold text-slate-900 truncate">
                   {g.courseTitle}
                 </div>
-                <div className="text-xs text-slate-500 font-medium">
-                  {g.lessons.length} bài
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-slate-500 font-medium">
+                    {(() => {
+                      const total = g.lessons.length;
+                      const done = g.lessons.reduce((acc, l) => acc + (doneMap[l.id] ? 1 : 0), 0);
+                      return `${done}/${total} đã học`;
+                    })()}
+                  </div>
+                  <div className="w-28 h-2 rounded-full bg-slate-100 overflow-hidden" aria-hidden="true">
+                    <div
+                      className="h-full bg-emerald-500"
+                      style={{
+                        width: (() => {
+                          const total = g.lessons.length || 1;
+                          const done = g.lessons.reduce((acc, l) => acc + (doneMap[l.id] ? 1 : 0), 0);
+                          return `${Math.round((done / total) * 100)}%`;
+                        })(),
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -140,8 +256,8 @@ export default function StudentClassroomLessonsPage() {
                   >
                     <div className="bg-white/90 rounded-2xl border border-slate-100 p-4 sm:p-5 hover:border-green-200 hover:bg-green-50/30 transition-colors">
                       <div className="flex items-start gap-3">
-                        <div className="mt-0.5 h-9 w-9 rounded-xl bg-green-100 text-green-700 flex items-center justify-center">
-                          <BookOpen className="h-5 w-5" />
+                        <div className="mt-0.5 h-9 w-9 rounded-xl bg-green-100 text-green-800 flex items-center justify-center text-[11px] font-extrabold">
+                          BÀI
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-3">
@@ -149,7 +265,26 @@ export default function StudentClassroomLessonsPage() {
                               <p className="text-sm font-semibold text-slate-900 truncate">{l.title}</p>
                               <p className="text-xs text-slate-600 truncate">Bài {l.order}</p>
                             </div>
-                            <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-green-700 transition-colors" />
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleDone(l.id);
+                                }}
+                                className={`inline-flex items-center gap-2 h-10 rounded-xl border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400 ${
+                                  doneMap[l.id]
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                                }`}
+                                aria-pressed={!!doneMap[l.id]}
+                                aria-label={doneMap[l.id] ? "Đánh dấu chưa học" : "Đánh dấu đã học"}
+                              >
+                                <span className={`h-2.5 w-2.5 rounded-full ${doneMap[l.id] ? "bg-emerald-600" : "bg-slate-300"}`} aria-hidden="true" />
+                                {doneMap[l.id] ? "Đã học" : "Chưa học"}
+                              </button>
+                            </div>
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
                             Phát hành: {new Date(l.publishedAt).toLocaleDateString("vi-VN")}

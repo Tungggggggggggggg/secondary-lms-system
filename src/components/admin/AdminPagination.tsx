@@ -13,21 +13,33 @@ interface AdminPaginationProps {
 
 export default function AdminPagination({ page, totalPages, total, onPageChange, className }: AdminPaginationProps) {
   return (
-    <div className={cn("flex items-center justify-between gap-3 text-sm text-slate-600", className)}>
-      <div className="min-w-0">
-        Trang <span className="font-semibold text-slate-900">{page}</span> / {totalPages} • Total{" "}
+    <div className={cn("flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between", className)}>
+      <div className="min-w-0 order-2 sm:order-1">
+        Trang <span className="font-semibold text-slate-900">{page}</span> / {totalPages} • Tổng{" "}
         <span className="font-semibold text-slate-900">{total.toLocaleString("vi-VN")}</span>
       </div>
-      <div className="inline-flex gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
+      <div className="order-1 sm:order-2 inline-flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          color="slate"
+          className="min-w-20 justify-center"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          aria-label="Trang trước"
+        >
           Trước
         </Button>
         <Button
           type="button"
           variant="outline"
           size="sm"
+          color="slate"
+          className="min-w-20 justify-center"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
+          aria-label="Trang sau"
         >
           Sau
         </Button>

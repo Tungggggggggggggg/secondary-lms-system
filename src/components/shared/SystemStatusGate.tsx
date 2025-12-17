@@ -93,8 +93,30 @@ export default function SystemStatusGate({
   return (
     <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
       {announcementEnabled && announcementMessage && (
-        <div className="px-4 sm:px-6 lg:px-8 py-3 border-b border-blue-100 bg-blue-50 text-blue-900">
-          <div className="text-sm whitespace-pre-wrap">{announcementMessage}</div>
+        <div className="px-4 sm:px-6 lg:px-8 py-3.5 border-b border-blue-100 bg-blue-50 text-blue-900">
+          <div className="relative overflow-hidden">
+            <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-blue-50 to-transparent pointer-events-none" />
+            <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-blue-50 to-transparent pointer-events-none" />
+            <div className="marquee text-sm sm:text-base font-medium whitespace-nowrap">
+              {announcementMessage}
+            </div>
+          </div>
+          <style jsx>{`
+            .marquee {
+              display: inline-block;
+              min-width: 100%;
+              animation: system-banner-marquee 25s linear infinite;
+            }
+
+            @keyframes system-banner-marquee {
+              0% {
+                transform: translateX(100%);
+              }
+              100% {
+                transform: translateX(-100%);
+              }
+            }
+          `}</style>
         </div>
       )}
       <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
