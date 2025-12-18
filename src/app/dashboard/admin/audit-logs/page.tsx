@@ -5,6 +5,9 @@ import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminAuditFilterBar from "@/components/admin/AdminAuditFilterBar";
 import AuditMetadataPreview from "@/components/admin/AuditMetadataPreview";
 import Button from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type AuditLogItem = {
   id: string;
@@ -95,14 +98,14 @@ export default function AdminAuditLogsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 sm:p-8 space-y-6">
       <AdminPageHeader
         title="Nhật ký hệ thống"
         subtitle="Nhật ký các hành động quan trọng và nhạy cảm trong toàn hệ thống."
         label="Audit & giám sát"
       />
 
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+      <Card className="p-6 space-y-4">
         <AdminAuditFilterBar
           actor={actorFilter}
           action={actionFilter}
@@ -123,89 +126,71 @@ export default function AdminAuditLogsPage() {
           }}
         />
 
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
 
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
-          <table className="min-w-full divide-y divide-slate-200 text-[11px]">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Thời gian</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Action</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Entity</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Actor</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Org</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">IP</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Metadata</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+        <div className="rounded-xl border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs font-semibold">Thời gian</TableHead>
+                <TableHead className="text-xs font-semibold">Action</TableHead>
+                <TableHead className="text-xs font-semibold">Entity</TableHead>
+                <TableHead className="text-xs font-semibold">Actor</TableHead>
+                <TableHead className="text-xs font-semibold">Org</TableHead>
+                <TableHead className="text-xs font-semibold">IP</TableHead>
+                <TableHead className="text-xs font-semibold">Metadata</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading && logs.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-3 py-6 text-center text-[11px] text-slate-500"
-                  >
+                <TableRow>
+                  <TableCell colSpan={7} className="py-6 text-center text-[11px] text-muted-foreground">
                     Đang tải audit logs...
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : logs.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-3 py-6 text-center text-[11px] text-slate-500"
-                  >
+                <TableRow>
+                  <TableCell colSpan={7} className="py-6 text-center text-[11px] text-muted-foreground">
                     Chưa có bản ghi nào phù hợp với bộ lọc.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/60">
-                    <td className="px-3 py-2 align-middle whitespace-nowrap">
-                      {formatTime(log.createdAt)}
-                    </td>
-                    <td className="px-3 py-2 align-middle font-semibold text-slate-800">
-                      {log.action}
-                    </td>
-                    <td className="px-3 py-2 align-middle">
+                  <TableRow key={log.id}>
+                    <TableCell className="py-2 whitespace-nowrap">{formatTime(log.createdAt)}</TableCell>
+                    <TableCell className="py-2 font-semibold text-foreground">{log.action}</TableCell>
+                    <TableCell className="py-2">
                       <div className="flex flex-col">
-                        <span className="font-medium text-slate-800">
-                          {log.entityType}
-                        </span>
-                        <span className="text-[10px] text-slate-500 truncate max-w-[220px]">
+                        <span className="font-medium text-foreground">{log.entityType}</span>
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[220px]">
                           ID: {log.entityId || "(none)"}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 align-middle">
+                    </TableCell>
+                    <TableCell className="py-2">
                       <div className="flex flex-col">
-                        <span className="text-slate-800">{log.actorId}</span>
-                        <span className="text-[10px] text-slate-500">
-                          Role: {log.actorRole || "(n/a)"}
-                        </span>
+                        <span className="text-foreground">{log.actorId}</span>
+                        <span className="text-[10px] text-muted-foreground">Role: {log.actorRole || "(n/a)"}</span>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      <span className="text-[10px] text-slate-600">
-                        {log.organizationId || "—"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      <span className="text-[10px] text-slate-600">
-                        {log.ip || "—"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 align-middle max-w-[260px]">
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <span className="text-[10px] text-muted-foreground">{log.organizationId || "—"}</span>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <span className="text-[10px] text-muted-foreground">{log.ip || "—"}</span>
+                    </TableCell>
+                    <TableCell className="py-2 max-w-[260px]">
                       <AuditMetadataPreview metadata={log.metadata} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {hasMore && (
@@ -223,7 +208,7 @@ export default function AdminAuditLogsPage() {
             </Button>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

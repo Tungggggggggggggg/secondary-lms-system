@@ -69,37 +69,37 @@ Triển khai qua CSS variables (HSL) trong scope `.theme-admin` để shadcn tok
 - [x] `src/components/ui/alert.tsx` (variants semantic)
 
 ### M3 — Overlay components (a11y)
-- [ ] `src/components/ui/dialog.tsx`
-  - [ ] Chuyển sang Radix/shadcn Dialog pattern (focus trap, Esc)
-- [ ] `src/components/ui/dropdown-menu.tsx`
-  - [ ] Chuyển sang Radix/shadcn DropdownMenu pattern
-- [ ] `src/components/ui/checkbox.tsx`
-  - [ ] Giữ native hoặc nâng cấp Radix (tuỳ mức độ refactor), đảm bảo focus-visible rõ
-- [ ] `src/components/ui/select.tsx`
-  - [ ] Giai đoạn 1 có thể giữ native để tránh regression
+- [x] `src/components/ui/dialog.tsx`
+  - [x] Chuyển sang Radix/shadcn Dialog pattern (focus trap, Esc)
+- [x] `src/components/ui/dropdown-menu.tsx`
+  - [x] Chuyển sang Radix/shadcn DropdownMenu pattern
+- [x] `src/components/ui/checkbox.tsx`
+  - [x] Giữ native hoặc nâng cấp Radix (tuỳ mức độ refactor), đảm bảo focus-visible rõ
+- [x] `src/components/ui/select.tsx`
+  - [x] Giai đoạn 1 có thể giữ native để tránh regression
 
 ### M4 — Admin shell (sidebar/topbar/container)
 - [x] `src/components/layout/Sidebar.tsx`
   - [x] Admin sidebar theo B1 (light + accent Indigo)
-- [ ] `src/components/layout/DashboardLayout.tsx`
+- [x] `src/components/layout/DashboardLayout.tsx`
   - [x] Background admin theo tokens (`bg-background text-foreground`) để theme-admin áp dụng đồng bộ
-  - [ ] Container spacing chuẩn (8pt grid)
+  - [x] Container spacing chuẩn (8pt grid)
 
 ### M5 — Refactor từng trang admin
-- [ ] Dashboard: `src/app/dashboard/admin/dashboard/page.tsx`
-- [ ] Users list + dialogs: `src/app/dashboard/admin/users/page.tsx`
-- [ ] User detail: `src/app/dashboard/admin/users/[id]/page.tsx`
-- [ ] Classrooms list + dialogs: `src/app/dashboard/admin/classrooms/page.tsx`
-- [ ] Classroom detail: `src/app/dashboard/admin/classrooms/[id]/page.tsx`
-- [ ] Audit logs: `src/app/dashboard/admin/audit-logs/page.tsx`
-- [ ] Settings: `src/app/dashboard/admin/settings/page.tsx`
-- [ ] Organizations list/detail: `src/app/dashboard/admin/organizations/page.tsx`, `src/app/dashboard/admin/organizations/[id]/page.tsx`
+- [x] Dashboard: `src/app/dashboard/admin/dashboard/page.tsx`
+- [x] Users list + dialogs: `src/app/dashboard/admin/users/page.tsx`
+- [x] User detail: `src/app/dashboard/admin/users/[id]/page.tsx`
+- [x] Classrooms list + dialogs: `src/app/dashboard/admin/classrooms/page.tsx`
+- [x] Classroom detail: `src/app/dashboard/admin/classrooms/[id]/page.tsx`
+- [x] Audit logs: `src/app/dashboard/admin/audit-logs/page.tsx`
+- [x] Settings: `src/app/dashboard/admin/settings/page.tsx`
+- [x] Organizations list/detail: `src/app/dashboard/admin/organizations/page.tsx`, `src/app/dashboard/admin/organizations/[id]/page.tsx`
 
 ### M6 — QA UI/UX
-- [ ] Responsive (mobile/tablet/desktop)
-- [ ] Keyboard navigation (Tab/Shift+Tab/Esc)
-- [ ] Focus states rõ ràng
-- [ ] Loading/Empty/Error states đồng bộ
+− [x] Responsive (mobile/tablet/desktop)
+− [x] Keyboard navigation (Tab/Shift+Tab/Esc)
+− [x] Focus states rõ ràng
+− [x] Loading/Empty/Error states đồng bộ
 
 ## 7) Definition of Done (Admin)
 - Admin có theme light nhất quán, accent Indigo.

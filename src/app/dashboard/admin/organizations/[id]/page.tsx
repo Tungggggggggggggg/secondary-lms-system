@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import PageHeader from "@/components/shared/PageHeader";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 type OrgStatus = "ACTIVE" | "INACTIVE";
 
@@ -53,25 +59,23 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
   const orgDisabled = (globalThis as unknown as { __lms_disable_org__?: boolean }).__lms_disable_org__ !== false;
   if (orgDisabled) {
     return (
-      <div className="p-8 space-y-6">
-        <PageHeader
+      <div className="p-6 sm:p-8 space-y-6">
+        <AdminPageHeader
           title="Organizations"
           subtitle="Tính năng Organizations đã được gỡ bỏ (phase 1)."
+          label="Organizations"
         />
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
-          <div className="text-sm font-semibold text-slate-900">Không khả dụng</div>
-          <div className="text-sm text-slate-600">
+        <Card className="space-y-3 p-6">
+          <div className="text-sm font-semibold text-foreground">Không khả dụng</div>
+          <div className="text-sm text-muted-foreground">
             Trang chi tiết organization đã được ẩn khỏi hệ thống.
           </div>
           <div>
-            <Link
-              href="/dashboard/admin/dashboard"
-              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
-            >
-              Quay về Overview
-            </Link>
+            <Button asChild variant="outline" size="sm" color="slate">
+              <Link href="/dashboard/admin/dashboard">Quay về Overview</Link>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -367,212 +371,212 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <PageHeader
+    <div className="p-6 sm:p-8 space-y-6">
+      <AdminPageHeader
         title="Organization detail"
         subtitle="Xem thông tin và quản lý members"
+        label="Organizations"
       />
 
       <div className="flex items-center justify-between">
-        <Link
-          href="/dashboard/admin/organizations"
-          className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
-        >
-          Quay lại
-        </Link>
+        <Button asChild variant="outline" size="sm" color="slate">
+          <Link href="/dashboard/admin/organizations">Quay lại</Link>
+        </Button>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
+            color="slate"
             onClick={() => setAddMemberOpen(true)}
-            className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
           >
             Thêm member
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="sm"
             disabled={!org || loading}
             onClick={() => setEditOpen(true)}
-            className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Chỉnh sửa
-          </button>
+          </Button>
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {loading && !org ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 text-sm text-slate-600">
-          Đang tải...
-        </div>
+        <Card className="p-6 text-sm text-muted-foreground">Đang tải...</Card>
       ) : org ? (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1 space-y-6">
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
-              <div className="text-sm font-semibold text-slate-900">Thông tin</div>
-              <div className="space-y-2 text-[12px] text-slate-700">
+            <Card className="space-y-3 p-6">
+              <div className="text-sm font-semibold text-foreground">Thông tin</div>
+              <div className="space-y-2 text-[12px] text-foreground/80">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Tên</span>
-                  <span className="font-semibold text-slate-900 truncate" title={org.name}>
+                  <span className="text-muted-foreground">Tên</span>
+                  <span className="font-semibold text-foreground truncate" title={org.name}>
                     {org.name}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Slug</span>
-                  <span className="font-semibold text-slate-900 truncate" title={org.slug || ""}>
+                  <span className="text-muted-foreground">Slug</span>
+                  <span className="font-semibold text-foreground truncate" title={org.slug || ""}>
                     {org.slug || "—"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Status</span>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                      org.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {org.status}
-                  </span>
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge variant={org.status === "ACTIVE" ? "success" : "destructive"}>{org.status}</Badge>
                 </div>
               </div>
-            </div>
+            </Card>
 
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
-              <div className="text-sm font-semibold text-slate-900">Tổng quan</div>
+            <Card className="space-y-3 p-6">
+              <div className="text-sm font-semibold text-foreground">Tổng quan</div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
-                  <div className="text-lg font-extrabold text-slate-900">{org._count.members}</div>
-                  <div className="text-[10px] font-semibold text-slate-600">Members</div>
+                <div className="rounded-xl border border-border bg-muted p-3 text-center">
+                  <div className="text-lg font-extrabold text-foreground">{org._count.members}</div>
+                  <div className="text-[10px] font-semibold text-muted-foreground">Members</div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
-                  <div className="text-lg font-extrabold text-slate-900">{org._count.classrooms}</div>
-                  <div className="text-[10px] font-semibold text-slate-600">Classes</div>
+                <div className="rounded-xl border border-border bg-muted p-3 text-center">
+                  <div className="text-lg font-extrabold text-foreground">{org._count.classrooms}</div>
+                  <div className="text-[10px] font-semibold text-muted-foreground">Classes</div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
-                  <div className="text-lg font-extrabold text-slate-900">{org._count.courses}</div>
-                  <div className="text-[10px] font-semibold text-slate-600">Courses</div>
+                <div className="rounded-xl border border-border bg-muted p-3 text-center">
+                  <div className="text-lg font-extrabold text-foreground">{org._count.courses}</div>
+                  <div className="text-[10px] font-semibold text-muted-foreground">Courses</div>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+            <Card className="space-y-4 p-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-slate-900">Members</div>
-                  <div className="text-xs text-slate-500 mt-1">
+                  <div className="text-sm font-semibold text-foreground">Members</div>
+                  <div className="text-xs text-muted-foreground mt-1">
                     Tìm theo email/họ tên và quản lý danh sách thành viên.
                   </div>
                 </div>
               </div>
 
-              <form onSubmit={handleMembersSearchSubmit} className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <form
+                onSubmit={handleMembersSearchSubmit}
+                className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"
+              >
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                  <input
-                    type="text"
+                  <Input
                     value={membersSearch}
                     onChange={(e) => setMembersSearch(e.target.value)}
                     placeholder="Tìm theo email hoặc họ tên..."
-                    className="flex-1 md:w-72 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                    className="flex-1 md:w-72 text-xs"
                   />
-                  <button
-                    type="submit"
-                    className="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800"
-                  >
+                  <Button type="submit" size="sm">
                     Lọc
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="flex gap-2 justify-end">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    color="slate"
                     disabled={membersLoading}
                     onClick={() => {
                       setMembersSearch("");
                       void fetchMembers({ reset: true, cursor: null });
                     }}
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     Làm mới
-                  </button>
+                  </Button>
                 </div>
               </form>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-100">
-                <table className="min-w-full divide-y divide-slate-200 text-[11px]">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold text-slate-600">User</th>
-                      <th className="px-3 py-2 text-left font-semibold text-slate-600">Global role</th>
-                      <th className="px-3 py-2 text-left font-semibold text-slate-600">Role in Org</th>
-                      <th className="px-3 py-2 text-right font-semibold text-slate-600">Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+              <div className="rounded-xl border border-border overflow-hidden">
+                <Table className="text-[11px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-left text-xs font-semibold">User</TableHead>
+                      <TableHead className="text-left text-xs font-semibold">Global role</TableHead>
+                      <TableHead className="text-left text-xs font-semibold">Role in Org</TableHead>
+                      <TableHead className="text-right text-xs font-semibold">Hành động</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {membersLoading && members.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-3 py-6 text-center text-[11px] text-slate-500">
+                      <TableRow>
+                        <TableCell colSpan={4} className="py-6 text-center text-[11px] text-muted-foreground">
                           Đang tải members...
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : members.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-3 py-6 text-center text-[11px] text-slate-500">
+                      <TableRow>
+                        <TableCell colSpan={4} className="py-6 text-center text-[11px] text-muted-foreground">
                           Chưa có member nào.
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : (
                       members.map((m) => (
-                        <tr key={m.id} className="hover:bg-slate-50/60">
-                          <td className="px-3 py-2">
+                        <TableRow key={m.id}>
+                          <TableCell className="py-2">
                             <div className="flex flex-col">
                               <Link
                                 href={`/dashboard/admin/users/${m.user.id}`}
-                                className="font-semibold text-slate-800 hover:underline"
+                                className="font-semibold text-foreground hover:underline"
                               >
                                 {m.user.email}
                               </Link>
-                              <span className="text-[10px] text-slate-500">
+                              <span className="text-[10px] text-muted-foreground">
                                 {m.user.fullname || "(Chưa cập nhật)"}
                               </span>
                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-[10px] text-slate-700">{String(m.user.role)}</td>
-                          <td className="px-3 py-2 text-[10px] text-slate-700">{m.roleInOrg || "—"}</td>
-                          <td className="px-3 py-2 text-right">
-                            <button
+                          </TableCell>
+                          <TableCell className="py-2 text-[10px] text-foreground/80">
+                            {String(m.user.role)}
+                          </TableCell>
+                          <TableCell className="py-2 text-[10px] text-foreground/80">{m.roleInOrg || "—"}</TableCell>
+                          <TableCell className="py-2 text-right">
+                            <Button
                               type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-destructive/30 text-destructive hover:bg-destructive/10"
                               onClick={() => void removeMember(m.user.id)}
-                              className="inline-flex items-center rounded-xl border border-red-200 px-3 py-1.5 text-[11px] font-semibold text-red-700 hover:bg-red-50"
                             >
                               Gỡ
-                            </button>
-                          </td>
-                        </tr>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
                       ))
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
 
               {canLoadMoreMembers && (
                 <div className="flex justify-center pt-3">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    color="slate"
                     disabled={membersLoading}
                     onClick={() => void fetchMembers({ reset: false, cursor: membersNextCursor })}
-                    className="inline-flex items-center rounded-full border border-slate-200 px-4 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="rounded-full px-4"
                   >
                     {membersLoading ? "Đang tải thêm..." : "Tải thêm"}
-                  </button>
+                  </Button>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </div>
       ) : null}
@@ -596,28 +600,24 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
 
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Tên</label>
-              <input
-                type="text"
+              <label className="text-[11px] font-semibold text-muted-foreground">Tên</label>
+              <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               />
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Slug</label>
-              <input
-                type="text"
+              <label className="text-[11px] font-semibold text-muted-foreground">Slug</label>
+              <Input
                 value={editSlug}
                 onChange={(e) => setEditSlug(e.target.value)}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               />
-              <div className="text-[10px] text-slate-500">Để trống nếu không dùng slug.</div>
+              <div className="text-[10px] text-muted-foreground">Để trống nếu không dùng slug.</div>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Status</label>
+              <label className="text-[11px] font-semibold text-muted-foreground">Status</label>
               <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value as OrgStatus)}>
                 <option value="ACTIVE">ACTIVE</option>
                 <option value="INACTIVE">INACTIVE</option>
@@ -626,21 +626,18 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
           </div>
 
           <DialogFooter className="shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              color="slate"
               onClick={() => setEditOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
             >
               Hủy
-            </button>
-            <button
-              type="button"
-              disabled={editLoading}
-              onClick={() => void updateOrg()}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button type="button" size="sm" disabled={editLoading} onClick={() => void updateOrg()}>
               {editLoading ? "Đang lưu..." : "Lưu"}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -665,18 +662,16 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
 
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">User ID</label>
-              <input
-                type="text"
+              <label className="text-[11px] font-semibold text-muted-foreground">User ID</label>
+              <Input
                 value={addUserId}
                 onChange={(e) => setAddUserId(e.target.value)}
                 placeholder="VD: cuid..."
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               />
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Role in Org (tuỳ chọn)</label>
+              <label className="text-[11px] font-semibold text-muted-foreground">Role in Org (tuỳ chọn)</label>
               <Select value={addRoleInOrg} onChange={(e) => setAddRoleInOrg(e.target.value)}>
                 <option value="">(Không set)</option>
                 <option value="OWNER">OWNER</option>
@@ -689,21 +684,18 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
           </div>
 
           <DialogFooter className="shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              color="slate"
               onClick={() => setAddMemberOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
             >
               Hủy
-            </button>
-            <button
-              type="button"
-              disabled={addMemberLoading}
-              onClick={() => void addMember()}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button type="button" size="sm" disabled={addMemberLoading} onClick={() => void addMember()}>
               {addMemberLoading ? "Đang thêm..." : "Thêm"}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

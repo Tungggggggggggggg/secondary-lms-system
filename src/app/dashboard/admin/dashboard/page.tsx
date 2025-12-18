@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { StatsGrid, type StatItem, InitialBadge, KpiSkeletonGrid, ErrorBanner } from "@/components/shared";
 import Button from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useAdminStats } from "@/hooks/use-admin-stats";
 
@@ -85,11 +86,11 @@ export default function AdminDashboardPage() {
         {isLoading && !totals ? <KpiSkeletonGrid count={4} /> : <StatsGrid items={kpiItems} />}
 
         <div className="mx-auto w-full max-w-6xl">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card className="p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-extrabold text-slate-900">Phân bố theo vai trò</h2>
-                <p className="text-sm text-slate-600">Số lượng và tỷ lệ người dùng theo nhóm quyền.</p>
+                <h2 className="text-lg font-extrabold text-foreground">Phân bố theo vai trò</h2>
+                <p className="text-sm text-muted-foreground">Số lượng và tỷ lệ người dùng theo nhóm quyền.</p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => mutate()}>
                 Làm mới
@@ -97,12 +98,16 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="mt-5">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold text-slate-600 uppercase tracking-[0.12em]">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.12em]">
                   Tỷ lệ người dùng
                 </div>
 
-                <div className="mt-3 h-4 rounded-full bg-white overflow-hidden border border-slate-200" role="img" aria-label="Thanh phân bố người dùng theo vai trò">
+                <div
+                  className="mt-3 h-4 rounded-full bg-background overflow-hidden border border-border"
+                  role="img"
+                  aria-label="Thanh phân bố người dùng theo vai trò"
+                >
                   {roleItems.map((r) => {
                     const value = roleCounts[r.key] ?? 0;
                     const base = totals?.users ?? 0;
@@ -124,21 +129,20 @@ export default function AdminDashboardPage() {
                     const base = totals?.users ?? 0;
                     const pct = base > 0 ? (value / base) * 100 : 0;
                     return (
-                      <div key={r.key} className="flex items-center justify-between gap-4 rounded-xl bg-white/70 border border-slate-200 px-3 py-2">
+                      <div
+                        key={r.key}
+                        className="flex items-center justify-between gap-4 rounded-xl bg-card/60 border border-border px-3 py-2"
+                      >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className={`h-2.5 w-2.5 rounded-full ${toneMeta[r.tone].bar}`} aria-hidden="true" />
                           <InitialBadge text={r.label.slice(0, 1)} size="sm" tone={r.tone} />
                           <div className="min-w-0">
-                            <div className="text-xs font-semibold text-slate-700 truncate">
-                              {r.label}
-                            </div>
-                            <div className="text-[11px] text-slate-500">
-                              {formatPercent(pct)}
-                            </div>
+                            <div className="text-xs font-semibold text-foreground truncate">{r.label}</div>
+                            <div className="text-[11px] text-muted-foreground">{formatPercent(pct)}</div>
                           </div>
                         </div>
 
-                        <div className="text-sm font-extrabold text-slate-900 tabular-nums">
+                        <div className="text-sm font-extrabold text-foreground tabular-nums">
                           {formatNumber(value)}
                         </div>
                       </div>
@@ -147,7 +151,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

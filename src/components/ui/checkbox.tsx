@@ -10,10 +10,10 @@ export interface CheckboxProps
 }
 
 const colorStyles = {
-  default: "text-violet-600 focus:ring-violet-500",
-  amber: "text-amber-600 focus:ring-amber-500",
-  blue: "text-blue-600 focus:ring-blue-500",
-  green: "text-green-600 focus:ring-green-500",
+  default: "text-primary border-input focus-visible:ring-ring",
+  amber: "text-amber-600 border-amber-300 focus-visible:ring-amber-500 focus-visible:border-amber-500",
+  blue: "text-blue-600 border-blue-300 focus-visible:ring-blue-500 focus-visible:border-blue-500",
+  green: "text-green-600 border-green-300 focus-visible:ring-green-500 focus-visible:border-green-500",
 } as const;
 
 export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
@@ -32,9 +32,10 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         type="checkbox"
         ref={ref}
         className={cn(
-          "h-4 w-4 rounded border-gray-300 focus:ring-2",
-          colorStyles[color],
+          "h-4 w-4 rounded border bg-background",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           "disabled:opacity-50 disabled:cursor-not-allowed",
+          colorStyles[color],
           className
         )}
         onChange={handleChange}

@@ -15,6 +15,12 @@ import AdminStudentsSelectionBar from "@/components/admin/AdminStudentsSelection
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usePrompt } from "@/components/providers/PromptProvider";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Input from "@/components/ui/input";
+import { Search, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -805,7 +811,7 @@ export default function AdminClassroomDetailPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 sm:p-8">
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <AdminPageHeader
           title={classroom ? `${classroom.icon ? `${classroom.icon} ` : ""}${classroom.name}` : "Chi tiết lớp"}
@@ -819,9 +825,7 @@ export default function AdminClassroomDetailPage() {
         />
 
         {loading ? (
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 text-sm text-slate-600">
-            Đang tải thông tin lớp...
-          </div>
+          <Card className="p-6 text-sm text-muted-foreground">Đang tải thông tin lớp...</Card>
         ) : error ? (
           <ErrorBanner message={error} onRetry={fetchClassroom} />
         ) : classroom ? (
@@ -854,25 +858,29 @@ export default function AdminClassroomDetailPage() {
           />
         )}
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+        <Card className="p-6 sm:p-7 space-y-5 rounded-2xl border border-border/80 bg-background shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm font-semibold text-slate-800">Danh sách học sinh</div>
+            <div className="space-y-1">
+              <div className="text-sm font-semibold text-foreground">Danh sách học sinh</div>
+              <p className="text-xs text-muted-foreground">Quản lý học sinh trong lớp</p>
+            </div>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 fetchStudents(1, studentsSearch);
               }}
-              className="flex items-center gap-2 w-full md:w-auto"
+              className="flex items-center gap-2 w-full md:w-auto md:justify-end"
             >
-              <input
-                type="text"
-                value={studentsSearch}
-                onChange={(e) => setStudentsSearch(e.target.value)}
-                placeholder="Tìm theo email hoặc họ tên..."
-                className="flex-1 md:w-72 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                style={{ fontSize: "13px" }}
-              />
-              <Button type="submit" size="sm">
+              <div className="relative w-full md:w-64">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={studentsSearch}
+                  onChange={(e) => setStudentsSearch(e.target.value)}
+                  placeholder="Tìm theo email hoặc họ tên..."
+                  className="h-10 pl-9 text-sm"
+                />
+              </div>
+              <Button type="submit" size="sm" variant="outline" color="slate">
                 Tìm
               </Button>
             </form>
@@ -886,26 +894,24 @@ export default function AdminClassroomDetailPage() {
             onBulkRemove={bulkRemoveSelected}
           />
 
-          {studentsError ? (
-            <ErrorBanner message={studentsError} onRetry={() => fetchStudents(studentsPage, studentsSearch)} />
-          ) : null}
+          {studentsError ? <ErrorBanner message={studentsError} onRetry={() => fetchStudents(studentsPage, studentsSearch)} /> : null}
 
           {studentsLoading && students.length === 0 ? (
-            <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <table className="min-w-full divide-y divide-slate-200 text-xs">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600 w-[52px]" />
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Email</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Họ tên</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Ngày vào lớp</th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-600">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+            <div className="rounded-2xl border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[52px]" />
+                    <TableHead className="text-xs font-semibold">Email</TableHead>
+                    <TableHead className="text-xs font-semibold">Họ tên</TableHead>
+                    <TableHead className="text-xs font-semibold">Ngày vào lớp</TableHead>
+                    <TableHead className="text-right text-xs font-semibold">Hành động</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   <AdminTableSkeleton rows={8} cols={5} />
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           ) : students.length === 0 ? (
             <EmptyState
@@ -930,59 +936,70 @@ export default function AdminClassroomDetailPage() {
                   </Button>
                 ) : null
               }
-              className="border-slate-200"
+              className="border-border"
             />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <table className="min-w-full divide-y divide-slate-200 text-xs">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600 w-[52px]">
+            <div className="rounded-2xl border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[52px]">
                       <input
                         ref={selectAllRef}
                         type="checkbox"
                         checked={allSelectedOnPage}
                         onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
                         disabled={isArchived || pageStudentIds.length === 0}
-                        className="h-4 w-4 rounded border-slate-300"
+                        className="h-4 w-4 rounded border-input"
                         aria-label="Chọn tất cả học sinh trong trang"
                       />
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Email</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Họ tên</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Ngày vào lớp</th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-600">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold">Email</TableHead>
+                    <TableHead className="text-xs font-semibold">Họ tên</TableHead>
+                    <TableHead className="text-xs font-semibold">Ngày vào lớp</TableHead>
+                    <TableHead className="text-right text-xs font-semibold">Hành động</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {students.map((s) => {
                     const isRemoving = studentsActionId === s.id;
                     const isChecked = selectedStudentIds.has(s.id);
+                    const displayName = s.fullname || "(Chưa cập nhật)";
+                    const initial = (displayName || s.email || "?")
+                      .toString()
+                      .trim()
+                      .charAt(0)
+                      .toUpperCase() || "?";
                     return (
-                      <tr key={s.id} className="hover:bg-slate-50/60">
-                        <td className="px-3 py-2 align-middle">
+                      <TableRow key={s.id} className="hover:bg-muted/60 transition-colors">
+                        <TableCell className="py-2 align-middle">
                           <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={(e) => toggleStudentSelected(s.id, e.target.checked)}
                             disabled={isArchived}
-                            className="h-4 w-4 rounded border-slate-300"
+                            className="h-4 w-4 rounded border-input"
                             aria-label={`Chọn học sinh ${s.email}`}
                           />
-                        </td>
-                        <td className="px-3 py-2 align-middle">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-900 text-xs">{s.email}</span>
-                            <span className="text-[10px] text-slate-500">ID: {s.id.slice(0, 8)}…</span>
+                        </TableCell>
+                        <TableCell className="py-2 align-middle">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/10 text-[11px] font-semibold text-indigo-700">
+                              <span>{initial}</span>
+                            </div>
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="text-xs font-semibold text-foreground truncate">{displayName}</div>
+                              <div className="text-[11px] text-muted-foreground truncate">{s.email}</div>
+                            </div>
                           </div>
-                        </td>
-                        <td className="px-3 py-2 align-middle text-xs text-slate-700">
-                          {s.fullname || "(Chưa cập nhật)"}
-                        </td>
-                        <td className="px-3 py-2 align-middle text-[11px] text-slate-700">
+                        </TableCell>
+                        <TableCell className="py-2 align-middle text-xs text-foreground/80">
+                          <span className="font-mono text-[11px] text-muted-foreground">ID: {s.id.slice(0, 8)}…</span>
+                        </TableCell>
+                        <TableCell className="py-2 align-middle text-[11px] text-muted-foreground">
                           {s.joinedAt ? new Date(s.joinedAt).toLocaleString() : "—"}
-                        </td>
-                        <td className="px-3 py-2 align-middle text-right">
+                        </TableCell>
+                        <TableCell className="py-2 align-middle text-right">
                           <Button
                             type="button"
                             variant="outline"
@@ -990,16 +1007,17 @@ export default function AdminClassroomDetailPage() {
                             color="slate"
                             disabled={isRemoving || isArchived}
                             onClick={() => removeStudent(s.id)}
-                            className="border-red-200 text-red-700 hover:bg-red-50"
+                            className="border-destructive/15 text-destructive/80 hover:bg-destructive/5 flex items-center gap-1.5 text-xs"
                           >
-                            {isRemoving ? "Đang xóa..." : "Xóa"}
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>{isRemoving ? "Đang xóa..." : "Xóa"}</span>
                           </Button>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
 
@@ -1014,8 +1032,7 @@ export default function AdminClassroomDetailPage() {
             }}
             className="text-xs"
           />
-        </div>
-      </div>
+        </Card>
 
       <Dialog
         open={editOpen}
@@ -1030,41 +1047,38 @@ export default function AdminClassroomDetailPage() {
             <DialogDescription>Cập nhật tên lớp, mã lớp và sĩ số tối đa.</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-            {editError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">{editError}</div>
-            )}
+            {editError ? (
+              <Alert variant="destructive">
+                <AlertDescription className="text-[11px]">{editError}</AlertDescription>
+              </Alert>
+            ) : null}
             <form id="edit-classroom-form" onSubmit={submitEdit} className="grid gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-[11px] font-semibold text-slate-600">Tên lớp</label>
-                <input
-                  type="text"
+                <label className="text-[11px] font-semibold text-muted-foreground">Tên lớp</label>
+                <Input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="VD: Lớp 10A1"
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   required
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-600">Mã lớp</label>
-                <input
-                  type="text"
+                <label className="text-[11px] font-semibold text-muted-foreground">Mã lớp</label>
+                <Input
                   value={editCode}
                   onChange={(e) => setEditCode(e.target.value)}
                   placeholder="VD: A2B3"
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   required
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-600">Sĩ số tối đa</label>
-                <input
+                <label className="text-[11px] font-semibold text-muted-foreground">Sĩ số tối đa</label>
+                <Input
                   type="number"
                   min={1}
                   max={500}
                   value={editMaxStudents}
                   onChange={(e) => setEditMaxStudents(e.target.value)}
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   required
                 />
               </div>
@@ -1104,15 +1118,16 @@ export default function AdminClassroomDetailPage() {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-            {changeTeacherError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">{changeTeacherError}</div>
-            )}
+            {changeTeacherError ? (
+              <Alert variant="destructive">
+                <AlertDescription className="text-[11px]">{changeTeacherError}</AlertDescription>
+              </Alert>
+            ) : null}
 
             <form id="change-teacher-form" onSubmit={submitChangeTeacher} className="grid gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-[11px] font-semibold text-slate-600">Tìm giáo viên</label>
-                <input
-                  type="text"
+                <label className="text-[11px] font-semibold text-muted-foreground">Tìm giáo viên</label>
+                <Input
                   value={teacherQuery}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -1120,13 +1135,12 @@ export default function AdminClassroomDetailPage() {
                     fetchTeachers(v);
                   }}
                   placeholder="Nhập tên hoặc email..."
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                 />
-                {teachersLoading && <div className="text-[11px] text-slate-500">Đang tải...</div>}
+                {teachersLoading && <div className="text-[11px] text-muted-foreground">Đang tải...</div>}
               </div>
 
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-[11px] font-semibold text-slate-600">Giáo viên</label>
+                <label className="text-[11px] font-semibold text-muted-foreground">Giáo viên</label>
                 <Select
                   value={changeTeacherId}
                   onChange={(e) => setChangeTeacherId(e.target.value)}
@@ -1142,13 +1156,13 @@ export default function AdminClassroomDetailPage() {
               </div>
 
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-[11px] font-semibold text-slate-600">Lý do (tùy chọn)</label>
-                <textarea
+                <label className="text-[11px] font-semibold text-muted-foreground">Lý do (tùy chọn)</label>
+                <Textarea
                   value={changeTeacherReason}
                   onChange={(e) => setChangeTeacherReason(e.target.value)}
                   rows={3}
                   placeholder="VD: Điều chỉnh phân công giảng dạy..."
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 resize-y"
+                  className="resize-y"
                 />
               </div>
             </form>
@@ -1203,56 +1217,59 @@ export default function AdminClassroomDetailPage() {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-            {bulkError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">{bulkError}</div>
-            )}
-            {bulkResult && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
-                Thêm {bulkResult.added} học sinh. Tạo mới {bulkResult.createdAccounts} tài khoản. Bỏ qua {bulkResult.skippedAlreadyInClass}. Lỗi {bulkResult.failed}.
-              </div>
-            )}
+            {bulkError ? (
+              <Alert variant="destructive">
+                <AlertDescription className="text-[11px]">{bulkError}</AlertDescription>
+              </Alert>
+            ) : null}
+            {bulkResult ? (
+              <Alert className="border-primary/20 bg-primary/10 text-primary">
+                <AlertDescription className="text-[11px]">
+                  Thêm {bulkResult.added} học sinh. Tạo mới {bulkResult.createdAccounts} tài khoản. Bỏ qua {bulkResult.skippedAlreadyInClass}. Lỗi {bulkResult.failed}.
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
             <form id="bulk-add-students-form" onSubmit={submitBulkAdd} className="grid gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2 flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-600">Danh sách học sinh</label>
-                <textarea
+                <label className="text-[11px] font-semibold text-muted-foreground">Danh sách học sinh</label>
+                <Textarea
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   rows={12}
                   placeholder={"VD:\nNguyễn Văn A, a@student.com\nstudent2@student.com"}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 resize-y"
+                  className="resize-y"
                 />
               </div>
 
               <div className="flex flex-col gap-4">
                 <div
                   className={`flex flex-col gap-2 rounded-xl border-2 border-dashed px-3 py-3 transition-colors cursor-pointer ${
-                    bulkDragOver ? "border-slate-900 bg-slate-50" : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+                    bulkDragOver ? "border-foreground bg-muted/30" : "border-border hover:border-foreground/40 hover:bg-muted/30"
                   }`}
                   onDragOver={handleBulkDragOver}
                   onDragLeave={handleBulkDragLeave}
                   onDrop={handleBulkDrop}
                 >
-                  <div className="text-[11px] font-semibold text-slate-700">Kéo & thả file CSV vào đây (hoặc chọn tệp)</div>
-                  <input type="file" accept=".csv,text/csv" onChange={handleBulkFileChange} className="text-[11px] text-slate-700" />
-                  {bulkFileName && <span className="text-[10px] text-slate-500">Đã chọn file: {bulkFileName}</span>}
-                  <div className="text-[10px] text-slate-500">CSV có thể theo định dạng: fullname,email</div>
+                  <div className="text-[11px] font-semibold text-foreground">Kéo & thả file CSV vào đây (hoặc chọn tệp)</div>
+                  <input type="file" accept=".csv,text/csv" onChange={handleBulkFileChange} className="text-[11px] text-foreground" />
+                  {bulkFileName && <span className="text-[10px] text-muted-foreground">Đã chọn file: {bulkFileName}</span>}
+                  <div className="text-[10px] text-muted-foreground">CSV có thể theo định dạng: fullname,email</div>
                 </div>
 
-                <label className="flex items-center gap-2 text-[11px] text-slate-700">
+                <label className="flex items-center gap-2 text-[11px] text-foreground/80">
                   <input type="checkbox" checked={bulkCreateMissing} onChange={(e) => setBulkCreateMissing(e.target.checked)} />
                   Tự tạo tài khoản nếu email chưa tồn tại
                 </label>
 
                 {bulkCreateMissing && (
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-semibold text-slate-600">Mật khẩu mặc định</label>
-                    <input
+                    <label className="text-[11px] font-semibold text-muted-foreground">Mật khẩu mặc định</label>
+                    <Input
                       type="password"
                       value={bulkDefaultPassword}
                       onChange={(e) => setBulkDefaultPassword(e.target.value)}
                       placeholder="Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số"
-                      className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     />
                   </div>
                 )}
@@ -1301,25 +1318,25 @@ export default function AdminClassroomDetailPage() {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <table className="min-w-full divide-y divide-slate-200 text-xs">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Email</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-600">Lý do</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+            <div className="rounded-xl border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs font-semibold">Email</TableHead>
+                    <TableHead className="text-xs font-semibold">Lý do</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {bulkIssues.map((x, idx) => (
-                    <tr key={`${x.email}-${idx}`} className="hover:bg-slate-50/60">
-                      <td className="px-3 py-2 align-middle">
-                        <span className="font-medium text-slate-900 text-xs">{x.email}</span>
-                      </td>
-                      <td className="px-3 py-2 align-middle text-xs text-slate-700">{x.reason}</td>
-                    </tr>
+                    <TableRow key={`${x.email}-${idx}`}>
+                      <TableCell className="py-2 align-middle">
+                        <span className="font-medium text-foreground text-xs">{x.email}</span>
+                      </TableCell>
+                      <TableCell className="py-2 align-middle text-xs text-foreground/80">{x.reason}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
 
@@ -1336,6 +1353,8 @@ export default function AdminClassroomDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      </div>
     </div>
   );
 }

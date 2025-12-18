@@ -9,6 +9,12 @@ import UserRowActionsMenu from "@/components/admin/UserRowActionsMenu";
 import AdminTableSkeleton from "@/components/admin/AdminTableSkeleton";
 import { EmptyState, ErrorBanner } from "@/components/shared";
 import Button from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import Badge from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Input from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { usePrompt } from "@/components/providers/PromptProvider";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -31,11 +37,11 @@ type UsersResponse = {
 };
 
 const ROLE_OPTIONS: { label: string; value: "" | AdminUserItem["role"]; badgeClass: string }[] = [
-  { label: "Tất cả", value: "", badgeClass: "bg-slate-100 text-slate-700" },
-  { label: "Teacher", value: "TEACHER", badgeClass: "bg-blue-100 text-blue-700" },
-  { label: "Student", value: "STUDENT", badgeClass: "bg-green-100 text-green-700" },
-  { label: "Parent", value: "PARENT", badgeClass: "bg-amber-100 text-amber-700" },
-  { label: "Admin", value: "ADMIN", badgeClass: "bg-slate-900 text-emerald-300" },
+  { label: "Tất cả", value: "", badgeClass: "bg-muted text-muted-foreground" },
+  { label: "Teacher", value: "TEACHER", badgeClass: "bg-primary/10 text-primary" },
+  { label: "Student", value: "STUDENT", badgeClass: "bg-emerald-50 text-emerald-800" },
+  { label: "Parent", value: "PARENT", badgeClass: "bg-amber-50 text-amber-900" },
+  { label: "Admin", value: "ADMIN", badgeClass: "bg-foreground text-background" },
 ];
 
 export default function AdminUsersPage() {
@@ -432,6 +438,21 @@ export default function AdminUsersPage() {
     if (bulkDragOver) setBulkDragOver(false);
   };
 
+  const roleBadgeVariant = (role: AdminUserItem["role"]): React.ComponentProps<typeof Badge>["variant"] => {
+    switch (role) {
+      case "STUDENT":
+        return "success";
+      case "PARENT":
+        return "warning";
+      case "TEACHER":
+        return "default";
+      case "ADMIN":
+        return "outline";
+      default:
+        return "default";
+    }
+  };
+
   return (
     <div className="p-6 sm:p-8">
       <div className="mx-auto w-full max-w-6xl space-y-6">
@@ -469,7 +490,7 @@ export default function AdminUsersPage() {
 
         {error ? <ErrorBanner message={error} onRetry={() => fetchUsers(page, roleFilter, search)} /> : null}
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+        <Card className="p-6 space-y-4">
           <AdminUsersToolbar
             roleOptions={ROLE_OPTIONS}
             roleValue={roleFilter}
@@ -480,24 +501,24 @@ export default function AdminUsersPage() {
             onReset={handleResetFilters}
           />
 
-          <div className="overflow-x-auto rounded-xl border border-slate-100">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Email</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Họ tên</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Vai trò</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Trạng thái</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Lý do khoá</th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-600">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+          <div className="rounded-xl border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-semibold">Email</TableHead>
+                  <TableHead className="font-semibold">Họ tên</TableHead>
+                  <TableHead className="font-semibold">Vai trò</TableHead>
+                  <TableHead className="font-semibold">Trạng thái</TableHead>
+                  <TableHead className="font-semibold">Lý do khoá</TableHead>
+                  <TableHead className="text-right font-semibold">Hành động</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loading && items.length === 0 ? (
                   <AdminTableSkeleton rows={8} cols={6} />
                 ) : items.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8">
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-10">
                       <EmptyState
                         title="Không có người dùng phù hợp"
                         description="Thử thay đổi bộ lọc hoặc đặt lại tìm kiếm để xem thêm kết quả."
@@ -518,8 +539,8 @@ export default function AdminUsersPage() {
                           </div>
                         }
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   items.map((user) => {
                     const isProcessing = banLoadingId === user.id;
@@ -529,50 +550,34 @@ export default function AdminUsersPage() {
                       ? user.disabledReason || "(Không có lý do)"
                       : "";
                     return (
-                      <tr key={user.id} className="hover:bg-slate-50/60">
-                        <td className="px-4 py-3 align-middle">
+                      <TableRow key={user.id}>
+                        <TableCell className="py-3">
                           <div className="flex flex-col min-w-0">
                             <Link
                               href={`/dashboard/admin/users/${user.id}`}
-                              className="font-semibold text-slate-900 hover:underline truncate"
+                              className="font-semibold text-foreground hover:underline truncate"
                               title={user.email}
                             >
                               {user.email}
                             </Link>
-                            <span className="text-xs text-slate-500">Tạo lúc: {new Date(user.createdAt).toLocaleDateString("vi-VN")}</span>
+                            <span className="text-xs text-muted-foreground">Tạo lúc: {new Date(user.createdAt).toLocaleDateString("vi-VN")}</span>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 align-middle text-slate-700">
-                          {user.fullname || <span className="text-slate-400">(Chưa cập nhật)</span>}
-                        </td>
-                        <td className="px-4 py-3 align-middle">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              user.role === "TEACHER"
-                                ? "bg-blue-100 text-blue-700"
-                                : user.role === "STUDENT"
-                                ? "bg-green-100 text-green-700"
-                                : user.role === "PARENT"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-slate-900 text-emerald-300"
-                            }`}
-                          >
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 align-middle">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              user.isDisabled ? "bg-red-100 text-red-700" : "bg-emerald-50 text-emerald-700"
-                            }`}
-                          >
+                        </TableCell>
+                        <TableCell className="py-3 text-foreground/80">
+                          {user.fullname || <span className="text-muted-foreground">(Chưa cập nhật)</span>}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge variant={roleBadgeVariant(user.role)}>{user.role}</Badge>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge variant={user.isDisabled ? "destructive" : "success"}>
                             {user.isDisabled ? "Đã khoá" : "Hoạt động"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 align-middle text-slate-600 max-w-[360px] truncate" title={disabledReason}>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3 text-muted-foreground max-w-[360px] truncate" title={disabledReason}>
                           {disabledReason}
-                        </td>
-                        <td className="px-4 py-3 align-middle text-right">
+                        </TableCell>
+                        <TableCell className="py-3 text-right">
                           <UserRowActionsMenu
                             detailHref={`/dashboard/admin/users/${user.id}`}
                             disabled={isProcessing || isDeleting}
@@ -588,13 +593,13 @@ export default function AdminUsersPage() {
                                 : "Khoá tài khoản"
                             }
                           />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           <AdminPagination
@@ -603,7 +608,7 @@ export default function AdminUsersPage() {
             total={total}
             onPageChange={handlePageChange}
           />
-        </div>
+        </Card>
       </div>
 
       <Dialog
@@ -630,18 +635,18 @@ export default function AdminUsersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-            {createError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                {createError}
-              </div>
-            )}
+            {createError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{createError}</AlertDescription>
+              </Alert>
+            ) : null}
             <form id="create-teacher-form" onSubmit={handleCreateTeacher} className="grid gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-[11px] font-semibold text-slate-600">Vai trò</label>
+                <label className="text-[11px] font-semibold text-muted-foreground">Vai trò</label>
                 <select
                   value={createRole}
                   onChange={(e) => setCreateRole(e.target.value as "TEACHER" | "STUDENT" | "PARENT")}
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <option value="TEACHER">TEACHER</option>
                   <option value="STUDENT">STUDENT</option>
@@ -649,35 +654,31 @@ export default function AdminUsersPage() {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-600">Họ và tên</label>
-                <input
-                  type="text"
+                <label className="text-[11px] font-semibold text-muted-foreground">Họ và tên</label>
+                <Input
                   value={createFullname}
                   onChange={(e) => setCreateFullname(e.target.value)}
                   placeholder="VD: Nguyễn Văn A"
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   required
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-600">Email</label>
-                <input
+                <label className="text-[11px] font-semibold text-muted-foreground">Email</label>
+                <Input
                   type="email"
                   value={createEmail}
                   onChange={(e) => setCreateEmail(e.target.value)}
                   placeholder="giaovien@example.com"
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   required
                 />
               </div>
               <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-[11px] font-semibold text-slate-600">Mật khẩu</label>
-                <input
+                <label className="text-[11px] font-semibold text-muted-foreground">Mật khẩu</label>
+                <Input
                   type="password"
                   value={createPassword}
                   onChange={(e) => setCreatePassword(e.target.value)}
                   placeholder="Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số"
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   required
                 />
               </div>
@@ -722,72 +723,74 @@ export default function AdminUsersPage() {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-            {bulkError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                {bulkError}
-              </div>
-            )}
-            {bulkResult && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
-                Đã tạo {bulkResult.created} người dùng, {bulkResult.failed} dòng lỗi.
-              </div>
-            )}
+            {bulkError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{bulkError}</AlertDescription>
+              </Alert>
+            ) : null}
+            {bulkResult ? (
+              <Alert className="border-primary/20 bg-primary/10 text-primary">
+                <AlertDescription>
+                  Đã tạo {bulkResult.created} người dùng, {bulkResult.failed} dòng lỗi.
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
             {bulkResult && bulkResult.failedDetails.length > 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-100">
-                  <div className="text-sm font-semibold text-slate-900">Danh sách dòng không tạo được</div>
-                  <div className="text-xs text-slate-600">Sửa lại các dòng này rồi chạy lại bulk import.</div>
+              <div className="rounded-2xl border border-border bg-card overflow-hidden">
+                <div className="px-4 py-3 border-b border-border">
+                  <div className="text-sm font-semibold text-foreground">Danh sách dòng không tạo được</div>
+                  <div className="text-xs text-muted-foreground">Sửa lại các dòng này rồi chạy lại bulk import.</div>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">#</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Email</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Lý do</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs font-semibold">#</TableHead>
+                        <TableHead className="text-xs font-semibold">Email</TableHead>
+                        <TableHead className="text-xs font-semibold">Lý do</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {bulkResult.failedDetails.map((row) => (
-                        <tr key={`${row.index}-${row.email}`} className="hover:bg-slate-50/60">
-                          <td className="px-4 py-2 text-slate-700">{Number.isFinite(row.index) ? row.index + 1 : ""}</td>
-                          <td className="px-4 py-2 text-slate-700 max-w-[240px] truncate" title={row.email}>
-                            {row.email || <span className="text-slate-400">(Trống)</span>}
-                          </td>
-                          <td className="px-4 py-2 text-slate-700 max-w-[520px] truncate" title={row.reason}>
+                        <TableRow key={`${row.index}-${row.email}`}>
+                          <TableCell className="py-2 text-foreground/80">{Number.isFinite(row.index) ? row.index + 1 : ""}</TableCell>
+                          <TableCell className="py-2 text-foreground/80 max-w-[240px] truncate" title={row.email}>
+                            {row.email || <span className="text-muted-foreground">(Trống)</span>}
+                          </TableCell>
+                          <TableCell className="py-2 text-foreground/80 max-w-[520px] truncate" title={row.reason}>
                             {row.reason}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             ) : null}
 
             <form id="bulk-create-teachers-form" onSubmit={handleBulkCreateTeachers} className="grid gap-4 lg:grid-cols-3">
               <div className="lg:col-span-3 flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-600">Vai trò mặc định</label>
+                <label className="text-[11px] font-semibold text-muted-foreground">Vai trò mặc định</label>
                 <select
                   value={bulkRole}
                   onChange={(e) => setBulkRole(e.target.value as "TEACHER" | "STUDENT" | "PARENT")}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <option value="TEACHER">TEACHER</option>
                   <option value="STUDENT">STUDENT</option>
                   <option value="PARENT">PARENT</option>
                 </select>
-                <div className="text-[10px] text-slate-500">Nếu mỗi dòng có cột role thứ 4, hệ thống sẽ ưu tiên theo dòng.</div>
+                <div className="text-[10px] text-muted-foreground">Nếu mỗi dòng có cột role thứ 4, hệ thống sẽ ưu tiên theo dòng.</div>
               </div>
               <div className="lg:col-span-2 flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-600">Danh sách người dùng</label>
-                <textarea
+                <label className="text-[11px] font-semibold text-muted-foreground">Danh sách người dùng</label>
+                <Textarea
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   rows={12}
                   placeholder={"VD:\nNguyễn Văn A, a@example.com\nTrần Thị B, b@example.com, MatKhau123, STUDENT"}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 resize-y"
+                  className="resize-y"
                 />
               </div>
 
@@ -795,38 +798,37 @@ export default function AdminUsersPage() {
                 <div
                   className={`flex flex-col gap-2 rounded-xl border-2 border-dashed px-3 py-3 transition-colors cursor-pointer ${
                     bulkDragOver
-                      ? "border-slate-900 bg-slate-50"
-                      : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+                      ? "border-foreground bg-muted/30"
+                      : "border-border hover:border-foreground/40 hover:bg-muted/30"
                   }`}
                   onDragOver={handleBulkDragOver}
                   onDragLeave={handleBulkDragLeave}
                   onDrop={handleBulkDrop}
                 >
-                  <div className="text-[11px] font-semibold text-slate-700">
+                  <div className="text-[11px] font-semibold text-foreground">
                     Kéo & thả file CSV vào đây (hoặc chọn tệp)
                   </div>
                   <input
                     type="file"
                     accept=".csv,text/csv"
                     onChange={handleBulkFileChange}
-                    className="text-[11px] text-slate-700"
+                    className="text-[11px] text-foreground"
                   />
                   {bulkFileName && (
-                    <span className="text-[10px] text-slate-500">Đã chọn file: {bulkFileName}</span>
+                    <span className="text-[10px] text-muted-foreground">Đã chọn file: {bulkFileName}</span>
                   )}
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[10px] text-muted-foreground">
                     Gợi ý: xuất từ Excel dạng CSV với cột Họ tên, Email, (Mật khẩu).
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-slate-600">Mật khẩu mặc định (tùy chọn)</label>
-                  <input
+                  <label className="text-[11px] font-semibold text-muted-foreground">Mật khẩu mặc định (tùy chọn)</label>
+                  <Input
                     type="password"
                     value={bulkDefaultPassword}
                     onChange={(e) => setBulkDefaultPassword(e.target.value)}
                     placeholder="Dùng cho các dòng không có mật khẩu riêng"
-                    className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   />
                 </div>
               </div>
@@ -863,7 +865,12 @@ export default function AdminUsersPage() {
             <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={!!deleteLoadingId}>
               Hủy
             </Button>
-            <Button type="button" onClick={confirmDeleteUser} disabled={!!deleteLoadingId} className="bg-red-600 hover:bg-red-700">
+            <Button
+              type="button"
+              onClick={confirmDeleteUser}
+              disabled={!!deleteLoadingId}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive"
+            >
               {deleteLoadingId ? "Đang xóa..." : "Xác nhận"}
             </Button>
           </DialogFooter>

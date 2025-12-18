@@ -9,6 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { usePrompt } from "@/components/providers/PromptProvider";
 import Button from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Input from "@/components/ui/input";
+import { BookOpenCheck, LineChart, Users } from "lucide-react";
 
 type UserStats = {
   teacherClassrooms: number;
@@ -257,7 +262,7 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
   const userRole = user ? String(user.role) : "";
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 sm:p-8 space-y-6">
       <AdminPageHeader
         title={user ? user.fullname || user.email : "Chi tiết người dùng"}
         subtitle={
@@ -273,21 +278,19 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
         }
       />
 
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {loading && !user ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 text-sm text-slate-600">
-          Đang tải...
-        </div>
+        <Card className="p-6 text-sm text-muted-foreground">Đang tải...</Card>
       ) : null}
 
       {user ? (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-1">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1.7fr)] xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1.75fr)] items-start">
+          <div className="space-y-4">
             <AdminUserOverview
               email={user.email}
               fullname={user.fullname}
@@ -304,9 +307,9 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                 <div className="flex flex-col items-end gap-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="primary"
                     size="sm"
-                    color="slate"
+                    color="blue"
                     disabled={loading || userRole === "ADMIN"}
                     onClick={openEdit}
                   >
@@ -321,8 +324,8 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                     onClick={() => void toggleBan()}
                     className={
                       user.isDisabled
-                        ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                        : "border-red-200 text-red-700 hover:bg-red-50"
+                        ? "border-border text-foreground hover:bg-muted/60"
+                        : "border-destructive/15 text-destructive hover:bg-destructive/10"
                     }
                   >
                     {user.isDisabled ? "Mở khoá" : "Khoá tài khoản"}
@@ -332,44 +335,77 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
             />
           </div>
 
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-5">
             {user && userRole === "TEACHER" && related?.teacherClassrooms ? (
               <AdminUserSectionCard
                 title="Lớp đang dạy"
                 description="Danh sách lớp (GV)"
                 count={related.teacherClassrooms.length}
+                tone="primary"
               >
                 {related.teacherClassrooms.length === 0 ? (
-                  <div className="text-sm text-slate-500">Chưa có lớp nào.</div>
+                  <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-indigo-200/80 bg-indigo-50/40 px-6 py-8 text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-600">
+                      <BookOpenCheck className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-foreground">Chưa có lớp nào</p>
+                      
+                    </div>
+                  
+                  </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-slate-100">
-                    <table className="min-w-full divide-y divide-slate-200 text-[11px]">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Lớp</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Code</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Trạng thái</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                  <div className="rounded-2xl border border-border overflow-hidden bg-background/80">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs font-semibold">Lớp</TableHead>
+                          <TableHead className="text-xs font-semibold">Code</TableHead>
+                          <TableHead className="text-xs font-semibold">Trạng thái</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {related.teacherClassrooms.map((c) => (
-                          <tr key={c.id} className="hover:bg-slate-50/60">
-                            <td className="px-3 py-2">
-                              <Link href={`/dashboard/admin/classrooms/${c.id}`} className="font-semibold text-slate-800 hover:underline">
+                          <TableRow key={c.id}>
+                            <TableCell className="py-2">
+                              <Link
+                                href={`/dashboard/admin/classrooms/${c.id}`}
+                                className="font-semibold text-foreground hover:underline"
+                              >
                                 {c.name}
                               </Link>
-                              <div className="text-[10px] text-slate-500">{c.id}</div>
-                            </td>
-                            <td className="px-3 py-2 text-slate-700">{c.code}</td>
-                            <td className="px-3 py-2 text-[10px] font-semibold text-slate-700">{c.isActive ? "ACTIVE" : "INACTIVE"}</td>
-                          </tr>
+                              <div className="text-[10px] text-muted-foreground">{c.id}</div>
+                            </TableCell>
+                            <TableCell className="py-2 text-foreground/80">{c.code}</TableCell>
+                            <TableCell className="py-2 text-[10px] font-semibold text-foreground/80">
+                              {c.isActive ? "ACTIVE" : "INACTIVE"}
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </AdminUserSectionCard>
             ) : null}
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <QuickStatCard
+                icon={BookOpenCheck}
+                label="Lớp (GV)"
+                value={user.stats.teacherClassrooms}
+              />
+              <QuickStatCard
+                icon={Users}
+                label="Lớp (HS)"
+                value={user.stats.studentEnrollments}
+              />
+              <QuickStatCard
+                icon={LineChart}
+                label="Liên kết (PH)"
+                value={user.stats.parentRelations}
+              />
+            </div>
 
             {user && userRole === "STUDENT" && related?.studentClassrooms ? (
               <AdminUserSectionCard
@@ -378,37 +414,39 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                 count={related.studentClassrooms.length}
               >
                 {related.studentClassrooms.length === 0 ? (
-                  <div className="text-sm text-slate-500">Chưa tham gia lớp nào.</div>
+                  <div className="text-sm text-muted-foreground">Chưa tham gia lớp nào.</div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-slate-100">
-                    <table className="min-w-full divide-y divide-slate-200 text-[11px]">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Lớp</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Giáo viên</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Joined</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs font-semibold">Lớp</TableHead>
+                          <TableHead className="text-xs font-semibold">Giáo viên</TableHead>
+                          <TableHead className="text-xs font-semibold">Joined</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {related.studentClassrooms.map((m) => (
-                          <tr key={m.id} className="hover:bg-slate-50/60">
-                            <td className="px-3 py-2">
-                              <Link href={`/dashboard/admin/classrooms/${m.classroom.id}`} className="font-semibold text-slate-800 hover:underline">
+                          <TableRow key={m.id}>
+                            <TableCell className="py-2">
+                              <Link href={`/dashboard/admin/classrooms/${m.classroom.id}`} className="font-semibold text-foreground hover:underline">
                                 {m.classroom.name}
                               </Link>
-                              <div className="text-[10px] text-slate-500">{m.classroom.code}</div>
-                            </td>
-                            <td className="px-3 py-2 text-slate-700">
+                              <div className="text-[10px] text-muted-foreground">{m.classroom.code}</div>
+                            </TableCell>
+                            <TableCell className="py-2 text-foreground/80">
                               <div className="flex flex-col">
-                                <span className="font-semibold text-slate-800">{m.classroom.teacher.fullname}</span>
-                                <span className="text-[10px] text-slate-500">{m.classroom.teacher.email}</span>
+                                <span className="font-semibold text-foreground">{m.classroom.teacher.fullname}</span>
+                                <span className="text-[10px] text-muted-foreground">{m.classroom.teacher.email}</span>
                               </div>
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap text-[10px] text-slate-600">{formatTime(m.joinedAt)}</td>
-                          </tr>
+                            </TableCell>
+                            <TableCell className="py-2 whitespace-nowrap text-[10px] text-muted-foreground">
+                              {formatTime(m.joinedAt)}
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </AdminUserSectionCard>
@@ -421,32 +459,34 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                 count={related.studentParents.length}
               >
                 {related.studentParents.length === 0 ? (
-                  <div className="text-sm text-slate-500">Chưa có phụ huynh liên kết.</div>
+                  <div className="text-sm text-muted-foreground">Chưa có phụ huynh liên kết.</div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-slate-100">
-                    <table className="min-w-full divide-y divide-slate-200 text-[11px]">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Phụ huynh</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Status</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Linked</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs font-semibold">Phụ huynh</TableHead>
+                          <TableHead className="text-xs font-semibold">Status</TableHead>
+                          <TableHead className="text-xs font-semibold">Linked</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {related.studentParents.map((r) => (
-                          <tr key={r.id} className="hover:bg-slate-50/60">
-                            <td className="px-3 py-2">
-                              <Link href={`/dashboard/admin/users/${r.parent.id}`} className="font-semibold text-slate-800 hover:underline">
+                          <TableRow key={r.id}>
+                            <TableCell className="py-2">
+                              <Link href={`/dashboard/admin/users/${r.parent.id}`} className="font-semibold text-foreground hover:underline">
                                 {r.parent.fullname}
                               </Link>
-                              <div className="text-[10px] text-slate-500">{r.parent.email}</div>
-                            </td>
-                            <td className="px-3 py-2 text-[10px] font-semibold text-slate-700">{r.status}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-[10px] text-slate-600">{formatTime(r.createdAt)}</td>
-                          </tr>
+                              <div className="text-[10px] text-muted-foreground">{r.parent.email}</div>
+                            </TableCell>
+                            <TableCell className="py-2 text-[10px] font-semibold text-foreground/80">{r.status}</TableCell>
+                            <TableCell className="py-2 whitespace-nowrap text-[10px] text-muted-foreground">
+                              {formatTime(r.createdAt)}
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </AdminUserSectionCard>
@@ -459,32 +499,34 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                 count={related.parentChildren.length}
               >
                 {related.parentChildren.length === 0 ? (
-                  <div className="text-sm text-slate-500">Chưa có học sinh liên kết.</div>
+                  <div className="text-sm text-muted-foreground">Chưa có học sinh liên kết.</div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-slate-100">
-                    <table className="min-w-full divide-y divide-slate-200 text-[11px]">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Học sinh</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Status</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-600">Linked</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs font-semibold">Học sinh</TableHead>
+                          <TableHead className="text-xs font-semibold">Status</TableHead>
+                          <TableHead className="text-xs font-semibold">Linked</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {related.parentChildren.map((r) => (
-                          <tr key={r.id} className="hover:bg-slate-50/60">
-                            <td className="px-3 py-2">
-                              <Link href={`/dashboard/admin/users/${r.student.id}`} className="font-semibold text-slate-800 hover:underline">
+                          <TableRow key={r.id}>
+                            <TableCell className="py-2">
+                              <Link href={`/dashboard/admin/users/${r.student.id}`} className="font-semibold text-foreground hover:underline">
                                 {r.student.fullname}
                               </Link>
-                              <div className="text-[10px] text-slate-500">{r.student.email}</div>
-                            </td>
-                            <td className="px-3 py-2 text-[10px] font-semibold text-slate-700">{r.status}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-[10px] text-slate-600">{formatTime(r.createdAt)}</td>
-                          </tr>
+                              <div className="text-[10px] text-muted-foreground">{r.student.email}</div>
+                            </TableCell>
+                            <TableCell className="py-2 text-[10px] font-semibold text-foreground/80">{r.status}</TableCell>
+                            <TableCell className="py-2 whitespace-nowrap text-[10px] text-muted-foreground">
+                              {formatTime(r.createdAt)}
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </AdminUserSectionCard>
@@ -509,6 +551,34 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
         role={editRole}
         setRole={setEditRole}
       />
+    </div>
+  );
+}
+
+function QuickStatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof BookOpenCheck;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-background via-background to-indigo-50/40 px-4 py-3 shadow-sm transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.10)]">
+      <div className="pointer-events-none absolute -right-4 -top-4 h-14 w-14 rounded-full bg-indigo-500/5 opacity-80" />
+      <div className="pointer-events-none absolute -right-6 bottom-0 h-16 w-16 rounded-full bg-indigo-500/8 opacity-80" />
+      <div className="relative flex items-center justify-between gap-2">
+        <div>
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.14em]">
+            {label}
+          </div>
+          <div className="mt-1 text-xl font-extrabold text-foreground">{value}</div>
+        </div>
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-600">
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -548,18 +618,18 @@ function EditUserDialog({
 
         <div className="px-6 py-5 space-y-4">
           {error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-              {error}
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription className="text-[11px]">{error}</AlertDescription>
+            </Alert>
           ) : null}
 
           <form id="admin-edit-user-form" onSubmit={onSubmit} className="grid gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Vai trò</label>
+              <label className="text-[11px] font-semibold text-muted-foreground">Vai trò</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as "TEACHER" | "STUDENT" | "PARENT")}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <option value="TEACHER">TEACHER</option>
                 <option value="STUDENT">STUDENT</option>
@@ -567,22 +637,19 @@ function EditUserDialog({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Họ và tên</label>
-              <input
-                type="text"
+              <label className="text-[11px] font-semibold text-muted-foreground">Họ và tên</label>
+              <Input
                 value={fullname}
                 onChange={(e) => setFullname(e.target.value)}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                 required
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Email</label>
-              <input
+              <label className="text-[11px] font-semibold text-muted-foreground">Email</label>
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                 required
               />
             </div>

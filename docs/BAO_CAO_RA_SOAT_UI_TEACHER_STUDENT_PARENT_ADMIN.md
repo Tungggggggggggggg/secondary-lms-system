@@ -84,6 +84,25 @@
     - padding responsive theo 8pt grid.
 - Overlay components: ưu tiên dùng primitives hiện có (`Dialog`, `DropdownMenu`, `Popover`).
 
+### 4.3. Đồng bộ 4 role (Admin + Teacher + Student + Parent)
+- 4 role chia sẻ cùng một "design system"; khác nhau chủ yếu ở **accent** và **surface**:
+
+  | Role    | Accent chính | Prefix token   | Ghi chú |
+  |---------|-------------|----------------|--------|
+  | Admin   | indigo      | `admin-*`      | Đã chuẩn hoá trong báo cáo A1 Indigo (Admin). |
+  | Teacher | blue        | `teacher-*`    | Dùng cho toàn bộ shell + page teacher. |
+  | Student | green       | `student-*`    | Dùng cho toàn bộ shell + page student. |
+  | Parent  | amber       | `parent-*`     | Dùng cho toàn bộ shell + page parent. |
+
+- Các component core phải **giống hierarchy/API giữa 4 role**, chỉ khác accent:
+  - `PageHeader` / `AdminPageHeader`
+  - `SectionCard`
+  - `StatsGrid`
+  - `EmptyState`
+  - Các thanh bulk/selection (ví dụ: bar chọn nhiều học sinh / lớp / con)
+- Tất cả component trên **lấy accent từ RoleThemeProvider / context**, không hardcode class `bg-blue-50`, `text-emerald-700`, ...
+- Pattern list/detail/empty/bulk **nên giống nhau giữa 4 role** (ví dụ: dashboard overview, list lớp/lớp học, detail, bulk selection).
+
 ## 5) Checklist triển khai (ưu tiên theo impact/risk)
 
 ### P0 — Shell & Consistency nền (Impact cao / Risk thấp)
@@ -96,18 +115,26 @@
   - [ ] Bọc `RoleThemeProvider color="blue"` để đồng bộ Button/controls.
 - [ ] `src/app/dashboard/student/page.tsx`, `src/app/dashboard/parent/page.tsx`
   - [ ] Loại UI redirect gradient lệch theme; tránh ProtectedRoute lồng thừa.
+ - [ ] `RoleThemeProvider` / context màu theo role
+   - [ ] Đảm bảo mapping 4 role (`admin/teacher/student/parent`) → accent/surface/token thống nhất, khớp với A1 Indigo bên admin.
 
 ### P1 — Shared components “role-aware” (Impact cao / Risk trung bình)
 - [ ] `src/components/shared/SectionCard.tsx`
-  - [ ] Thêm `variant` theo role để bỏ style hardcode blue.
+  - [ ] Thêm `variant` theo role (teacher/student/parent + tương thích admin) để bỏ style hardcode blue.
 - [ ] `src/components/shared/StatsGrid.tsx`
-  - [ ] Cho phép truyền `accent`/`variant` để focus ring không bị cố định green.
+  - [ ] Cho phép truyền `accent`/`variant` hoặc đọc từ RoleThemeProvider để focus ring không bị cố định green cho mọi role.
 - [ ] `src/components/ui/tabs.tsx`
-  - [ ] (Tuỳ chọn) hỗ trợ `variant` theo role hoặc token-based để giảm override lặp.
+  - [ ] (Tuỳ chọn) hỗ trợ `variant` theo role hoặc token-based để giảm override lặp giữa 4 role.
 - [ ] `src/components/ui/breadcrumb.tsx`
-  - [ ] Giảm hardcode `text-gray-*` sang token/role accent.
+  - [ ] Giảm hardcode `text-gray-*` sang token/role accent (tôn trọng màu của từng role).
 
 ### P2 — Page refactor theo role (Impact cao / Risk trung bình-cao)
+**Cross-role patterns (áp dụng đồng thời cho 4 role)**  
+- [ ] Dashboard overview (cards/stats) dùng cùng pattern `PageHeader + StatsGrid + SectionCard`.
+- [ ] List pages (classrooms/classes/children/progress/assignments) dùng chung layout: header + filter bar + table/card list + EmptyState.
+- [ ] Detail pages (classroom detail, assignment detail, progress detail, user detail) dùng chung pattern: hero header + info cards + action bar + related lists.
+- [ ] Bulk actions (selection bar + checkbox + confirm) thống nhất UX (vị trí thanh, wording, nút dangerous/secondary).
+
 #### Teacher
 - [ ] `src/app/dashboard/teacher/courses/page.tsx`
   - [ ] Đổi header thủ công sang `PageHeader` + `Breadcrumb`.

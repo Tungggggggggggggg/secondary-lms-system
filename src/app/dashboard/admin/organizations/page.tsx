@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import PageHeader from "@/components/shared/PageHeader";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type OrgStatus = "ACTIVE" | "INACTIVE";
 
@@ -33,25 +39,23 @@ export default function AdminOrganizationsPage() {
   const orgDisabled = (globalThis as unknown as { __lms_disable_org__?: boolean }).__lms_disable_org__ !== false;
   if (orgDisabled) {
     return (
-      <div className="p-8 space-y-6">
-        <PageHeader
+      <div className="p-6 sm:p-8 space-y-6">
+        <AdminPageHeader
           title="Organizations"
           subtitle="Tính năng Organizations đã được gỡ bỏ (phase 1)."
+          label="Organizations"
         />
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-3">
-          <div className="text-sm font-semibold text-slate-900">Không khả dụng</div>
-          <div className="text-sm text-slate-600">
+        <Card className="space-y-3 p-6">
+          <div className="text-sm font-semibold text-foreground">Không khả dụng</div>
+          <div className="text-sm text-muted-foreground">
             Trang này đã được ẩn khỏi hệ thống. Nếu bạn cần quản lý tổ chức, vui lòng liên hệ đội phát triển.
           </div>
           <div>
-            <Link
-              href="/dashboard/admin/dashboard"
-              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
-            >
-              Quay về Overview
-            </Link>
+            <Button asChild variant="outline" size="sm" color="slate">
+              <Link href="/dashboard/admin/dashboard">Quay về Overview</Link>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -189,119 +193,109 @@ export default function AdminOrganizationsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <PageHeader
+    <div className="p-6 sm:p-8 space-y-6">
+      <AdminPageHeader
         title="Organizations"
         subtitle="Quản lý tổ chức (tạo mới, tìm kiếm, xem chi tiết)"
+        label="Organizations"
       />
 
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+      <Card className="p-6 space-y-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full md:w-auto">
-            <input
-              type="text"
+            <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm theo tên organization..."
-              className="flex-1 md:w-72 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+              className="flex-1 md:w-72 text-xs"
             />
-            <button
-              type="submit"
-              className="inline-flex items-center rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-800"
-            >
+            <Button type="submit" size="sm">
               Tìm kiếm
-            </button>
+            </Button>
           </form>
 
           <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800"
-            >
+            <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
               Tạo organization
-            </button>
+            </Button>
           </div>
         </div>
 
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
 
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
-          <table className="min-w-full divide-y divide-slate-200 text-xs">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Tên</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Slug</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Status</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">Created</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+        <div className="rounded-xl border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs font-semibold">Tên</TableHead>
+                <TableHead className="text-xs font-semibold">Slug</TableHead>
+                <TableHead className="text-xs font-semibold">Status</TableHead>
+                <TableHead className="text-xs font-semibold">Created</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading && items.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-[11px] text-slate-500">
+                <TableRow>
+                  <TableCell colSpan={4} className="py-6 text-center text-[11px] text-muted-foreground">
                     Đang tải organizations...
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-[11px] text-slate-500">
+                <TableRow>
+                  <TableCell colSpan={4} className="py-6 text-center text-[11px] text-muted-foreground">
                     Chưa có organization nào.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 items.map((org) => (
-                  <tr key={org.id} className="hover:bg-slate-50/60">
-                    <td className="px-3 py-2 align-middle">
+                  <TableRow key={org.id}>
+                    <TableCell className="py-2 align-middle">
                       <div className="flex flex-col">
                         <Link
                           href={`/dashboard/admin/organizations/${org.id}`}
-                          className="font-semibold text-slate-900 hover:underline"
+                          className="font-semibold text-foreground hover:underline"
                         >
                           {org.name}
                         </Link>
-                        <span className="text-[10px] text-slate-500">ID: {org.id.slice(0, 8)}…</span>
+                        <span className="text-[10px] text-muted-foreground">ID: {org.id.slice(0, 8)}…</span>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 align-middle text-[11px] text-slate-700">
+                    </TableCell>
+                    <TableCell className="py-2 align-middle text-[11px] text-foreground/80">
                       {org.slug || "—"}
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          org.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {org.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 align-middle text-[10px] text-slate-600 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="py-2 align-middle">
+                      <Badge variant={org.status === "ACTIVE" ? "success" : "destructive"}>{org.status}</Badge>
+                    </TableCell>
+                    <TableCell className="py-2 align-middle text-[10px] text-muted-foreground whitespace-nowrap">
                       {new Date(org.createdAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {canLoadMore && (
           <div className="flex justify-center pt-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              color="slate"
               disabled={loading}
               onClick={() => void fetchList({ reset: false, cursor: nextCursor })}
-              className="inline-flex items-center rounded-full border border-slate-200 px-4 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="rounded-full px-4"
             >
               {loading ? "Đang tải thêm..." : "Tải thêm"}
-            </button>
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
 
       <Dialog
         open={createOpen}
@@ -323,47 +317,40 @@ export default function AdminOrganizationsPage() {
 
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Tên organization</label>
-              <input
-                type="text"
+              <label className="text-[11px] font-semibold text-muted-foreground">Tên organization</label>
+              <Input
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 placeholder="VD: Trường THPT ABC"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               />
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Slug (tuỳ chọn)</label>
-              <input
-                type="text"
+              <label className="text-[11px] font-semibold text-muted-foreground">Slug (tuỳ chọn)</label>
+              <Input
                 value={createSlug}
                 onChange={(e) => setCreateSlug(e.target.value)}
                 placeholder="VD: thpt-abc"
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
               />
-              <div className="text-[10px] text-slate-500">
+              <div className="text-[10px] text-muted-foreground">
                 Nếu nhập slug, hệ thống sẽ kiểm tra trùng (unique).
               </div>
             </div>
           </div>
 
           <DialogFooter className="shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              color="slate"
               onClick={() => setCreateOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
             >
               Hủy
-            </button>
-            <button
-              type="button"
-              onClick={() => void createOrganization()}
-              disabled={createLoading}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button type="button" size="sm" disabled={createLoading} onClick={() => void createOrganization()}>
               {createLoading ? "Đang tạo..." : "Tạo"}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

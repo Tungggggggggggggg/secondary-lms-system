@@ -12,6 +12,12 @@ import { Button } from "@/components/ui/button";
 import { usePrompt } from "@/components/providers/PromptProvider";
 import { Select } from "@/components/ui/select";
 import { AccordionItem } from "@/components/ui/accordion";
+import { Card } from "@/components/ui/card";
+import Badge from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Input from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -830,7 +836,7 @@ export default function AdminClassroomsPage() {
 
         {error ? <ErrorBanner message={error} onRetry={() => fetchClassrooms(page, status, search)} /> : null}
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100 space-y-4">
+        <Card className="p-6 space-y-4">
           <AdminClassroomsToolbar
             statusOptions={STATUS_OPTIONS}
             statusValue={status}
@@ -841,111 +847,110 @@ export default function AdminClassroomsPage() {
             onReset={handleResetFilters}
           />
 
-        <div className="overflow-x-auto rounded-xl border border-slate-100">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Lớp</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Giáo viên</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Học sinh</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-600">Trạng thái</th>
-                <th className="px-4 py-3 text-right font-semibold text-slate-600">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {loading && items.length === 0 ? (
-                <AdminTableSkeleton rows={8} cols={5} />
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8">
-                    <EmptyState
-                      title="Không có lớp học phù hợp"
-                      description="Thử thay đổi bộ lọc hoặc đặt lại tìm kiếm để xem thêm kết quả."
-                      action={
-                        <div className="flex items-center justify-center gap-2">
-                          <Button type="button" variant="outline" onClick={handleResetFilters}>
-                            Reset bộ lọc
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              setCreateError(null);
-                              setTeacherError(null);
-                              setTeacherQuery("");
-                              setTeacherOptions([]);
-                              setCreateTeacherId("");
-                              fetchTeachers("");
-                              setCreateOpen(true);
-                            }}
-                          >
-                            Tạo lớp học
-                          </Button>
-                        </div>
-                      }
-                    />
-                  </td>
-                </tr>
-              ) : (
-                items.map((c) => {
-                  const isProcessing = actionLoadingId === c.id;
-                  const isArchived = !c.isActive;
-                  return (
-                    <tr key={c.id} className="hover:bg-slate-50/60">
-                      <td className="px-4 py-3 align-middle">
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-slate-900 truncate" title={c.name}>
-                            {c.icon ? `${c.icon} ` : ""}{c.name}
-                          </span>
-                          <span className="text-xs text-slate-500">Mã: {c.code}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 align-middle">
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-slate-800 truncate" title={c.teacher?.fullname || ""}>{c.teacher?.fullname || "(Chưa cập nhật)"}</span>
-                          <span className="text-xs text-slate-500 truncate" title={c.teacher?.email || ""}>{c.teacher?.email || "—"}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-slate-700">
-                        {c._count?.students ?? 0} / {c.maxStudents}
-                      </td>
-                      <td className="px-4 py-3 align-middle">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            c.isActive
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                              : "bg-slate-100 text-slate-700 border border-slate-200"
-                          }`}
-                        >
-                          {c.isActive ? "Hoạt động" : "Đã lưu trữ"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-right">
-                        <div className="inline-flex items-center gap-2">
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/dashboard/admin/classrooms/${c.id}`}>Chi tiết</Link>
-                          </Button>
+          <div className="rounded-xl border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-semibold">Lớp</TableHead>
+                  <TableHead className="font-semibold">Giáo viên</TableHead>
+                  <TableHead className="font-semibold">Học sinh</TableHead>
+                  <TableHead className="font-semibold">Trạng thái</TableHead>
+                  <TableHead className="text-right font-semibold">Thao tác</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading && items.length === 0 ? (
+                  <AdminTableSkeleton rows={8} cols={5} />
+                ) : items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-10">
+                      <EmptyState
+                        title="Không có lớp học phù hợp"
+                        description="Thử thay đổi bộ lọc hoặc đặt lại tìm kiếm để xem thêm kết quả."
+                        action={
+                          <div className="flex items-center justify-center gap-2">
+                            <Button type="button" variant="outline" onClick={handleResetFilters}>
+                              Reset bộ lọc
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                setCreateError(null);
+                                setTeacherError(null);
+                                setTeacherQuery("");
+                                setTeacherOptions([]);
+                                setCreateTeacherId("");
+                                fetchTeachers("");
+                                setCreateOpen(true);
+                              }}
+                            >
+                              Tạo lớp học
+                            </Button>
+                          </div>
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  items.map((c) => {
+                    const isProcessing = actionLoadingId === c.id;
+                    const isArchived = !c.isActive;
+                    return (
+                      <TableRow key={c.id}>
+                        <TableCell className="py-3">
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-semibold text-foreground truncate" title={c.name}>
+                              {c.icon ? `${c.icon} ` : ""}
+                              {c.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">Mã: {c.code}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-foreground truncate" title={c.teacher?.fullname || ""}>
+                              {c.teacher?.fullname || "(Chưa cập nhật)"}
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate" title={c.teacher?.email || ""}>
+                              {c.teacher?.email || "—"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 text-foreground/80">
+                          {c._count?.students ?? 0} / {c.maxStudents}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge variant={c.isActive ? "success" : "outline"}>
+                            {c.isActive ? "Hoạt động" : "Đã lưu trữ"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <Button asChild variant="outline" size="sm">
+                              <Link href={`/dashboard/admin/classrooms/${c.id}`}>Chi tiết</Link>
+                            </Button>
 
-                          <ClassroomRowActionsMenu
-                            disabled={isProcessing}
-                            isArchived={isArchived}
-                            onOpenStudents={() => openStudentsDialog(c)}
-                            onOpenBulkAddStudents={() => openBulkAddStudents(c)}
-                            onOpenEdit={() => openEditClassroom(c)}
-                            onOpenChangeTeacher={() => openChangeTeacherDialog(c)}
-                            onToggleArchive={() => toggleArchive(c)}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                            <ClassroomRowActionsMenu
+                              disabled={isProcessing}
+                              isArchived={isArchived}
+                              onOpenStudents={() => openStudentsDialog(c)}
+                              onOpenBulkAddStudents={() => openBulkAddStudents(c)}
+                              onOpenEdit={() => openEditClassroom(c)}
+                              onOpenChangeTeacher={() => openChangeTeacherDialog(c)}
+                              onToggleArchive={() => toggleArchive(c)}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
         <AdminPagination page={page} totalPages={totalPages} total={total} onPageChange={handlePageChange} />
-      </div>
+        </Card>
 
       <Dialog
         open={createOpen}
@@ -970,45 +975,41 @@ export default function AdminClassroomsPage() {
 
           <form onSubmit={createClassroom} className="flex-1 min-h-0 flex flex-col">
             <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 space-y-4">
-              {createError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {createError}
-                </div>
-              )}
+              {createError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{createError}</AlertDescription>
+                </Alert>
+              ) : null}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-slate-600">Tên lớp</label>
-                  <input
-                    type="text"
+                  <label className="text-[11px] font-semibold text-muted-foreground">Tên lớp</label>
+                  <Input
                     value={createName}
                     onChange={(e) => setCreateName(e.target.value)}
                     placeholder="VD: Lớp 8A1"
-                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     required
                     disabled={createLoading}
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-slate-600">Sĩ số tối đa</label>
-                  <input
+                  <label className="text-[11px] font-semibold text-muted-foreground">Sĩ số tối đa</label>
+                  <Input
                     type="number"
                     value={createMaxStudents}
                     onChange={(e) => setCreateMaxStudents(e.target.value)}
                     min={1}
                     max={500}
-                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     disabled={createLoading}
                   />
                 </div>
               </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-semibold text-slate-600">Giáo viên phụ trách</label>
+              <label className="text-[11px] font-semibold text-muted-foreground">Giáo viên phụ trách</label>
               <div className="grid gap-2 md:grid-cols-2">
-                <input
-                  type="text"
+                <Input
                   value={teacherQuery}
                   onChange={(e) => setTeacherQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -1018,7 +1019,6 @@ export default function AdminClassroomsPage() {
                     }
                   }}
                   placeholder="Tìm theo tên hoặc email..."
-                  className="rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   disabled={createLoading || teacherLoading}
                 />
                 <Select
@@ -1036,32 +1036,30 @@ export default function AdminClassroomsPage() {
                 </Select>
               </div>
               <div className="flex items-center justify-between">
-                <div className="text-[11px] text-slate-500">
+                <div className="text-[11px] text-muted-foreground">
                   Gõ để tìm rồi chọn trong danh sách.
                 </div>
                 <button
                   type="button"
                   onClick={() => fetchTeachers(teacherQuery)}
                   disabled={createLoading || teacherLoading}
-                  className="text-[11px] font-semibold text-slate-700 hover:text-slate-900 disabled:opacity-60"
+                  className="text-[11px] font-semibold text-foreground hover:text-foreground/80 disabled:opacity-60"
                 >
                   {teacherLoading ? "Đang tải..." : "Tải danh sách"}
                 </button>
               </div>
               {teacherError && (
-                <div className="text-[12px] text-red-700">{teacherError}</div>
+                <div className="text-[12px] text-destructive">{teacherError}</div>
               )}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-semibold text-slate-600">Mã lớp</label>
+              <label className="text-[11px] font-semibold text-muted-foreground">Mã lớp</label>
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
+                <Input
                   value={createCode}
                   onChange={(e) => setCreateCode(e.target.value)}
                   placeholder="Để trống để hệ thống tự tạo"
-                  className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   disabled={createLoading}
                 />
                 <Button
@@ -1113,51 +1111,46 @@ export default function AdminClassroomsPage() {
 
           <form onSubmit={submitEditClassroom} className="flex-1 min-h-0 flex flex-col">
             <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 space-y-4">
-              {editError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                  {editError}
-                </div>
-              )}
+              {editError ? (
+                <Alert variant="destructive">
+                  <AlertDescription className="text-[11px]">{editError}</AlertDescription>
+                </Alert>
+              ) : null}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-slate-600">Tên lớp</div>
-                  <input
-                    type="text"
+                  <div className="text-xs font-semibold text-muted-foreground">Tên lớp</div>
+                  <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     placeholder="VD: Lớp 12A2"
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     disabled={editSubmitting}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-slate-600">Sĩ số tối đa</div>
-                  <input
+                  <div className="text-xs font-semibold text-muted-foreground">Sĩ số tối đa</div>
+                  <Input
                     type="number"
                     value={editMaxStudents}
                     onChange={(e) => setEditMaxStudents(e.target.value)}
                     placeholder="30"
                     min={1}
                     max={500}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     disabled={editSubmitting}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-slate-600">Mã lớp</div>
-                <input
-                  type="text"
+                <div className="text-xs font-semibold text-muted-foreground">Mã lớp</div>
+                <Input
                   value={editCode}
                   onChange={(e) => setEditCode(e.target.value.toUpperCase())}
                   placeholder="VD: 6QEH8D"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   disabled={editSubmitting}
                 />
-                <div className="text-[11px] text-slate-500">4-10 ký tự, chỉ gồm A-Z và 2-9.</div>
+                <div className="text-[11px] text-muted-foreground">4-10 ký tự, chỉ gồm A-Z và 2-9.</div>
               </div>
             </div>
 
@@ -1200,11 +1193,11 @@ export default function AdminClassroomsPage() {
 
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-4 px-6 pb-6">
-              {studentsError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {studentsError}
-                </div>
-              )}
+              {studentsError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{studentsError}</AlertDescription>
+                </Alert>
+              ) : null}
 
               <form
                 onSubmit={(e) => {
@@ -1214,12 +1207,10 @@ export default function AdminClassroomsPage() {
                 }}
                 className="flex items-center gap-2"
               >
-                <input
-                  type="text"
+                <Input
                   value={studentsSearch}
                   onChange={(e) => setStudentsSearch(e.target.value)}
                   placeholder="Tìm theo tên hoặc email..."
-                  className="flex-1 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                   disabled={studentsLoading}
                 />
                 <Button type="submit" variant="outline" disabled={studentsLoading} className="rounded-2xl">
@@ -1227,41 +1218,41 @@ export default function AdminClassroomsPage() {
                 </Button>
               </form>
 
-              <div className="overflow-x-auto rounded-2xl border border-slate-100">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Học sinh</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Email</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600">Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+              <div className="rounded-2xl border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs font-semibold">Học sinh</TableHead>
+                      <TableHead className="text-xs font-semibold">Email</TableHead>
+                      <TableHead className="text-right text-xs font-semibold">Hành động</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {studentsLoading && studentsItems.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="px-3 py-6 text-center text-sm text-slate-500">
+                      <TableRow>
+                        <TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">
                           Đang tải danh sách học sinh...
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : studentsItems.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="px-3 py-6 text-center text-sm text-slate-500">
+                      <TableRow>
+                        <TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">
                           Không có học sinh nào.
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : (
                       studentsItems.map((s) => {
                         const isRemoving = studentsActionId === s.id;
                         return (
-                          <tr key={s.id} className="hover:bg-slate-50/60">
-                            <td className="px-3 py-2 align-middle">
+                          <TableRow key={s.id}>
+                            <TableCell className="py-2 align-middle">
                               <div className="flex flex-col">
-                                <span className="font-medium text-slate-900">{s.fullname || "(Chưa cập nhật)"}</span>
-                                <span className="text-[11px] text-slate-500">Vào lớp: {new Date(s.joinedAt).toLocaleString()}</span>
+                                <span className="font-medium text-foreground">{s.fullname || "(Chưa cập nhật)"}</span>
+                                <span className="text-[11px] text-muted-foreground">Vào lớp: {new Date(s.joinedAt).toLocaleString()}</span>
                               </div>
-                            </td>
-                            <td className="px-3 py-2 align-middle text-slate-700">{s.email}</td>
-                            <td className="px-3 py-2 align-middle text-right">
+                            </TableCell>
+                            <TableCell className="py-2 align-middle text-foreground/80">{s.email}</TableCell>
+                            <TableCell className="py-2 align-middle text-right">
                               <Button
                                 variant="outline"
                                 className="rounded-2xl"
@@ -1270,16 +1261,16 @@ export default function AdminClassroomsPage() {
                               >
                                 {isRemoving ? "Đang xoá..." : "Xoá"}
                               </Button>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         );
                       })
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-600">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div>
                   Trang {studentsPage} / {Math.max(1, Math.ceil(studentsTotal / studentsPageSize))} • Tổng {studentsTotal}
                 </div>
@@ -1292,7 +1283,7 @@ export default function AdminClassroomsPage() {
                       fetchClassroomStudents({ page: next, q: studentsSearch });
                     }}
                     disabled={studentsLoading || studentsPage <= 1}
-                    className="rounded-full border border-slate-200 px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                    className="rounded-full border border-border px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 text-foreground/80"
                   >
                     Trước
                   </button>
@@ -1305,7 +1296,7 @@ export default function AdminClassroomsPage() {
                       fetchClassroomStudents({ page: next, q: studentsSearch });
                     }}
                     disabled={studentsLoading || studentsPage >= Math.max(1, Math.ceil(studentsTotal / studentsPageSize))}
-                    className="rounded-full border border-slate-200 px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                    className="rounded-full border border-border px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 text-foreground/80"
                   >
                     Sau
                   </button>
@@ -1351,17 +1342,16 @@ export default function AdminClassroomsPage() {
 
           <form onSubmit={submitChangeTeacher} className="flex-1 min-h-0 flex flex-col">
             <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 space-y-4">
-              {changeTeacherError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {changeTeacherError}
-                </div>
-              )}
+              {changeTeacherError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{changeTeacherError}</AlertDescription>
+                </Alert>
+              ) : null}
 
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-semibold text-slate-600">Giáo viên mới</label>
+                <label className="text-[11px] font-semibold text-muted-foreground">Giáo viên mới</label>
                 <div className="grid gap-2 md:grid-cols-2">
-                  <input
-                    type="text"
+                  <Input
                     value={changeTeacherQuery}
                     onChange={(e) => setChangeTeacherQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -1371,7 +1361,6 @@ export default function AdminClassroomsPage() {
                       }
                     }}
                     placeholder="Tìm theo tên hoặc email..."
-                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     disabled={changeTeacherSubmitting || changeTeacherLoading}
                   />
                   <Select
@@ -1389,12 +1378,12 @@ export default function AdminClassroomsPage() {
                   </Select>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="text-[11px] text-slate-500">Gõ để tìm rồi chọn trong danh sách.</div>
+                  <div className="text-[11px] text-muted-foreground">Gõ để tìm rồi chọn trong danh sách.</div>
                   <button
                     type="button"
                     onClick={() => fetchChangeTeacherOptions(changeTeacherQuery)}
                     disabled={changeTeacherSubmitting || changeTeacherLoading}
-                    className="text-[11px] font-semibold text-slate-700 hover:text-slate-900 disabled:opacity-60"
+                    className="text-[11px] font-semibold text-foreground hover:text-foreground/80 disabled:opacity-60"
                   >
                     {changeTeacherLoading ? "Đang tải..." : "Tải danh sách"}
                   </button>
@@ -1441,72 +1430,74 @@ export default function AdminClassroomsPage() {
 
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-4 px-6 pb-6">
-              {bulkError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {bulkError}
-                </div>
-              )}
+              {bulkError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{bulkError}</AlertDescription>
+                </Alert>
+              ) : null}
 
-              {bulkResult && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-                  Đã thêm {bulkResult.created} học sinh.
-                  {bulkResult.accountsCreated > 0 ? ` Đã tạo mới ${bulkResult.accountsCreated} tài khoản.` : ""}
-                  {bulkResult.alreadyInClassroom > 0 ? ` Đã có trong lớp ${bulkResult.alreadyInClassroom}.` : ""}
-                  {` Bỏ qua ${bulkResult.skipped} email.`}
-                </div>
-              )}
+              {bulkResult ? (
+                <Alert className="border-primary/20 bg-primary/10 text-primary">
+                  <AlertDescription>
+                    Đã thêm {bulkResult.created} học sinh.
+                    {bulkResult.accountsCreated > 0 ? ` Đã tạo mới ${bulkResult.accountsCreated} tài khoản.` : ""}
+                    {bulkResult.alreadyInClassroom > 0 ? ` Đã có trong lớp ${bulkResult.alreadyInClassroom}.` : ""}
+                    {` Bỏ qua ${bulkResult.skipped} email.`}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-slate-600">Danh sách email học sinh</div>
-                  <textarea
+                  <div className="text-xs font-semibold text-muted-foreground">Danh sách email học sinh</div>
+                  <Textarea
                     value={bulkText}
                     onChange={(e) => setBulkText(e.target.value)}
                     rows={10}
                     placeholder={"VD:\nstudent1@example.com\nNguyễn Văn A, student2@example.com"}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 resize-y"
+                    className="resize-y"
                     disabled={bulkSubmitting}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-slate-600">Tải lên CSV</div>
+                  <div className="text-xs font-semibold text-muted-foreground">Tải lên CSV</div>
                   <div
                     className={`flex flex-col gap-2 rounded-2xl border-2 border-dashed px-4 py-4 transition-colors ${
                       bulkDragOver
-                        ? "border-slate-900 bg-slate-50"
-                        : "border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+                        ? "border-foreground bg-muted/30"
+                        : "border-border hover:border-foreground/40 hover:bg-muted/30"
                     }`}
                     onDragOver={handleBulkDragOver}
                     onDragLeave={handleBulkDragLeave}
                     onDrop={handleBulkDrop}
                   >
-                    <div className="text-sm font-semibold text-slate-800">Kéo & thả file CSV</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-sm font-semibold text-foreground">Kéo & thả file CSV</div>
+                    <div className="text-xs text-muted-foreground">
                       CSV có thể chứa nhiều cột, hệ thống sẽ tự tìm email trong từng dòng.
                     </div>
                     <input
                       type="file"
                       accept=".csv,text/csv"
                       onChange={handleBulkFileChange}
-                      className="text-[11px] text-slate-700"
+                      className="text-[11px] text-foreground"
                       disabled={bulkSubmitting}
                     />
                     {bulkFileName && (
-                      <span className="text-[11px] text-slate-700">File: {bulkFileName}</span>
+                      <span className="text-[11px] text-muted-foreground">File: {bulkFileName}</span>
                     )}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-slate-600">Lý do (tuỳ chọn)</div>
-                <textarea
+                <div className="text-xs font-semibold text-muted-foreground">Lý do (tuỳ chọn)</div>
+                <Textarea
                   value={bulkReason}
                   onChange={(e) => setBulkReason(e.target.value)}
                   rows={2}
                   placeholder="VD: Bổ sung học sinh mới nhập học..."
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 resize-y"
+                  className="resize-y"
                   disabled={bulkSubmitting}
                 />
               </div>
@@ -1514,11 +1505,11 @@ export default function AdminClassroomsPage() {
               <AccordionItem
                 title="Tùy chọn tài khoản"
                 defaultOpen={false}
-                className="rounded-2xl border border-slate-100 bg-white"
-                headerClassName="text-slate-700 hover:bg-slate-50 rounded-2xl px-4 py-3"
+                className="rounded-2xl border border-border bg-card"
+                headerClassName="text-foreground hover:bg-muted/50 rounded-2xl px-4 py-3"
                 contentClassName="px-4 pb-3"
               >
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm text-slate-700">
+                <label className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground/80">
                   <input
                     type="checkbox"
                     checked={bulkCreateMissing}
@@ -1528,23 +1519,22 @@ export default function AdminClassroomsPage() {
                   />
                   <div className="flex-1">
                     <div className="font-semibold">Tự tạo tài khoản cho email chưa tồn tại</div>
-                    <div className="text-[12px] text-slate-500">Tài khoản mới sẽ có role STUDENT và được thêm vào lớp.</div>
+                    <div className="text-[12px] text-muted-foreground">Tài khoản mới sẽ có role STUDENT và được thêm vào lớp.</div>
                   </div>
                 </label>
 
                 {bulkCreateMissing && (
                   <div className="grid gap-2 md:grid-cols-2">
                     <div className="flex flex-col gap-1">
-                      <div className="text-xs font-semibold text-slate-600">Mật khẩu mặc định</div>
-                      <input
+                      <div className="text-xs font-semibold text-muted-foreground">Mật khẩu mặc định</div>
+                      <Input
                         type="password"
                         value={bulkDefaultPassword}
                         onChange={(e) => setBulkDefaultPassword(e.target.value)}
                         placeholder="Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số"
-                        className="rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                         disabled={bulkSubmitting}
                       />
-                      <div className="text-[11px] text-slate-500">Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường và số. Không lưu/hiển thị lại trong kết quả.</div>
+                      <div className="text-[11px] text-muted-foreground">Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường và số. Không lưu/hiển thị lại trong kết quả.</div>
                     </div>
                     <div className="hidden md:block" />
                   </div>
@@ -1553,12 +1543,12 @@ export default function AdminClassroomsPage() {
 
               {bulkSkippedPreview.length > 0 && (
                 <div className="space-y-1">
-                  <div className="text-xs font-semibold text-slate-600">Một số email bị bỏ qua</div>
-                  <div className="rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm text-slate-700">
+                  <div className="text-xs font-semibold text-muted-foreground">Một số email bị bỏ qua</div>
+                  <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground/80">
                     {bulkSkippedPreview.map((it) => (
                       <div key={it.email} className="flex items-start justify-between gap-3">
                         <span className="font-medium">{it.email}</span>
-                        <span className="text-slate-500">{it.reason}</span>
+                        <span className="text-muted-foreground">{it.reason}</span>
                       </div>
                     ))}
                   </div>
