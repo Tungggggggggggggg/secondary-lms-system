@@ -125,10 +125,10 @@ export default function AssignmentTable({ items, onView, onEdit, onSubmissions, 
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onSubmissions?.(a.id)}>Xem bài nộp</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onDuplicate?.(a.id)}>Nhân bản</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => onSubmissions?.(a.id)}>Xem bài nộp</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => onDuplicate?.(a.id)}>Nhân bản</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600" onClick={() => onDelete?.(a.id)}>
+                          <DropdownMenuItem className="text-red-600" onSelect={() => onDelete?.(a.id)}>
                             <Trash2 className="h-4 w-4 mr-2" /> Xoá
                           </DropdownMenuItem>
                         </DropdownMenuContent>

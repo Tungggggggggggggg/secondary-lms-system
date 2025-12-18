@@ -122,17 +122,17 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
       labelActive: "text-amber-800 font-semibold",
     },
     admin: {
-      hover: "hover:bg-gradient-to-r hover:from-slate-800/60 hover:to-slate-900/60",
-      activeBg: "bg-gradient-to-r from-slate-800 to-slate-900",
-      indicator: "bg-emerald-400",
-      ring: "focus-visible:ring-emerald-400/50",
-      textAccent: "text-slate-100",
-      hoverBorder: "hover:border-slate-700/80",
-      activeBorder: "border-slate-700",
-      iconBase: "text-slate-200 group-hover:text-emerald-300",
-      iconActive: "text-emerald-300 font-semibold",
-      labelBase: "text-slate-100 group-hover:text-emerald-200",
-      labelActive: "text-emerald-200 font-semibold",
+      hover: "hover:bg-indigo-50",
+      activeBg: "bg-indigo-50",
+      indicator: "bg-indigo-600",
+      ring: "focus-visible:ring-indigo-400/50",
+      textAccent: "text-muted-foreground",
+      hoverBorder: "hover:border-indigo-200",
+      activeBorder: "border-indigo-200",
+      iconBase: "text-slate-600 group-hover:text-indigo-700",
+      iconActive: "text-indigo-700 font-semibold",
+      labelBase: "text-slate-700 group-hover:text-indigo-800",
+      labelActive: "text-indigo-800 font-semibold",
     },
   }[role];
 
@@ -150,8 +150,8 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
       border: "rgba(255, 214, 165, 0.35)",
     },
     admin: {
-      bg: "rgba(15, 23, 42, 0.96)",
-      border: "rgba(148, 163, 184, 0.55)",
+      bg: "hsl(var(--card))",
+      border: "hsl(var(--border))",
     },
   }[role];
 
@@ -174,11 +174,13 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
   };
 
   const isAdmin = role === "admin";
-  const brandTextClass = isAdmin ? "text-slate-100" : "text-slate-900";
-  const profileCardClass = isAdmin ? "border-slate-700/60 bg-slate-900/30" : "border-gray-200";
-  const avatarClass = isAdmin ? "bg-slate-800 text-slate-100" : "bg-gray-100 text-slate-700";
-  const nameClass = isAdmin ? "text-slate-100" : "text-slate-900";
-  const groupHeaderClass = isAdmin ? "text-slate-400 hover:bg-slate-800/50" : "text-slate-600 hover:bg-gray-50";
+  const brandTextClass = isAdmin ? "text-foreground" : "text-slate-900";
+  const profileCardClass = isAdmin ? "border-border bg-card" : "border-gray-200";
+  const avatarClass = isAdmin ? "bg-muted text-foreground" : "bg-gray-100 text-slate-700";
+  const nameClass = isAdmin ? "text-foreground" : "text-slate-900";
+  const groupHeaderClass = isAdmin
+    ? "text-muted-foreground hover:bg-muted/50"
+    : "text-slate-600 hover:bg-gray-50";
 
   return (
     <aside
@@ -256,9 +258,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                       {active && (
                         <span className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full ${accent.indicator}`} aria-hidden="true" />
                       )}
-                      {isAdmin ? null : (
-                        <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
-                      )}
+                      <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
                       <span className={`transition-colors duration-200 ${active ? accent.labelActive : accent.labelBase}`}>{item.label}</span>
                       {active && (
                         <span className="sr-only" aria-current="page">Trang hiện tại</span>
@@ -293,15 +293,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                   )}
                   <div className="relative flex items-center justify-center">
                     <Tooltip content={item.label}>
-                      {isAdmin ? (
-                        <span className={`h-9 w-9 inline-flex items-center justify-center rounded-lg border ${
-                          active ? "border-slate-700 bg-slate-800" : "border-transparent"
-                        } text-[11px] font-bold text-slate-100`}>
-                          {item.label.slice(0, 1).toUpperCase()}
-                        </span>
-                      ) : (
-                        <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
-                      )}
+                      <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
                     </Tooltip>
                     {isMessages && unreadBadge && (
                       <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">

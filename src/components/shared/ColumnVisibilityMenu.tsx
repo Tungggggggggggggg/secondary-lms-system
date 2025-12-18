@@ -23,7 +23,13 @@ export default function ColumnVisibilityMenu<T extends string>({ columns, onTogg
         <DropdownMenuLabel>Hiển thị cột</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {keys.map((k) => (
-          <DropdownMenuItem key={k as string} onClick={() => onToggle(k)}>
+          <DropdownMenuItem
+            key={k as string}
+            onSelect={(event) => {
+              event.preventDefault();
+              onToggle(k);
+            }}
+          >
             <input type="checkbox" className="mr-2" readOnly checked={columns[k]} /> {k as string}
           </DropdownMenuItem>
         ))}

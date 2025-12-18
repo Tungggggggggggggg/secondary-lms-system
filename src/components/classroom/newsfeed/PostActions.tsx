@@ -16,7 +16,7 @@ interface PostActionsProps {
 export default function PostActions({ post, onPin, onEdit, onDelete, className }: PostActionsProps) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>
         <button
           type="button"
           className={cn(
@@ -29,13 +29,13 @@ export default function PostActions({ post, onPin, onEdit, onDelete, className }
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[12rem]">
-        <DropdownMenuItem onClick={() => onPin?.(post.id, !post.pinnedAt)}>
+        <DropdownMenuItem onSelect={() => onPin?.(post.id, !post.pinnedAt)}>
           <Pin className="h-4 w-4 mr-2 text-blue-600" /> {post.pinnedAt ? "Bỏ ghim" : "Ghim trên đầu"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onEdit?.(post.id)}>
+        <DropdownMenuItem onSelect={() => onEdit?.(post.id)}>
           <Pencil className="h-4 w-4 mr-2 text-slate-700" /> Chỉnh sửa
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onDelete?.(post.id)} className="text-rose-600">
+        <DropdownMenuItem onSelect={() => onDelete?.(post.id)} className="text-rose-600">
           <Trash2 className="h-4 w-4 mr-2" /> Xóa bài
         </DropdownMenuItem>
       </DropdownMenuContent>

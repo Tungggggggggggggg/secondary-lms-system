@@ -1,4 +1,7 @@
-﻿import * as React from "react";
+﻿"use client";
+
+import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import { useRoleTheme } from "@/components/providers/RoleThemeProvider";
@@ -9,39 +12,22 @@ interface DialogProps {
   children: React.ReactNode;
 }
 
-interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
+interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   onClose?: () => void;
 }
 
 const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
-  React.useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={() => onOpenChange(false)}
-    >
-      <div onClick={(e) => e.stopPropagation()}>{children}</div>
-    </div>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      {children}
+    </DialogPrimitive.Root>
   );
 };
 
-const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
+const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, DialogContentProps>(
   ({ className, children, onClose, ...props }, ref) => {
     const theme = useRoleTheme();
-    
+
     // Xác định màu nút đóng theo role
     const colorKey: "green" | "blue" | "amber" =
       theme?.color === "green" ? "green" : theme?.color === "amber" ? "amber" : "blue";
@@ -50,32 +36,41 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       blue: "text-blue-600 hover:bg-blue-50",
       amber: "text-amber-600 hover:bg-amber-50",
     }[colorKey];
-    
+
     return (
-      <div
-        ref={ref}
-        className={cn(
-          "relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col border border-gray-100",
-          className
-        )}
-        {...props}
-      >
-        {/* Close button (X) */}
-        <button
-          onClick={onClose}
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <DialogPrimitive.Content
+          ref={ref}
           className={cn(
-            "absolute top-4 right-4 p-2 rounded-lg transition-colors z-10",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-            closeButtonColorClass,
-            "focus-visible:ring-current"
+            "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2",
+            "max-h-[90vh] overflow-hidden",
+            "rounded-3xl border border-border bg-card text-card-foreground shadow-2xl",
+            "flex flex-col",
+            className
           )}
-          aria-label="Đóng dialog"
+          {...props}
         >
-          <X className="h-5 w-5" />
-        </button>
-        
-        {children}
-      </div>
+          {/* Close button (X) */}
+          <DialogPrimitive.Close asChild>
+            <button
+              onClick={onClose}
+              className={cn(
+                "absolute top-4 right-4 p-2 rounded-lg transition-colors z-10",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                closeButtonColorClass,
+                "focus-visible:ring-current"
+              )}
+              aria-label="Đóng dialog"
+              type="button"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </DialogPrimitive.Close>
+
+          {children}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
     );
   }
 );
@@ -86,7 +81,7 @@ interface DialogHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const headerVariants = {
-  default: "bg-white border-b border-gray-200",
+  default: "bg-card border-b border-border",
   parent: "bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200",
   teacher: "bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200",
   student: "bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200",
@@ -109,7 +104,7 @@ interface DialogTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
 }
 
 const titleVariants = {
-  default: "text-gray-800",
+  default: "text-foreground",
   parent: "text-amber-900",
   teacher: "text-blue-900",
   student: "text-green-900",
@@ -135,7 +130,7 @@ interface DialogDescriptionProps extends React.HTMLAttributes<HTMLParagraphEleme
 }
 
 const descriptionVariants = {
-  default: "text-gray-600",
+  default: "text-muted-foreground",
   parent: "text-amber-700",
   teacher: "text-blue-700",
   student: "text-green-700",
@@ -158,7 +153,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 px-6 py-5 border-t border-gray-100 bg-gray-50/50",
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 px-6 py-5 border-t border-border bg-muted/30",
       className
     )}
     {...props}

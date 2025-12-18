@@ -35,6 +35,17 @@ export default function DashboardLayout({
     "--sb-w-collapsed": "64px",
   };
 
+  const surfaceClass =
+    role === "admin"
+      ? "bg-background text-foreground"
+      : role === "teacher"
+      ? "teacher-surface"
+      : role === "student"
+      ? "student-surface"
+      : role === "parent"
+      ? "parent-surface"
+      : "bg-gray-50";
+
   useEffect(() => {
     const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
     if (!isMobile) return;
@@ -52,7 +63,10 @@ export default function DashboardLayout({
   }, [expanded, toggle]);
 
   return (
-    <div className={`flex ${lockContentScroll ? "h-screen overflow-hidden" : "min-h-screen"} bg-gray-50`} style={containerVars}>
+    <div
+      className={`flex ${lockContentScroll ? "h-screen overflow-hidden" : "min-h-screen"} ${surfaceClass}`}
+      style={containerVars}
+    >
       {sidebar}
       <button
         type="button"

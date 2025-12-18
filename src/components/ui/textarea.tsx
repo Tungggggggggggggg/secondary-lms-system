@@ -6,7 +6,7 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 }
 
 const colorStyles: Record<string, string> = {
-  default: "focus-visible:ring-gray-500 focus-visible:border-gray-500",
+  default: "focus-visible:ring-ring",
   amber: "focus-visible:ring-amber-500 focus-visible:border-amber-500",
   blue: "focus-visible:ring-blue-500 focus-visible:border-blue-500",
   green: "focus-visible:ring-green-500 focus-visible:border-green-500",
@@ -17,9 +17,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         className={cn(
-          "flex min-h-[80px] w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm",
-          "placeholder:text-gray-400",
-          "focus-visible:outline-none focus-visible:ring-2",
+          "flex min-h-[80px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground",
+          "placeholder:text-muted-foreground",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           colorStyles[color],
           "disabled:cursor-not-allowed disabled:opacity-60",
           "resize-none",

@@ -32,9 +32,9 @@ export default function ClassroomRowActionsMenu({
 
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem
-          aria-disabled={disabled}
+          disabled={!!disabled}
           className={disabled ? "opacity-60 cursor-not-allowed" : undefined}
-          onClick={() => {
+          onSelect={() => {
             if (!disabled) onOpenStudents();
           }}
         >
@@ -42,9 +42,9 @@ export default function ClassroomRowActionsMenu({
         </DropdownMenuItem>
 
         <DropdownMenuItem
-          aria-disabled={disabled || isArchived}
+          disabled={!!disabled || isArchived}
           className={disabled || isArchived ? "opacity-60 cursor-not-allowed" : undefined}
-          onClick={() => {
+          onSelect={() => {
             if (!disabled && !isArchived) onOpenBulkAddStudents();
           }}
         >
@@ -54,9 +54,9 @@ export default function ClassroomRowActionsMenu({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          aria-disabled={disabled || isArchived}
+          disabled={!!disabled || isArchived}
           className={disabled || isArchived ? "opacity-60 cursor-not-allowed" : undefined}
-          onClick={() => {
+          onSelect={() => {
             if (!disabled && !isArchived) onOpenEdit();
           }}
         >
@@ -64,9 +64,9 @@ export default function ClassroomRowActionsMenu({
         </DropdownMenuItem>
 
         <DropdownMenuItem
-          aria-disabled={disabled || isArchived}
+          disabled={!!disabled || isArchived}
           className={disabled || isArchived ? "opacity-60 cursor-not-allowed" : undefined}
-          onClick={() => {
+          onSelect={() => {
             if (!disabled && !isArchived) onOpenChangeTeacher();
           }}
         >
@@ -76,9 +76,9 @@ export default function ClassroomRowActionsMenu({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          aria-disabled={disabled}
+          disabled={!!disabled}
           className={disabled ? "opacity-60 cursor-not-allowed" : undefined}
-          onClick={() => {
+          onSelect={() => {
             if (!disabled) onToggleArchive();
           }}
         >

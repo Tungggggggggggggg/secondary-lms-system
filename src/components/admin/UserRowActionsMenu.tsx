@@ -36,9 +36,9 @@ export default function UserRowActionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem
-          aria-disabled={!!disabled}
+          disabled={!!disabled}
           className={disabled ? "opacity-60 cursor-not-allowed" : undefined}
-          onClick={() => {
+          onSelect={() => {
             if (!disabled) router.push(detailHref);
           }}
         >
@@ -47,9 +47,9 @@ export default function UserRowActionsMenu({
 
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          aria-disabled={isToggleDisabled}
+          disabled={isToggleDisabled}
           className={isToggleDisabled ? "opacity-60 cursor-not-allowed" : undefined}
-          onClick={() => {
+          onSelect={() => {
             if (!isToggleDisabled) onToggleBan();
           }}
         >
@@ -58,13 +58,13 @@ export default function UserRowActionsMenu({
 
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          aria-disabled={isDeleteDisabled}
+          disabled={isDeleteDisabled}
           className={
             isDeleteDisabled
               ? "opacity-60 cursor-not-allowed text-red-700"
               : "text-red-700 hover:bg-red-50"
           }
-          onClick={() => {
+          onSelect={() => {
             if (!isDeleteDisabled) onDeleteUser();
           }}
         >
