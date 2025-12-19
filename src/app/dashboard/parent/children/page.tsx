@@ -15,6 +15,7 @@ import SearchResultItem from "@/components/parent/SearchResultItem";
 import PendingRequestItem from "@/components/parent/PendingRequestItem";
 import { EmptyState } from "@/components/shared";
 import type { ParentStudentRelationship } from "@/types/parent";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // types and SWR fetcher now provided globally
 
@@ -181,8 +182,21 @@ export default function ParentChildrenPage() {
           title="Con của tôi"
           subtitle="Danh sách các con đã được liên kết với tài khoản của bạn"
         />
-        <div className="text-center py-12">
-          <p className="text-gray-500">Đang tải...</p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border-amber-100">
+              <CardContent className="pt-6 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                </div>
+                <Skeleton className="h-9 w-full rounded-xl" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </>
     );

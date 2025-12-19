@@ -16,6 +16,7 @@ import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { StatsGrid } from "@/components/shared";
 import StudentsTable from "@/components/teacher/students/StudentsTable";
 import { exportToXlsx } from "@/lib/excel";
+import { Button } from "@/components/ui/button";
 
 type TeacherStudentsApiResponse = {
   success?: boolean;
@@ -175,7 +176,7 @@ export default function StudentsPage() {
     ]);
     exportToXlsx(`students-${rows.length}`, header, rows, { sheetName: "Students" });
   };
- const breadcrumbItems: BreadcrumbItem[] = [
+  const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
     { label: "Học sinh", href: "/dashboard/teacher/students" },
   ];
@@ -238,16 +239,23 @@ export default function StudentsPage() {
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="text-xs font-semibold text-blue-700">Chế độ xem:</div>
         <div className="ml-auto flex items-center gap-2">
-          <button
+          <Button
             type="button"
+            size="sm"
+            variant="outline"
+            color="blue"
             onClick={onExportFiltered}
-            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="rounded-xl border-blue-200"
             aria-label="Xuất Excel theo bộ lọc"
           >
             Xuất Excel
-          </button>
+          </Button>
           {/* View toggle */}
-          <div className="inline-flex rounded-xl border border-blue-200 overflow-hidden bg-background">
+          <div
+            className="inline-flex rounded-xl border border-blue-200 overflow-hidden bg-background"
+            role="group"
+            aria-label="Chọn chế độ xem danh sách hoặc bảng"
+          >
             <button
               type="button"
               onClick={() => setView("list")}
@@ -279,15 +287,17 @@ export default function StudentsPage() {
           description={error}
           variant="teacher"
           action={
-            <button
+            <Button
               type="button"
+              color="blue"
+              size="sm"
+              className="mt-2 rounded-xl px-4 py-2"
               onClick={() => {
                 void handleRefresh();
               }}
-              className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Thử lại
-            </button>
+            </Button>
           }
         />
       ) : filteredStudents.length === 0 ? (
@@ -297,16 +307,18 @@ export default function StudentsPage() {
           description="Hãy kiểm tra bộ lọc hoặc thêm học sinh vào lớp học của bạn."
           variant="teacher"
           action={
-            <button
+            <Button
               type="button"
+              color="blue"
+              size="sm"
+              className="mt-2 rounded-xl px-4 py-2"
               onClick={() => {
-                // Điều hướng tới màn quản lý lớp nếu cần, tạm thời chỉ gọi lại fetch
+                // Điều hướng tới màn quản lý lớp nếu cần, tạm thởi chỉ gọi lại fetch
                 void handleRefresh();
               }}
-              className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Làm mới dữ liệu
-            </button>
+            </Button>
           }
         />
       ) : (

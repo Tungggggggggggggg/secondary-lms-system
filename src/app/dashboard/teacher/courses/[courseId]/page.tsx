@@ -66,7 +66,7 @@ export default function Page() {
 
   const { data: courseRes, error: courseErr, isLoading: courseLoading } = useSWR<ApiResponse<CourseDetail>>(
     courseId ? `/api/teachers/courses/${courseId}` : null,
-    (url) => fetcher<CourseDetail>(url)
+    (url: string) => fetcher<CourseDetail>(url)
   );
 
   const {
@@ -76,7 +76,7 @@ export default function Page() {
     mutate: mutateLessons,
   } = useSWR<ApiResponse<{ items: LessonItem[] }>>(
     courseId ? `/api/teachers/courses/${courseId}/lessons` : null,
-    (url) => fetcher<{ items: LessonItem[] }>(url)
+    (url: string) => fetcher<{ items: LessonItem[] }>(url)
   );
 
   const course = courseRes?.data ?? null;

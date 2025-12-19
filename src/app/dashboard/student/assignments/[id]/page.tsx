@@ -163,8 +163,11 @@ export default function StudentAssignmentDetailPage({
                 try {
                   const r = await fetch(`/api/submissions/signed-url?path=${encodeURIComponent(f.storagePath)}`);
                   const jj: unknown = await r.json();
-                  if (r.ok && isRecord(jj) && jj.success === true && isRecord(jj.data) && typeof jj.data.url === "string") {
-                    setSignedUrlByPath((prev) => ({ ...prev, [f.storagePath]: jj.data.url }));
+                  if (r.ok && isRecord(jj) && jj.success === true) {
+                    const data = (jj as { data?: unknown }).data;
+                    if (isRecord(data) && typeof data.url === "string") {
+                      setSignedUrlByPath((prev) => ({ ...prev, [f.storagePath]: data.url as string }));
+                    }
                   }
                 } catch {}
               });
@@ -188,8 +191,11 @@ export default function StudentAssignmentDetailPage({
               try {
                 const r = await fetch(`/api/submissions/signed-url?path=${encodeURIComponent(f.storagePath)}`);
                 const jj: unknown = await r.json();
-                if (r.ok && isRecord(jj) && jj.success === true && isRecord(jj.data) && typeof jj.data.url === "string") {
-                  setSignedUrlByPath((prev) => ({ ...prev, [f.storagePath]: jj.data.url }));
+                if (r.ok && isRecord(jj) && jj.success === true) {
+                  const data = (jj as { data?: unknown }).data;
+                  if (isRecord(data) && typeof data.url === "string") {
+                    setSignedUrlByPath((prev) => ({ ...prev, [f.storagePath]: data.url as string }));
+                  }
                 }
               } catch {}
             });
@@ -443,7 +449,7 @@ export default function StudentAssignmentDetailPage({
 
         <TabsContent value="work">
           {workDisabled ? (
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl p-6">
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-6">
               <div className="font-semibold mb-1">Hiện chưa thể làm bài</div>
               <div className="text-sm">{(openAt && new Date() < openAt) ? `Bài sẽ mở lúc ${openAt.toLocaleString("vi-VN")}` : (lockAt ? `Bài đã khoá lúc ${lockAt.toLocaleString("vi-VN")}` : "Không khả dụng")}</div>
             </div>
@@ -503,7 +509,7 @@ export default function StudentAssignmentDetailPage({
                 <div className="space-y-6">
                   {promptPanel}
                   <div className="bg-card rounded-xl p-6 shadow border border-border space-y-6">
-                    <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">Bạn có thể chọn nộp văn bản hoặc nộp tệp. Chỉ cần chọn một hình thức phù hợp.</div>
+                    <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800">Bạn có thể chọn nộp văn bản hoặc nộp tệp. Chỉ cần chọn một hình thức phù hợp.</div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-3">
                         <h4 className="font-semibold">Nộp văn bản</h4>

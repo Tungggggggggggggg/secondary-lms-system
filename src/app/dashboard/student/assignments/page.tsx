@@ -10,6 +10,7 @@ import { useStudentAssignments } from "@/hooks/use-student-assignments";
 import { FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import StudentAssignmentCard from "@/components/student/StudentAssignmentCard";
 import AssignmentFilters from "@/components/student/AssignmentFilters";
+import { Button } from "@/components/ui/button";
 
 /**
  * Trang bài tập của tôi (student view)
@@ -52,8 +53,8 @@ export default function AssignmentsPage() {
 
     // Sort
     filtered.sort((a, b) => {
-      const dueARaw = a.type === "QUIZ" ? (a as any).lockAt || a.dueDate : a.dueDate;
-      const dueBRaw = b.type === "QUIZ" ? (b as any).lockAt || b.dueDate : b.dueDate;
+      const dueARaw = a.type === "QUIZ" ? (a.lockAt ?? a.dueDate) : a.dueDate;
+      const dueBRaw = b.type === "QUIZ" ? (b.lockAt ?? b.dueDate) : b.dueDate;
       const dueA = dueARaw ? new Date(dueARaw).getTime() : 0;
       const dueB = dueBRaw ? new Date(dueBRaw).getTime() : 0;
 
@@ -128,7 +129,7 @@ export default function AssignmentsPage() {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Breadcrumb items={breadcrumbItems} color="green" className="mb-2" />
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6 text-rose-700">
           <div className="flex items-start gap-3">
@@ -136,9 +137,15 @@ export default function AssignmentsPage() {
             <div className="flex-1">
               <h3 className="font-semibold mb-1">Lỗi tải danh sách bài tập</h3>
               <p className="text-sm mb-4">{error}</p>
-              <button onClick={fetchAllAssignments} className="text-sm text-green-600 hover:text-green-700 transition-colors duration-200">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                color="green"
+                onClick={fetchAllAssignments}
+              >
                 Thử lại
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -147,13 +154,13 @@ export default function AssignmentsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="space-y-6">
       <Breadcrumb items={breadcrumbItems} color="green" className="mb-3" />
 
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">Bài tập của tôi</h1>
-          <p className="text-sm sm:text-base text-slate-600">Tất cả bài tập từ các lớp học bạn đã tham gia.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">Bài tập của tôi</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Tất cả bài tập từ các lớp học bạn đã tham gia.</p>
         </div>
       </div>
 
@@ -179,13 +186,13 @@ export default function AssignmentsPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-white/90 rounded-2xl border border-slate-100 p-4 sm:p-5 animate-pulse"
+              className="bg-card/90 rounded-2xl border border-border p-4 sm:p-5 animate-pulse"
             >
-              <div className="h-4 bg-slate-200 rounded w-1/3 mb-3" />
-              <div className="h-3 bg-slate-100 rounded w-2/3 mb-4" />
+              <div className="h-4 bg-muted rounded w-1/3 mb-3" />
+              <div className="h-3 bg-muted rounded w-2/3 mb-4" />
               <div className="flex gap-2">
-                <div className="h-6 bg-slate-100 rounded-full w-20" />
-                <div className="h-6 bg-slate-100 rounded-full w-20" />
+                <div className="h-6 bg-muted rounded-full w-20" />
+                <div className="h-6 bg-muted rounded-full w-20" />
               </div>
             </div>
           ))}

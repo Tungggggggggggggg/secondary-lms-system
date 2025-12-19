@@ -850,7 +850,7 @@ export default function ExamMonitorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <RateLimitDialog
           open={rateLimitOpen}
@@ -1073,11 +1073,11 @@ export default function ExamMonitorPage() {
             ) : (
               <Card>
                 <CardContent className="p-12 text-center">
-                  <Eye className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <Eye className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
                     Chọn học sinh để điều khiển
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     Vui lòng chọn một học sinh từ tab Giám sát để sử dụng các công cụ điều khiển
                   </p>
                 </CardContent>
@@ -1095,11 +1095,11 @@ export default function ExamMonitorPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="rounded-lg border bg-white p-4 space-y-3">
+                <div className="rounded-lg border border-border bg-card p-4 space-y-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="font-medium">Tổng hợp chống gian lận (P2.5)</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         Dùng filters (Student ID / Attempt) rồi bấm tải để xem breakdown.
                       </div>
                     </div>
@@ -1122,8 +1122,8 @@ export default function ExamMonitorPage() {
 
                   {antiScore ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="rounded-lg border bg-slate-50 p-3">
-                        <div className="text-sm text-gray-600">Suspicion score</div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <div className="text-sm text-muted-foreground">Suspicion score</div>
                         <div className="text-2xl font-bold">{antiScore.suspicionScore}/100</div>
                         <div className="mt-1">
                           <Badge
@@ -1143,17 +1143,17 @@ export default function ExamMonitorPage() {
                           </Badge>
                         </div>
                       </div>
-                      <div className="rounded-lg border bg-slate-50 p-3">
-                        <div className="text-sm text-gray-600">Tổng số events</div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <div className="text-sm text-muted-foreground">Tổng số events</div>
                         <div className="text-2xl font-bold">{antiScore.totalEvents}</div>
                       </div>
-                      <div className="rounded-lg border bg-slate-50 p-3">
-                        <div className="text-sm text-gray-600">Rule hits</div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <div className="text-sm text-muted-foreground">Rule hits</div>
                         <div className="text-2xl font-bold">{antiScore.breakdown.length}</div>
                       </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       Chưa có dữ liệu điểm nghi ngờ. Hãy bấm “Tải điểm nghi ngờ”.
                     </div>
                   )}
@@ -1175,7 +1175,7 @@ export default function ExamMonitorPage() {
                               <td className="py-2 pr-4 font-medium">{b.title}</td>
                               <td className="py-2 pr-4">{b.count}</td>
                               <td className="py-2 pr-4">{b.points}/{b.maxPoints}</td>
-                              <td className="py-2 pr-4 text-gray-600 max-w-[520px] whitespace-pre-wrap break-words">
+                              <td className="py-2 pr-4 text-muted-foreground max-w-[520px] whitespace-pre-wrap break-words">
                                 {b.details}
                               </td>
                             </tr>
@@ -1186,13 +1186,13 @@ export default function ExamMonitorPage() {
                   ) : null}
 
                   {aiSummary ? (
-                    <div className="rounded-lg border bg-white p-4 space-y-3">
+                    <div className="rounded-lg border border-border bg-card p-4 space-y-3">
                       <div className="font-semibold">{aiSummary.title}</div>
-                      <div className="text-sm text-gray-700 whitespace-pre-wrap">{aiSummary.summary}</div>
+                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">{aiSummary.summary}</div>
                       {(aiSummary.keySignals?.length ?? 0) > 0 && (
                         <div>
                           <div className="text-sm font-medium">Tín hiệu chính</div>
-                          <ul className="mt-1 list-disc pl-5 text-sm text-gray-700">
+                          <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground">
                             {aiSummary.keySignals.map((s, idx) => (
                               <li key={`${idx}-${s}`}>{s}</li>
                             ))}
@@ -1215,7 +1215,7 @@ export default function ExamMonitorPage() {
 
                 {events.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                       Chưa có dữ liệu logs để phân tích. Vào tab <span className="font-medium">Logs chống gian lận</span> để tải logs cho bài thi này.
                     </p>
                   </div>
@@ -1224,14 +1224,14 @@ export default function ExamMonitorPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Card>
                         <CardContent className="p-4">
-                          <p className="text-sm text-gray-600">Tổng số sự kiện</p>
+                          <p className="text-sm text-muted-foreground">Tổng số sự kiện</p>
                           <p className="text-2xl font-bold">{events.length}</p>
                         </CardContent>
                       </Card>
 
                       <Card>
                         <CardContent className="p-4">
-                          <p className="text-sm text-gray-600">Sự kiện nghiêm trọng</p>
+                          <p className="text-sm text-muted-foreground">Sự kiện nghiêm trọng</p>
                           <p className="text-2xl font-bold text-red-600">
                             {events.filter((ev) => severityOf(ev.eventType) === 'high').length}
                           </p>
@@ -1240,7 +1240,7 @@ export default function ExamMonitorPage() {
 
                       <Card>
                         <CardContent className="p-4">
-                          <p className="text-sm text-gray-600">Học sinh bị gắn cờ</p>
+                          <p className="text-sm text-muted-foreground">Học sinh bị gắn cờ</p>
                           <p className="text-2xl font-bold text-orange-600">
                             {summaryByStudentAttempt.filter((row) => {
                               const flagged = row.high >= 1 || (row.high + row.medium) >= 3;
@@ -1274,7 +1274,7 @@ export default function ExamMonitorPage() {
                                 >
                                   <td className="py-2 pr-4">
                                     {row.fullname}{' '}
-                                    <span className="text-gray-500 text-xs">({row.studentId})</span>
+                                    <span className="text-muted-foreground text-xs">({row.studentId})</span>
                                   </td>
                                   <td className="py-2 pr-4">{row.attempt ?? '-'}</td>
                                   <td className="py-2 pr-4">{row.count}</td>

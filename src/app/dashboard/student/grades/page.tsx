@@ -141,6 +141,40 @@ export default function GradesPage() {
     }
   };
 
+  const renderGradeBadge = (grade: number | null) => {
+    const baseClass =
+      "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ";
+    const variantClass = getGradeBadgeClass(grade);
+
+    if (grade === null) {
+      return (
+        <span className={baseClass + variantClass}>
+          Chưa chấm
+        </span>
+      );
+    }
+
+    return (
+      <span className={baseClass + variantClass}>
+        {grade.toFixed(1)}
+      </span>
+    );
+  };
+
+  const renderStatusBadge = (status: GradeEntry["status"]) => {
+    const { label, className } = getStatusBadge(status);
+    return (
+      <span
+        className={
+          "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm " +
+          className
+        }
+      >
+        {label}
+      </span>
+    );
+  };
+
   const handleOpenFeedback = (grade: GradeEntry) => {
     if (!grade.feedback) return;
     setSelectedFeedback({
@@ -323,7 +357,6 @@ export default function GradesPage() {
               </TableHeader>
               <TableBody>
                 {filteredAndSortedGrades.map((grade) => {
-                  const statusBadge = getStatusBadge(grade.status);
                   return (
                     <TableRow
                       key={grade.id}
@@ -367,23 +400,7 @@ export default function GradesPage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {grade.grade !== null ? (
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${getGradeBadgeClass(
-                              grade.grade,
-                            )}`}
-                          >
-                            {grade.grade.toFixed(1)}
-                          </span>
-                        ) : (
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${getGradeBadgeClass(
-                              null,
-                            )}`}
-                          >
-                            Chưa chấm
-                          </span>
-                        )}
+                        {renderGradeBadge(grade.grade)}
                       </TableCell>
                       <TableCell>
                         {grade.feedback ? (
@@ -405,11 +422,7 @@ export default function GradesPage() {
                       </TableCell>
 
                       <TableCell>
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusBadge.className}`}
-                        >
-                          {statusBadge.label}
-                        </span>
+                        {renderStatusBadge(grade.status)}
                       </TableCell>
                     </TableRow>
                   );

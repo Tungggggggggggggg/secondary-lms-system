@@ -314,13 +314,13 @@ export default function ParentProgressPage() {
                         {student.fullname?.charAt(0).toUpperCase() || "S"}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-amber-800 transition-colors duration-300">{student.fullname}</CardTitle>
-                        <CardDescription className="text-sm text-gray-600">{student.email}</CardDescription>
+                        <CardTitle className="text-lg text-foreground group-hover:text-amber-800 transition-colors duration-300">{student.fullname}</CardTitle>
+                        <CardDescription className="text-sm text-muted-foreground">{student.email}</CardDescription>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 flex-shrink-0">
                       <div className="text-center hidden sm:block">
-                        <div className="text-xs text-gray-500 font-semibold">Điểm TB</div>
+                        <div className="text-xs text-muted-foreground font-semibold">Điểm TB</div>
                         <div className="text-lg font-bold text-amber-700">
                           {statistics.totalGraded > 0
                             ? statistics.averageGrade.toFixed(1)
@@ -328,13 +328,13 @@ export default function ParentProgressPage() {
                         </div>
                       </div>
                       <div className="text-center hidden sm:block">
-                        <div className="text-xs text-gray-500 font-semibold">Đã chấm</div>
+                        <div className="text-xs text-muted-foreground font-semibold">Đã chấm</div>
                         <div className="text-lg font-bold text-amber-700">
                           {statistics.totalGraded}
                         </div>
                       </div>
                       <div className="text-center hidden sm:block">
-                        <div className="text-xs text-gray-500 font-semibold">Tổng bài</div>
+                        <div className="text-xs text-muted-foreground font-semibold">Tổng bài</div>
                         <div className="text-lg font-bold text-amber-700">
                           {statistics.totalSubmissions}
                         </div>
@@ -370,7 +370,7 @@ export default function ParentProgressPage() {
 
                       {/* Grades Table */}
                       {grades.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
+                        <div className="text-center py-8 text-muted-foreground">
                           <p>Chưa có bài nộp nào</p>
                         </div>
                       ) : (
@@ -399,7 +399,7 @@ export default function ParentProgressPage() {
                                         </span>
                                       </div>
                                     ) : (
-                                      <span className="text-gray-400">N/A</span>
+                                      <span className="text-muted-foreground">N/A</span>
                                     )}
                                   </TableCell>
                                   <TableCell className="font-medium">
@@ -424,19 +424,19 @@ export default function ParentProgressPage() {
                                         {grade.grade.toFixed(1)}
                                       </span>
                                     ) : (
-                                      <span className="text-gray-400">Chưa chấm</span>
+                                      <span className="text-muted-foreground">Chưa chấm</span>
                                     )}
                                   </TableCell>
                                   <TableCell>
                                     {grade.feedback ? (
-                                      <span className="text-sm text-gray-700">
+                                      <span className="text-sm text-foreground">
                                         {grade.feedback}
                                       </span>
                                     ) : (
-                                      <span className="text-gray-400">—</span>
+                                      <span className="text-muted-foreground">—</span>
                                     )}
                                   </TableCell>
-                                  <TableCell className="text-sm text-gray-600">
+                                  <TableCell className="text-sm text-muted-foreground">
                                     {grade.submittedAt
                                       ? new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
                                           day: "2-digit",
@@ -452,7 +452,7 @@ export default function ParentProgressPage() {
                                           ? "bg-amber-100 text-amber-700"
                                           : grade.status === "submitted"
                                           ? "bg-orange-100 text-orange-700"
-                                          : "bg-gray-100 text-gray-700"
+                                          : "bg-muted/40 text-muted-foreground"
                                       }`}
                                     >
                                       {grade.status === "graded"
