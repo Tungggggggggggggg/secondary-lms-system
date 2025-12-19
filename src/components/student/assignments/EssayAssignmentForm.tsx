@@ -159,10 +159,10 @@ export default function EssayAssignmentForm({
   return (
     <form
       onSubmit={isSubmitted ? handleUpdate : handleSubmit}
-      className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
+      className="bg-card rounded-2xl p-6 shadow-lg border border-border"
     >
       <div className="mb-6">
-        <Label htmlFor="content" className="text-base font-semibold text-gray-800 mb-2 block">
+        <Label htmlFor="content" className="text-base font-semibold text-foreground mb-2 block">
           Nội dung bài làm <span className="text-red-500">*</span>
         </Label>
         {countdownLabel && (
@@ -182,13 +182,13 @@ export default function EssayAssignmentForm({
           disabled={isLoading || isOverdue}
           className="resize-none"
         />
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-muted-foreground mt-2">
           Bạn có thể nhập văn bản dài, hệ thống sẽ tự động lưu khi bạn nộp bài
         </p>
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-        <div className="text-sm text-gray-600">
+      <div className="flex items-center justify-between pt-4 border-t border-border">
+        <div className="text-sm text-muted-foreground">
           {content.trim().length > 0 && (
             <span>{content.trim().length} ký tự</span>
           )}

@@ -48,8 +48,18 @@ export default function ExamMonitoringList({
             key={session.id}
             className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
               isSelected ? "bg-blue-50 border-blue-500 shadow-sm" : "bg-white hover:bg-gray-50"
-            }`}
+            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
             onClick={() => onSelect(session.id)}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            onKeyDown={(event) => {
+              if (event.currentTarget !== event.target) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelect(session.id);
+              }
+            }}
           >
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">

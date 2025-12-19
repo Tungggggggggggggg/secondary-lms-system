@@ -18,7 +18,7 @@ export default function AssignmentListItem({ assignment, checked, onChange }: As
       aria-checked={checked}
       tabIndex={0}
       className={cn(
-        "p-4 rounded-xl border-2 cursor-pointer transition-all",
+        "p-4 rounded-xl border-2 cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         checked ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"
       )}
       onClick={() => onChange(!checked)}

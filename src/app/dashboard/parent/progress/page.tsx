@@ -5,6 +5,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import HeaderParent from "@/components/parent/ParentHeader";
@@ -254,19 +255,20 @@ export default function ParentProgressPage() {
       {studentsData.length > 0 && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Sắp xếp theo:</label>
-            <select
+            <label className="text-sm font-medium text-foreground">Sắp xếp theo:</label>
+            <Select
               value={sortBy}
               onChange={(e) =>
                 setSortBy(e.target.value as "name" | "average" | "submissions")
               }
               aria-label="Sắp xếp theo"
-              className="px-4 py-2 bg-white rounded-xl border-2 border-amber-300 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200"
+              color="amber"
+              className="min-w-[180px]"
             >
               <option value="name">Tên</option>
               <option value="average">Điểm trung bình</option>
               <option value="submissions">Số bài nộp</option>
-            </select>
+            </Select>
           </div>
         </div>
       )}
@@ -293,8 +295,18 @@ export default function ParentProgressPage() {
             return (
               <Card key={student.id} className="overflow-hidden border-amber-100 hover:border-amber-200 transition-all duration-300 group">
                 <CardHeader
-                  className="cursor-pointer hover:bg-amber-50/50 transition-colors p-5"
+                  className="cursor-pointer hover:bg-amber-50/50 transition-colors p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   onClick={() => toggleStudent(student.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isExpanded}
+                  onKeyDown={(event) => {
+                    if (event.currentTarget !== event.target) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      toggleStudent(student.id);
+                    }
+                  }}
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -327,13 +339,13 @@ export default function ParentProgressPage() {
                           {statistics.totalSubmissions}
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-amber-700">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-md text-amber-700" aria-hidden>
                         {isExpanded ? (
                           <ChevronUp className="h-5 w-5" />
                         ) : (
                           <ChevronDown className="h-5 w-5" />
                         )}
-                      </Button>
+                      </span>
                     </div>
                   </div>
                 </CardHeader>

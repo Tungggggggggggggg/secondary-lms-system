@@ -80,11 +80,11 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
             type="button"
             onClick={toggleDone}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
-              done ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              done ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-background text-foreground border-border hover:bg-muted/40"
             }`}
             aria-pressed={done}
           >
-            <span className={`h-2.5 w-2.5 rounded-full ${done ? "bg-emerald-600" : "bg-slate-300"}`} aria-hidden="true" />
+            <span className={`h-2.5 w-2.5 rounded-full ${done ? "bg-emerald-600" : "bg-muted-foreground/40"}`} aria-hidden="true" />
             {done ? "Đã hoàn thành" : "Đánh dấu đã học"}
           </button>
         }
@@ -92,16 +92,16 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
 
       {/* Meta */}
       {lesson && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 flex flex-wrap items-center gap-4 text-sm">
+        <div className="bg-card rounded-2xl border border-border p-4 sm:p-5 flex flex-wrap items-center gap-4 text-sm">
           {lesson.teacher?.fullname && (
-            <div className="inline-flex items-center gap-2 text-slate-700">
+            <div className="inline-flex items-center gap-2 text-foreground">
               <span className="h-2.5 w-2.5 rounded-full bg-green-600" aria-hidden="true" />
               <span className="font-medium">{lesson.teacher.fullname}</span>
             </div>
           )}
           {lesson.publishedAt && (
-            <div className="inline-flex items-center gap-2 text-slate-600">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-400" aria-hidden="true" />
+            <div className="inline-flex items-center gap-2 text-muted-foreground">
+              <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/60" aria-hidden="true" />
               <span>
                 Phát hành: {new Date(lesson.publishedAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}
               </span>
@@ -113,17 +113,17 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
       {/* Tabs */}
       <Tabs defaultValue="content" className="w-full">
         <TabsList className="bg-green-100/60 text-green-700">
-          <TabsTrigger value="content" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-green-500">Nội dung</TabsTrigger>
-          <TabsTrigger value="tutor" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-green-500">Tutor</TabsTrigger>
-          <TabsTrigger value="files" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-green-500">Tệp</TabsTrigger>
+          <TabsTrigger value="content" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-ring">Nội dung</TabsTrigger>
+          <TabsTrigger value="tutor" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-ring">Tutor</TabsTrigger>
+          <TabsTrigger value="files" className="data-[state=active]:bg-green-200 data-[state=active]:text-green-900 focus-visible:ring-ring">Tệp</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content" className="mt-4">
           {isLoading ? (
             <div className="space-y-3">
-              <div className="h-5 bg-slate-200 rounded w-1/2" />
-              <div className="h-4 bg-slate-100 rounded w-3/4" />
-              <div className="h-4 bg-slate-100 rounded w-2/3" />
+              <div className="h-5 bg-muted rounded w-1/2" />
+              <div className="h-4 bg-muted/60 rounded w-3/4" />
+              <div className="h-4 bg-muted/60 rounded w-2/3" />
             </div>
           ) : error ? (
             <EmptyState title="Không tải được nội dung" description="Vui lòng thử lại sau." />
@@ -131,17 +131,17 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
             <div className="space-y-3">
               {pdfUrl && (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Chế độ xem
                   </div>
-                  <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+                  <div className="inline-flex rounded-xl border border-border bg-background p-1">
                     <button
                       type="button"
                       onClick={() => setContentView("original")}
                       className={
                         contentView === "original"
                           ? "px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-100 text-green-900"
-                          : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          : "px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted/40"
                       }
                       aria-pressed={contentView === "original"}
                     >
@@ -153,7 +153,7 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
                       className={
                         contentView === "text"
                           ? "px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-100 text-green-900"
-                          : "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          : "px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted/40"
                       }
                       aria-pressed={contentView === "text"}
                     >
@@ -164,22 +164,22 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
               )}
 
               {pdfUrl && contentView === "original" ? (
-                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                  <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-slate-200">
+                <div className="rounded-2xl border border-border bg-background overflow-hidden">
+                  <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-border">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-slate-900 truncate">Tài liệu gốc</div>
-                      <div className="text-xs text-slate-500 truncate">{pdfAttachment?.name}</div>
+                      <div className="text-sm font-semibold text-foreground truncate">Tài liệu gốc</div>
+                      <div className="text-xs text-muted-foreground truncate">{pdfAttachment?.name}</div>
                     </div>
                     <a
                       href={pdfUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="shrink-0 inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
+                      className="shrink-0 inline-flex items-center justify-center rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       Mở trong tab mới
                     </a>
                   </div>
-                  <div className="w-full h-[72vh] bg-slate-50">
+                  <div className="w-full h-[72vh] bg-muted/40">
                     <iframe
                       title={pdfAttachment?.name || "PDF"}
                       src={pdfUrl}
@@ -188,12 +188,12 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
                   </div>
                 </div>
               ) : lesson.content ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                  <div className="text-xs text-slate-500 mb-3">
+                <div className="rounded-2xl border border-border bg-background p-4 sm:p-5">
+                  <div className="text-xs text-muted-foreground mb-3">
                     Nếu nội dung bị mất định dạng, hãy kiểm tra phần "Bản gốc" (nếu có).
                   </div>
                   <article className="prose max-w-none prose-slate">
-                    <pre className="whitespace-pre-wrap break-words text-slate-800 text-[15px] leading-7 bg-transparent p-0">{lesson.content}</pre>
+                    <pre className="whitespace-pre-wrap break-words text-foreground text-[15px] leading-7 bg-transparent p-0">{lesson.content}</pre>
                   </article>
                 </div>
               ) : (
@@ -215,10 +215,10 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="bg-white/90 rounded-2xl border border-slate-100 p-4 sm:p-5 motion-safe:animate-pulse"
+                  className="bg-card/90 rounded-2xl border border-border p-4 sm:p-5 motion-safe:animate-pulse"
                 >
-                  <div className="h-4 bg-slate-200 rounded w-2/3 mb-2" />
-                  <div className="h-3 bg-slate-100 rounded w-1/3" />
+                  <div className="h-4 bg-muted rounded w-2/3 mb-2" />
+                  <div className="h-3 bg-muted/60 rounded w-1/3" />
                 </div>
               ))}
             </div>
@@ -230,7 +230,7 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
                   href={getChatFileUrl(file.storagePath, "assignments")}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-2xl transition-colors border border-slate-200 bg-white hover:bg-green-50/40 hover:border-green-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
+                  className="flex items-center gap-3 p-3 rounded-2xl transition-colors border border-border bg-background hover:bg-green-50/40 hover:border-green-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <div className="h-10 w-10 rounded-xl bg-green-100 text-green-800 flex items-center justify-center text-[11px] font-extrabold shrink-0">
                     {(() => {
@@ -242,8 +242,8 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
                     })()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate text-slate-900">{file.name}</p>
-                    <p className="text-xs text-slate-500 truncate">{file.mimeType}</p>
+                    <p className="text-sm font-semibold truncate text-foreground">{file.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{file.mimeType}</p>
                   </div>
                 </a>
               ))}
@@ -261,7 +261,7 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
             type="button"
             disabled={!lesson.prevLessonId}
             onClick={() => lesson.prevLessonId && router.push(`/dashboard/student/classes/${classId}/lessons/${lesson.prevLessonId}`)}
-            className="inline-flex items-center justify-center h-11 min-w-28 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
+            className="inline-flex items-center justify-center h-11 min-w-28 px-4 rounded-xl border border-border bg-background text-foreground text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Bài trước
           </button>
@@ -269,7 +269,7 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
             type="button"
             disabled={!lesson.nextLessonId}
             onClick={() => lesson.nextLessonId && router.push(`/dashboard/student/classes/${classId}/lessons/${lesson.nextLessonId}`)}
-            className="inline-flex items-center justify-center h-11 min-w-28 px-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
+            className="inline-flex items-center justify-center h-11 min-w-28 px-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-emerald-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Bài tiếp
           </button>

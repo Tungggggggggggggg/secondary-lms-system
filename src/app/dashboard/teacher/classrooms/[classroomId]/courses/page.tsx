@@ -211,7 +211,7 @@ export default function TeacherClassroomCoursesPage() {
                         type="button"
                         onClick={() => router.push(`/dashboard/teacher/courses/${c.id}`)}
                         disabled={saving}
-                        className="h-10 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+                        className="h-10 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       >
                         Quản lý
                       </button>
@@ -220,7 +220,7 @@ export default function TeacherClassroomCoursesPage() {
                         type="button"
                         onClick={() => removeCourse(c.id)}
                         disabled={saving}
-                        className="h-10 px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+                        className="h-10 px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       >
                         {removingId === c.id ? "Đang gỡ..." : "Gỡ"}
                       </button>

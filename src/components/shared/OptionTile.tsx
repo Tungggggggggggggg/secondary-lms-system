@@ -51,7 +51,7 @@ export default function OptionTile({
       }}
       className={cn(
         size === "sm" ? "p-6" : "p-8",
-        "border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg",
+        "border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring focus-visible:ring-offset-background",
         selected ? selectedStyles[color] : "border-gray-200 hover:border-gray-300",
         className
       )}

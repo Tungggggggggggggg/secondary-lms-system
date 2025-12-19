@@ -87,8 +87,11 @@ export default function PostCard({
 
             {/* Post Content - Clickable để điều hướng nếu có detailUrl */}
             {detailUrl ? (
-                <Link href={detailUrl} className="block">
-                    <p className="whitespace-pre-line text-sm sm:text-[15px] text-slate-800 mb-3 group-hover:text-indigo-700 transition-colors cursor-pointer">
+                <Link
+                    href={detailUrl}
+                    className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-white"
+                >
+                    <p className="whitespace-pre-line text-sm sm:text-[15px] text-slate-800 mb-3 group-hover:text-indigo-700 transition-colors">
                         {post.content}
                     </p>
                 </Link>

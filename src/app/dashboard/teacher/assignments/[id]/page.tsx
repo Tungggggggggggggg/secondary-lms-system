@@ -26,6 +26,12 @@ function stripHtml(value?: string | null) {
     return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function getOptionalMessage(value: unknown): string | undefined {
+    if (typeof value !== "object" || value === null) return undefined;
+    const record = value as Record<string, unknown>;
+    return typeof record.message === "string" ? record.message : undefined;
+}
+
 export default function AssignmentDetailPage() {
     const { id: assignmentId } = useParams() as { id: string };
     const router = useRouter();
@@ -159,14 +165,12 @@ export default function AssignmentDetailPage() {
 
     if (loading)
         return (
-            <div className="px-6 py-4">
-                <div className="max-w-5xl mx-auto">
-                    <div className="bg-white rounded-2xl shadow-lg p-8">
-                        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                            <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
-                            <div className="text-gray-700 font-semibold text-lg">Đang tải chi tiết bài tập...</div>
-                            <div className="text-sm text-gray-500">Vui lòng chờ trong giây lát</div>
-                        </div>
+            <div className="space-y-4">
+                <div className="bg-card rounded-2xl shadow-lg border border-border p-8">
+                    <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                        <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
+                        <div className="text-foreground font-semibold text-lg">Đang tải chi tiết bài tập...</div>
+                        <div className="text-sm text-muted-foreground">Vui lòng chờ trong giây lát</div>
                     </div>
                 </div>
             </div>
@@ -218,7 +222,7 @@ export default function AssignmentDetailPage() {
     ];
 
     return (
-        <div className="px-6 py-4 max-w-6xl mx-auto space-y-6">
+        <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <Breadcrumb items={breadcrumbItems} />
                 <BackButton href="/dashboard/teacher/assignments" />
@@ -229,23 +233,22 @@ export default function AssignmentDetailPage() {
                 title={detail.title}
                 subtitle={detail.description || "Chi tiết bài tập cho lớp học của bạn."}
                 actions={
-                    <div className="flex flex-col items-end gap-2 text-xs text-slate-700">
+                    <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
                         <div>
                             <span className="font-semibold">Hạn nộp: </span>
                             {(() => {
-                                const effective = detail.type === "QUIZ"
-                                    ? ((detail as any).lockAt || detail.dueDate)
-                                    : detail.dueDate;
+                                const effective =
+                                    detail.type === "QUIZ" ? (detail.lockAt ?? detail.dueDate) : detail.dueDate;
                                 return effective
-                                    ? new Date(effective as any).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                    ? new Date(effective).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
                                     : "Không rõ";
                             })()}
                         </div>
-                        {((detail as any).openAt || (detail as any).lockAt) && (
-                            <div className="text-[11px] text-gray-500 flex items-center gap-1">
+                        {(detail.openAt || detail.lockAt) && (
+                            <div className="text-[11px] text-muted-foreground flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
                                 <span>
-                                    Lịch: { (detail as any).openAt ? new Date((detail as any).openAt).toLocaleString("vi-VN") : "Hiện tại" } → { (detail as any).lockAt ? new Date((detail as any).lockAt).toLocaleString("vi-VN") : (detail.dueDate ? new Date(detail.dueDate).toLocaleString("vi-VN") : "Không giới hạn") }
+                                    Lịch: {detail.openAt ? new Date(detail.openAt).toLocaleString("vi-VN") : "Hiện tại"} → {detail.lockAt ? new Date(detail.lockAt).toLocaleString("vi-VN") : (detail.dueDate ? new Date(detail.dueDate).toLocaleString("vi-VN") : "Không giới hạn")}
                                 </span>
                             </div>
                         )}
@@ -266,9 +269,9 @@ export default function AssignmentDetailPage() {
                                     if (!ok) return;
                                     try {
                                         const res = await fetch(`/api/assignments/${assignmentId}`, { method: "DELETE" });
-                                        const data = await res.json().catch(() => ({}));
+                                        const data: unknown = await res.json().catch(() => ({}));
                                         if (!res.ok) {
-                                            toast({ title: "Xoá bài tập thất bại", description: (data as any)?.message, variant: "destructive" });
+                                            toast({ title: "Xoá bài tập thất bại", description: getOptionalMessage(data), variant: "destructive" });
                                             return;
                                         }
                                         toast({ title: "Đã xoá bài tập", variant: "success" });
@@ -296,7 +299,7 @@ export default function AssignmentDetailPage() {
 
                     <TabsContent value="questions" className="mt-6">
                         {/* Danh sách câu hỏi */}
-                        <div className="bg-white rounded-2xl p-6 shadow border">
+                        <div className="bg-card rounded-2xl p-6 shadow border border-border">
                             <h2 className="text-lg font-bold mb-4 text-indigo-700 flex items-center gap-2">
                                 <FileText className="h-5 w-5" />
                                 Danh sách câu hỏi
@@ -304,10 +307,10 @@ export default function AssignmentDetailPage() {
 
                             {/* File đính kèm */}
                             {loadingFiles ? (
-                                <div className="text-sm text-gray-500 mb-4">Đang tải file đính kèm...</div>
+                                <div className="text-sm text-muted-foreground mb-4">Đang tải file đính kèm...</div>
                             ) : attachments.length > 0 ? (
                                 <div className="mb-6">
-                                    <h3 className="text-md font-semibold mb-3 text-gray-700 flex items-center gap-2">
+                                    <h3 className="text-md font-semibold mb-3 text-foreground flex items-center gap-2">
                                         <Paperclip className="h-4 w-4" />
                                         File đính kèm
                                     </h3>
@@ -317,20 +320,20 @@ export default function AssignmentDetailPage() {
                                             const isImg = file.mimeType?.startsWith('image/');
                                             const isVid = file.mimeType?.startsWith('video/');
                                             return (
-                                                <div key={file.id} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg">
+                                                <div key={file.id} className="flex items-center justify-between gap-3 p-3 bg-muted/40 rounded-lg border border-border">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-sm">
+                                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background shadow-sm">
                                                             {isImg ? (
                                                                 <ImageIcon className="h-5 w-5 text-sky-500" />
                                                             ) : isVid ? (
                                                                 <VideoIcon className="h-5 w-5 text-violet-500" />
                                                             ) : (
-                                                                <FileText className="h-5 w-5 text-slate-500" />
+                                                                <FileText className="h-5 w-5 text-muted-foreground" />
                                                             )}
                                                         </div>
                                                         <div>
-                                                            <p className="font-medium text-sm">{file.name}</p>
-                                                            <p className="text-xs text-gray-500">
+                                                            <p className="font-medium text-sm text-foreground">{file.name}</p>
+                                                            <p className="text-xs text-muted-foreground">
                                                                 {(file.size / 1024 / 1024).toFixed(2)} MB • {file.mimeType}
                                                             </p>
                                                         </div>
@@ -347,11 +350,11 @@ export default function AssignmentDetailPage() {
                                             );
                                         })}
                                     </div>
-                                    <hr className="my-6 border-gray-200" />
+                                    <hr className="my-6 border-border" />
                                 </div>
                             ) : null}
                             {(!detail.questions || detail.questions.length === 0) && (
-                                <div className="text-gray-400 italic py-4">
+                                <div className="text-muted-foreground italic py-4">
                                     Bài tập này chưa có câu hỏi nào.
                                 </div>
                             )}
@@ -386,10 +389,10 @@ export default function AssignmentDetailPage() {
                                             {q.type === "ESSAY" ? (
                                                 <RichTextPreview
                                                     html={q.content || ""}
-                                                    className="text-gray-700 text-base mb-1"
+                                                    className="text-foreground text-base mb-1"
                                                 />
                                             ) : (
-                                                <div className="text-gray-700 text-base mb-1 whitespace-pre-line">
+                                                <div className="text-foreground text-base mb-1 whitespace-pre-line">
                                                     {stripHtml(q.content)}
                                                 </div>
                                             )}
@@ -411,10 +414,10 @@ export default function AssignmentDetailPage() {
                                                                 >
                                                                     <span
                                                                         className={cn(
-                                                                            "w-10 h-10 rounded-xl flex items-center justify-center font-bold border border-gray-200 text-lg",
+                                                                            "w-10 h-10 rounded-xl flex items-center justify-center font-bold border border-border text-lg",
                                                                             opt.isCorrect
                                                                                 ? "bg-green-50 border-green-400 text-green-700"
-                                                                                : "bg-gray-50 text-gray-500"
+                                                                                : "bg-muted/40 text-muted-foreground"
                                                                         )}
                                                                     >
                                                                         {opt.label}
@@ -423,7 +426,7 @@ export default function AssignmentDetailPage() {
                                                                         className={cn(
                                                                             opt.isCorrect
                                                                                 ? "font-medium text-green-700"
-                                                                                : "text-gray-700"
+                                                                                : "text-foreground"
                                                                         )}
                                                                     >
                                                                         {stripHtml(opt.content)}

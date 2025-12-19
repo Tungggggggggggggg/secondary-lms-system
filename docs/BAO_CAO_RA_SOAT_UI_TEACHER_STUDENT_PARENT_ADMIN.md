@@ -107,26 +107,26 @@
 
 ### P0 — Shell & Consistency nền (Impact cao / Risk thấp)
 - [ ] `src/components/layout/DashboardLayout.tsx`
-  - [ ] Dùng background theo role surface (`teacher-surface`, `student-surface`, `parent-surface`) thay vì `bg-gray-50` chung.
+  - [x] Dùng background theo role surface (`teacher-surface`, `student-surface`, `parent-surface`) thay vì `bg-gray-50` chung.
   - [ ] Chuẩn bị điểm đặt “container wrapper” để loại bỏ `p-8` rải rác (triển khai dần).
-- [ ] `src/components/layout/DashboardTopbar.tsx`
-  - [ ] Topbar dùng nền + border nhất quán, ring theo role.
-- [ ] `src/app/dashboard/teacher/layout.tsx`
-  - [ ] Bọc `RoleThemeProvider color="blue"` để đồng bộ Button/controls.
-- [ ] `src/app/dashboard/student/page.tsx`, `src/app/dashboard/parent/page.tsx`
-  - [ ] Loại UI redirect gradient lệch theme; tránh ProtectedRoute lồng thừa.
+- [x] `src/components/layout/DashboardTopbar.tsx`
+  - [x] Topbar dùng nền + border nhất quán, ring theo role.
+- [x] `src/app/dashboard/teacher/layout.tsx`
+  - [x] Bọc `RoleThemeProvider color="blue"` để đồng bộ Button/controls.
+- [x] `src/app/dashboard/student/page.tsx`, `src/app/dashboard/parent/page.tsx`
+  - [x] Loại UI redirect gradient lệch theme; tránh ProtectedRoute lồng thừa.
  - [ ] `RoleThemeProvider` / context màu theo role
    - [ ] Đảm bảo mapping 4 role (`admin/teacher/student/parent`) → accent/surface/token thống nhất, khớp với A1 Indigo bên admin.
 
 ### P1 — Shared components “role-aware” (Impact cao / Risk trung bình)
-- [ ] `src/components/shared/SectionCard.tsx`
-  - [ ] Thêm `variant` theo role (teacher/student/parent + tương thích admin) để bỏ style hardcode blue.
-- [ ] `src/components/shared/StatsGrid.tsx`
-  - [ ] Cho phép truyền `accent`/`variant` hoặc đọc từ RoleThemeProvider để focus ring không bị cố định green cho mọi role.
-- [ ] `src/components/ui/tabs.tsx`
-  - [ ] (Tuỳ chọn) hỗ trợ `variant` theo role hoặc token-based để giảm override lặp giữa 4 role.
-- [ ] `src/components/ui/breadcrumb.tsx`
-  - [ ] Giảm hardcode `text-gray-*` sang token/role accent (tôn trọng màu của từng role).
+- [x] `src/components/shared/SectionCard.tsx`
+  - [x] Thêm `variant` theo role (teacher/student/parent + tương thích admin) để bỏ style hardcode blue.
+- [x] `src/components/shared/StatsGrid.tsx`
+  - [x] Cho phép truyền `accent`/`variant` hoặc đọc từ RoleThemeProvider để focus ring không bị cố định green cho mọi role.
+- [x] `src/components/ui/tabs.tsx`
+  - [x] (Tuỳ chọn) hỗ trợ `variant` theo role hoặc token-based để giảm override lặp giữa 4 role.
+- [x] `src/components/ui/breadcrumb.tsx`
+  - [x] Giảm hardcode `text-gray-*` sang token/role accent (tôn trọng màu của từng role).
 
 ### P2 — Page refactor theo role (Impact cao / Risk trung bình-cao)
 **Cross-role patterns (áp dụng đồng thời cho 4 role)**  
@@ -136,9 +136,9 @@
 - [ ] Bulk actions (selection bar + checkbox + confirm) thống nhất UX (vị trí thanh, wording, nút dangerous/secondary).
 
 #### Teacher
-- [ ] `src/app/dashboard/teacher/courses/page.tsx`
-  - [ ] Đổi header thủ công sang `PageHeader` + `Breadcrumb`.
-  - [ ] Chuẩn hoá `Input/Select` dùng `color="blue"` đồng bộ.
+- [x] `src/app/dashboard/teacher/courses/page.tsx`
+  - [x] Đổi header thủ công sang `PageHeader` + `Breadcrumb`.
+  - [x] Chuẩn hoá `Input/Select` dùng `color="blue"` đồng bộ.
 - [ ] `src/app/dashboard/teacher/classrooms/page.tsx`
   - [ ] Bỏ `ProtectedRoute` thừa (đã có ở layout).
   - [ ] Chuẩn container giống các page khác.
@@ -150,8 +150,23 @@
   - [ ] Cần quyết định: sản phẩm thật hay demo. Nếu sản phẩm thật → refactor theo primitives + token + remove mock.
 
 #### Student
-- [ ] `src/app/dashboard/student/classes/page.tsx`
-  - [ ] Skeleton đang dùng `bg-gray-200`; chuyển sang `Skeleton` component để thống nhất.
+- [x] `src/app/dashboard/student/classes/page.tsx`
+  - [x] Skeleton đang dùng `bg-gray-200`; chuyển sang `Skeleton` component để thống nhất.
+- [x] Token hoá màu trung tính + focus ring token theo role (Student)
+  - Thay `bg-white/bg-gray*/text-gray*/border-gray*/slate*` → `bg-card/bg-background/bg-muted`, `text-foreground/text-muted-foreground`, `border-border`
+  - Chuẩn hoá focus ring: `focus-visible:ring-ring` + `ring-offset-background` (thay cho `ring-*-*` hardcode)
+  - Các component đã xử lý tiêu biểu:
+    - `src/components/student/lesson/LessonDetailView.tsx`
+    - `src/components/student/lesson/LessonTutorChat.tsx`
+    - `src/components/student/assignments/*` (Quiz/Eassy forms, SubmissionReview, comments, file submission)
+    - `src/components/student/SearchClasses.tsx`
+    - `src/components/student/exam/ExamInterface.tsx`
+    - `src/components/student/ClassGridSkeleton.tsx`
+    - `src/components/student/classroom/*` (Header/Tabs/Overview/QuickActions)
+    - `src/components/student/ClassesToolbar.tsx`, `JoinClass.tsx`, `AssignmentFilters.tsx`, `DueCountdownChip.tsx`, `grades/GradeStatusBadge.tsx`
+  - Kết quả QA nhanh:
+    - `npm run lint`: PASS
+    - `npm run build`: PASS
 - [ ] `src/app/dashboard/student/grades/page.tsx`
   - [ ] Tách badge/status thành component tái dùng (giảm hardcode class string).
 - [ ] `src/app/dashboard/student/assignments/[id]/page.tsx`
@@ -159,26 +174,50 @@
 
 #### Parent
 - [ ] `src/app/dashboard/parent/progress/page.tsx`
-  - [ ] Thay `<select>` thuần bằng `Select` component để đồng bộ.
+  - [x] Thay `<select>` thuần bằng `Select` component để đồng bộ.
   - [ ] Giảm hardcode `text-gray-*` sang variant.
+- [x] Token hoá màu trung tính + focus ring token theo role (Parent)
+  - Thay `bg-white/bg-gray*/text-gray*/border-gray*/slate*` → `bg-card/bg-background/bg-muted`, `text-foreground/text-muted-foreground`, `border-border`
+  - Chuẩn hoá focus ring: `focus-visible:ring-ring` + `ring-offset-background`
+  - Các component đã xử lý tiêu biểu:
+    - `src/components/parent/AcademicPerformance.tsx`
+    - `src/components/parent/MyChildren.tsx`
+    - `src/components/parent/UpcomingEvents.tsx`
+    - `src/components/parent/PendingRequestItem.tsx`, `SearchResultItem.tsx`
+    - `src/components/parent/StudentItem.tsx`, `StudentCard.tsx`, `ClassroomItem.tsx`
+    - `src/components/parent/QuickActions.tsx`, `QuickStats.tsx`
+  - Kết quả QA nhanh:
+    - `npm run lint`: PASS
+    - `npm run build`: PASS
 - [ ] `src/app/dashboard/parent/children/page.tsx`
   - [ ] Chuẩn loading/error state theo `Skeleton/EmptyState` (hiện đang mixed).
 
 ### P3 — A11y & QA (Impact cao / Risk thấp)
 - [ ] Tất cả interactive “card click” (`article/div` + `onClick`) phải hỗ trợ keyboard:
-  - Enter/Space trigger.
-  - Focus-visible rõ.
+  - [x] Enter/Space trigger.
+  - [x] Focus-visible rõ.
+  - [x] Tránh double-trigger khi có nested interactive (stopPropagation/guard currentTarget).
+- [ ] Notes phát hiện thêm trong quá trình triển khai:
+  - [x] Nhiều card/list còn hardcode `focus-visible:ring-*-500` → đã thêm scope theme theo role (`theme-teacher/theme-student/theme-parent`) để override `--ring` và đã đổi dần sang `focus-visible:ring-ring` + `ring-offset-background` (teacher + student + parent các điểm chính).
+  - [ ] Một số component role pages vẫn hardcode `bg-white`/`text-gray-*`/`bg-*-50` (ví dụ list/cards teacher) → cần QA và chuyển dần sang token (`bg-card`, `text-foreground`, `muted-foreground`, ...).
 - [ ] Kiểm tra:
   - Responsive (mobile/tablet/desktop)
   - Tab order, Esc, focus trap (Dialog)
   - Loading/empty/error consistency
 
-## 6) Hạng mục mình sẽ triển khai ngay (đợt 1)
-- P0:
-  - Đồng bộ background shell theo role.
-  - Đồng bộ Topbar.
-  - Thêm RoleThemeProvider cho teacher.
-  - Fix redirect pages student/parent.
+## 6) Hạng mục mình đã triển khai (đợt 1)
+- [x] Đồng bộ background shell theo role.
+- [x] Đồng bộ Topbar.
+- [x] Thêm `RoleThemeProvider` cho teacher.
+- [x] Fix redirect pages student/parent.
+
+## 7) Hạng mục còn lại (chưa hoàn tất)
+- [ ] Chuẩn hoá container wrapper để giảm `p-8` rải rác.
+- [ ] Chuẩn hoá mapping `RoleThemeProvider` cho đủ 4 role (admin/teacher/student/parent).
+- [ ] Refactor các page theo role (P2) theo pattern list/detail thống nhất.
+- [ ] Teacher: `classrooms/page.tsx`, `students/page.tsx`, `ExamMonitoringDashboard`.
+- [ ] Student: `grades/page.tsx`, `assignments/[id]/page.tsx`.
+- [ ] Parent: `progress/page.tsx` (giảm `text-gray-*`), `children/page.tsx` (loading/error state thống nhất).
 
 ---
 *File này chỉ mô tả kế hoạch và checklist. Các thay đổi sẽ được triển khai theo từng đợt nhỏ để tránh regression.*

@@ -27,14 +27,14 @@ export default function StudentItem({
   const initial = student.fullname?.charAt(0).toUpperCase() || "S";
 
   return (
-    <div className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-white/60 hover:bg-amber-100/50 transition-all duration-300 hover:shadow-sm group border border-amber-100/50 hover:border-amber-300/50">
+    <div className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-background/60 hover:bg-amber-100/50 transition-all duration-300 hover:shadow-sm group border border-amber-100/50 hover:border-amber-300/50">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white text-sm font-bold transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
           {initial}
         </div>
         <div className="min-w-0">
-          <div className="text-xs text-gray-500 font-semibold">Con:</div>
-          <div className="font-semibold text-gray-900 group-hover:text-amber-800 transition-colors duration-300 truncate text-sm">
+          <div className="text-xs text-muted-foreground font-semibold">Con:</div>
+          <div className="font-semibold text-foreground group-hover:text-amber-800 transition-colors duration-300 truncate text-sm">
             {student.fullname}
           </div>
         </div>

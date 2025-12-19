@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
 import BackButton from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import {
   useStudentAssignments,
   StudentAssignmentDetail,
   SubmissionResponse,
+  type SubmitAssignmentRequest,
 } from "@/hooks/use-student-assignments";
 import { useToast } from "@/hooks/use-toast";
 import AssignmentDetailHeader from "@/components/student/assignments/AssignmentDetailHeader";
@@ -33,6 +33,47 @@ const isImageByName = (name?: string) => {
   return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].some((ext) => lower.endsWith(ext));
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null;
+};
+
+type TeacherAttachment = { id: string; name: string; url: string | null; mimeType: string };
+type StoredSubmissionFile = { fileName: string; mimeType: string; sizeBytes: number; storagePath: string };
+type FileSubmission = { id: string; status: string; files: StoredSubmissionFile[] };
+
+const parseTeacherAttachments = (data: unknown): TeacherAttachment[] => {
+  if (!Array.isArray(data)) return [];
+  return data.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    const id = typeof item.id === "string" ? item.id : "";
+    const name = typeof item.name === "string" ? item.name : "";
+    const mimeType = typeof item.mimeType === "string" ? item.mimeType : "";
+    const url = typeof item.url === "string" ? item.url : null;
+    if (!id || !name || !mimeType) return [];
+    return [{ id, name, url, mimeType }];
+  });
+};
+
+const parseFileSubmission = (data: unknown): FileSubmission | null => {
+  if (!isRecord(data)) return null;
+  const id = typeof data.id === "string" ? data.id : "";
+  const status = typeof data.status === "string" ? data.status : "";
+  const filesRaw = data.files;
+  const files: StoredSubmissionFile[] = Array.isArray(filesRaw)
+    ? filesRaw.flatMap((f) => {
+        if (!isRecord(f)) return [];
+        const fileName = typeof f.fileName === "string" ? f.fileName : "";
+        const mimeType = typeof f.mimeType === "string" ? f.mimeType : "";
+        const sizeBytes = typeof f.sizeBytes === "number" ? f.sizeBytes : 0;
+        const storagePath = typeof f.storagePath === "string" ? f.storagePath : "";
+        if (!fileName || !mimeType || !storagePath) return [];
+        return [{ fileName, mimeType, sizeBytes, storagePath }];
+      })
+    : [];
+  if (!id || !status) return null;
+  return { id, status, files };
+};
+
 /**
  * Trang chi tiết assignment cho student
  */
@@ -42,8 +83,6 @@ export default function StudentAssignmentDetailPage({
   params: { id: string };
 }) {
   const assignmentId = params.id as string;
-
-  const router = useRouter();
 
   const {
     fetchAssignmentDetail,
@@ -99,9 +138,9 @@ export default function StudentAssignmentDetailPage({
 
       try {
         const r = await fetch(`/api/assignments/${assignmentId}/files`);
-        const j = await r.json();
-        if (r.ok && j?.success && Array.isArray(j.data)) {
-          setAttachments(j.data.map((f: any) => ({ id: f.id, name: f.name, url: f.url, mimeType: f.mimeType })));
+        const j: unknown = await r.json();
+        if (r.ok && isRecord(j) && j.success === true) {
+          setAttachments(parseTeacherAttachments(j.data));
         }
       } catch {}
 
@@ -113,15 +152,18 @@ export default function StudentAssignmentDetailPage({
         if (!submissionData.content || submissionData.content.trim() === "") {
           try {
             const resp = await fetch(`/api/submissions?assignmentId=${assignmentId}`);
-            const j = await resp.json();
-            if (resp.ok && j?.success && j.data) {
-              setFileSubmission(j.data);
-              const imgs = (j.data.files || []).filter((f: any) => f?.mimeType?.startsWith("image/") || isImageByName(f?.fileName) || isImageByName(f?.storagePath));
-              imgs.forEach(async (f: any) => {
+            const j: unknown = await resp.json();
+            const parsed = resp.ok && isRecord(j) && j.success === true ? parseFileSubmission(j.data) : null;
+            if (parsed) {
+              setFileSubmission(parsed);
+              const imgs = parsed.files.filter(
+                (f) => f.mimeType.startsWith("image/") || isImageByName(f.fileName) || isImageByName(f.storagePath)
+              );
+              imgs.forEach(async (f) => {
                 try {
                   const r = await fetch(`/api/submissions/signed-url?path=${encodeURIComponent(f.storagePath)}`);
-                  const jj = await r.json();
-                  if (r.ok && jj?.success && jj.data?.url) {
+                  const jj: unknown = await r.json();
+                  if (r.ok && isRecord(jj) && jj.success === true && isRecord(jj.data) && typeof jj.data.url === "string") {
                     setSignedUrlByPath((prev) => ({ ...prev, [f.storagePath]: jj.data.url }));
                   }
                 } catch {}
@@ -134,16 +176,19 @@ export default function StudentAssignmentDetailPage({
         // Kiểm tra nộp file kiểu mới
         try {
           const resp = await fetch(`/api/submissions?assignmentId=${assignmentId}`);
-          const j = await resp.json();
-          if (resp.ok && j?.success && j.data) {
-            setFileSubmission(j.data);
-            const imgs = (j.data.files || []).filter((f: any) => f?.mimeType?.startsWith("image/") || isImageByName(f?.fileName) || isImageByName(f?.storagePath));
+          const j: unknown = await resp.json();
+          const parsed = resp.ok && isRecord(j) && j.success === true ? parseFileSubmission(j.data) : null;
+          if (parsed) {
+            setFileSubmission(parsed);
+            const imgs = parsed.files.filter(
+              (f) => f.mimeType.startsWith("image/") || isImageByName(f.fileName) || isImageByName(f.storagePath)
+            );
             // prefetch signed urls
-            imgs.forEach(async (f: any) => {
+            imgs.forEach(async (f) => {
               try {
                 const r = await fetch(`/api/submissions/signed-url?path=${encodeURIComponent(f.storagePath)}`);
-                const jj = await r.json();
-                if (r.ok && jj?.success && jj.data?.url) {
+                const jj: unknown = await r.json();
+                if (r.ok && isRecord(jj) && jj.success === true && isRecord(jj.data) && typeof jj.data.url === "string") {
                   setSignedUrlByPath((prev) => ({ ...prev, [f.storagePath]: jj.data.url }));
                 }
               } catch {}
@@ -191,7 +236,7 @@ export default function StudentAssignmentDetailPage({
   ) => {
     if (!assignmentId) return;
 
-    const payload: any = presentation ? { answers, presentation } : { answers };
+    const payload: SubmitAssignmentRequest = presentation ? { answers, presentation } : { answers };
     const result = await submitAssignment(assignmentId, payload);
 
     if (result) {
@@ -270,9 +315,9 @@ export default function StudentAssignmentDetailPage({
 
   if (isLoading && !assignment) {
     return (
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Breadcrumb items={breadcrumbItems} className="mb-2" color="green" />
-        <div className="text-center py-12 text-slate-500 animate-pulse">
+        <div className="text-center py-12 text-muted-foreground animate-pulse">
           Đang tải chi tiết bài tập...
         </div>
       </div>
@@ -281,7 +326,7 @@ export default function StudentAssignmentDetailPage({
 
   if (error && !assignment) {
     return (
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Breadcrumb items={breadcrumbItems} className="mb-2" color="green" />
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6 text-rose-700">
           <h3 className="font-semibold mb-2">Lỗi tải chi tiết bài tập</h3>
@@ -291,7 +336,8 @@ export default function StudentAssignmentDetailPage({
               fetchAssignmentDetail(assignmentId);
             }}
             size="sm"
-            className="bg-rose-600 hover:bg-rose-700"
+            variant="outline"
+            color="green"
           >
             Thử lại
           </Button>
@@ -302,9 +348,9 @@ export default function StudentAssignmentDetailPage({
 
   if (!assignment) {
     return (
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Breadcrumb items={breadcrumbItems} className="mb-2" color="green" />
-        <div className="text-center py-12 text-slate-400">
+        <div className="text-center py-12 text-muted-foreground">
           Không tìm thấy bài tập
         </div>
       </div>
@@ -314,16 +360,28 @@ export default function StudentAssignmentDetailPage({
   const hasSubmission = submission !== null || !!fileSubmission;
   const canEdit = !!submission && submission.grade === null; // Chỉ edit được nếu chưa chấm
   const now = new Date();
-  const openAt = (assignment as any).openAt ? new Date((assignment as any).openAt) : null;
-  const lockAt = (assignment as any).lockAt ? new Date((assignment as any).lockAt) : (assignment.dueDate ? new Date(assignment.dueDate) : null);
+  const openAt = assignment.openAt ? new Date(assignment.openAt) : null;
+  const lockAt = assignment.lockAt ? new Date(assignment.lockAt) : (assignment.dueDate ? new Date(assignment.dueDate) : null);
   const notOpened = openAt ? now < openAt : false;
   const locked = lockAt ? now > lockAt : false;
   const workDisabled = (notOpened || locked) && !canEdit;
 
   
 
+  const headerSubmission = submission
+    ? submission
+    : fileSubmission
+      ? {
+          id: fileSubmission.id,
+          submittedAt: new Date().toISOString(),
+          grade: null,
+          feedback: null,
+          attempt: null,
+        }
+      : null;
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <Breadcrumb items={breadcrumbItems} color="green" />
         <BackButton href="/dashboard/student/assignments" />
@@ -331,23 +389,12 @@ export default function StudentAssignmentDetailPage({
 
       <AssignmentDetailHeader
         assignment={assignment}
-        submission={
-          submission
-            ? (submission as any)
-            : fileSubmission
-            ? ({
-                id: "file",
-                submittedAt: new Date().toISOString(),
-                grade: (submission as any)?.grade ?? null,
-                feedback: (submission as any)?.feedback ?? null,
-              } as any)
-            : undefined
-        }
+        submission={headerSubmission}
       />
 
       {attachments.length > 0 && (
-        <div className="bg-white/90 rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 space-y-3">
-          <h3 className="font-semibold text-sm sm:text-base text-slate-900">
+        <div className="bg-card/90 rounded-2xl border border-border shadow-sm p-4 sm:p-5 space-y-3">
+          <h3 className="font-semibold text-sm sm:text-base text-foreground">
             Tài liệu đính kèm từ giáo viên
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -357,12 +404,12 @@ export default function StudentAssignmentDetailPage({
                 href={f.url || "#"}
                 target="_blank"
                 rel="noreferrer"
-                className="flex flex-col rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3 text-xs sm:text-sm text-slate-700 hover:bg-slate-100 hover:border-slate-200 transition-colors"
+                className="flex flex-col rounded-xl border border-border bg-muted/40 px-3 py-3 text-xs sm:text-sm text-foreground hover:bg-muted/60 hover:border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <span className="font-medium truncate" title={f.name}>
                   {f.name}
                 </span>
-                <span className="mt-1 text-[11px] text-slate-500 truncate">
+                <span className="mt-1 text-[11px] text-muted-foreground truncate">
                   {f.mimeType}
                 </span>
               </a>
@@ -380,14 +427,14 @@ export default function StudentAssignmentDetailPage({
           <TabsTrigger
             value="work"
             disabled={workDisabled}
-            className="px-4 py-1.5 text-xs sm:text-sm rounded-full focus-visible:ring-green-500 data-[state=active]:bg-white data-[state=active]:text-green-700 data-[state=active]:shadow-sm"
+            className="px-4 py-1.5 text-xs sm:text-sm rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=active]:bg-background data-[state=active]:text-green-700 data-[state=active]:shadow-sm"
           >
             {hasSubmission && canEdit ? "Chỉnh sửa bài làm" : "Làm bài"}
           </TabsTrigger>
           {hasSubmission && (
             <TabsTrigger
               value="review"
-              className="px-4 py-1.5 text-xs sm:text-sm rounded-full focus-visible:ring-green-500 data-[state=active]:bg-white data-[state=active]:text-green-700 data-[state=active]:shadow-sm"
+              className="px-4 py-1.5 text-xs sm:text-sm rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=active]:bg-background data-[state=active]:text-green-700 data-[state=active]:shadow-sm"
             >
               Xem bài nộp
             </TabsTrigger>
@@ -402,20 +449,20 @@ export default function StudentAssignmentDetailPage({
             </div>
           ) : assignment.type === "ESSAY" ? (
             (() => {
-              const format = ((assignment as any).submissionFormat as string) || "BOTH";
+              const format = assignment.submissionFormat ?? "BOTH";
               const hasPrompt = Array.isArray(assignment.questions) && assignment.questions.length > 0;
               const promptPanel = hasPrompt ? (
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-                  <h3 className="text-base font-semibold text-slate-900 mb-4">Đề bài</h3>
+                <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
+                  <h3 className="text-base font-semibold text-foreground mb-4">Đề bài</h3>
                   <div className="space-y-3">
                     {assignment.questions.map((q, idx) => (
-                      <div key={q.id} className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                      <div key={q.id} className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4">
                         <span className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-bold">
                           {idx + 1}
                         </span>
                         <RichTextPreview
                           html={q.content || ""}
-                          className="flex-1 text-slate-800"
+                          className="flex-1 text-foreground"
                         />
                       </div>
                     ))}
@@ -434,9 +481,9 @@ export default function StudentAssignmentDetailPage({
                       isLoading={isLoading}
                       dueDate={assignment.dueDate}
                       isSubmitted={!!submission && canEdit}
-                      openAt={(assignment as any).openAt || null}
-                      lockAt={(assignment as any).lockAt || null}
-                      timeLimitMinutes={(assignment as any).timeLimitMinutes || null}
+                      openAt={assignment.openAt ?? null}
+                      lockAt={assignment.lockAt ?? null}
+                      timeLimitMinutes={assignment.timeLimitMinutes ?? null}
                     />
                   </div>
                 );
@@ -445,8 +492,8 @@ export default function StudentAssignmentDetailPage({
                 return (
                   <div className="space-y-6">
                     {promptPanel}
-                    <div className="bg-white rounded-xl p-6 shadow space-y-4">
-                      <p className="text-sm text-gray-700">Bạn cần nộp tệp theo yêu cầu của giáo viên.</p>
+                    <div className="bg-card rounded-xl p-6 shadow border border-border space-y-4">
+                      <p className="text-sm text-muted-foreground">Bạn cần nộp tệp theo yêu cầu của giáo viên.</p>
                       <FileSubmissionPanel assignmentId={assignmentId} />
                     </div>
                   </div>
@@ -455,7 +502,7 @@ export default function StudentAssignmentDetailPage({
               return (
                 <div className="space-y-6">
                   {promptPanel}
-                  <div className="bg-white rounded-xl p-6 shadow space-y-6">
+                  <div className="bg-card rounded-xl p-6 shadow border border-border space-y-6">
                     <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">Bạn có thể chọn nộp văn bản hoặc nộp tệp. Chỉ cần chọn một hình thức phù hợp.</div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-3">
@@ -467,9 +514,9 @@ export default function StudentAssignmentDetailPage({
                           isLoading={isLoading}
                           dueDate={assignment.dueDate}
                           isSubmitted={!!submission && canEdit}
-                          openAt={(assignment as any).openAt || null}
-                          lockAt={(assignment as any).lockAt || null}
-                          timeLimitMinutes={(assignment as any).timeLimitMinutes || null}
+                          openAt={assignment.openAt ?? null}
+                          lockAt={assignment.lockAt ?? null}
+                          timeLimitMinutes={assignment.timeLimitMinutes ?? null}
                         />
                       </div>
                       <div className="space-y-3">
@@ -511,26 +558,26 @@ export default function StudentAssignmentDetailPage({
 
         <TabsContent value="review">
           {fileSubmission ? (
-            <div className="bg-white rounded-xl p-6 shadow">
-              <h3 className="font-semibold mb-3">Tệp đã nộp</h3>
+            <div className="bg-card rounded-xl p-6 shadow border border-border">
+              <h3 className="font-semibold mb-3 text-foreground">Tệp đã nộp</h3>
               {fileSubmission.files?.length ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {fileSubmission.files.map((f, idx) => (
-                    <div key={idx} className="border rounded-lg p-2 bg-gray-50">
-                      <div className="aspect-video bg-white flex items-center justify-center overflow-hidden rounded">
+                    <div key={idx} className="border border-border rounded-lg p-2 bg-muted/40">
+                      <div className="aspect-video bg-background flex items-center justify-center overflow-hidden rounded">
                         {f.mimeType?.startsWith("image/") ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={signedUrlByPath[f.storagePath] || publicUrlForStored(f.storagePath)} alt={f.fileName} className="object-cover w-full h-full" />
                         ) : (
-                          <div className="text-xs text-gray-500">{f.fileName}</div>
+                          <div className="text-xs text-muted-foreground">{f.fileName}</div>
                         )}
                       </div>
-                      <div className="mt-2 text-xs truncate" title={f.fileName}>{f.fileName}</div>
+                      <div className="mt-2 text-xs truncate text-foreground" title={f.fileName}>{f.fileName}</div>
                       <div className="mt-2">
                         <button
                           type="button"
                           onClick={() => handleDownload(f.storagePath, f.fileName)}
-                          className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-xs font-medium shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"
+                          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                             <path d="M12 3a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L11 12.586V4a1 1 0 011-1z" />
@@ -543,7 +590,7 @@ export default function StudentAssignmentDetailPage({
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-gray-600">Chưa có tệp nào.</div>
+                <div className="text-sm text-muted-foreground">Chưa có tệp nào.</div>
               )}
             </div>
           ) : submission ? (
@@ -561,4 +608,3 @@ export default function StudentAssignmentDetailPage({
     </div>
   );
 }
-

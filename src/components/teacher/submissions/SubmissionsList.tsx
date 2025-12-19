@@ -157,7 +157,7 @@ export default function SubmissionsList({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-destructive">
         <h3 className="font-semibold mb-2">Lỗi tải danh sách bài nộp</h3>
         <p className="text-sm mb-4">{error}</p>
         <Button onClick={() => fetchSubmissions(assignmentId)}>Thử lại</Button>
@@ -186,9 +186,9 @@ export default function SubmissionsList({
         bottom={
           <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(parseStatusFilter(v))}>
             <TabsList className="grid w-full grid-cols-3 rounded-xl bg-blue-100/60 text-blue-700">
-              <TabsTrigger value="all" className="data-[state=active]:bg-white data-[state=active]:text-blue-900">Tất cả</TabsTrigger>
-              <TabsTrigger value="graded" className="data-[state=active]:bg-white data-[state=active]:text-blue-900">Đã chấm</TabsTrigger>
-              <TabsTrigger value="ungraded" className="data-[state=active]:bg-white data-[state=active]:text-blue-900">Chưa chấm</TabsTrigger>
+              <TabsTrigger value="all" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Tất cả</TabsTrigger>
+              <TabsTrigger value="graded" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Đã chấm</TabsTrigger>
+              <TabsTrigger value="ungraded" className="data-[state=active]:bg-background data-[state=active]:text-foreground">Chưa chấm</TabsTrigger>
             </TabsList>
           </Tabs>
         }
@@ -198,7 +198,7 @@ export default function SubmissionsList({
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-2xl p-6 shadow">
+            <div key={i} className="bg-card rounded-2xl p-6 shadow">
               <Skeleton className="h-6 w-3/4 mb-4" />
               <Skeleton className="h-4 w-1/2 mb-2" />
               <Skeleton className="h-20 w-full mb-4" />
@@ -207,8 +207,8 @@ export default function SubmissionsList({
           ))}
         </div>
       ) : submissions.length === 0 ? (
-        <div className="bg-white rounded-lg p-12 text-center">
-          <p className="text-gray-500 text-lg">
+        <div className="bg-card rounded-lg p-12 text-center border border-border">
+          <p className="text-muted-foreground text-lg">
             {searchQuery || statusFilter !== "all"
               ? "Không tìm thấy bài nộp nào"
               : "Chưa có học sinh nào nộp bài"}

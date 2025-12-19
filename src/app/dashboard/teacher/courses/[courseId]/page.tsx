@@ -40,12 +40,23 @@ type ApiResponse<T> = {
   message?: string;
 };
 
-const fetcher = (url: string) =>
-  fetch(url).then(async (r) => {
-    const json = await r.json().catch(() => ({}));
-    if (!r.ok || json?.success === false) throw new Error(json?.message || "fetch error");
-    return json as any;
-  });
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null;
+};
+
+const fetcher = async <T,>(url: string): Promise<ApiResponse<T>> => {
+  const r = await fetch(url);
+  const json: unknown = await r.json().catch(() => ({}));
+
+  const record = isRecord(json) ? json : {};
+  const success = typeof record.success === "boolean" ? record.success : undefined;
+  const message = typeof record.message === "string" ? record.message : undefined;
+  const data = (record.data as T | undefined) ?? undefined;
+
+  if (!r.ok || success === false) throw new Error(message || "fetch error");
+
+  return { success, data, message };
+};
 
 export default function Page() {
   const params = useParams();
@@ -55,7 +66,7 @@ export default function Page() {
 
   const { data: courseRes, error: courseErr, isLoading: courseLoading } = useSWR<ApiResponse<CourseDetail>>(
     courseId ? `/api/teachers/courses/${courseId}` : null,
-    fetcher
+    (url) => fetcher<CourseDetail>(url)
   );
 
   const {
@@ -65,7 +76,7 @@ export default function Page() {
     mutate: mutateLessons,
   } = useSWR<ApiResponse<{ items: LessonItem[] }>>(
     courseId ? `/api/teachers/courses/${courseId}/lessons` : null,
-    fetcher
+    (url) => fetcher<{ items: LessonItem[] }>(url)
   );
 
   const course = courseRes?.data ?? null;
@@ -274,16 +285,16 @@ export default function Page() {
 
   if (courseLoading) {
     return (
-      <div className="p-8">
-        <div className="h-8 w-64 bg-slate-100 rounded animate-pulse" />
-        <div className="h-4 w-96 bg-slate-100 rounded animate-pulse mt-3" />
+      <div className="space-y-3">
+        <div className="h-8 w-64 bg-muted rounded animate-pulse" />
+        <div className="h-4 w-96 bg-muted rounded animate-pulse mt-3" />
       </div>
     );
   }
 
   if (courseErr) {
     return (
-      <div className="p-8">
+      <div>
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">
           Không tải được khóa học.
         </div>
@@ -293,8 +304,8 @@ export default function Page() {
 
   if (!course) {
     return (
-      <div className="p-8">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-700">
+      <div>
+        <div className="rounded-2xl border border-border bg-card p-6 text-muted-foreground">
           Không tìm thấy khóa học.
         </div>
       </div>
@@ -302,7 +313,7 @@ export default function Page() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         role="teacher"
         title={course.title}
@@ -323,9 +334,9 @@ export default function Page() {
         }
       />
 
-      <div className="bg-white rounded-2xl border border-slate-100 p-5">
+      <div className="bg-card rounded-2xl border border-border p-5">
         <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="text-sm font-semibold text-slate-900">Bài học</div>
+          <div className="text-sm font-semibold text-foreground">Bài học</div>
           <Button variant="outline" onClick={() => mutateLessons()} disabled={lessonsLoading}>
             {lessonsLoading ? "Đang tải..." : "Tải lại"}
           </Button>
@@ -334,7 +345,7 @@ export default function Page() {
         {lessonsLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+              <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />
             ))}
           </div>
         ) : lessonsErr ? (
@@ -342,20 +353,20 @@ export default function Page() {
             Không tải được danh sách bài học.
           </div>
         ) : lessons.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-700">
+          <div className="rounded-xl border border-border bg-muted/40 p-4 text-muted-foreground">
             Chưa có bài học. Hãy thêm bài học đầu tiên.
           </div>
         ) : (
           <div className="space-y-3">
             {lessons.map((l) => (
-              <div key={l.id} className="flex items-start justify-between gap-3 rounded-2xl border border-slate-100 p-4">
+              <div key={l.id} className="flex items-start justify-between gap-3 rounded-2xl border border-border p-4">
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center text-[11px] font-extrabold">
                     BÀI
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{l.title}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">
+                    <div className="text-sm font-semibold text-foreground truncate">{l.title}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
                       Thứ tự: {l.order} • Cập nhật: {new Date(l.updatedAt).toLocaleDateString("vi-VN")}
                     </div>
                   </div>

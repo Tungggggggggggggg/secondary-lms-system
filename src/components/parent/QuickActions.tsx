@@ -52,9 +52,13 @@ export default function QuickActions() {
     >
       <div className="grid grid-cols-2 gap-3">
         {actions.map((action) => (
-          <Link key={action.label} href={action.href}>
+          <Link
+            key={action.label}
+            href={action.href}
+            className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
             <div
-              className={`flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 transition-all duration-300 ${action.color} ${action.hoverColor} hover:shadow-md hover:scale-105 cursor-pointer group`}
+              className={`flex flex-col items-center justify-center p-4 rounded-xl border border-border transition-all duration-300 ${action.color} ${action.hoverColor} hover:shadow-md hover:scale-105 cursor-pointer group`}
             >
               <div className="transition-transform duration-300 group-hover:scale-110">
                 {action.icon}

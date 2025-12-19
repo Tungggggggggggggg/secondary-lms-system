@@ -4,10 +4,20 @@ import React, { createContext, useContext } from "react";
 
 export type ThemeColor = "violet" | "amber" | "blue" | "green";
 
-const RoleThemeContext = createContext<{ color: ThemeColor } | undefined>(undefined);
+export type ThemeRole = "teacher" | "student" | "parent" | "admin";
 
-export function RoleThemeProvider({ color, children }: { color: ThemeColor; children: React.ReactNode }) {
-  return <RoleThemeContext.Provider value={{ color }}>{children}</RoleThemeContext.Provider>;
+const RoleThemeContext = createContext<{ color: ThemeColor; role?: ThemeRole } | undefined>(undefined);
+
+export function RoleThemeProvider({
+  color,
+  role,
+  children,
+}: {
+  color: ThemeColor;
+  role?: ThemeRole;
+  children: React.ReactNode;
+}) {
+  return <RoleThemeContext.Provider value={{ color, role }}>{children}</RoleThemeContext.Provider>;
 }
 
 export function useRoleTheme() {

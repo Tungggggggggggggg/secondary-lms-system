@@ -88,11 +88,11 @@ export default function QuestionComments({
   const displayCount = isExpanded ? total : initialCommentsCount;
 
   return (
-    <div className="border-t border-gray-200 pt-4 mt-4">
+    <div className="border-t border-border pt-4 mt-4">
       <div className="flex items-center justify-between mb-3">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-violet-600 transition-colors"
+          className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md"
         >
           <span>{isExpanded ? "▼" : "▶"}</span>
           <span>Bình luận ({displayCount})</span>
@@ -112,9 +112,9 @@ export default function QuestionComments({
 
       {/* Comment form */}
       {isExpanded && showCommentForm && (
-        <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+        <div className="mb-4 p-4 bg-muted/40 rounded-xl border border-border">
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-foreground mb-2">
               Nội dung bình luận <span className="text-red-500">*</span>
             </label>
             <Textarea
@@ -158,11 +158,11 @@ export default function QuestionComments({
           )}
 
           {isLoading && comments.length === 0 ? (
-            <div className="text-center py-6 text-gray-500 animate-pulse text-sm">
+            <div className="text-center py-6 text-muted-foreground animate-pulse text-sm">
               Đang tải comments...
             </div>
           ) : comments.length === 0 ? (
-            <div className="text-center py-6 text-gray-400 text-sm">
+            <div className="text-center py-6 text-muted-foreground text-sm">
               <div className="text-3xl mb-2">💬</div>
               <p>Chưa có bình luận nào cho câu hỏi này</p>
             </div>
@@ -172,7 +172,7 @@ export default function QuestionComments({
                 {comments.map((comment) => (
                   <div
                     key={comment.id}
-                    className="p-3 bg-gray-50 rounded-xl border border-gray-200"
+                    className="p-3 bg-muted/40 rounded-xl border border-border"
                   >
                     <div className="flex items-start gap-2 mb-1">
                       <div className="flex-shrink-0 w-6 h-6 bg-violet-600 text-white rounded-full flex items-center justify-center font-semibold text-xs">
@@ -180,10 +180,10 @@ export default function QuestionComments({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-gray-800 text-sm">
+                          <span className="font-semibold text-foreground text-sm">
                             {comment.user.fullname}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             {new Date(comment.createdAt).toLocaleString("vi-VN", {
                               day: "2-digit",
                               month: "2-digit",
@@ -192,7 +192,7 @@ export default function QuestionComments({
                             })}
                           </span>
                         </div>
-                        <p className="text-gray-700 text-sm whitespace-pre-wrap">{comment.content}</p>
+                        <p className="text-foreground text-sm whitespace-pre-wrap">{comment.content}</p>
                       </div>
                     </div>
                   </div>

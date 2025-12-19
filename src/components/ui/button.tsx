@@ -16,34 +16,34 @@ export interface ButtonProps
 
 const colorStyles = {
   slate: {
-    default: "bg-slate-900 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-slate-500",
-    outline: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-500",
-    ghost: "text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-500",
-    primary: "bg-slate-900 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-slate-500",
+    default: "bg-slate-900 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+    outline: "border border-border bg-background text-foreground hover:bg-muted/40",
+    ghost: "text-foreground hover:bg-muted/40",
+    primary: "bg-slate-900 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
   },
   violet: {
-    default: "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-violet-500",
-    outline: "border-2 border-violet-500 text-violet-600 hover:bg-violet-50 focus-visible:ring-violet-500",
-    ghost: "text-violet-600 hover:bg-violet-50 focus-visible:ring-violet-500",
-    primary: "bg-violet-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-violet-500",
+    default: "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+    outline: "border-2 border-violet-500 text-violet-600 hover:bg-violet-50",
+    ghost: "text-violet-600 hover:bg-violet-50",
+    primary: "bg-violet-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
   },
   amber: {
-    default: "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-amber-500",
-    outline: "border-2 border-amber-500 text-amber-600 hover:bg-amber-50 focus-visible:ring-amber-500",
-    ghost: "text-amber-600 hover:bg-amber-50 focus-visible:ring-amber-500",
-    primary: "bg-amber-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-amber-500",
+    default: "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+    outline: "border-2 border-amber-500 text-amber-600 hover:bg-amber-50",
+    ghost: "text-amber-600 hover:bg-amber-50",
+    primary: "bg-amber-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
   },
   blue: {
-    default: "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-blue-500",
-    outline: "border-2 border-blue-500 text-blue-600 hover:bg-blue-50 focus-visible:ring-blue-500",
-    ghost: "text-blue-600 hover:bg-blue-50 focus-visible:ring-blue-500",
-    primary: "bg-blue-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-blue-500",
+    default: "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+    outline: "border-2 border-blue-500 text-blue-600 hover:bg-blue-50",
+    ghost: "text-blue-600 hover:bg-blue-50",
+    primary: "bg-blue-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
   },
   green: {
-    default: "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-green-500",
-    outline: "border-2 border-green-500 text-green-600 hover:bg-green-50 focus-visible:ring-green-500",
-    ghost: "text-green-600 hover:bg-green-50 focus-visible:ring-green-500",
-    primary: "bg-green-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-green-500",
+    default: "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+    outline: "border-2 border-green-500 text-green-600 hover:bg-green-50",
+    ghost: "text-green-600 hover:bg-green-50",
+    primary: "bg-green-600 text-white shadow hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
   },
 };
 
@@ -59,7 +59,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 className={cn(
                     "inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all",
                     "disabled:opacity-60 disabled:cursor-not-allowed",
-                    "focus-visible:outline-none focus-visible:ring-2",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     
                     colorStyles[effectiveColor][variant],
                     

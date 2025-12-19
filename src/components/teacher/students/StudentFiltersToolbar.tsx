@@ -57,7 +57,7 @@ export default function StudentFiltersToolbar({
     <div className={cn("flex flex-col gap-4 mb-6", className)}>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative w-full md:max-w-xs lg:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Tìm kiếm học sinh..."
@@ -117,25 +117,25 @@ export default function StudentFiltersToolbar({
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 rounded-xl bg-blue-100/60 text-blue-700">
           <TabsTrigger
             value="all"
-            className="data-[state=active]:bg-white data-[state=active]:text-blue-900"
+            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Tất cả
           </TabsTrigger>
           <TabsTrigger
             value="active"
-            className="data-[state=active]:bg-white data-[state=active]:text-blue-900"
+            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Tốt
           </TabsTrigger>
           <TabsTrigger
             value="warning"
-            className="data-[state=active]:bg-white data-[state=active]:text-blue-900"
+            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Cần chú ý
           </TabsTrigger>
           <TabsTrigger
             value="inactive"
-            className="data-[state=active]:bg-white data-[state=active]:text-blue-900"
+            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Không hoạt động
           </TabsTrigger>

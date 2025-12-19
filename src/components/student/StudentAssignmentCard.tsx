@@ -61,7 +61,7 @@ export default function StudentAssignmentCard({ assignment, onOpen }: Props) {
     <button
       type="button"
       onClick={onOpen}
-      className="group w-full text-left relative bg-white/90 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-200 cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
+      className="group w-full text-left relative bg-card/90 rounded-2xl border border-border shadow-sm hover:shadow-md hover:border-border transition-all duration-200 cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-label={`Mở bài tập ${assignment.title}`}
       role="listitem"
     >
@@ -79,18 +79,18 @@ export default function StudentAssignmentCard({ assignment, onOpen }: Props) {
       <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="text-base sm:text-lg font-semibold text-slate-900 line-clamp-2 mb-1">{assignment.title}</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground line-clamp-2 mb-1">{assignment.title}</h3>
             {assignment.description && (
-              <p className="text-xs sm:text-sm text-slate-600 line-clamp-2">{assignment.description}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{assignment.description}</p>
             )}
             {assignment.classroom && (
-              <p className="mt-1 text-xs sm:text-[13px] text-slate-500">
+              <p className="mt-1 text-xs sm:text-[13px] text-muted-foreground">
                 Lớp:
-                <span className="ml-1 font-medium text-slate-700">{assignment.classroom.name}</span>
+                <span className="ml-1 font-medium text-foreground">{assignment.classroom.name}</span>
                 {assignment.classroom.teacher?.fullname && (
                   <span className="ml-1">
                     • GV:
-                    <span className="ml-1 font-medium text-slate-700">{assignment.classroom.teacher.fullname}</span>
+                    <span className="ml-1 font-medium text-foreground">{assignment.classroom.teacher.fullname}</span>
                   </span>
                 )}
               </p>
@@ -104,8 +104,8 @@ export default function StudentAssignmentCard({ assignment, onOpen }: Props) {
         </div>
 
         {dueDate && (
-          <div className="flex items-center justify-between gap-2 text-xs sm:text-sm mb-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-1.5 text-slate-600">
+          <div className="flex items-center justify-between gap-2 text-xs sm:text-sm mb-3 pb-3 border-b border-border">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
               <Clock className="h-4 w-4 flex-shrink-0" />
               <span>
                 {dueDate.toLocaleDateString("vi-VN", {

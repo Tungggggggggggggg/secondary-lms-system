@@ -77,9 +77,9 @@ export default function AssignmentComments({
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+    <div className="bg-card rounded-2xl p-6 shadow-lg border border-border">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">
+        <h2 className="text-2xl font-bold text-foreground">
           Thảo luận ({total})
         </h2>
         <Button
@@ -92,16 +92,16 @@ export default function AssignmentComments({
 
       {/* Comment form */}
       {showCommentForm && (
-        <form onSubmit={handleSubmitComment} className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+        <form onSubmit={handleSubmitComment} className="mb-6 p-4 bg-muted/40 rounded-xl border border-border">
           {assignment.questions.length > 0 && (
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-foreground mb-2">
                 Chọn câu hỏi để bình luận <span className="text-red-500">*</span>
               </label>
               <select
                 value={selectedQuestionId || ""}
                 onChange={(e) => setSelectedQuestionId(e.target.value)}
-                className="w-full px-4 py-2 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-4 py-2 bg-background rounded-xl border border-border text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 required
               >
                 <option value="">-- Chọn câu hỏi --</option>
@@ -115,7 +115,7 @@ export default function AssignmentComments({
             </div>
           )}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-foreground mb-2">
               Nội dung bình luận <span className="text-red-500">*</span>
             </label>
             <Textarea
@@ -157,11 +157,11 @@ export default function AssignmentComments({
       )}
 
       {isLoading && comments.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 animate-pulse">
+        <div className="text-center py-8 text-muted-foreground animate-pulse">
           Đang tải comments...
         </div>
       ) : comments.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
+        <div className="text-center py-8 text-muted-foreground">
           <div className="flex justify-center mb-2">
             <MessageSquare className="h-10 w-10 text-green-600" />
           </div>
@@ -174,7 +174,7 @@ export default function AssignmentComments({
             {comments.map((comment) => (
               <div
                 key={comment.id}
-                className="p-4 bg-gray-50 rounded-xl border border-gray-200"
+                className="p-4 bg-muted/40 rounded-xl border border-border"
               >
                 <div className="flex items-start gap-3 mb-2">
                   <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
@@ -182,10 +182,10 @@ export default function AssignmentComments({
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-gray-800">
+                      <span className="font-semibold text-foreground">
                         {comment.user.fullname}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(comment.createdAt).toLocaleString("vi-VN", {
                           day: "2-digit",
                           month: "2-digit",
@@ -202,7 +202,7 @@ export default function AssignmentComments({
                         {comment.question.content.length > 100 ? "..." : ""}
                       </div>
                     )}
-                    <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                    <p className="text-foreground whitespace-pre-wrap">{comment.content}</p>
                   </div>
                 </div>
               </div>

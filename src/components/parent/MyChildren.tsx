@@ -71,19 +71,19 @@ export default function MyChildren() {
                 <Link
                   key={relationship.id}
                   href={`/dashboard/parent/children/${student.id}`}
-                  className="block group"
+                  className="block group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  <div className="flex items-center gap-3 p-3 rounded-lg border-l-4 border-l-transparent hover:border-l-amber-500 hover:bg-white/60 transition-all duration-300 hover:scale-102 hover:shadow-sm">
+                  <div className="flex items-center gap-3 p-3 rounded-lg border-l-4 border-l-transparent hover:border-l-amber-500 hover:bg-muted/40 transition-all duration-300 hover:scale-102 hover:shadow-sm">
                     <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold transition-transform duration-300 group-hover:scale-110">
                       {student.fullname?.charAt(0).toUpperCase() || "S"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-amber-700 transition-colors duration-300">
+                      <p className="font-semibold text-sm text-foreground truncate group-hover:text-amber-700 transition-colors duration-300">
                         {student.fullname || "Không có tên"}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">{student.email}</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-gray-400 transition-all duration-300 group-hover:text-amber-600 group-hover:translate-x-1" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-all duration-300 group-hover:text-amber-600 group-hover:translate-x-1" />
                   </div>
                 </Link>
               );

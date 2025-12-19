@@ -103,16 +103,16 @@ export default function SubmissionReview({
   }, [assignment.questions]);
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-      <div className="mb-6 pb-4 border-b border-gray-200">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Bài nộp của bạn</h2>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border">
+    <div className="bg-card rounded-2xl p-6 shadow-lg border border-border">
+      <div className="mb-6 pb-4 border-b border-border">
+        <h2 className="text-2xl font-bold text-foreground mb-4">Bài nộp của bạn</h2>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-muted text-foreground border border-border">
             Lần nộp #{submission.attempt ?? 1}
           </span>
           <span>
             Nộp lúc:{" "}
-            <span className="font-semibold text-gray-800">
+            <span className="font-semibold text-foreground">
               {new Date(submission.submittedAt).toLocaleString("vi-VN", {
                 day: "2-digit",
                 month: "2-digit",
@@ -141,15 +141,15 @@ export default function SubmissionReview({
       {assignment.type === "ESSAY" ? (
         // Essay submission
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">Nội dung bài làm:</h3>
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-            <p className="text-gray-700 whitespace-pre-wrap">{submission.content}</p>
+          <h3 className="text-lg font-semibold text-foreground mb-3">Nội dung bài làm:</h3>
+          <div className="bg-muted/40 rounded-xl p-4 border border-border">
+            <p className="text-foreground whitespace-pre-wrap">{submission.content}</p>
           </div>
         </div>
       ) : (
         // Quiz submission
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Câu trả lời của bạn:</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Câu trả lời của bạn:</h3>
           <div className="space-y-4">
             {(() => {
               const baseQuestions: QuestionVM[] = (snapshot?.questions && snapshot.questions.length)
@@ -184,13 +184,13 @@ export default function SubmissionReview({
                 question.options.forEach((o) => (optionById[o.id] = o));
 
                 return (
-                  <div key={question.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div key={question.id} className="p-4 bg-muted/40 rounded-xl border border-border">
                     <div className="flex items-start gap-3 mb-3">
                       <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
                         {index + 1}
                       </span>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-800 mb-3">{question.content}</h4>
+                        <h4 className="font-semibold text-foreground mb-3">{question.content}</h4>
                         <div className="space-y-2">
                           {orderedOptionIds.map((oid, optIdx) => {
                             const option = optionById[oid];
@@ -203,7 +203,7 @@ export default function SubmissionReview({
                                 ? "bg-green-50 border-green-400"
                                 : isSelected
                                   ? "bg-rose-50 border-rose-400"
-                                  : "bg-white border-gray-200";
+                                  : "bg-background border-border";
                             return (
                               <div
                                 key={oid}
@@ -216,10 +216,10 @@ export default function SubmissionReview({
                                   className="mt-1"
                                 />
                                 <div className="flex-1">
-                                  <span className="font-medium text-gray-800 mr-2">
+                                  <span className="font-medium text-foreground mr-2">
                                     {String.fromCharCode(65 + optIdx)}:
                                   </span>
-                                  <span className="text-gray-700">{option.content}</span>
+                                  <span className="text-foreground">{option.content}</span>
                                   {isAnswer && (
                                     <span className="ml-2 inline-flex text-[11px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">Đáp án đúng</span>
                                   )}
@@ -255,10 +255,10 @@ export default function SubmissionReview({
 
       {/* Feedback */}
       {submission.feedback && (
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">Nhận xét của giáo viên:</h3>
+        <div className="mt-6 pt-6 border-t border-border">
+          <h3 className="text-lg font-semibold text-foreground mb-3">Nhận xét của giáo viên:</h3>
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-gray-700">{submission.feedback}</p>
+            <p className="text-foreground">{submission.feedback}</p>
           </div>
         </div>
       )}

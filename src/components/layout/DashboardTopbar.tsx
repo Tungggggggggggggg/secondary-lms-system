@@ -35,7 +35,7 @@ export default function DashboardTopbar({ role }: DashboardTopbarProps) {
 
   return (
     <div
-      className={`lg:hidden px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between sticky top-0 z-30 bg-white border-b border-slate-200`}
+      className="lg:hidden px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between sticky top-0 z-30 bg-background text-foreground border-b border-border"
     >
       <div className="min-w-0 flex items-center gap-2">
         <button

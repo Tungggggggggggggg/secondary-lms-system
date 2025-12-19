@@ -364,12 +364,12 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
                         onClick={() => setActiveSource(s)}
                         className={
                           isActive
-                            ? "w-full text-left rounded-xl border border-slate-200 bg-slate-100 px-3 py-2"
-                            : "w-full text-left rounded-xl border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50"
+                            ? "w-full text-left rounded-xl border border-border bg-muted px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            : "w-full text-left rounded-xl border border-border bg-background px-3 py-2 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         }
                       >
-                        <div className="text-xs font-semibold text-slate-800">Nguồn {idx + 1}</div>
-                        <div className="mt-1 text-[11px] text-slate-600 line-clamp-3">
+                        <div className="text-xs font-semibold text-foreground">Nguồn {idx + 1}</div>
+                        <div className="mt-1 text-[11px] text-muted-foreground line-clamp-3">
                           {s.excerpt}
                         </div>
                       </button>
@@ -379,18 +379,18 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
 
                 <div>
                   {activeSource ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="whitespace-pre-wrap text-sm text-slate-900">
+                    <div className="rounded-2xl border border-border bg-muted/40 p-4">
+                      <div className="whitespace-pre-wrap text-sm text-foreground">
                         {activeSource.content || activeSource.excerpt}
                       </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-slate-500">Chọn một nguồn ở bên trái để xem chi tiết.</div>
+                    <div className="text-sm text-muted-foreground">Chọn một nguồn ở bên trái để xem chi tiết.</div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="text-sm text-slate-500">Không có dữ liệu nguồn.</div>
+              <div className="text-sm text-muted-foreground">Không có dữ liệu nguồn.</div>
             )}
           </div>
 
@@ -398,7 +398,7 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
             <button
               type="button"
               onClick={() => setSourceOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2.5 text-[12px] font-semibold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Đóng
             </button>
@@ -406,9 +406,9 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
         </DialogContent>
       </Dialog>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-        <div className="text-sm font-semibold text-slate-800">Trợ lý AI (RAG Tutor)</div>
-        <div className="text-xs text-slate-600">
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+        <div className="text-sm font-semibold text-foreground">Trợ lý AI (RAG Tutor)</div>
+        <div className="text-xs text-muted-foreground">
           Trợ lý sẽ trả lời dựa trên nội dung bài học đã được hệ thống index.
         </div>
 
@@ -420,7 +420,7 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
 
         <div className="space-y-3">
           {messages.length === 0 ? (
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-muted-foreground">
               Hãy đặt câu hỏi về bài học (ví dụ: "Tóm tắt ý chính", "Giải thích khái niệm X").
             </div>
           ) : (
@@ -434,7 +434,7 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
                     className={
                       m.role === "user"
                         ? "inline-block rounded-2xl bg-green-600 text-white px-3 py-2 text-sm max-w-[90%] whitespace-pre-wrap"
-                        : "inline-block rounded-2xl bg-slate-100 text-slate-900 px-3 py-2 text-sm max-w-[90%] whitespace-pre-wrap"
+                        : "inline-block rounded-2xl bg-muted text-foreground px-3 py-2 text-sm max-w-[90%] whitespace-pre-wrap"
                     }
                   >
                     {displayContent}
@@ -470,7 +470,7 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
                           }}
                           className="group"
                         >
-                          <Badge variant="outline" title={s.excerpt} className="cursor-pointer group-hover:bg-slate-50">
+                          <Badge variant="outline" title={s.excerpt} className="cursor-pointer group-hover:bg-muted/40">
                             Nguồn {sourceIndex + 1}
                           </Badge>
                         </button>
@@ -483,14 +483,14 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
           )}
         </div>
 
-        <div className="flex items-end gap-2 pt-2 border-t border-slate-200">
+        <div className="flex items-end gap-2 pt-2 border-t border-border">
           <TextareaAutosize
             minRows={2}
             maxRows={6}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Nhập câu hỏi..."
-            className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
           <Button
             onClick={() => void send(input)}

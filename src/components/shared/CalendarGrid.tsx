@@ -142,7 +142,7 @@ export default function CalendarGrid({ value, onChange, minDate, maxDate, classN
                 onClick={() => day && handleDayClick(day)}
                 disabled={isDisabled}
                 className={cn(
-                  "h-12 rounded-lg font-medium text-base transition-all duration-200",
+                  "h-12 rounded-lg font-medium text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   day === null ? "invisible" : "",
                   day !== null && !isDisabled ? "cursor-pointer" : "",
                   day !== null && isDisabled ? "text-gray-300 cursor-not-allowed" : "",

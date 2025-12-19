@@ -21,10 +21,16 @@ export default function CreateClassroomCard({
   return (
     <article
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={cn(
         "rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 p-6 text-white",
         "flex items-center justify-center text-center",
-        "cursor-pointer transition-all hover:-translate-y-1 hover:shadow-xl",
+        "cursor-pointer transition-all hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-ring",
         className
       )}
       role="button"

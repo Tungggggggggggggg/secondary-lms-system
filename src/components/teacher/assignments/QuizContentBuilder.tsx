@@ -703,9 +703,11 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
             </Label>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {TIME_PRESETS.map((preset) => (
-                <div
+                <button
                   key={preset.value}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-center ${
+                  type="button"
+                  aria-pressed={currentContent.timeLimitMinutes === preset.value && !customTime}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                     currentContent.timeLimitMinutes === preset.value && !customTime
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
@@ -717,7 +719,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
                 >
                   <div className="font-bold text-lg text-blue-600">{preset.label}</div>
                   <div className="text-xs text-gray-500 mt-1">{preset.description}</div>
-                </div>
+                </button>
               ))}
             </div>
           </div>

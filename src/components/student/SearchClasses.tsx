@@ -130,7 +130,7 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
                 <div className="relative">
                     <input
                         id="class-search"
-                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+                        className="w-full rounded-xl border border-border bg-background px-4 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         placeholder="Nhập tên lớp hoặc giáo viên... (/ để focus)"
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
@@ -145,14 +145,14 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
                         <button
                             type="button"
                             aria-label="Xóa tìm kiếm"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                             onClick={() => setQ("")}
                         >
                             Xóa
                         </button>
                     )}
                 </div>
-                <div className="text-xs text-gray-500" aria-live="polite">
+                <div className="text-xs text-muted-foreground" aria-live="polite">
                     {hasQuery && !isLoading ? `${items.length} kết quả` : ""}
                 </div>
             </div>
@@ -160,13 +160,13 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
             {isLoading && (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-100" />
+                        <div key={i} className="h-28 animate-pulse rounded-xl bg-muted" />
                     ))}
                 </div>
             )}
 
             {!isLoading && hasQuery && items.length === 0 && !error && (
-                <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-600">
+                <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                     Không tìm thấy lớp phù hợp. Thử từ khóa khác.
                 </div>
             )}
@@ -174,15 +174,15 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
             {!isLoading && items.length > 0 && (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {items.map((c) => (
-                        <div data-card key={c.id} className="rounded-xl border border-gray-200 p-4 shadow-sm transition hover:shadow-md">
+                        <div data-card key={c.id} className="rounded-xl border border-border bg-card p-4 shadow-sm transition hover:shadow-md">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <div className="text-sm font-semibold">{c.name}</div>
-                                    <div className="mt-1 text-xs text-gray-500">GV: {c.teacherName}</div>
+                                    <div className="mt-1 text-xs text-muted-foreground">GV: {c.teacherName}</div>
                                 </div>
                             </div>
                             <div className="mt-3 flex items-center justify-between">
-                                <div className="text-xs text-gray-400">
+                                <div className="text-xs text-muted-foreground">
                                     {new Intl.DateTimeFormat("vi-VN").format(new Date(c.createdAt))}
                                 </div>
                                 {c.joined ? (
@@ -190,7 +190,7 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
                                 ) : (
                                     <button
                                         onClick={() => onJoin(c.id)}
-                                        className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                        className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                     >
                                         Tham gia
                                     </button>
@@ -205,7 +205,7 @@ export default function SearchClasses({ defaultQuery = "" }: Props) {
                 <div className="flex justify-center">
                     <button
                         onClick={loadMore}
-                        className="rounded-lg border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
+                        className="rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                         Tải thêm
                     </button>

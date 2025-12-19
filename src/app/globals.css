@@ -72,6 +72,21 @@
         --ring: 243 75% 59%;
         --radius: 0.75rem;
     }
+
+    .theme-teacher {
+        --primary: 221 83% 53%;
+        --ring: 221 83% 53%;
+    }
+
+    .theme-student {
+        --primary: 142 71% 45%;
+        --ring: 142 71% 45%;
+    }
+
+    .theme-parent {
+        --primary: 38 92% 50%;
+        --ring: 38 92% 50%;
+    }
 }
 
 @layer base {

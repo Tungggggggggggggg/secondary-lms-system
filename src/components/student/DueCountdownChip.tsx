@@ -19,7 +19,7 @@ export default function DueCountdownChip({ dueDate, openAt, lockAt }: Props) {
       ? "text-amber-600"
       : variant === "success"
       ? "text-emerald-600"
-      : "text-slate-600";
+      : "text-muted-foreground";
   return (
     <span className={`font-medium whitespace-nowrap inline-flex items-center gap-1 ${cls}`}>
       <Clock className="h-4 w-4" />

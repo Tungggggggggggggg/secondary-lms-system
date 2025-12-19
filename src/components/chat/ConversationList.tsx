@@ -98,6 +98,7 @@ export default function ConversationList({ color = "amber", items, selectedId, o
     itemActive: color === "green" ? "bg-green-100 border-green-300" : color === "blue" ? "bg-blue-100 border-blue-300" : "bg-amber-100 border-amber-300",
     itemHover: color === "green" ? "hover:bg-green-50/50 hover:border-green-200" : color === "blue" ? "hover:bg-blue-50/50 hover:border-blue-200" : "hover:bg-amber-50/50 hover:border-amber-200",
     itemBorderBase: color === "green" ? "border-green-100/50" : color === "blue" ? "border-blue-100/50" : "border-amber-100/50",
+    itemRing: color === "green" ? "focus-visible:ring-green-400" : color === "blue" ? "focus-visible:ring-blue-400" : "focus-visible:ring-amber-400",
     labelText: color === "green" ? "text-green-700" : color === "blue" ? "text-blue-700" : "text-amber-700",
     badgeBg: color === "green" ? "bg-green-100/70" : color === "blue" ? "bg-blue-100/70" : "bg-amber-100/70",
     badgeText: color === "green" ? "text-green-700" : color === "blue" ? "text-blue-700" : "text-amber-700",
@@ -125,8 +126,9 @@ export default function ConversationList({ color = "amber", items, selectedId, o
     return (
       <button
         key={c.id}
+        type="button"
         onClick={() => onSelect(c.id)}
-        className={`w-full text-left rounded-xl px-3 py-2 transition border ${active ? `${palette.itemActive} shadow-md` : `${palette.itemBorderBase} ${palette.itemHover}`}`}
+        className={`w-full text-left rounded-xl px-3 py-2 transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${palette.itemRing} ${active ? `${palette.itemActive} shadow-md` : `${palette.itemBorderBase} ${palette.itemHover}`}`}
       >
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
@@ -174,10 +176,15 @@ export default function ConversationList({ color = "amber", items, selectedId, o
               <p className={`text-center ${palette.labelText} p-4 font-medium`}>Đang tìm...</p>
             ) : results.length > 0 ? (
               results.map(result => (
-                <div key={result.id} onClick={() => onSelect(result.conversationId)} className={`p-2 rounded-lg cursor-pointer transition-colors border border-transparent ${palette.itemHover}`}>
+                <button
+                  key={result.id}
+                  type="button"
+                  onClick={() => onSelect(result.conversationId)}
+                  className={`w-full text-left p-2 rounded-lg transition-colors border border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${palette.itemRing} ${palette.itemHover}`}
+                >
                   <p className={`text-xs ${palette.labelText} truncate font-medium`}>{result.conversationName}</p>
                   <p className="font-semibold text-sm truncate text-gray-900">{result.senderName}: <span className="font-normal opacity-80">{result.content}</span></p>
-                </div>
+                </button>
               ))
             ) : (
               <p className={`text-center ${palette.labelText} p-4 font-medium`}>Không tìm thấy kết quả.</p>

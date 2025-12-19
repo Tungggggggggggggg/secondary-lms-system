@@ -63,7 +63,7 @@ export default function UpcomingEvents() {
       case "low":
         return "border-l-green-500 bg-green-50/30";
       default:
-        return "border-l-gray-500 bg-gray-50/30";
+        return "border-l-border bg-muted/40";
     }
   };
 
@@ -79,7 +79,7 @@ export default function UpcomingEvents() {
       description={"Những việc cần chú ý"}
     >
         {events.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
+          <div className="text-center py-6 text-muted-foreground">
             <p>Không có sự kiện sắp tới</p>
           </div>
         ) : (
@@ -87,7 +87,7 @@ export default function UpcomingEvents() {
             {events.map((event) => (
               <div
                 key={event.id}
-                className={`border-l-4 rounded-lg p-3 transition-all duration-300 hover:shadow-md hover:scale-102 cursor-pointer group ${getPriorityColor(
+                className={`border-l-4 rounded-lg p-3 transition-all duration-300 hover:shadow-md group ${getPriorityColor(
                   event.priority
                 )}`}
               >
@@ -96,10 +96,10 @@ export default function UpcomingEvents() {
                     {getEventIcon(event.type)}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-gray-900 group-hover:text-amber-700 transition-colors duration-300 truncate">
+                    <p className="font-semibold text-sm text-foreground group-hover:text-amber-700 transition-colors duration-300 truncate">
                       {event.title}
                     </p>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
+                    <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         {formatDate(event.date)}

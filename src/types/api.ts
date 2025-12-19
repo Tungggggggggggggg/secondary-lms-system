@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 // Các kiểu dữ liệu chung cho API assignment
 
 // Đáp án trắc nghiệm cho câu hỏi
@@ -22,8 +24,11 @@ export interface Question {
 export interface AssignmentDetail {
   id: string;
   title: string;
-  description?: string;
-  dueDate?: string;
+  description?: string | null;
+  dueDate?: string | null;
+  openAt?: string | null;
+  lockAt?: string | null;
+  timeLimitMinutes?: number | null;
   createdAt: string;
   updatedAt: string;
   questions?: Question[];
@@ -56,8 +61,6 @@ export type SearchClassesResponse = {
   items: SearchClassItem[];
   nextCursor?: string;
 };
-
-import { z } from "zod";
 
 export const createAssignmentSchema = z.object({
   title: z.string().min(1, "Tiêu đề là bắt buộc").max(200),

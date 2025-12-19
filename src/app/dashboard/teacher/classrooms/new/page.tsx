@@ -14,7 +14,7 @@ export default function NewClassroomPage() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-5xl overflow-x-hidden p-6 sm:p-8">
+    <main className="mx-auto w-full max-w-5xl overflow-x-hidden">
       <Breadcrumb items={breadcrumbItems} color="blue" className="mb-2" />
       <PageHeader
         title="Tạo lớp học mới"

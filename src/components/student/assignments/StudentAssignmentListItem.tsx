@@ -26,7 +26,7 @@ export default function StudentAssignmentListItem({ item, href }: Props) {
   return (
     <Link
       href={href}
-      className="group block rounded-xl border border-slate-200 bg-white hover:bg-green-50/40 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+      className="group block rounded-xl border border-border bg-background hover:bg-green-50/40 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <div className="p-4 flex items-center gap-3">
         <div className="shrink-0">
@@ -34,12 +34,12 @@ export default function StudentAssignmentListItem({ item, href }: Props) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="truncate font-semibold text-slate-900 group-hover:text-slate-950">{item.title}</h3>
+            <h3 className="truncate font-semibold text-foreground">{item.title}</h3>
             {due && (
               <div className="shrink-0"><DueCountdownChip dueDate={due} /></div>
             )}
           </div>
-          <div className="mt-1 text-sm text-slate-600 flex items-center gap-2">
+          <div className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
             <AssignmentStatusBadge status={status} />
           </div>
         </div>

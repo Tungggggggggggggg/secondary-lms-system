@@ -14,16 +14,20 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
     const isMessages = pathname?.includes("/dashboard/student/messages");
     return (
         <ProtectedRoute allowedRoles={["STUDENT"]}>
-            <RoleThemeProvider color="green">
-                <DashboardLayout
-                    role="student"
-                    sidebarStateKey="sidebar:student"
-                    sidebar={<Sidebar role="student" />}
-                    lockContentScroll={isMessages}
-                    rightAside={<Toaster />}
-                >
-                    {isMessages ? children : <div className="p-8 space-y-8">{children}</div>}
-                </DashboardLayout>
+            <RoleThemeProvider color="green" role="student">
+                <div className="theme-student">
+                    <DashboardLayout
+                        role="student"
+                        sidebarStateKey="sidebar:student"
+                        sidebar={<Sidebar role="student" />}
+                        lockContentScroll={isMessages}
+                        rightAside={<Toaster />}
+                        wrapContent={!isMessages}
+                        contentClassName="mx-auto w-full max-w-7xl p-6 lg:p-8 space-y-8"
+                    >
+                        {children}
+                    </DashboardLayout>
+                </div>
             </RoleThemeProvider>
         </ProtectedRoute>
     );

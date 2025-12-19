@@ -26,14 +26,14 @@ export default function PendingRequestItem({
   return (
     <div className="flex items-center justify-between p-4 border-l-4 border-l-orange-500 hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 rounded-lg transition-all duration-300 hover:shadow-md hover:scale-102 group bg-orange-50/30">
       <div className="flex-1">
-        <div className="font-semibold text-gray-900 group-hover:text-orange-700 transition-colors duration-300">
+        <div className="font-semibold text-foreground group-hover:text-orange-700 transition-colors duration-300">
           {request.student.fullname}
         </div>
-        <div className="text-sm text-gray-600 flex items-center gap-1 mt-0.5">
+        <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
           <Mail className="h-3 w-3" />
           {request.student.email}
         </div>
-        <div className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+        <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
           <Clock className="h-3 w-3" />
           Gửi lúc: {formatDate(request.createdAt, "medium")}
         </div>

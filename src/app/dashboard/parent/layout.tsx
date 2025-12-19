@@ -13,15 +13,19 @@ export default function ParentLayout({ children }: { children: ReactNode }) {
     const isMessages = pathname?.includes("/dashboard/parent/messages");
     return (
         <ProtectedRoute allowedRoles={["PARENT"]}>
-            <RoleThemeProvider color="amber">
-                <DashboardLayout
-                    role="parent"
-                    sidebarStateKey="sidebar:parent"
-                    sidebar={<SidebarParent />}
-                    lockContentScroll={isMessages}
-                >
-                    {isMessages ? children : <div className="p-8 space-y-8">{children}</div>}
-                </DashboardLayout>
+            <RoleThemeProvider color="amber" role="parent">
+                <div className="theme-parent">
+                    <DashboardLayout
+                        role="parent"
+                        sidebarStateKey="sidebar:parent"
+                        sidebar={<SidebarParent />}
+                        lockContentScroll={isMessages}
+                        wrapContent={!isMessages}
+                        contentClassName="mx-auto w-full max-w-7xl p-6 lg:p-8 space-y-8"
+                    >
+                        {children}
+                    </DashboardLayout>
+                </div>
             </RoleThemeProvider>
         </ProtectedRoute>
     );

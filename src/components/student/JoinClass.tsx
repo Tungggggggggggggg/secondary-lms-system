@@ -39,12 +39,12 @@ export default function JoinClass() {
     }
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
             <div className="mb-4">
-                <h2 className="text-2xl font-extrabold text-gray-800">
+                <h2 className="text-2xl font-extrabold text-foreground">
                     🔑 Tham gia lớp bằng mã
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                     Nhập mã do giáo viên cung cấp để vào lớp của bạn.
                 </p>
             </div>

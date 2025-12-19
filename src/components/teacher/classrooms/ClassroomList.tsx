@@ -130,7 +130,14 @@ export default function ClassroomList() {
             <article
               key={classroom.id}
               onClick={() => router.push(`/dashboard/teacher/classrooms/${classroom.id}`)}
-              className="flex flex-col justify-between rounded-2xl bg-white/95 border border-slate-100 shadow-[0_8px_24px_rgba(15,23,42,0.06)] px-5 py-4 sm:px-6 sm:py-5 transition-all duration-200 ease-out cursor-pointer hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
+              onKeyDown={(e) => {
+                if (e.currentTarget !== e.target) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push(`/dashboard/teacher/classrooms/${classroom.id}`);
+                }
+              }}
+              className="flex flex-col justify-between rounded-2xl bg-white/95 border border-slate-100 shadow-[0_8px_24px_rgba(15,23,42,0.06)] px-5 py-4 sm:px-6 sm:py-5 transition-all duration-200 ease-out cursor-pointer hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               role="button"
               tabIndex={0}
             >

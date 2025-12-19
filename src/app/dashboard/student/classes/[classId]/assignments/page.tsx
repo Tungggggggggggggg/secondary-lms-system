@@ -121,7 +121,8 @@ export default function StudentClassroomAssignmentsPage() {
             <Button
               onClick={() => fetchClassroomAssignments(classId)}
               size="sm"
-              className="bg-rose-600 hover:bg-rose-700"
+              variant="outline"
+              color="green"
             >
               Thử lại
             </Button>
@@ -142,13 +143,13 @@ export default function StudentClassroomAssignmentsPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-white/90 rounded-2xl border border-slate-100 p-4 sm:p-5 animate-pulse"
+              className="bg-card/90 rounded-2xl border border-border p-4 sm:p-5 animate-pulse"
             >
-              <div className="h-4 bg-slate-200 rounded w-1/3 mb-3" />
-              <div className="h-3 bg-slate-100 rounded w-2/3 mb-4" />
+              <div className="h-4 bg-muted rounded w-1/3 mb-3" />
+              <div className="h-3 bg-muted rounded w-2/3 mb-4" />
               <div className="flex gap-2">
-                <div className="h-6 bg-slate-100 rounded-full w-20" />
-                <div className="h-6 bg-slate-100 rounded-full w-20" />
+                <div className="h-6 bg-muted rounded-full w-20" />
+                <div className="h-6 bg-muted rounded-full w-20" />
               </div>
             </div>
           ))}

@@ -136,12 +136,21 @@ export default function AssignmentList({
             {assignments.map((assignment) => (
                 <div
                     key={assignment.id}
-                    className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                    className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    role="button"
+                    tabIndex={0}
                     onClick={() =>
                         router.push(
                             `/dashboard/teacher/assignments/${assignment.id}`
                         )
                     }
+                    onKeyDown={(event) => {
+                        if (event.currentTarget !== event.target) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            router.push(`/dashboard/teacher/assignments/${assignment.id}`);
+                        }
+                    }}
                 >
                     {/* Thêm chip loại bài tập hiển thị bên phải tiêu đề */}
                     <div className="flex items-start justify-between">

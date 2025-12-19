@@ -8,20 +8,17 @@ import { PageHeader } from "@/components/shared";
 
 export default function StudentProfilePage() {
   const { data: session } = useSession();
-  const displayName =
-    (session?.user as any)?.fullname || session?.user?.name || "Học sinh";
+  const user = session?.user as unknown as { fullname?: string; name?: string; email?: string } | undefined;
+  const displayName = user?.fullname || user?.name || "Học sinh";
 
   // Get user's first letter for avatar
   const getUserInitial = () => {
-    if (session?.user) {
-      const fullname = (session.user as any)?.fullname || session.user?.name || "";
-      return fullname.charAt(0).toUpperCase() || "HS";
-    }
-    return "HS";
+    const fullname = user?.fullname || user?.name || "";
+    return fullname.charAt(0).toUpperCase() || "HS";
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="space-y-6">
       {(() => {
         const breadcrumbItems: BreadcrumbItem[] = [
           { label: "Dashboard", href: "/dashboard/student/dashboard" },
@@ -40,7 +37,7 @@ export default function StudentProfilePage() {
       })()}
 
       {/* User Avatar Card */}
-      <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm p-6">
+      <div className="bg-card/90 rounded-3xl border border-border shadow-sm p-6">
         <div className="flex items-center gap-6">
           <div
             className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-4xl text-white font-bold"
@@ -50,11 +47,11 @@ export default function StudentProfilePage() {
             {getUserInitial()}
           </div>
           <div>
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-2xl font-bold text-foreground">
               {displayName}
             </h2>
-            <p className="text-gray-600 mt-1">
-              {session?.user?.email} • Học sinh
+            <p className="text-muted-foreground mt-1">
+              {user?.email} • Học sinh
             </p>
           </div>
         </div>

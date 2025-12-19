@@ -12,12 +12,13 @@ export default function AdminLayout({
 }) {
   return (
     <ProtectedRoute allowedRoles={["ADMIN"]}>
-      <RoleThemeProvider color="blue">
+      <RoleThemeProvider color="violet" role="admin">
         <div className="theme-admin">
           <DashboardLayout
             role="admin"
             sidebarStateKey="sidebar:admin"
             sidebar={<DashboardSidebar role="admin" />}
+            contentClassName="mx-auto w-full max-w-7xl p-6 lg:p-8 space-y-8"
           >
             {children}
           </DashboardLayout>

@@ -140,13 +140,13 @@ export default function AcademicPerformance() {
             <Link
               key={child.id}
               href={`/dashboard/parent/children/${child.id}/grades`}
-              className="block group"
+              className="block group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <div className="hover:bg-white/60 rounded-lg p-4 -m-4 transition-all duration-300 border-l-4 border-l-transparent group-hover:border-l-amber-500 group-hover:shadow-md">
+              <div className="hover:bg-muted/40 rounded-lg p-4 -m-4 transition-all duration-300 border-l-4 border-l-transparent group-hover:border-l-amber-500 group-hover:shadow-md">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 group-hover:text-amber-700 transition-colors duration-300">{child.name}</h3>
-                    <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors duration-300">
+                    <h3 className="font-bold text-foreground group-hover:text-amber-700 transition-colors duration-300">{child.name}</h3>
+                    <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors duration-300">
                       Điểm trung bình: {child.average > 0 ? child.average.toFixed(1) : "—"}/10
                       {child.totalGraded > 0 && (
                         <> • {child.totalGraded} bài đã chấm</>
@@ -166,7 +166,7 @@ export default function AcademicPerformance() {
                   </div>
                 </div>
                 {child.average > 0 && (
-                  <div className="w-full bg-gray-200/50 rounded-full h-3 overflow-hidden">
+                  <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
                     <div
                       className={`${progressColor} h-3 rounded-full transition-all duration-500 ease-out`}
                       style={{ width: `${score}%` }}

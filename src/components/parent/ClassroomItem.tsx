@@ -32,7 +32,7 @@ export default function ClassroomItem({
           {classroom.icon || "📘"}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-gray-900 group-hover:text-amber-800 transition-colors duration-300 text-base">
+          <div className="font-bold text-foreground group-hover:text-amber-800 transition-colors duration-300 text-base">
             {classroom.name}
           </div>
         </div>

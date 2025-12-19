@@ -181,10 +181,10 @@ export default function GradeSubmissionDialog({
           description="Vui lòng chờ thêm một chút rồi thử lại."
           onRetry={handleAiSuggest}
         />
-        <div className="bg-gradient-to-r from-blue-50 to-white px-6 pt-6 pb-4 border-b">
+        <div className="bg-gradient-to-r from-blue-50 to-background px-6 pt-6 pb-4 border-b border-border">
           <DialogHeader>
             <DialogTitle className="text-xl">Chấm bài tập</DialogTitle>
-            <DialogDescription className="text-gray-600">
+            <DialogDescription className="text-muted-foreground">
               Xem chi tiết và chấm điểm bài nộp của học sinh
             </DialogDescription>
           </DialogHeader>
@@ -192,21 +192,21 @@ export default function GradeSubmissionDialog({
 
         <div className="md:grid md:grid-cols-2 gap-6 p-6 max-h-[80vh] overflow-y-auto">
           {/* Thông tin học sinh */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
                 {submission.student.fullname?.charAt(0) || "S"}
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">{submission.student.fullname}</h3>
-                <p className="text-xs text-gray-600">{submission.student.email}</p>
+                <h3 className="font-semibold text-foreground">{submission.student.fullname}</h3>
+                <p className="text-xs text-muted-foreground">{submission.student.email}</p>
               </div>
             </div>
-            <div className="text-xs text-gray-500">Nộp lúc: {new Date(submission.submittedAt).toLocaleString("vi-VN")}</div>
+            <div className="text-xs text-muted-foreground">Nộp lúc: {new Date(submission.submittedAt).toLocaleString("vi-VN")}</div>
           </div>
 
           {/* Form chấm điểm */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="grade">Điểm số (0 - 10)</Label>
@@ -221,7 +221,7 @@ export default function GradeSubmissionDialog({
                   placeholder="Nhập điểm (0-10)"
                 />
                 {gradeError && (
-                  <p className="text-sm text-red-600">{gradeError}</p>
+                  <p className="text-sm text-destructive">{gradeError}</p>
                 )}
               </div>
 
@@ -256,10 +256,10 @@ export default function GradeSubmissionDialog({
                     )}
                   </div>
 
-                  {aiError && <p className="text-sm text-red-600">{aiError}</p>}
+                  {aiError && <p className="text-sm text-destructive">{aiError}</p>}
 
                   {aiSuggestion && (
-                    <div className="rounded-lg border bg-gray-50 p-3 text-sm text-gray-800">
+                    <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground">
                       <div className="font-semibold">Gợi ý từ AI</div>
                       <div className="mt-1">
                         <span className="font-medium">Điểm:</span> {aiSuggestion.score}/10
@@ -280,24 +280,24 @@ export default function GradeSubmissionDialog({
             {fileList && fileList.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {fileList.map((f, idx) => (
-                  <div key={idx} className="border rounded-md p-2 bg-gray-50">
-                    <div className="aspect-video bg-white rounded flex items-center justify-center overflow-hidden">
+                  <div key={idx} className="border border-border rounded-md p-2 bg-muted/40">
+                    <div className="aspect-video bg-background rounded flex items-center justify-center overflow-hidden">
                       {f.mimeType?.startsWith("image/") && f.url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={f.url} alt={f.fileName} className="object-cover w-full h-full" />
                       ) : (
-                        <div className="text-xs text-gray-600">{f.fileName}</div>
+                        <div className="text-xs text-muted-foreground">{f.fileName}</div>
                       )}
                     </div>
                     {f.url && (
-                      <a className="mt-2 inline-flex text-xs px-2 py-1 rounded border bg-white" href={f.url} target="_blank" rel="noreferrer">Tải xuống</a>
+                      <a className="mt-2 inline-flex text-xs px-2 py-1 rounded border border-border bg-background" href={f.url} target="_blank" rel="noreferrer">Tải xuống</a>
                     )}
                   </div>
                 ))}
               </div>
             ) : submission.assignment.type === "ESSAY" ? (
-              <div className="bg-white border rounded-lg p-6 min-h-[240px] shadow-sm">
-                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">
+              <div className="bg-background border border-border rounded-lg p-6 min-h-[240px] shadow-sm">
+                <pre className="whitespace-pre-wrap text-sm text-foreground font-sans">
                   {submission.content}
                 </pre>
               </div>
@@ -373,7 +373,7 @@ export default function GradeSubmissionDialog({
                           }`}
                         >
                           <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold text-gray-800">
+                            <h4 className="font-semibold text-foreground">
                               Câu {qIdx + 1}: {q.content}
                             </h4>
                             <span
@@ -398,7 +398,7 @@ export default function GradeSubmissionDialog({
                                       ? "bg-indigo-50 border-indigo-500"
                                       : isAns
                                         ? "bg-green-50 border-green-400"
-                                        : "bg-white border-gray-200"
+                                        : "bg-background border-border"
                                   }`}
                                 >
                                   <input
@@ -408,10 +408,10 @@ export default function GradeSubmissionDialog({
                                     className="mt-1"
                                   />
                                   <div className="flex-1">
-                                    <span className="font-medium text-gray-800 mr-2">
+                                    <span className="font-medium text-foreground mr-2">
                                       {String.fromCharCode(65 + optIdx)}:
                                     </span>
-                                    <span className="text-gray-700">{opt.content}</span>
+                                    <span className="text-foreground">{opt.content}</span>
                                     {isAns && (
                                       <span className="ml-2 inline-flex text-[11px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">Đáp án đúng</span>
                                     )}
@@ -425,8 +425,8 @@ export default function GradeSubmissionDialog({
                     });
                   })()
                 ) : (
-                  <div className="bg-white border rounded-lg p-4">
-                    <p className="text-sm text-gray-600">Không có câu trả lời</p>
+                  <div className="bg-background border border-border rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground">Không có câu trả lời</p>
                   </div>
                 )}
               </div>

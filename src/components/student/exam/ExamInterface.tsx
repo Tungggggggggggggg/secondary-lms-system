@@ -337,16 +337,16 @@ export default function ExamInterface({
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold">Không tìm thấy câu hỏi</h3>
-          <p className="text-gray-600">Vui lòng liên hệ giáo viên để được hỗ trợ.</p>
+          <p className="text-muted-foreground">Vui lòng liên hệ giáo viên để được hỗ trợ.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div ref={examContainerRef} className={`min-h-screen bg-gray-50 ${className}`}>
+    <div ref={examContainerRef} className={`min-h-screen bg-muted/40 ${className}`}>
       {/* Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
+      <div className="bg-card border-b border-border shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Timer */}
@@ -373,10 +373,10 @@ export default function ExamInterface({
 
             {/* Progress */}
             <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 Câu {currentQuestionIndex + 1}/{questions.length}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 Đã trả lời: {answeredCount}/{questions.length}
               </div>
             </div>
@@ -406,7 +406,7 @@ export default function ExamInterface({
           {/* Progress Bar */}
           <div className="mt-3">
             <Progress value={progress} className="h-2" />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>Tiến độ: {Math.round(progress)}%</span>
               <span>Lưu lần cuối: {lastSaveTime.toLocaleTimeString()}</span>
             </div>
@@ -462,26 +462,28 @@ export default function ExamInterface({
                   : session.answers[currentQuestion.id] === option.shuffledLabel
 
                 return (
-                  <div
+                  <button
                     key={option.shuffledLabel}
                     className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
                       isSelected 
                         ? 'border-blue-500 bg-blue-50 shadow-md' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                        : 'border-border bg-background hover:border-muted-foreground/40'
+                    } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
                     onClick={() => handleAnswerSelect(option.shuffledLabel)}
+                    type="button"
+                    aria-pressed={isSelected}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
                         isSelected 
                           ? 'border-blue-500 bg-blue-500' 
-                          : 'border-gray-300'
+                          : 'border-border'
                       }`}>
                         {isSelected && (
                           currentQuestion.type === 'MULTIPLE' ? (
                             <CheckCircle className="w-3 h-3 text-white" />
                           ) : (
-                            <div className="w-2 h-2 bg-white rounded-full" />
+                            <div className="w-2 h-2 bg-background rounded-full" />
                           )
                         )}
                       </div>
@@ -496,7 +498,7 @@ export default function ExamInterface({
                         />
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>

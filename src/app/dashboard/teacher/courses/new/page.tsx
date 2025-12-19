@@ -56,16 +56,16 @@ export default function Page() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       <PageHeader
         role="teacher"
         title="Tạo khóa học mới"
         subtitle="Tạo khóa học, thêm bài học và gán vào lớp để học sinh sử dụng Tutor."
       />
 
-      <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+      <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
         <div className="space-y-2">
-          <div className="text-sm font-semibold text-slate-800">Tên khóa học</div>
+          <div className="text-sm font-semibold text-foreground">Tên khóa học</div>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -75,7 +75,7 @@ export default function Page() {
         </div>
 
         <div className="space-y-2">
-          <div className="text-sm font-semibold text-slate-800">Mô tả (tuỳ chọn)</div>
+          <div className="text-sm font-semibold text-foreground">Mô tả (tuỳ chọn)</div>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}

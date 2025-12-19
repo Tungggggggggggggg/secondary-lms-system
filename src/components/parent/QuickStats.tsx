@@ -44,7 +44,7 @@ export default function QuickStats() {
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="bg-gray-200 rounded-2xl p-6 animate-pulse"
+            className="bg-muted rounded-2xl p-6 animate-pulse"
             style={{ height: "140px" }}
           />
         ))}

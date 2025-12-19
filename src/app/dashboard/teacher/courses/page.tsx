@@ -8,6 +8,8 @@ import CourseStats from "@/components/teacher/courses/CourseStats";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
+import { PageHeader } from "@/components/shared";
 import { Plus, Search } from "lucide-react";
 
 type CourseListItem = {
@@ -82,31 +84,39 @@ export default function CoursesPage() {
     return sorted;
   }, [courses, search, sortKey]);
 
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
+    { label: "Khóa học", href: "/dashboard/teacher/courses" },
+  ];
+
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-800 mb-2">Khóa học của tôi</h1>
-          <p className="text-gray-600">Quản lý và theo dõi tất cả khóa học của bạn</p>
-        </div>
-        <Button
-          onClick={() => {
-            router.push("/dashboard/teacher/courses/new");
-          }}
-          size="lg"
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-5 w-5" />
-          <span>Tạo khóa học mới</span>
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <Breadcrumb items={breadcrumbItems} />
+
+      <PageHeader
+        title="Khóa học của tôi"
+        subtitle="Quản lý và theo dõi tất cả khóa học của bạn"
+        role="teacher"
+        actions={
+          <Button
+            type="button"
+            onClick={() => {
+              router.push("/dashboard/teacher/courses/new");
+            }}
+            size="lg"
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Tạo khóa học mới</span>
+          </Button>
+        }
+      />
 
       {/* Stats Overview */}
       <CourseStats courses={courses} isLoading={isLoading} />
 
       {/* Filter & Search (có thể thêm sau) */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-4">
           <Select
             value={sortKey}
@@ -116,6 +126,7 @@ export default function CoursesPage() {
                 setSortKey(v);
               }
             }}
+            color="blue"
           >
             <option value="recent">Gần đây nhất</option>
             <option value="oldest">Cũ nhất</option>
@@ -123,16 +134,17 @@ export default function CoursesPage() {
             <option value="classrooms">Số lớp sử dụng</option>
           </Select>
         </div>
-        <div className="relative">
+        <div className="relative w-full sm:w-80">
           <Input
             type="text"
             placeholder="Tìm kiếm khóa học..."
             aria-label="Tìm kiếm khóa học"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-200 w-64"
+            color="blue"
+            className="pl-10 pr-4"
           />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-500" />
+          <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
         </div>
       </div>
 

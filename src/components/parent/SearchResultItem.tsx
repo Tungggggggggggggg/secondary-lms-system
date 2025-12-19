@@ -26,15 +26,15 @@ export default function SearchResultItem({
   return (
     <div className="flex items-center justify-between p-4 border-l-4 border-l-transparent hover:border-l-amber-500 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 rounded-lg transition-all duration-300 hover:shadow-md hover:scale-102 group">
       <div className="flex-1">
-        <div className="font-semibold text-gray-900 group-hover:text-amber-700 transition-colors duration-300">
+        <div className="font-semibold text-foreground group-hover:text-amber-700 transition-colors duration-300">
           {student.fullname || "Học sinh"}
         </div>
-        <div className="text-sm text-gray-600 flex items-center gap-1 mt-0.5">
+        <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
           <Mail className="h-3 w-3" />
           {student.email}
         </div>
         {student.classrooms && student.classrooms.length > 0 && (
-          <div className="text-xs text-gray-500 mt-2">
+          <div className="text-xs text-muted-foreground mt-2">
             <span className="font-medium">Lớp:</span> {student.classrooms.map((c) => c.name).join(", ")}
           </div>
         )}

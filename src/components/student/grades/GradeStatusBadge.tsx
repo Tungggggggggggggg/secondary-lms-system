@@ -17,7 +17,7 @@ export default function GradeStatusBadge({ status }: Props) {
       label: "Chờ chấm",
     },
     pending: {
-      cls: "bg-slate-50 text-slate-700 border-slate-200",
+      cls: "bg-muted/40 text-muted-foreground border-border",
       label: "Chưa nộp",
     },
   } as const;

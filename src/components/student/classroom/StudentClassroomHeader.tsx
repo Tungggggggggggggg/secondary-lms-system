@@ -57,13 +57,13 @@ export default function StudentClassroomHeader({ classroom }: Props) {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start min-w-0">
                     <div className="space-y-1 min-w-0">
-                        <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">
+                        <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">
                             {classroom.name}
                         </h1>
-                        <p className="text-xs sm:text-sm text-slate-600 truncate">
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
                             GV: {classroom.teacher?.fullname || "Giáo viên"}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                             {classroom._count?.students ?? 0} học sinh
                         </p>
                     </div>
@@ -74,7 +74,7 @@ export default function StudentClassroomHeader({ classroom }: Props) {
                             type="button"
                             onClick={handleMessageTeacher}
                             disabled={isCreatingConversation}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-green-600 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-md hover:bg-green-700 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 disabled:opacity-60 disabled:hover:bg-green-600 disabled:hover:shadow-md transition-all duration-200"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-green-600 px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-md hover:bg-green-700 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60 disabled:hover:bg-green-600 disabled:hover:shadow-md transition-all duration-200"
                             aria-label="Nhắn giáo viên"
                         >
                             <MessageCircle className="h-4 w-4" />

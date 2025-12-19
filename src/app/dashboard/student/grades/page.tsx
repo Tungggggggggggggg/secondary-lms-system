@@ -136,7 +136,7 @@ export default function GradesPage() {
       default:
         return {
           label: "Chưa nộp",
-          className: "bg-slate-50 text-slate-700 border border-slate-200",
+          className: "bg-muted/40 text-muted-foreground border border-border",
         };
     }
   };
@@ -170,7 +170,7 @@ export default function GradesPage() {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Breadcrumb items={breadcrumbItems} color="green" className="mb-2" />
         <div className="rounded-2xl border border-red-200 bg-red-50 p-5 sm:p-6 text-red-700">
           <h3 className="font-semibold mb-2">Lỗi tải danh sách điểm số</h3>
@@ -182,7 +182,7 @@ export default function GradesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="space-y-6">
       <Breadcrumb items={breadcrumbItems} color="green" className="mb-2" />
 
       <PageHeader
@@ -193,7 +193,7 @@ export default function GradesPage() {
 
       {/* KPI Statistics */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-4 sm:p-5 shadow-[0_10px_30px_rgba(16,185,129,0.15)] flex items-center gap-4">
+        <div className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-background to-emerald-50 p-4 sm:p-5 shadow-[0_10px_30px_rgba(16,185,129,0.15)] flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-400 text-white shadow-md">
             <Award className="h-6 w-6" />
           </div>
@@ -201,7 +201,7 @@ export default function GradesPage() {
             <div className="text-xs font-semibold tracking-wide text-emerald-700/80 uppercase">
               Điểm trung bình
             </div>
-            <div className="text-2xl font-semibold text-slate-900">
+            <div className="text-2xl font-semibold text-foreground">
               {(statistics.totalGraded ?? 0) > 0
                 ? statistics.averageGrade.toFixed(1)
                 : "N/A"}
@@ -209,7 +209,7 @@ export default function GradesPage() {
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-sky-50 p-4 sm:p-5 shadow-[0_10px_30px_rgba(56,189,248,0.15)] flex items-center gap-4">
+        <div className="group relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 via-background to-sky-50 p-4 sm:p-5 shadow-[0_10px_30px_rgba(56,189,248,0.15)] flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-500 text-white shadow-md">
             <CheckCircle2 className="h-6 w-6" />
           </div>
@@ -217,13 +217,13 @@ export default function GradesPage() {
             <div className="text-xs font-semibold tracking-wide text-sky-700/80 uppercase">
               Đã chấm
             </div>
-            <div className="text-2xl font-semibold text-slate-900">
+            <div className="text-2xl font-semibold text-foreground">
               {statistics.totalGraded ?? 0}
             </div>
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 via-white to-amber-50 p-4 sm:p-5 shadow-[0_10px_30px_rgba(251,191,36,0.18)] flex items-center gap-4">
+        <div className="group relative overflow-hidden rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 via-background to-amber-50 p-4 sm:p-5 shadow-[0_10px_30px_rgba(251,191,36,0.18)] flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 text-white shadow-md">
             <Clock className="h-6 w-6" />
           </div>
@@ -231,7 +231,7 @@ export default function GradesPage() {
             <div className="text-xs font-semibold tracking-wide text-amber-700/80 uppercase">
               Chưa chấm
             </div>
-            <div className="text-2xl font-semibold text-slate-900">
+            <div className="text-2xl font-semibold text-foreground">
               {statistics.totalPending ?? 0}
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function GradesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
         {/* Search */}
         <div className="relative md:justify-self-start">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Tìm kiếm bài tập hoặc lớp học..."
             value={searchQuery}
@@ -287,20 +287,20 @@ export default function GradesPage() {
       {/* Grades Table */}
       {isLoading ? (
         <div className="space-y-3">
-          <div className="h-10 w-60 bg-slate-200 rounded-xl motion-safe:animate-pulse" />
-          <div className="h-8 w-full bg-slate-200 rounded-xl motion-safe:animate-pulse" />
-          <div className="h-64 w-full bg-slate-200 rounded-2xl motion-safe:animate-pulse" />
+          <div className="h-10 w-60 bg-muted rounded-xl motion-safe:animate-pulse" />
+          <div className="h-8 w-full bg-muted rounded-xl motion-safe:animate-pulse" />
+          <div className="h-64 w-full bg-muted rounded-2xl motion-safe:animate-pulse" />
         </div>
       ) : filteredAndSortedGrades.length === 0 ? (
-        <div className="bg-white/90 rounded-3xl p-10 text-center border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+        <div className="bg-card/90 rounded-3xl p-10 text-center border border-border shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
           <div className="mb-4 flex justify-center">
             <BarChart3 className="h-12 w-12 text-green-600" />
           </div>
 
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">
+          <h3 className="text-xl font-semibold text-foreground mb-2">
             Chưa có điểm số nào
           </h3>
-          <p className="text-slate-600">
+          <p className="text-muted-foreground">
             {grades.length === 0
               ? "Bạn chưa có bài nộp nào được chấm điểm"
               : "Không tìm thấy điểm số nào phù hợp với bộ lọc"}
@@ -308,17 +308,17 @@ export default function GradesPage() {
         </div>
       ) : (
         <>
-          <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] overflow-hidden">
+          <div className="bg-card/90 rounded-3xl border border-border shadow-[0_10px_30px_rgba(15,23,42,0.06)] overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-green-50/60">
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Lớp học</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Bài tập</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Loại</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Điểm</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Nhận xét</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Ngày nộp</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Trạng thái</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Lớp học</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Bài tập</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Loại</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Điểm</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Nhận xét</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Ngày nộp</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Trạng thái</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -333,17 +333,18 @@ export default function GradesPage() {
                         {grade.classroom ? (
                           <div className="flex items-center gap-2">
                             <BookOpen className="h-4 w-4 text-green-600" />
-                            <span className="font-medium text-slate-900">
+                            <span className="font-medium text-foreground">
                               {grade.classroom.name}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-slate-400">N/A</span>
+                          <span className="text-muted-foreground">N/A</span>
                         )}
                       </TableCell>
-                      <TableCell className="font-medium text-slate-900">
+                      <TableCell className="font-medium text-foreground">
                         {grade.assignmentTitle}
                       </TableCell>
+
                       <TableCell>
                         <span
                           className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
@@ -389,19 +390,20 @@ export default function GradesPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenFeedback(grade)}
-                            className="inline-flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-100 hover:border-green-200 transition-colors shadow-sm"
+                            className="inline-flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-100 hover:border-green-200 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                           >
                             <MessageCircle className="h-4 w-4" />
                             <span>Xem</span>
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Không có</span>
+                          <span className="text-xs text-muted-foreground italic">Không có</span>
                         )}
                       </TableCell>
 
-                      <TableCell className="text-sm text-slate-600">
+                      <TableCell className="text-sm text-muted-foreground">
                         {grade.submittedAt ? formatDate(grade.submittedAt) : "Chưa nộp"}
                       </TableCell>
+
                       <TableCell>
                         <span
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusBadge.className}`}
@@ -433,7 +435,7 @@ export default function GradesPage() {
                     Bài tập: <span className="font-medium">{selectedFeedback.assignmentTitle}</span>
                   </DialogDescription>
                 </DialogHeader>
-                <div className="px-6 py-4 text-sm text-slate-800 whitespace-pre-line max-h-[50vh] overflow-y-auto">
+                <div className="px-6 py-4 text-sm text-foreground whitespace-pre-line max-h-[50vh] overflow-y-auto">
                   {selectedFeedback.feedback}
                 </div>
                 <DialogFooter>

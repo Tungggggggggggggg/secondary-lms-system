@@ -79,7 +79,7 @@ export default function UpcomingAssignments() {
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
-              <div className="h-20 bg-gray-200 rounded-xl"></div>
+              <div className="h-20 bg-muted rounded-xl"></div>
             </div>
           ))}
         </div>
@@ -99,7 +99,7 @@ export default function UpcomingAssignments() {
         }
         actions={<Link href="/dashboard/student/assignments" className="text-sm text-green-600 hover:text-green-700 font-semibold">Xem tất cả</Link>}
       >
-        <div className="text-red-500 text-center py-4">Có lỗi xảy ra: {String(error)}</div>
+        <div className="text-destructive text-center py-4">Có lỗi xảy ra: {String(error)}</div>
       </SectionCard>
     );
   }
@@ -125,7 +125,7 @@ export default function UpcomingAssignments() {
           size="sm"
           accent="student"
         />
-        <div className="text-center py-8 text-gray-500 mt-4">
+        <div className="text-center py-8 text-muted-foreground mt-4">
           <p>Không có bài tập nào</p>
         </div>
       </SectionCard>

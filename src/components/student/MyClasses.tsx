@@ -29,7 +29,7 @@ export default function MyClasses() {
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
-              <div className="h-24 bg-gray-200 rounded-xl"></div>
+              <div className="h-24 bg-muted rounded-xl"></div>
             </div>
           ))}
         </div>
@@ -54,7 +54,7 @@ export default function MyClasses() {
           </Link>
         }
       >
-        <div className="text-red-500 text-center py-4">Có lỗi xảy ra: {error}</div>
+        <div className="text-destructive text-center py-4">Có lỗi xảy ra: {error}</div>
       </SectionCard>
     );
   }
@@ -76,7 +76,7 @@ export default function MyClasses() {
           </Link>
         }
       >
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-muted-foreground">
           <p className="mb-4">Bạn chưa tham gia lớp học nào.</p>
           <Link href="/dashboard/student/classes/join" className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700">
             Tham gia lớp học đầu tiên

@@ -89,7 +89,7 @@ export default function CourseList({
               key={course.id}
               type="button"
               onClick={() => handleCourseClick(course.id)}
-              className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
 
               <div className="flex items-center justify-between mb-4">

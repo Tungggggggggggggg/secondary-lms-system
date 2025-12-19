@@ -33,7 +33,7 @@ export default function DashboardPage() {
     });
 
     return (
-        <div className="p-8 space-y-8">
+        <div className="space-y-8">
             <PageHeader
                 title={`Chào mừng trở lại, ${displayName} 👋`}
                 subtitle={`Hôm nay là ${dayName}, ${dateStr}`}

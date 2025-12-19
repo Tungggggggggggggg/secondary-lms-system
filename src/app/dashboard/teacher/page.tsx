@@ -11,7 +11,7 @@ export default function TeacherRedirectPage() {
   }, [router]);
 
   return (
-    <div className="flex items-center justify-center py-12 text-slate-600">
+    <div className="flex items-center justify-center py-12 text-muted-foreground">
       <p>Đang chuyển hướng...</p>
     </div>
   );

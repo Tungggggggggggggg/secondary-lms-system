@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import ClassesToolbar from "@/components/student/ClassesToolbar";
 import ClassList from "@/components/student/ClassList";
 import ClassGridSkeleton from "@/components/student/ClassGridSkeleton";
@@ -103,9 +104,9 @@ export default function ClassesPage() {
       {isLoading && (
         <>
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-            <div className="flex-1 h-10 bg-gray-200 rounded-xl motion-safe:animate-pulse" />
-            <div className="w-32 h-10 bg-gray-200 rounded-xl motion-safe:animate-pulse" />
-            <div className="w-24 h-10 bg-gray-200 rounded-xl motion-safe:animate-pulse" />
+            <Skeleton className="flex-1 h-10 rounded-xl" />
+            <Skeleton className="w-32 h-10 rounded-xl" />
+            <Skeleton className="w-24 h-10 rounded-xl" />
           </div>
           <ClassGridSkeleton count={6} variant={view} />
         </>

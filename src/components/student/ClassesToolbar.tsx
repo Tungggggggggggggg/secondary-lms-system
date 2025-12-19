@@ -48,7 +48,7 @@ export default function ClassesToolbar({
     >
       {/* Search Input (left) */}
       <div className="relative md:justify-self-start">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
           type="text"
           placeholder="Tìm kiếm lớp học..."
@@ -62,15 +62,15 @@ export default function ClassesToolbar({
 
       {/* Controls group (right): view toggle + sort */}
       <div className="flex items-center justify-start md:justify-end gap-2">
-        <div className="flex h-12 items-center gap-2 border border-gray-200 rounded-xl p-1 bg-white">
+        <div className="flex h-12 items-center gap-2 border border-border rounded-xl p-1 bg-background">
           <button
             onClick={() => onViewChange("grid")}
             className={cn(
-              "p-2 rounded-lg",
+              "p-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               "transition-all duration-200 motion-safe:duration-200 motion-reduce:duration-0",
               view === "grid"
                 ? "bg-green-100 text-green-700"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
             aria-label="Xem dạng lưới"
             aria-pressed={view === "grid"}
@@ -80,11 +80,11 @@ export default function ClassesToolbar({
           <button
             onClick={() => onViewChange("list")}
             className={cn(
-              "p-2 rounded-lg",
+              "p-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               "transition-all duration-200 motion-safe:duration-200 motion-reduce:duration-0",
               view === "list"
                 ? "bg-green-100 text-green-700"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
             aria-label="Xem dạng danh sách"
             aria-pressed={view === "list"}

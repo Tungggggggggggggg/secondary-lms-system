@@ -66,8 +66,8 @@ export default function StatsOverview() {
     // Error state
     if (error) {
         return (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-8">
-                <p className="text-red-600">Lỗi khi tải thống kê: {error}</p>
+            <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-6 mb-8">
+                <p className="text-destructive">Lỗi khi tải thống kê: {error}</p>
             </div>
         );
     }
@@ -75,8 +75,8 @@ export default function StatsOverview() {
     // No data state
     if (!stats) {
         return (
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 mb-8">
-                <p className="text-gray-600">Không có dữ liệu thống kê</p>
+            <div className="bg-muted/40 border border-border rounded-2xl p-6 mb-8">
+                <p className="text-muted-foreground">Không có dữ liệu thống kê</p>
             </div>
         );
     }

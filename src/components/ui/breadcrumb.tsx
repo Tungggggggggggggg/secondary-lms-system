@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRoleTheme } from "@/components/providers/RoleThemeProvider";
 
 /**
  * BreadcrumbItem - Item trong breadcrumb navigation
@@ -27,6 +28,7 @@ interface BreadcrumbProps {
  */
 export default function Breadcrumb({ items, className = "", color = "blue" }: BreadcrumbProps) {
   const pathname = usePathname();
+  const theme = useRoleTheme();
 
   // Không hiển thị nếu chỉ có 1 item hoặc không có item nào
   if (!items || items.length <= 1) {
@@ -42,9 +44,12 @@ export default function Breadcrumb({ items, className = "", color = "blue" }: Br
     green: "hover:text-green-700 hover:bg-green-50 focus-visible:ring-green-500",
   };
 
+  const effectiveColor = theme?.color ?? color;
+  const isAdmin = theme?.role === "admin";
+
   return (
     <nav
-      className={`flex items-center gap-2 text-sm text-gray-600 mb-2 ${className}`}
+      className={`flex items-center gap-2 text-sm text-muted-foreground mb-2 ${className}`}
       aria-label="Breadcrumb"
     >
       {items.map((item, index) => {
@@ -56,7 +61,7 @@ export default function Breadcrumb({ items, className = "", color = "blue" }: Br
             {item.href && !isLast ? (
               <Link
                 href={item.href}
-                className={`${linkBase} ${linkStyles[color]}`}
+                className={`${linkBase} ${isAdmin ? "hover:bg-muted/60 hover:text-foreground focus-visible:ring-ring" : linkStyles[effectiveColor]}`}
               >
                 {item.label}
               </Link>
@@ -64,8 +69,8 @@ export default function Breadcrumb({ items, className = "", color = "blue" }: Br
               <span
                 className={`${
                   isLast || isActive
-                    ? "text-gray-900 font-semibold"
-                    : "text-gray-600"
+                    ? "text-foreground font-semibold"
+                    : "text-muted-foreground"
                 }`}
                 aria-current={isLast ? "page" : undefined}
               >
@@ -73,7 +78,7 @@ export default function Breadcrumb({ items, className = "", color = "blue" }: Br
               </span>
             )}
             {!isLast && (
-              <span className="text-gray-400" aria-hidden="true">/</span>
+              <span className="text-muted-foreground/70" aria-hidden="true">/</span>
             )}
           </div>
         );

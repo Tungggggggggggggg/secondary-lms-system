@@ -180,7 +180,7 @@ export default function StudentsPage() {
     { label: "Học sinh", href: "/dashboard/teacher/students" },
   ];
   return (
-    <div className="p-8">
+    <div className="space-y-6">
       {/* Header */}
       <Breadcrumb items={breadcrumbItems} color="blue" className="mb-2" />
       <PageHeader
@@ -188,7 +188,7 @@ export default function StudentsPage() {
         subtitle="Theo dõi và hỗ trợ học sinh trong các lớp của bạn"
         role="teacher"
         badge={
-          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm">
+          <span className="inline-flex items-center rounded-full bg-background/90 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm border border-border">
             <Users className="mr-1 h-3.5 w-3.5" />
             {overview.totalStudents} học sinh
           </span>
@@ -241,17 +241,17 @@ export default function StudentsPage() {
           <button
             type="button"
             onClick={onExportFiltered}
-            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="Xuất Excel theo bộ lọc"
           >
             Xuất Excel
           </button>
           {/* View toggle */}
-          <div className="inline-flex rounded-xl border border-blue-200 overflow-hidden">
+          <div className="inline-flex rounded-xl border border-blue-200 overflow-hidden bg-background">
             <button
               type="button"
               onClick={() => setView("list")}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm ${view === "list" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "list" ? "bg-blue-600 text-white" : "bg-background text-blue-700 hover:bg-blue-50"}`}
               aria-pressed={view === "list"}
             >
               <LayoutList className="h-4 w-4" /> Danh sách
@@ -259,7 +259,7 @@ export default function StudentsPage() {
             <button
               type="button"
               onClick={() => setView("table")}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm border-l border-blue-200 ${view === "table" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm border-l border-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "table" ? "bg-blue-600 text-white" : "bg-background text-blue-700 hover:bg-blue-50"}`}
               aria-pressed={view === "table"}
             >
               <LayoutGrid className="h-4 w-4" /> Bảng
@@ -284,7 +284,7 @@ export default function StudentsPage() {
               onClick={() => {
                 void handleRefresh();
               }}
-              className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Thử lại
             </button>
@@ -303,7 +303,7 @@ export default function StudentsPage() {
                 // Điều hướng tới màn quản lý lớp nếu cần, tạm thời chỉ gọi lại fetch
                 void handleRefresh();
               }}
-              className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              className="mt-2 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Làm mới dữ liệu
             </button>

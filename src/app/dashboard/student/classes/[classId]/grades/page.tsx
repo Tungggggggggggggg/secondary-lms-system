@@ -147,7 +147,7 @@ export default function StudentClassroomGradesPage() {
         title={<span className="text-green-700">Điểm số của lớp</span>}
         actions={
           <div className="flex items-center gap-2 sm:gap-3">
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide hidden sm:block">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:block">
               Sắp xếp
             </label>
             <div className="relative">
@@ -162,14 +162,14 @@ export default function StudentClassroomGradesPage() {
                       | "due_date"
                   )
                 }
-                className="appearance-none px-3 sm:px-4 pr-8 sm:pr-9 py-2 bg-white/90 rounded-lg border border-slate-200 text-xs sm:text-sm text-slate-700 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                className="appearance-none px-3 sm:px-4 pr-8 sm:pr-9 py-2 bg-background rounded-lg border border-border text-xs sm:text-sm text-foreground font-medium shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
               >
                 <option value="newest">Mới nhất</option>
                 <option value="grade_desc">Điểm cao nhất</option>
                 <option value="grade_asc">Điểm thấp nhất</option>
                 <option value="due_date">Hạn nộp</option>
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 sm:right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <ChevronDown className="pointer-events-none absolute right-2 sm:right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             </div>
           </div>
         }
@@ -206,53 +206,53 @@ export default function StudentClassroomGradesPage() {
 
       {/* Grades Table */}
       {isLoading ? (
-        <div className="bg-white/90 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-card/90 rounded-2xl border border-border shadow-sm overflow-hidden">
           <div className="space-y-3 p-4 sm:p-6">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="h-4 bg-slate-200 rounded flex-1" />
-                <div className="h-4 bg-slate-100 rounded w-20" />
-                <div className="h-4 bg-slate-100 rounded w-20" />
+                <div className="h-4 bg-muted rounded flex-1" />
+                <div className="h-4 bg-muted rounded w-20" />
+                <div className="h-4 bg-muted rounded w-20" />
               </div>
             ))}
           </div>
         </div>
       ) : filteredAndSortedGrades.length === 0 ? (
-        <div className="bg-white/90 rounded-2xl border border-slate-100 p-8 sm:p-12 text-center shadow-sm">
+        <div className="bg-card/90 rounded-2xl border border-border p-8 sm:p-12 text-center shadow-sm">
           <div className="flex justify-center mb-4">
             <BarChart3 className="h-12 w-12 text-green-600" />
           </div>
-          <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">
+          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">
             Chưa có điểm số nào
           </h3>
-          <p className="text-sm sm:text-base text-slate-600">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Khi bạn nộp bài và được chấm điểm, bảng điểm sẽ hiển thị tại đây.
           </p>
         </div>
       ) : (
-        <div className="bg-white/90 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-card/90 rounded-2xl border border-border shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-green-50/60 border-b border-slate-200">
-                <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+              <TableRow className="bg-green-50/60 border-b border-border">
+                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Bài tập
                 </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Loại
                 </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Hạn nộp
                 </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Ngày nộp
                 </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Điểm
                 </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Nhận xét
                 </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Trạng thái
                 </TableHead>
               </TableRow>
@@ -260,18 +260,19 @@ export default function StudentClassroomGradesPage() {
             <TableBody>
               {filteredAndSortedGrades.map((grade) => (
                 <TableRow key={grade.id} className="hover:bg-green-50/40 transition-colors">
-                  <TableCell className="font-medium text-slate-900">
+                  <TableCell className="font-medium text-foreground">
                     {grade.assignmentTitle}
                   </TableCell>
                   <TableCell>
-                    <AssignmentTypeBadge type={grade.assignmentType as any} />
+                    <AssignmentTypeBadge type={grade.assignmentType} />
                   </TableCell>
-                  <TableCell className="text-sm text-slate-600">
+                  <TableCell className="text-sm text-muted-foreground">
                     {formatDate(grade.dueDate ?? null)}
                   </TableCell>
-                  <TableCell className="text-sm text-slate-600">
+                  <TableCell className="text-sm text-muted-foreground">
                     {grade.submittedAt ? formatDate(grade.submittedAt) : "Chưa nộp"}
                   </TableCell>
+
                   <TableCell>
                     {grade.grade !== null ? (
                       <span
@@ -302,11 +303,12 @@ export default function StudentClassroomGradesPage() {
                         <span>Xem</span>
                       </button>
                     ) : (
-                      <span className="text-xs text-slate-400 italic">
+                      <span className="text-xs text-muted-foreground italic">
                         Không có
                       </span>
                     )}
                   </TableCell>
+
                   <TableCell>
                     <GradeStatusBadge status={grade.status} />
                   </TableCell>
@@ -337,7 +339,7 @@ export default function StudentClassroomGradesPage() {
                 </span>
               </DialogDescription>
             </DialogHeader>
-            <div className="px-6 py-4 text-sm text-slate-800 whitespace-pre-line max-h-[50vh] overflow-y-auto">
+            <div className="px-6 py-4 text-sm text-foreground whitespace-pre-line max-h-[50vh] overflow-y-auto">
               {selectedFeedback.feedback}
             </div>
             <DialogFooter>

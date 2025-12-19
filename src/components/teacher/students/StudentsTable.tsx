@@ -25,7 +25,7 @@ export default function StudentsTable({ students, selectable = true, selectedIds
   }, [indeterminate, selectedIds.length, selectable]);
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
       <table className="min-w-full text-sm">
         <thead className="bg-blue-50 sticky top-0 z-10">
           <tr className="text-left text-blue-900">
@@ -52,7 +52,7 @@ export default function StudentsTable({ students, selectable = true, selectedIds
           {students.map((s) => {
             const checked = selectable && selectedIds.includes(s.id);
             return (
-              <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={s.id} className="border-t border-border hover:bg-muted/40">
                 {selectable && (
                   <td className="px-4 py-3">
                     <input
@@ -68,10 +68,10 @@ export default function StudentsTable({ students, selectable = true, selectedIds
                     <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 text-white font-bold flex items-center justify-center">
                       {s.avatarInitial}
                     </div>
-                    <div className="font-medium text-slate-800">{s.fullname}</div>
+                    <div className="font-medium text-foreground">{s.fullname}</div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-slate-700">
+                <td className="px-4 py-3 text-muted-foreground">
                   {s.classroomCode} · {s.classroomName}
                 </td>
                 <td className="px-4 py-3 font-semibold">

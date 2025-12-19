@@ -29,9 +29,18 @@ export default function ClassroomCard({
   return (
     <article
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (!clickable) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
       className={cn(
         "bg-white rounded-2xl shadow-lg p-6 transition-all",
-        clickable ? "cursor-pointer hover:shadow-xl hover:-translate-y-1" : "",
+        clickable
+          ? "cursor-pointer hover:shadow-xl hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          : "",
         className
       )}
       role={clickable ? "button" : undefined}

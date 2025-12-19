@@ -69,10 +69,20 @@ function AssignmentCard({
 
   return (
     <div
-      className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer"
+      className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       onClick={() =>
         router.push(`/dashboard/teacher/assignments/${assignment.id}`)
       }
+      onKeyDown={(e) => {
+        if (e.currentTarget !== e.target) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push(`/dashboard/teacher/assignments/${assignment.id}`);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Mở bài tập: ${assignment.title}`}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -147,6 +157,7 @@ function AssignmentCard({
         {/* Actions */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onViewSubmissions();
@@ -156,6 +167,7 @@ function AssignmentCard({
             Xem bài nộp
           </button>
           <button
+            type="button"
             onClick={handleRemove}
             disabled={isRemoving}
             className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-all text-sm font-medium disabled:opacity-50"

@@ -21,6 +21,18 @@ const MIME_WHITELIST = new Set([
     "application/zip",
 ]);
 
+type StoredSubmissionFile = {
+    mimeType?: string | null;
+    fileName?: string | null;
+    storagePath: string;
+};
+
+const isStoredSubmissionFile = (v: unknown): v is StoredSubmissionFile => {
+    if (!v || typeof v !== "object") return false;
+    const obj = v as Record<string, unknown>;
+    return typeof obj.storagePath === "string";
+};
+
 export default function FileSubmissionPanel({ assignmentId }: { assignmentId: string }) {
     const { toast } = useToast();
     const [files, setFiles] = useState<File[]>([]);
@@ -193,8 +205,9 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
             setFiles([]);
             setStatus("draft");
             toast({ title: "Đã lưu thay đổi", description: `Lưu ${allFiles.length} file vào bản nháp` });
-        } catch (e: any) {
-            toast({ title: "Lỗi lưu nháp", description: e.message || "Đã xảy ra lỗi", variant: "destructive" });
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Đã xảy ra lỗi";
+            toast({ title: "Lỗi lưu nháp", description: msg, variant: "destructive" });
         } finally {
             setIsUploading(false);
             setIsSaving(false);
@@ -216,8 +229,9 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
             if (!res.ok || !j?.success) throw new Error(j?.message || "Xác nhận nộp bài thất bại");
             toast({ title: "Đã nộp bài", description: "Bài nộp đã được xác nhận" });
             setStatus("submitted");
-        } catch (e: any) {
-            toast({ title: "Lỗi nộp bài", description: e.message || "Đã xảy ra lỗi", variant: "destructive" });
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Đã xảy ra lỗi";
+            toast({ title: "Lỗi nộp bài", description: msg, variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -232,8 +246,12 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                     setUploaded(j.data.files || []);
                     setStatus(j.data.status || "draft");
                     // proactively fetch signed urls for image files
-                    const imgs = (j.data.files || []).filter((f: any) => f?.mimeType?.startsWith("image/") || isImageByName(f?.fileName) || isImageByName(f?.storagePath));
-                    await Promise.all(imgs.map((f: any) => fetchSignedUrl(f.storagePath)));
+                    const rawFiles: unknown = j.data.files;
+                    const list = Array.isArray(rawFiles) ? rawFiles : [];
+                    const imgs = list
+                        .filter(isStoredSubmissionFile)
+                        .filter((f) => (f.mimeType || "").startsWith("image/") || isImageByName(f.fileName ?? undefined) || isImageByName(f.storagePath));
+                    await Promise.all(imgs.map((f) => fetchSignedUrl(f.storagePath)));
                 }
             } catch {}
         })();
@@ -242,7 +260,7 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
     return (
         <Card className="p-4">
             <div
-                className="border-2 border-dashed rounded-xl p-5 text-center text-sm text-gray-600 bg-white/70 backdrop-blur transition-colors hover:bg-gray-50 hover:border-gray-400"
+                className="border-2 border-dashed border-border rounded-xl p-5 text-center text-sm text-muted-foreground bg-background/70 backdrop-blur transition-colors hover:bg-muted/40 hover:border-muted-foreground/60"
                 onDrop={onDrop}
                 onDragOver={onDragOver}
             >
@@ -256,30 +274,42 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {uploaded.map((f, idx) => (
-                            <div key={`u-${idx}`} className="border rounded-lg p-2 cursor-pointer bg-white shadow-sm hover:shadow-md hover:bg-gray-50 transition" onClick={() => openEditForUploaded(idx)}>
-                                <div className="aspect-video bg-gray-50 flex items-center justify-center overflow-hidden rounded">
+                            <button
+                                key={`u-${idx}`}
+                                type="button"
+                                className="border border-border rounded-lg p-2 bg-background shadow-sm hover:shadow-md hover:bg-muted/40 transition text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                onClick={() => openEditForUploaded(idx)}
+                                aria-label={`Chỉnh sửa tệp ${f.fileName}`}
+                            >
+                                <div className="aspect-video bg-muted/40 flex items-center justify-center overflow-hidden rounded">
                                     {(f.mimeType?.startsWith("image/") || isImageByName(f.fileName) || isImageByName(f.storagePath)) ? (
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img src={signedUrlByPath[f.storagePath] || publicUrlForStored(f.storagePath)} alt={f.fileName} className="object-cover w-full h-full" />
                                     ) : (
-                                        <div className="text-xs text-gray-500">{f.mimeType || "file"}</div>
+                                        <div className="text-xs text-muted-foreground">{f.mimeType || "file"}</div>
                                     )}
                                 </div>
                                 <div className="mt-2 text-xs truncate" title={f.fileName}>{f.fileName}</div>
-                            </div>
+                            </button>
                         ))}
                         {files.map((f, idx) => (
-                            <div key={`n-${idx}`} className="border rounded-lg p-2 cursor-pointer bg-white shadow-sm hover:shadow-md hover:bg-gray-50 transition" onClick={() => openEditForNew(idx)}>
-                                <div className="aspect-video bg-gray-50 flex items-center justify-center overflow-hidden rounded">
+                            <button
+                                key={`n-${idx}`}
+                                type="button"
+                                className="border border-border rounded-lg p-2 bg-background shadow-sm hover:shadow-md hover:bg-muted/40 transition text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                onClick={() => openEditForNew(idx)}
+                                aria-label={`Chỉnh sửa tệp ${f.name}`}
+                            >
+                                <div className="aspect-video bg-muted/40 flex items-center justify-center overflow-hidden rounded">
                                     {(f.type.startsWith("image/") || isImageByName(f.name)) ? (
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img src={previewFor(f)} alt={f.name} className="object-cover w-full h-full" />
                                     ) : (
-                                        <div className="text-xs text-gray-500">{f.type || "file"}</div>
+                                        <div className="text-xs text-muted-foreground">{f.type || "file"}</div>
                                     )}
                                 </div>
                                 <div className="mt-2 text-xs truncate" title={f.name}>{f.name}</div>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 )}
@@ -287,7 +317,7 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
 
             <div className="mt-4">
                 <div className="text-sm font-medium">Đã thêm mới: {files.length} file</div>
-                <div className="text-xs text-gray-500">Tổng {(totalSize / (1024 * 1024)).toFixed(2)} MB</div>
+                <div className="text-xs text-muted-foreground">Tổng {(totalSize / (1024 * 1024)).toFixed(2)} MB</div>
             </div>
 
             {/* Đã gộp hiển thị bản nháp vào khung kéo-thả phía trên */}
@@ -310,12 +340,12 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                 <DialogContent className="md:max-w-3xl p-0 overflow-hidden rounded-2xl" onClose={() => setEditOpen(false)}>
                     <div className="md:grid md:grid-cols-2">
                         {/* Preview */}
-                        <div className="relative bg-gray-50 p-5 flex items-center justify-center">
+                        <div className="relative bg-muted/40 p-5 flex items-center justify-center">
                             {editPreviewUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={editPreviewUrl} alt="preview" className="max-h-80 rounded-lg shadow object-contain" />
                             ) : (
-                                <div className="text-xs text-gray-500">Không có bản xem trước</div>
+                                <div className="text-xs text-muted-foreground">Không có bản xem trước</div>
                             )}
                         </div>
 
@@ -324,10 +354,10 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                             <DialogHeader className="p-0">
                                 <DialogTitle className="text-lg">Chỉnh sửa tệp</DialogTitle>
                             </DialogHeader>
-                            <p className="text-xs text-gray-500">Đặt lại tên hiển thị trước khi lưu nháp hoặc nộp.</p>
+                            <p className="text-xs text-muted-foreground">Đặt lại tên hiển thị trước khi lưu nháp hoặc nộp.</p>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-gray-700">Tên tệp</label>
+                                <label className="text-xs font-medium text-foreground">Tên tệp</label>
                                 <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
                             </div>
 

@@ -183,7 +183,7 @@ export default function StudentFamilyPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* a11y live region for copy */}
       <p className="sr-only" aria-live="polite">{liveMessage}</p>
 
@@ -206,18 +206,18 @@ export default function StudentFamilyPage() {
       })()}
 
       {/* Create Invitation */}
-      <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
+      <Card className="bg-card/90 rounded-3xl border border-border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base sm:text-lg text-slate-900 flex items-center gap-2">
+          <CardTitle className="text-base sm:text-lg text-foreground flex items-center gap-2">
             <Users className="h-5 w-5 text-green-600" />
             Mời phụ huynh
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm text-slate-600">
+          <CardDescription className="text-xs sm:text-sm text-muted-foreground">
             Tạo mã mời và gửi cho phụ huynh để họ liên kết tài khoản với bạn.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs sm:text-sm text-slate-500">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             Mỗi mã mời chỉ sử dụng được một lần và có thời hạn nhất định.
           </div>
           <Button
@@ -235,7 +235,7 @@ export default function StudentFamilyPage() {
 
       {/* Pending Invitations */}
       {loadingInv ? (
-        <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm p-5">
+        <div className="bg-card/90 rounded-3xl border border-border shadow-sm p-5">
           <div className="space-y-3">
             <Skeleton className="h-5 w-56" />
             {[1,2].map(i => (
@@ -247,9 +247,9 @@ export default function StudentFamilyPage() {
           </div>
         </div>
       ) : invitations.filter((inv) => inv.status === "PENDING").length > 0 && (
-        <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
+        <Card className="bg-card/90 rounded-3xl border border-border shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base sm:text-lg text-slate-900">
+            <CardTitle className="text-base sm:text-lg text-foreground">
               Mã mời đang chờ ({invitations.filter((inv) => inv.status === "PENDING").length})
             </CardTitle>
           </CardHeader>
@@ -259,11 +259,11 @@ export default function StudentFamilyPage() {
               .map((invitation) => (
                 <div
                   key={invitation.id}
-                  className="flex items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border border-slate-100 bg-white/90 shadow-sm hover:border-slate-200 hover:shadow-md transition-all"
+                  className="flex items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border border-border bg-card/90 shadow-sm hover:border-border hover:shadow-md transition-all"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <code className="text-lg sm:text-2xl font-mono font-semibold bg-slate-900 text-slate-50 px-4 py-2 rounded-2xl tracking-[0.25em]">
+                      <code className="text-lg sm:text-2xl font-mono font-semibold bg-foreground text-background px-4 py-2 rounded-2xl tracking-[0.25em]">
                         {invitation.code}
                       </code>
                       <Button
@@ -280,7 +280,7 @@ export default function StudentFamilyPage() {
                         )}
                       </Button>
                     </div>
-                    <div className="mt-2 text-xs sm:text-sm text-slate-600 flex items-center gap-1.5">
+                    <div className="mt-2 text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
                       <Clock className="h-3 w-3" />
                       <span>Hết hạn: {formatDate(invitation.expiresAt, "medium")}</span>
                     </div>
@@ -306,7 +306,7 @@ export default function StudentFamilyPage() {
 
       {/* Pending Requests */}
       {loadingReq ? (
-        <div className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm p-5">
+        <div className="bg-card/90 rounded-3xl border border-border shadow-sm p-5">
           <div className="space-y-3">
             <Skeleton className="h-5 w-56" />
             {[1,2,3].map(i => (
@@ -321,35 +321,35 @@ export default function StudentFamilyPage() {
           </div>
         </div>
       ) : requests.length > 0 && (
-        <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
+        <Card className="bg-card/90 rounded-3xl border border-border shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base sm:text-lg text-slate-900">
+            <CardTitle className="text-base sm:text-lg text-foreground">
               Yêu cầu liên kết ({requests.length})
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm text-slate-600">
+            <CardDescription className="text-xs sm:text-sm text-muted-foreground">
               Các phụ huynh muốn liên kết tài khoản với bạn.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {requests.map((request) => (
               <div
                 key={request.id}
-                className="flex items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border border-slate-100 bg-white/90 shadow-sm hover:border-slate-200 hover:shadow-md transition-all"
+                className="flex items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl border border-border bg-card/90 shadow-sm hover:border-border hover:shadow-md transition-all"
               >
                 <div className="flex-1">
-                  <div className="font-semibold text-sm sm:text-base text-slate-900">
+                  <div className="font-semibold text-sm sm:text-base text-foreground">
                     {request.parent.fullname}
                   </div>
-                  <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1.5 mt-0.5">
+                  <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
                     <Mail className="h-3 w-3" />
                     <span>{request.parent.email}</span>
                   </div>
                   {request.message && (
-                    <div className="mt-2 text-xs sm:text-sm text-slate-700 italic">
+                    <div className="mt-2 text-xs sm:text-sm text-foreground italic">
                       “{request.message}”
                     </div>
                   )}
-                  <div className="mt-1 text-[11px] text-slate-500 flex items-center gap-1.5">
+                  <div className="mt-1 text-[11px] text-muted-foreground flex items-center gap-1.5">
                     <Calendar className="h-3 w-3" />
                     <span>{formatDate(request.createdAt, "medium")}</span>
                   </div>
@@ -382,16 +382,16 @@ export default function StudentFamilyPage() {
       )}
 
       {/* Linked Parents */}
-      <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm">
+      <Card className="bg-card/90 rounded-3xl border border-border shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base sm:text-lg text-slate-900">
+          <CardTitle className="text-base sm:text-lg text-foreground">
             Phụ huynh đã liên kết ({linkedParents.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loadingParents ? (
             <div className="space-y-3 p-4">
-              {[1,2].map(i => (
+              {[1, 2].map((i) => (
                 <div key={i} className="flex items-center gap-3">
                   <Skeleton className="h-12 w-12 rounded-full" />
                   <div className="flex-1">
@@ -402,37 +402,38 @@ export default function StudentFamilyPage() {
               ))}
             </div>
           ) : linkedParents.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              <Users className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-              <p className="text-sm sm:text-base font-medium text-slate-700">Chưa có phụ huynh nào được liên kết</p>
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/60" />
+              <p className="text-sm sm:text-base font-medium text-foreground">
+                Chưa có phụ huynh nào được liên kết
+              </p>
               <p className="text-xs sm:text-sm mt-2">
                 Tạo mã mời hoặc chờ phụ huynh gửi yêu cầu liên kết để bắt đầu.
               </p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
               {linkedParents.map((link) => (
                 <div
                   key={link.id}
-                  className="p-4 sm:p-5 rounded-2xl border border-slate-100 bg-white/90 shadow-sm hover:border-slate-200 hover:shadow-md transition-all"
+                  className="p-4 sm:p-5 rounded-2xl border border-border bg-card/90 shadow-sm hover:border-border hover:shadow-md transition-all"
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                       {link.parent.fullname?.charAt(0).toUpperCase() || "P"}
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-sm sm:text-base text-slate-900">{link.parent.fullname}</div>
-                      <div className="text-xs sm:text-sm text-slate-600 flex items-center gap-1 mt-1">
+                      <div className="font-semibold text-sm sm:text-base text-foreground">
+                        {link.parent.fullname}
+                      </div>
+                      <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 mt-1">
                         <Mail className="h-3 w-3" />
                         {link.parent.email}
                       </div>
-                      <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1.5">
+                      <div className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1.5">
                         <Clock className="h-3 w-3" />
                         <span>Liên kết từ: {formatDate(link.createdAt, "short")}</span>
                       </div>
-                      <Badge variant="outline" className="mt-2 bg-emerald-50 text-emerald-700 border-emerald-200 rounded-full px-3 py-1 text-[11px] font-semibold">
-                        Đã kích hoạt
-                      </Badge>
                     </div>
                   </div>
                 </div>

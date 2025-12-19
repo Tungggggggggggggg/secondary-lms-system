@@ -16,6 +16,8 @@ interface DashboardLayoutProps {
   children: ReactNode;
   rightAside?: ReactNode;
   lockContentScroll?: boolean;
+  wrapContent?: boolean;
+  contentClassName?: string;
 }
 
 export default function DashboardLayout({
@@ -25,6 +27,8 @@ export default function DashboardLayout({
   children,
   rightAside,
   lockContentScroll = false,
+  wrapContent = true,
+  contentClassName = "p-8 space-y-8",
 }: DashboardLayoutProps) {
   const { expanded, toggle } = useSidebarState(sidebarStateKey);
   type CSSVars = CSSProperties & Record<`--${string}`,
@@ -62,6 +66,12 @@ export default function DashboardLayout({
     };
   }, [expanded, toggle]);
 
+  const content = wrapContent ? (
+    <div className={contentClassName}>{children}</div>
+  ) : (
+    children
+  );
+
   return (
     <div
       className={`flex ${lockContentScroll ? "h-screen overflow-hidden" : "min-h-screen"} ${surfaceClass}`}
@@ -80,7 +90,7 @@ export default function DashboardLayout({
         } flex flex-col ${lockContentScroll ? "h-screen overflow-hidden" : "min-h-screen"}`}
       >
         <DashboardTopbar role={role} />
-        <SystemStatusGate role={role}>{children}</SystemStatusGate>
+        <SystemStatusGate role={role}>{content}</SystemStatusGate>
       </main>
       {rightAside}
     </div>

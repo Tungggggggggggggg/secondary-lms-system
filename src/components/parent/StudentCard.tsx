@@ -49,12 +49,12 @@ export default function StudentCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <GraduationCap className="h-4 w-4" />
             <span>Học sinh</span>
           </div>
           {createdAt && (
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               <span className="font-medium">Liên kết từ:</span>{" "}
               {formatDate(createdAt, "medium")}
             </div>

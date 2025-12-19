@@ -49,7 +49,7 @@ export default function ClassTile({
         }
       }}
       className={cn(
-        "border-2 rounded-lg cursor-pointer transition-all duration-200",
+        "border-2 rounded-lg cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         checked ? "border-blue-500 bg-blue-50 ring-1 ring-blue-200" : "border-gray-200 hover:border-blue-300 hover:bg-gray-50",
         disabled ? "opacity-60 cursor-not-allowed" : undefined,
         view === "list" ? "p-3" : "p-4",

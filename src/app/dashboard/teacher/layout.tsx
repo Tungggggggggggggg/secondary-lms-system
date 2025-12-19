@@ -15,15 +15,19 @@ export default function TeacherLayout({
     const isMessages = pathname?.includes("/dashboard/teacher/messages");
     return (
         <ProtectedRoute allowedRoles={["TEACHER"]}>
-            <RoleThemeProvider color="blue">
-                <DashboardLayout
-                    role="teacher"
-                    sidebarStateKey="sidebar:teacher"
-                    sidebar={<Sidebar />}
-                    lockContentScroll={isMessages}
-                >
-                    {children}
-                </DashboardLayout>
+            <RoleThemeProvider color="blue" role="teacher">
+                <div className="theme-teacher">
+                    <DashboardLayout
+                        role="teacher"
+                        sidebarStateKey="sidebar:teacher"
+                        sidebar={<Sidebar />}
+                        lockContentScroll={isMessages}
+                        wrapContent={!isMessages}
+                        contentClassName="mx-auto w-full max-w-7xl p-6 lg:p-8 space-y-8"
+                    >
+                        {children}
+                    </DashboardLayout>
+                </div>
             </RoleThemeProvider>
         </ProtectedRoute>
     );

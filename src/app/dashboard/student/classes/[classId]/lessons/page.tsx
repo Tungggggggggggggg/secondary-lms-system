@@ -137,7 +137,7 @@ export default function StudentClassroomLessonsPage() {
               <select
                 value={selectedCourseId}
                 onChange={(e) => setSelectedCourseId(e.target.value)}
-                className="appearance-none px-3 sm:px-4 h-10 rounded-xl border border-slate-200 bg-white/90 text-sm text-slate-700 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="appearance-none px-3 sm:px-4 h-10 rounded-xl border border-border bg-background text-sm text-foreground font-medium shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label="Lọc theo khóa học"
               >
                 <option value="all">Tất cả khóa học</option>
@@ -150,43 +150,46 @@ export default function StudentClassroomLessonsPage() {
             )}
 
             <div
-              className="inline-flex h-10 rounded-xl border border-slate-200 bg-white p-1"
+              className="inline-flex h-10 rounded-xl border border-border bg-background p-1"
               role="group"
               aria-label="Lọc theo trạng thái học"
             >
               <button
                 type="button"
                 onClick={() => setStatusFilter("all")}
-                className={
-                  statusFilter === "all"
-                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
-                    : "px-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                }
                 aria-pressed={statusFilter === "all"}
+                className={
+                  `${statusFilter === "all"
+                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
+                    : "px-3 rounded-lg text-sm font-semibold text-foreground hover:bg-muted/40"
+                  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`
+                }
               >
                 Tất cả
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter("todo")}
-                className={
-                  statusFilter === "todo"
-                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
-                    : "px-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                }
                 aria-pressed={statusFilter === "todo"}
+                className={
+                  `${statusFilter === "todo"
+                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
+                    : "px-3 rounded-lg text-sm font-semibold text-foreground hover:bg-muted/40"
+                  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`
+                }
               >
                 Chưa học
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter("done")}
-                className={
-                  statusFilter === "done"
-                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
-                    : "px-3 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                }
                 aria-pressed={statusFilter === "done"}
+                className={
+                  `${statusFilter === "done"
+                    ? "px-3 rounded-lg text-sm font-semibold bg-green-100 text-green-900"
+                    : "px-3 rounded-lg text-sm font-semibold text-foreground hover:bg-muted/40"
+                  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`
+                }
               >
                 Đã học
               </button>
@@ -200,10 +203,10 @@ export default function StudentClassroomLessonsPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-white/90 rounded-2xl border border-slate-100 p-4 sm:p-5 motion-safe:animate-pulse"
+              className="bg-card/90 rounded-2xl border border-border p-4 sm:p-5 motion-safe:animate-pulse"
             >
-              <div className="h-4 bg-slate-200 rounded w-1/2 mb-2" />
-              <div className="h-3 bg-slate-100 rounded w-1/3" />
+              <div className="h-4 bg-muted rounded w-1/2 mb-2" />
+              <div className="h-3 bg-muted rounded w-1/3" />
             </div>
           ))}
         </div>
@@ -221,18 +224,18 @@ export default function StudentClassroomLessonsPage() {
           {grouped.map((g) => (
             <div key={g.courseId} className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-slate-900 truncate">
+                <div className="text-sm font-semibold text-foreground truncate">
                   {g.courseTitle}
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="text-xs text-slate-500 font-medium">
+                  <div className="text-xs text-muted-foreground font-medium">
                     {(() => {
                       const total = g.lessons.length;
                       const done = g.lessons.reduce((acc, l) => acc + (doneMap[l.id] ? 1 : 0), 0);
                       return `${done}/${total} đã học`;
                     })()}
                   </div>
-                  <div className="w-28 h-2 rounded-full bg-slate-100 overflow-hidden" aria-hidden="true">
+                  <div className="w-28 h-2 rounded-full bg-muted overflow-hidden" aria-hidden="true">
                     <div
                       className="h-full bg-emerald-500"
                       style={{
@@ -252,9 +255,9 @@ export default function StudentClassroomLessonsPage() {
                   <Link
                     key={l.id}
                     href={`/dashboard/student/classes/${classId}/lessons/${l.id}`}
-                    className="group block"
+                    className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
-                    <div className="bg-white/90 rounded-2xl border border-slate-100 p-4 sm:p-5 hover:border-green-200 hover:bg-green-50/30 transition-colors">
+                    <div className="bg-card/90 rounded-2xl border border-border p-4 sm:p-5 hover:border-green-200 hover:bg-green-50/30 transition-colors">
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5 h-9 w-9 rounded-xl bg-green-100 text-green-800 flex items-center justify-center text-[11px] font-extrabold">
                           BÀI
@@ -262,8 +265,8 @@ export default function StudentClassroomLessonsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold text-slate-900 truncate">{l.title}</p>
-                              <p className="text-xs text-slate-600 truncate">Bài {l.order}</p>
+                              <p className="text-sm font-semibold text-foreground truncate">{l.title}</p>
+                              <p className="text-xs text-muted-foreground truncate">Bài {l.order}</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <button
@@ -273,20 +276,20 @@ export default function StudentClassroomLessonsPage() {
                                   e.stopPropagation();
                                   toggleDone(l.id);
                                 }}
-                                className={`inline-flex items-center gap-2 h-10 rounded-xl border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400 ${
+                                className={`inline-flex items-center gap-2 h-10 rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                                   doneMap[l.id]
                                     ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                                    : "bg-background text-foreground border-border hover:bg-muted/40"
                                 }`}
                                 aria-pressed={!!doneMap[l.id]}
                                 aria-label={doneMap[l.id] ? "Đánh dấu chưa học" : "Đánh dấu đã học"}
                               >
-                                <span className={`h-2.5 w-2.5 rounded-full ${doneMap[l.id] ? "bg-emerald-600" : "bg-slate-300"}`} aria-hidden="true" />
+                                <span className={`h-2.5 w-2.5 rounded-full ${doneMap[l.id] ? "bg-emerald-600" : "bg-muted-foreground/60"}`} aria-hidden="true" />
                                 {doneMap[l.id] ? "Đã học" : "Chưa học"}
                               </button>
                             </div>
                           </div>
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Phát hành: {new Date(l.publishedAt).toLocaleDateString("vi-VN")}
                           </p>
                         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,7 @@ export default function SubmitAssignmentFilesPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [status, setStatus] = useState<"draft" | "submitted" | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const list = e.target.files ? Array.from(e.target.files) : [];
@@ -151,16 +152,37 @@ export default function SubmitAssignmentFilesPage() {
 
             <Card className="bg-white/90 rounded-3xl border border-slate-100 shadow-sm p-4 sm:p-6 space-y-5">
                 <div
-                    className="border-2 border-dashed border-slate-200 rounded-2xl px-4 py-6 sm:px-6 sm:py-8 text-center text-xs sm:text-sm text-slate-600 bg-slate-50/70 hover:border-indigo-300 hover:bg-slate-50 transition-colors cursor-pointer"
+                    className="border-2 border-dashed border-slate-200 rounded-2xl px-4 py-6 sm:px-6 sm:py-8 text-center text-xs sm:text-sm text-slate-600 bg-slate-50/70 hover:border-indigo-300 hover:bg-slate-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onDrop={onDrop}
                     onDragOver={onDragOver}
+                    onClick={(e) => {
+                        if (e.currentTarget !== e.target) return;
+                        fileInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.currentTarget !== e.target) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            fileInputRef.current?.click();
+                        }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Chọn tệp để tải lên"
                 >
                     <p className="font-medium text-slate-800 mb-1">Kéo và thả tệp vào đây</p>
                     <p className="text-[11px] sm:text-xs text-slate-500 mb-3">
                         hoặc chọn từ thiết bị của bạn
                     </p>
                     <div className="mt-2 flex justify-center">
-                        <Input type="file" multiple onChange={onFileChange} className="w-auto text-xs sm:text-sm" />
+                        <Input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            onChange={onFileChange}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-auto text-xs sm:text-sm"
+                        />
                     </div>
                 </div>
 

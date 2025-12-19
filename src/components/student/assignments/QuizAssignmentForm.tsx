@@ -737,30 +737,30 @@ export default function QuizAssignmentForm({
 
   if (gateOpen) {
     return (
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+      <div className="bg-card rounded-2xl p-6 shadow-lg border border-border">
         <div className="mb-4">
-          <h3 className="text-xl font-bold text-gray-800">Bắt đầu làm bài</h3>
-          <p className="text-sm text-gray-600 mt-2">Vui lòng xác nhận cài đặt trước khi bắt đầu.</p>
+          <h3 className="text-xl font-bold text-foreground">Bắt đầu làm bài</h3>
+          <p className="text-sm text-muted-foreground mt-2">Vui lòng xác nhận cài đặt trước khi bắt đầu.</p>
         </div>
         <div className="grid sm:grid-cols-2 gap-4 text-sm">
-          <div className="p-3 rounded-lg border bg-gray-50">
-            <div className="font-semibold text-gray-800">Cấu hình bảo mật</div>
-            <ul className="mt-2 space-y-1 text-gray-700">
+          <div className="p-3 rounded-lg border border-border bg-muted/40">
+            <div className="font-semibold text-foreground">Cấu hình bảo mật</div>
+            <ul className="mt-2 space-y-1 text-muted-foreground">
               <li>{requireFullscreen ? "Yêu cầu fullscreen" : "Không yêu cầu fullscreen"}</li>
               <li>{detectTabSwitch ? "Phát hiện chuyển tab" : "Không phát hiện chuyển tab"}</li>
               <li>{disableCopyPaste ? "Vô hiệu hóa copy/paste" : "Cho phép copy/paste"}</li>
             </ul>
           </div>
-          <div className="p-3 rounded-lg border bg-gray-50">
-            <div className="font-semibold text-gray-800">Cấu hình hiển thị</div>
-            <ul className="mt-2 space-y-1 text-gray-700">
+          <div className="p-3 rounded-lg border border-border bg-muted/40">
+            <div className="font-semibold text-foreground">Cấu hình hiển thị</div>
+            <ul className="mt-2 space-y-1 text-muted-foreground">
               <li>{shuffleQuestionsFlag ? "Xáo thứ tự câu hỏi" : "Giữ nguyên thứ tự câu hỏi"}</li>
               <li>{shuffleOptionsFlag ? "Xáo thứ tự đáp án" : "Giữ nguyên thứ tự đáp án"}</li>
               <li>{singleQuestionMode ? "Chế độ từng câu một" : "Hiển thị tất cả câu"}</li>
             </ul>
           </div>
         </div>
-        <div className="mt-4 text-sm text-gray-700">
+        <div className="mt-4 text-sm text-muted-foreground">
           {maxAttempts != null && (
             <div> Lần làm: {(latestAttempt as number)}/{(maxAttempts as number)}{attemptsLeft != null ? ` • Còn lại: ${attemptsLeft}` : ""}</div>
           )}
@@ -775,7 +775,7 @@ export default function QuizAssignmentForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 relative"
+      className="bg-card rounded-2xl p-6 shadow-lg border border-border relative"
     >
       <Dialog open={blockedByTeacher} onOpenChange={() => {}}>
         <DialogContent className="max-w-md" onClose={() => {}}>
@@ -819,7 +819,7 @@ export default function QuizAssignmentForm({
 
       {singleQuestionMode && (
         <div className="flex items-center justify-between mb-4">
-          <div className="text-sm text-gray-600">Câu {currentIdx + 1}/{assignment.questions.length}</div>
+          <div className="text-sm text-muted-foreground">Câu {currentIdx + 1}/{assignment.questions.length}</div>
           <div className="flex gap-2">
             <Button
               type="button"
@@ -891,7 +891,7 @@ export default function QuizAssignmentForm({
                       const nextBtn = btns[nextIndex];
                       if (nextBtn && typeof nextBtn.focus === 'function') nextBtn.focus();
                     }}
-                    className={`min-w-11 h-11 px-3 rounded-md text-sm font-medium border ${ans ? 'bg-green-50 border-green-400 text-green-700' : 'bg-white border-gray-300 text-gray-700'} hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2`}
+                    className={`min-w-11 h-11 px-3 rounded-md text-sm font-medium border ${ans ? 'bg-green-50 border-green-400 text-green-700' : 'bg-background border-border text-foreground'} hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
                   >
                     {idx + 1}
                   </button>
@@ -929,7 +929,7 @@ export default function QuizAssignmentForm({
             <div
               id={`q-${question.id}`}
               key={question.id}
-              className="p-5 bg-gray-50 rounded-xl border border-gray-200"
+              className="p-5 bg-muted/40 rounded-xl border border-border"
             >
               <div className="flex items-start gap-3 mb-4">
                 <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
@@ -937,8 +937,8 @@ export default function QuizAssignmentForm({
                 </span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 id={`q-title-${question.id}`} className="font-semibold text-gray-800">{question.content}</h3>
-                    <span className="text-xs px-2 py-1 bg-gray-200 rounded text-gray-600">
+                    <h3 id={`q-title-${question.id}`} className="font-semibold text-foreground">{question.content}</h3>
+                    <span className="text-xs px-2 py-1 bg-muted rounded text-muted-foreground">
                       {question.type === "FILL_BLANK"
                         ? "Nhập câu trả lời"
                         : (question.type === "SINGLE" || question.type === "TRUE_FALSE" ? "Chọn 1 đáp án" : "Chọn nhiều đáp án")}
@@ -961,7 +961,7 @@ export default function QuizAssignmentForm({
                             e.stopPropagation();
                           }
                         }}
-                        className="w-full rounded-lg border-2 border-gray-200 p-3 h-12 text-base focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="w-full rounded-lg border-2 border-border bg-background p-3 h-12 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         placeholder="Nhập đáp án..."
                       />
                     </div>
@@ -981,10 +981,10 @@ export default function QuizAssignmentForm({
                         return (
                           <label
                             key={option.id}
-                            className={`flex items-start gap-3 p-3 min-h-[44px] rounded-lg border-2 cursor-pointer transition-all focus-within:outline-none focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-offset-2 ${
+                            className={`flex items-start gap-3 p-3 min-h-[44px] rounded-lg border-2 cursor-pointer transition-all focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background ${
                               isSelected
                                 ? "bg-green-50 border-green-500"
-                                : "bg-white border-gray-200 hover:border-green-300"
+                                : "bg-background border-border hover:border-green-300"
                             } ${isOverdue || isLoading || disabledMode || blockedByTeacher ? "opacity-60 cursor-not-allowed" : ""}`}
                           >
                             <input
@@ -999,10 +999,10 @@ export default function QuizAssignmentForm({
                               tabIndex={tabIndex}
                             />
                             <div className="flex-1">
-                              <span className="font-medium text-gray-800 mr-2">
+                              <span className="font-medium text-foreground mr-2">
                                 {String.fromCharCode(65 + optIdx)}:
                               </span>
-                              <span className="text-gray-800">{option.content}</span>
+                              <span className="text-foreground">{option.content}</span>
                             </div>
                           </label>
                         );
@@ -1028,10 +1028,10 @@ export default function QuizAssignmentForm({
 
       {/* Submit button */}
       <div
-        className="flex items-center justify-between pt-4 border-t border-gray-200 sticky bottom-0 bg-white/95 backdrop-blur-md z-10 px-0 md:px-0 -mx-0 shadow-[0_-2px_10px_rgba(0,0,0,0.08)]"
+        className="flex items-center justify-between pt-4 border-t border-border sticky bottom-0 bg-background/95 backdrop-blur-md z-10 px-0 md:px-0 -mx-0 shadow-[0_-2px_10px_rgba(0,0,0,0.08)]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-muted-foreground">
           {!allAnswered && (
             <span className="text-amber-600 font-medium inline-flex items-center gap-1">
               <AlertTriangle className="h-4 w-4" />
