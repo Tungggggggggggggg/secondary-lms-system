@@ -140,3 +140,16 @@ vite.config.ts.timestamp-*
 
 src/generated/prisma
 generated/prisma
+
+docs/luanvan/*.aux
+docs/luanvan/*.toc
+docs/luanvan/*.lof
+docs/luanvan/*.lot
+docs/luanvan/*.out
+docs/luanvan/*.fls
+docs/luanvan/*.fdb_latexmk
+docs/luanvan/*.synctex.gz
+docs/luanvan/*.bbl
+docs/luanvan/*.blg
+docs/luanvan/*.run.xml
+docs/luanvan/*.bcf

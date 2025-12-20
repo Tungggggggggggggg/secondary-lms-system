@@ -1,0 +1,267 @@
+\documentclass[12pt, a4paper]{report}
+
+% --- UNIVERSAL PREAMBLE BLOCK FOR VIETNAMESE ---
+\usepackage[a4paper, top=20mm, bottom=20mm, left=35mm, right=20mm]{geometry}
+\usepackage{fontspec}
+\usepackage[bidi=basic, provide=*]{babel}
+
+% Cấu hình ngôn ngữ và font chữ (Sử dụng Noto Serif để thay thế Times New Roman trong môi trường này)
+\babelprovide[main, import, onchar=ids fonts]{vietnamese}
+\babelprovide[import, onchar=ids fonts]{english}
+
+\IfFontExistsTF{Noto Serif}{
+\babelfont{rm}{Noto Serif}
+\babelfont[vietnamese]{rm}{Noto Serif}
+}{
+\IfFontExistsTF{Times New Roman}{
+\babelfont{rm}{Times New Roman}
+\babelfont[vietnamese]{rm}{Times New Roman}
+}{
+\babelfont{rm}{Latin Modern Roman}
+\babelfont[vietnamese]{rm}{Latin Modern Roman}
+}
+}
+
+% Fix cho danh sách khi sử dụng ngôn ngữ không phải tiếng Anh
+\usepackage{enumitem}
+\setlist[itemize]{label=-}
+% --- GÓI BỔ TRỢ HỌC THUẬT ---
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{indentfirst}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{booktabs}
+\usepackage{caption}
+
+% Cấu hình giãn dòng chuẩn luận văn (1.5 line spacing)
+\onehalfspacing
+\setlength{\parindent}{1.27cm}
+
+% Cấu hình mã nguồn (Code) chuyên nghiệp
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstset{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+% Định dạng tiêu đề chương theo chuẩn: CHƯƠNG 1 (Căn giữa, viết hoa)
+\titleformat{\chapter}[display]
+  {\normalfont\large\bfseries\centering}
+  {\MakeUppercase{\chaptername}\ \thechapter}
+  {5pt}
+  {\large\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{-20pt}{30pt}
+
+% Định dạng tiêu đề mục (Section, Subsection)
+\titleformat{\section}{\normalfont\normalsize\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries\itshape}{\thesubsection}{1em}{}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,      
+    urlcolor=blue,
+    pdftitle={Luận văn Tốt nghiệp - Smart LMS},
+}
+
+\begin{document}
+
+% ======================================================
+% TRANG BÌA
+% ======================================================
+\begin{titlepage}
+    \centering
+    {\large \textbf{BỘ GIÁO DỤC VÀ ĐÀO TẠO}} \\
+    {\large \textbf{TRƯỜNG ĐẠI HỌC GIAO THÔNG VẬN TẢI TP.HCM}} \\
+    {\large \textbf{KHOA CÔNG NGHỆ THÔNG TIN}}
+    
+    \vspace{1.5cm}
+    \begin{figure}[h]
+      \centering
+      \framebox{\parbox{0.3\textwidth}{\centering
+        \vspace{1cm}
+        \textbf{LOGO TRƯỜNG} \\
+        \small\textit{(Image Placeholder)}
+        \vspace{1cm}
+      }}
+    \end{figure}
+    
+    \vspace{1.5cm}
+    {\Large \textbf{LUẬN VĂN TỐT NGHIỆP ĐẠI HỌC}} \\
+    
+    \vspace{1cm}
+    \begin{spacing}{1.5}
+        {\huge \textbf{NGHIÊN CỨU VÀ XÂY DỰNG HỆ THỐNG QUẢN LÝ HỌC TẬP THÔNG MINH (SMART LMS) DỰA TRÊN KIẾN TRÚC RAG VÀ MÔ HÌNH NGÔN NGỮ LỚN}}
+    \end{spacing}
+    
+    \vspace{2cm}
+    \begin{flushright}
+        \begin{tabular}{l p{6cm}}
+            \textbf{Giảng viên hướng dẫn:} & \textbf{TS. Nguyễn Văn B} \\
+            \textbf{Sinh viên thực hiện:}     & \textbf{Nguyễn Quốc Tùnggggg} \\
+            \textbf{Mã số sinh viên:}         & \textbf{2251120259} \\
+            \textbf{Lớp:}                     & \textbf{CN22E}
+        \end{tabular}
+    \end{flushright}
+
+    \vfill
+    {\large \textbf{TP. HỒ CHÍ MINH, NĂM 2025}}
+\end{titlepage}
+
+% ======================================================
+% PHẦN TRƯỚC NỘI DUNG CHÍNH
+% ======================================================
+\pagenumbering{roman}
+
+\chapter*{Lời cam đoan}
+\addcontentsline{toc}{chapter}{Lời cam đoan}
+Tôi xin cam đoan đây là công trình nghiên cứu của riêng tôi dưới sự hướng dẫn của giảng viên hướng dẫn. Các kết quả nêu trong luận văn là trung thực và chưa từng được công bố trong bất kỳ công trình nào khác. Mọi sự giúp đỡ cho việc thực hiện luận văn này đã được cảm ơn và các thông tin trích dẫn trong luận văn đã được chỉ rõ nguồn gốc.
+
+\chapter*{Lời mở đầu}
+\addcontentsline{toc}{chapter}{Lời mở đầu}
+Sự bùng nổ của Trí tuệ nhân tạo tạo sinh (Generative AI) đã mở ra những cơ hội chưa từng có trong việc cá nhân hóa giáo dục. Tuy nhiên, các hệ thống Quản lý học tập (LMS) hiện nay tại Việt Nam chủ yếu vẫn đóng vai trò là kho lưu trữ tài liệu tĩnh, thiếu đi tính tương tác thông minh và khả năng hỗ trợ học sinh học tập chủ động.
+
+Dự án này được thực hiện với mong muốn xây dựng một hệ sinh thái học tập "Smart LMS" dành cho cấp trung học. Điểm đột phá của hệ thống là việc ứng dụng kỹ thuật Retrieval-Augmented Generation (RAG) để tạo ra một Trợ lý ảo (AI Tutor) có khả năng hiểu sâu sắc nội dung bài giảng của giáo viên, từ đó phản hồi chính xác thắc mắc của học sinh. Bên cạnh đó, hệ thống tích hợp các công cụ giám sát thi cử dựa trên AI nhằm đảm bảo tính liêm chính trong môi trường học tập trực tuyến.
+
+\newpage
+\tableofcontents 
+\newpage
+\listoffigures
+\newpage
+\listoftables
+
+% ======================================================
+% CHƯƠNG 1: MỞ ĐẦU
+% ======================================================
+\newpage
+\pagenumbering{arabic}
+\chapter{MỞ ĐẦU}
+
+\section{Lý do chọn đề tài}
+Trong kỷ nguyên giáo dục 4.0, vai trò của giáo viên đang dịch chuyển từ người truyền thụ kiến thức sang người điều phối học tập. Tuy nhiên, khối lượng công việc hành chính và việc theo sát từng học sinh trong lớp học trực tuyến là một thách thức lớn. Hệ thống LMS thông minh cần phải giải quyết được bài toán giảm tải cho giáo viên và tăng tính tự học cho học sinh.
+
+\section{Mục tiêu nghiên cứu}
+\begin{itemize}
+    \item Thiết kế kiến trúc hệ thống LMS đa vai trò (Admin, Teacher, Student, Parent).
+    \item Hiện thực hóa module AI Tutor hỗ trợ học tập dựa trên cơ sở dữ liệu vector.
+    \item Xây dựng quy trình tự động hóa đánh giá năng lực học sinh qua AI.
+    \item Đảm bảo an ninh và tính liêm chính học thuật qua hệ thống chống gian lận.
+\end{itemize}
+
+\section{Đối tượng và phạm vi nghiên cứu}
+\begin{itemize}
+    \item \textbf{Đối tượng:} Quy trình quản lý và hỗ trợ học tập tại các trường trung học.
+    \item \textbf{Phạm vi:} Xây dựng ứng dụng Web dựa trên Next.js và tích hợp Google Gemini API.
+\end{itemize}
+
+% ======================================================
+% CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ
+% ======================================================
+\chapter{CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ}
+
+\section{Mô hình ngôn ngữ lớn (LLM) và Gemini API}
+Trình bày về khả năng của mô hình Gemini 1.5 Flash trong việc xử lý ngữ cảnh dài (long context window), điều này rất quan trọng cho việc phân tích tài liệu bài giảng.
+
+\section{Kiến trúc RAG (Retrieval-Augmented Generation)}
+Đây là nền tảng kỹ thuật của AI Tutor. Quy trình bao gồm:
+\begin{enumerate}
+    \item \textbf{Văn bản hóa:} Chuyển đổi PDF/DOCX bài giảng thành văn bản thô.
+    \item \textbf{Chia nhỏ (Chunking):} Sử dụng các thuật toán chia đoạn để giữ nguyên ngữ nghĩa.
+    \item \textbf{Nhúng Vector (Embedding):} Chuyển đoạn văn thành các vector không gian.
+    \item \textbf{Truy xuất (Retrieval):} Tìm kiếm đoạn văn có độ tương đồng cao nhất với câu hỏi của học sinh.
+\end{enumerate}
+
+\section{Kiến trúc Web hiện đại: Next.js App Router}
+Phân tích lợi ích của Server Components và API Routes trong việc bảo mật các Key của AI và tối ưu hiệu suất Rendering.
+
+% ======================================================
+% CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
+% ======================================================
+\chapter{PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG}
+
+\section{Phân tích yêu cầu chức năng}
+\subsection{Vai trò Giáo viên}
+Quản lý khóa học, tạo bài tập thông minh (Quiz/Essay), chấm bài hỗ trợ bởi AI và giám sát thi cử.
+\subsection{Vai trò Học sinh}
+Tương tác với AI Tutor, làm bài tập, nhận phản hồi tức thì và theo dõi lộ trình học tập.
+
+\section{Thiết kế cơ sở dữ liệu}
+Mô tả các thực thể chính dựa trên Schema Prisma:
+\begin{itemize}
+    \item \texttt{User}: Quản lý thông tin và phân quyền người dùng.
+    \item \texttt{LessonEmbedding}: Lưu trữ các đoạn văn bản đã được vector hóa của bài học.
+    \item \texttt{ExamEvent}: Ghi lại các hành vi bất thường trong quá trình thi.
+\end{itemize}
+
+% ======================================================
+% CHƯƠNG 4: HIỆN THỰC HÓA HỆ THỐNG
+% ======================================================
+\chapter{HIỆN THỰC HÓA HỆ THỐNG}
+
+\section{Xây dựng trợ lý ảo AI Tutor}
+Mô tả chi tiết quá trình hiện thực hóa tệp \texttt{src/lib/rag/indexLessonEmbeddings.ts}. Cách sử dụng \texttt{pgvector} trong PostgreSQL để lưu trữ và truy vấn vector.
+
+\section{Hệ thống đánh giá và giám sát thi cử}
+\subsection{Cơ chế tự động chấm bài}
+Sử dụng Prompt Engineering để hướng dẫn Gemini chấm bài tự luận dựa trên Rubric của giáo viên.
+\subsection{Phát hiện hành vi đáng ngờ}
+Phân tích logic trong \texttt{suspicious-behavior.ts}: Theo dõi chuyển đổi Tab, phím tắt cấm và mất kết nối.
+
+\section{Giao diện người dùng (UI/UX)}
+Sử dụng Tailwind CSS và các thành phần từ Shadcn UI để tạo ra một giao diện tối giản, tập trung vào trải nghiệm học tập (Learning-centric design).
+
+% ======================================================
+% CHƯƠNG 5: ĐÁNH GIÁ VÀ THỬ NGHIỆM
+% ======================================================
+\chapter{ĐÁNH GIÁ VÀ THỬ NGHIỆM}
+
+\section{Đánh giá độ chính xác của AI Tutor}
+Thử nghiệm với các bộ câu hỏi mẫu và so sánh câu trả lời của AI với nội dung bài giảng thực tế.
+
+\section{Đánh giá hiệu năng hệ thống}
+Phân tích thời gian phản hồi khi truy xuất Vector và khả năng chịu tải của API Routes.
+
+% ======================================================
+% CHƯƠNG 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+% ======================================================
+\chapter{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
+
+\section{Kết quả đạt được}
+Hệ thống đã giải quyết được vấn đề cá nhân hóa hỗ trợ học tập và giúp giáo viên tự động hóa các công việc lặp đi lặp lại.
+
+\section{Hướng phát triển tương lai}
+Tích hợp nhận diện khuôn mặt để xác thực danh tính học sinh khi thi và mở rộng ứng dụng trên nền tảng di động.
+
+% ======================================================
+% TÀI LIỆU THAM KHẢO
+% ======================================================
+\begin{thebibliography}{99}
+\addcontentsline{toc}{chapter}{Tài liệu tham khảo}
+\bibitem{nextjs} Vercel, "Next.js 14 Documentation," 2024. [Online]. Available: \url{https://nextjs.org/docs}.
+\bibitem{gemini} Google DeepMind, "Gemini: A Family of Highly Capable Multimodal Models," 2023.
+\bibitem{rag} Lewis, P., et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks," NeurIPS, 2020.
+\end{thebibliography}
+
+\end{document}
