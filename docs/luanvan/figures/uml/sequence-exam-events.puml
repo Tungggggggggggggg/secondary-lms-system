@@ -1,0 +1,47 @@
+@startuml sequence-exam-events
+title Sequence - Ghi nhận sự kiện thi (EduVerse)
+
+!pragma layout smetana
+
+actor "Học sinh" as Student
+participant "UI Làm bài (Client)" as UI
+participant "Exam Session Manager\n(src/lib/exam-session/*)" as SessionMgr
+participant "API /api/exam-events" as Api
+participant "Prisma" as Prisma
+database "PostgreSQL\n(exam_events)" as DB
+
+Student -> UI : Thao tác làm bài / chuyển tab / mất mạng
+activate UI
+
+UI -> SessionMgr : detectTabSwitch / detectDisconnect
+activate SessionMgr
+SessionMgr -> SessionMgr : Phân loại eventType + metadata
+SessionMgr -> Api : POST /api/exam-events\n{assignmentId,eventType,attempt?,metadata}
+activate Api
+Api -> Prisma : examEvent.create(...)
+activate Prisma
+Prisma -> DB : INSERT exam_events
+DB --> Prisma : OK
+deactivate Prisma
+Api --> SessionMgr : {success:true}
+deactivate Api
+SessionMgr --> UI : Cập nhật trạng thái phiên thi
+
+deactivate SessionMgr
+deactivate UI
+
+== Giáo viên truy vấn nhật ký ==
+actor "Giáo viên" as Teacher
+Teacher -> Api : GET /api/exam-events?assignmentId=...&studentId?&attempt?
+activate Api
+Api -> Prisma : examEvent.findMany(...)
+activate Prisma
+Prisma -> DB : SELECT exam_events
+DB --> Prisma : rows
+Prisma --> Api : events
+Api --> Teacher : danh sách sự kiện
+
+deactivate Prisma
+deactivate Api
+
+@enduml

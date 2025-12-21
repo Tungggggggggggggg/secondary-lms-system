@@ -1,0 +1,27 @@
+@startuml EduVerse_System_Context
+title EduVerse - Sơ đồ bối cảnh hệ thống (Context Diagram)
+
+left to right direction
+skinparam shadowing false
+
+actor "Học sinh" as Student
+actor "Giáo viên" as Teacher
+actor "Phụ huynh" as Parent
+actor "Quản trị viên" as Admin
+
+rectangle "EduVerse\n(Smart LMS)" as System
+
+cloud "Google Gemini API" as Gemini
+cloud "Supabase Storage" as Supabase
+database "PostgreSQL\n(+ pgvector)" as DB
+
+Student --> System : Học tập\nLàm bài\nGửi sự kiện thi
+Teacher --> System : Tạo học liệu\nTạo bài kiểm tra\nXem giám sát thi
+Parent --> System : Theo dõi tiến độ
+Admin --> System : Quản trị hệ thống
+
+System --> DB : Lưu dữ liệu\n(truy vấn + vector search)
+System --> Gemini : Embedding / Generation
+System --> Supabase : Upload/Download file
+
+@enduml

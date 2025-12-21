@@ -28,6 +28,7 @@
 % --- GÓI BỔ TRỢ HỌC THUẬT ---
 \usepackage{amsmath, amsfonts, amssymb}
 \usepackage{graphicx}
+\graphicspath{{docs/luanvan/}{docs/luanvan/figures/}{docs/luanvan/figures/uml/}{figures/}{figures/uml/}{uml/}{out/docs/luanvan/figures/}{out/docs/luanvan/figures/uml/}{out/docs/luanvan/figures/uml/usecase-overall/}{out/docs/luanvan/figures/uml/usecase-anti-cheat/}{out/docs/luanvan/figures/uml/sequence-exam-events/}{out/docs/luanvan/figures/uml/activity-suspicious-behavior/}{out/docs/luanvan/figures/uml/context-eduverse/}{out/docs/luanvan/figures/uml/component-architecture/}{out/docs/luanvan/figures/uml/db-core/}}
 \usepackage{setspace}
 \usepackage{indentfirst}
 \usepackage{titlesec}
@@ -35,10 +36,13 @@
 \usepackage{color}
 \usepackage{booktabs}
 \usepackage{caption}
+\usepackage{float}
+\usepackage{needspace}
 
 % Cấu hình giãn dòng chuẩn luận văn (1.5 line spacing)
 \onehalfspacing
 \setlength{\parindent}{1.27cm}
+\setlength{\emergencystretch}{2em}
 
 % Cấu hình mã nguồn (Code) chuyên nghiệp
 \definecolor{codegreen}{rgb}{0,0.6,0}
@@ -100,12 +104,20 @@
     \vspace{1.5cm}
     \begin{figure}[h]
       \centering
-      \framebox{\parbox{0.3\textwidth}{\centering
-        \vspace{1cm}
-        \textbf{LOGO TRƯỜNG} \\
-        \small\textit{(Image Placeholder)}
-        \vspace{1cm}
-      }}
+      \IfFileExists{docs/luanvan/figures/uth-logo.png}{
+        \includegraphics[width=0.35\textwidth]{docs/luanvan/figures/uth-logo.png}
+      }{
+        \IfFileExists{figures/uth-logo.png}{
+          \includegraphics[width=0.35\textwidth]{figures/uth-logo.png}
+        }{
+          \framebox{\parbox{0.35\textwidth}{\centering
+            \vspace{1cm}
+            \textbf{LOGO TRƯỜNG} \\
+            \small\textit{(Image Placeholder)}
+            \vspace{1cm}
+          }}
+        }
+      }
     \end{figure}
     
     \vspace{1.5cm}
@@ -137,7 +149,7 @@
 
 \chapter*{Lời cam đoan}
 \addcontentsline{toc}{chapter}{Lời cam đoan}
-Tôi xin cam đoan đây là công trình nghiên cứu của riêng tôi dưới sự hướng dẫn của giảng viên hướng dẫn. Các kết quả nêu trong luận văn là trung thực và chưa từng được công bố trong bất kỳ công trình nào khác. Mọi sự giúp đỡ cho việc thực hiện luận văn này đã được cảm ơn và các thông tin trích dẫn trong luận văn đã được chỉ rõ nguồn gốc.
+Tôi xin cam đoan đây là công trình nghiên cứu của riêng tôi dước sự hướng dẫn của giảng viên hướng dẫn. Các kết quả nêu trong luận văn là trung thực và chưa từng được công bố trong bất kỳ công trình nào khác. Mọi sự giúp đỡ cho việc thực hiện luận văn này đã được cảm ơn và các thông tin trích dẫn trong luận văn đã được chỉ rõ nguồn gốc.
 
 \chapter*{Lời mở đầu}
 \addcontentsline{toc}{chapter}{Lời mở đầu}
@@ -181,39 +193,286 @@ Trong kỷ nguyên giáo dục 4.0, vai trò của giáo viên đang dịch chuy
 % ======================================================
 \chapter{CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ}
 
+\section{Tổng quan nền tảng công nghệ}
+Hệ thống \textbf{EduVerse} được hiện thực hóa dước dạng ứng dụng Web theo mô hình full-stack, trong đó lớp giao diện và lớp xử lý nghiệp vụ (API) được tổ chức thống nhất. Nhóm công nghệ trọng tâm gồm: Next.js (App Router) cho kiến trúc web hiện đại \cite{nextjs}, NextAuth.js cho xác thực và quản lý phiên đăng nhập \cite{nextauth}, Prisma ORM cho truy cập dữ liệu \cite{prisma}, PostgreSQL cho lưu trữ quan hệ \cite{postgresql}, pgvector cho truy xuất tương đồng vector phục vụ RAG \cite{pgvector}, Supabase Storage cho lưu trữ tệp nộp bài \cite{supabase}, và Gemini API cho các tác vụ AI (embedding và sinh nội dung) \cite{gemini}.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{|p{3.2cm}|p{5.2cm}|p{5.2cm}|}
+\hline
+\textbf{Công nghệ} & \textbf{Vai trò trong hệ thống} & \textbf{Lý do lựa chọn} \\ \hline
+Next.js (App Router) \cite{nextjs} & Full-stack Web framework; tổ chức routing, rendering, API Routes & Hỗ trợ kiến trúc hiện đại, tối ưu hiệu năng và bảo mật khi triển khai logic phía server \\ \hline
+NextAuth.js \cite{nextauth} & Xác thực người dùng, quản lý phiên đăng nhập & Tích hợp đăng nhập linh hoạt, đồng thời hỗ trợ quản lý session/role cho phân quyền \\ \hline
+Prisma ORM \cite{prisma} & Truy cập dữ liệu type-safe, migrations, ánh xạ mô hình dữ liệu & Giảm lỗi truy vấn, tăng tính nhất quán và hỗ trợ mở rộng schema có kiểm soát \\ \hline
+PostgreSQL \cite{postgresql} & Cơ sở dữ liệu quan hệ lưu dữ liệu nghiệp vụ & Đảm bảo ACID, ổn định và phù hợp dữ liệu có quan hệ phức tạp (khóa học, bài tập, sự kiện thi) \\ \hline
+pgvector \cite{pgvector} & Lưu embedding và truy vấn tương đồng vector phục vụ RAG & Cho phép truy xuất ngữ nghĩa ngay trên Postgres, thống nhất hạ tầng dữ liệu \\ \hline
+Supabase Storage \cite{supabase} & Lưu trữ tệp nộp bài, cấp signed URL & Tách tải lưu trữ file khỏi DB, hỗ trợ truy cập an toàn theo thời hạn \\ \hline
+Gemini API \cite{gemini} & Tạo embedding và sinh nội dung (AI Tutor, tóm tắt hỗ trợ) & Khả năng sinh ngôn ngữ tự nhiên và tạo embedding phục vụ truy xuất/giải thích \\ \hline
+\end{tabular}
+\caption{Tóm tắt công nghệ sử dụng trong hệ thống EduVerse}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{|p{3cm}|p{5.3cm}|p{5.3cm}|}
+\hline
+\textbf{Tiêu chí} & \textbf{RAG \cite{rag}} & \textbf{LLM thuần} \\ \hline
+Nguồn tri thức & Dựa trên tài liệu nội bộ (bài giảng) được truy xuất theo câu hỏi & Chủ yếu dựa trên tri thức đã học trong quá trình huấn luyện \\ \hline
+Tính kiểm chứng & Có thể truy vết theo đoạn truy xuất; dễ giải thích tại sao trả lời như vậy & Khó truy vết nguồn; dễ sinh nội dung không có trong tài liệu \\ \hline
+Rủi ro "ảo giác" & Thấp hơn do bị ràng buộc bởi ngữ cảnh truy xuất & Cao hơn, đặc biệt với câu hỏi đặc thù nội dung lớp học \\ \hline
+Chi phí cập nhật tri thức & Cập nhật bằng cách thay tài liệu/embedding (không cần huấn luyện lại) & Thường cần fine-tune hoặc chờ model mới để cập nhật tri thức \\ \hline
+Phù hợp giáo dục & Phù hợp khi cần bám sát học liệu và chuẩn hóa nội dung & Phù hợp cho gợi ý chung, nhưng cần kiểm soát chặt khi dùng như nguồn kiến thức \\ \hline
+\end{tabular}
+\caption{So sánh RAG và LLM thuần trong bối cảnh hệ thống học tập}
+\end{table}
+
+\section{Kiến trúc tổng thể hệ thống}
+Về mặt kiến trúc, EduVerse có thể xem như một hệ thống gồm bốn lớp chính:
+\begin{itemize}
+    \item \textbf{Lớp giao diện (Presentation):} các trang dashboard cho học sinh/giáo viên, tập trung vào thao tác học tập, làm bài và theo dõi kết quả.
+    \item \textbf{Lớp dịch vụ ứng dụng (Application/API):} các API Routes xử lý nghiệp vụ (xác thực, nộp bài, ghi sự kiện thi, gọi AI Tutor, tóm tắt chống gian lận), đóng vai trò ranh giới bảo mật và kiểm soát truy cập.
+    \item \textbf{Lớp dữ liệu (Data):} PostgreSQL lưu dữ liệu quan hệ, kết hợp pgvector để truy vấn vector; Supabase Storage lưu tệp đính kèm.
+    \item \textbf{Lớp dịch vụ AI (External AI Service):} Gemini API đảm nhiệm embedding và sinh phản hồi.
+\end{itemize}
+Trong bối cảnh Next.js, các API Routes và logic truy xuất dữ liệu được thực thi phía server, giúp đảm bảo các tác vụ nhạy cảm (khoá API, truy vấn dữ liệu) không bị lộ ra phía client \cite{nextjs}.
+
+\section{Kiến trúc Web: Next.js App Router và React}
+Next.js App Router cung cấp cơ chế định tuyến theo thư mục và hỗ trợ Server Components, giúp tách bạch phần render phía server và tương tác phía client. Trong EduVerse, API Routes được dùng để đóng gói các nghiệp vụ nhạy cảm (ví dụ gọi AI, truy cập cơ sở dữ liệu), qua đó hạn chế lộ khóa dịch vụ và giảm tải cho phía client \cite{nextjs}.
+
+Ở cấp độ triển khai, App Router giúp thống nhất các luồng:
+\begin{itemize}
+    \item \textbf{SSR/Server Components:} phù hợp khi cần render dữ liệu theo người dùng (ví dụ thông tin lớp học, bài tập), giảm thời gian chờ nhờ trả về HTML đã có dữ liệu.
+    \item \textbf{Client Components:} xử lý tương tác trực tiếp (làm bài kiểm tra, thao tác nộp bài, theo dõi trạng thái) và các hành vi cần bắt sự kiện theo thời gian thực.
+    \item \textbf{API Routes:} cung cấp endpoint thống nhất cho client, đồng thời là nơi áp dụng các chính sách bảo mật (xác thực, phân quyền, giới hạn tần suất).
+\end{itemize}
+
+\section{Xác thực và phân quyền: NextAuth.js}
+Hệ thống sử dụng NextAuth.js để hiện thực hóa đăng nhập và quản lý phiên làm việc của người dùng. Cách tiếp cận này cho phép tích hợp nhiều nhà cung cấp đăng nhập (ví dụ OAuth) và đồng thời hỗ trợ cơ chế Credentials khi cần. Dữ liệu phiên (session) được sử dụng để thực thi phân quyền theo vai trò (giáo viên, học sinh, quản trị, phụ huynh) trong các API và luồng điều hướng \cite{nextauth}.
+
+Về mô hình triển khai, NextAuth.js cung cấp cơ chế quản lý phiên dựa trên JWT hoặc session lưu trong cơ sở dữ liệu. Khi người dùng đăng nhập, hệ thống tạo thông tin phiên để:
+\begin{itemize}
+    \item định danh người dùng (id/email);
+    \item gắn \textbf{vai trò (role)} để kiểm soát truy cập chức năng;
+    \item đảm bảo tính nhất quán khi truy cập các API Routes.
+\end{itemize}
+
+\subsection{Phân quyền theo vai trò (RBAC) và bảo vệ truy cập}
+EduVerse áp dụng RBAC (Role-Based Access Control) để tách biệt quyền truy cập giữa học sinh và giáo viên, đặc biệt với các chức năng nhạy cảm như xem sự kiện thi, tạo cấu hình chống gian lận, hoặc gọi API tóm tắt chống gian lận. Trong kiến trúc Next.js, phân quyền có thể được thực thi đồng thời ở:
+\begin{itemize}
+    \item \textbf{Tầng điều hướng (middleware):} chặn truy cập sớm vào các tuyến không phù hợp với vai trò.
+    \item \textbf{Tầng API Routes:} kiểm tra phiên/role trước khi truy vấn dữ liệu hoặc trả kết quả.
+\end{itemize}
+Cách tiếp cận phòng thủ nhiều lớp (defense in depth) giúp giảm rủi ro truy cập trái phép ngay cả khi client bị giả mạo \cite{nextjs,nextauth}.
+
+\section{Tầng dữ liệu: Prisma ORM và PostgreSQL}
+Prisma đóng vai trò lớp ánh xạ đối tượng--quan hệ (ORM), giúp truy cập dữ liệu thông qua client kiểu tĩnh (type-safe) trong TypeScript, giảm lỗi truy vấn và tăng tính nhất quán khi phát triển \cite{prisma}. Dữ liệu nghiệp vụ cốt lõi (người dùng, khóa học/bài học, bài tập, lần làm bài, sự kiện thi) được lưu trong PostgreSQL nhờ đặc tính ACID, khả năng mở rộng và hệ sinh thái phong phú \cite{postgresql}.
+
+\section{Cơ sở dữ liệu vector: pgvector}
+Để phục vụ truy xuất ngữ nghĩa cho AI Tutor, EduVerse lưu trữ embedding dước dạng vector trong PostgreSQL thông qua phần mở rộng pgvector \cite{pgvector}. Việc lưu vector cùng hệ quản trị quan hệ giúp thống nhất hạ tầng dữ liệu, đồng thời cho phép truy vấn tương đồng (similarity search) trực tiếp trên cùng một nguồn dữ liệu.
+
+\section{Lưu trữ tệp: Supabase Storage}
+Đối với các bài nộp dạng tệp (ví dụ bài tự luận đính kèm), hệ thống sử dụng Supabase Storage để lưu trữ và cấp phát liên kết truy cập an toàn theo thời hạn (signed URL) \cite{supabase}.
+
 \section{Mô hình ngôn ngữ lớn (LLM) và Gemini API}
-Trình bày về khả năng của mô hình Gemini 1.5 Flash trong việc xử lý ngữ cảnh dài (long context window), điều này rất quan trọng cho việc phân tích tài liệu bài giảng.
+Gemini API được dùng cho hai nhóm tác vụ: (i) \textbf{tạo embedding} cho tài liệu bài giảng và câu hỏi của học sinh, và (ii) \textbf{sinh câu trả lời} dựa trên ngữ cảnh được truy xuất \cite{gemini}.
 
 \section{Kiến trúc RAG (Retrieval-Augmented Generation)}
-Đây là nền tảng kỹ thuật của AI Tutor. Quy trình bao gồm:
-\begin{enumerate}
-    \item \textbf{Văn bản hóa:} Chuyển đổi PDF/DOCX bài giảng thành văn bản thô.
-    \item \textbf{Chia nhỏ (Chunking):} Sử dụng các thuật toán chia đoạn để giữ nguyên ngữ nghĩa.
-    \item \textbf{Nhúng Vector (Embedding):} Chuyển đoạn văn thành các vector không gian.
-    \item \textbf{Truy xuất (Retrieval):} Tìm kiếm đoạn văn có độ tương đồng cao nhất với câu hỏi của học sinh.
-\end{enumerate}
+RAG là nền tảng kỹ thuật của AI Tutor, kết hợp truy xuất tri thức từ nguồn dữ liệu nội bộ và sinh câu trả lời bằng mô hình ngôn ngữ. So với cách chỉ dùng LLM thuần túy, RAG giúp giảm hiện tượng "ảo giác" và tăng khả năng kiểm chứng nhờ bám theo tài liệu bài giảng \cite{rag}.
 
-\section{Kiến trúc Web hiện đại: Next.js App Router}
-Phân tích lợi ích của Server Components và API Routes trong việc bảo mật các Key của AI và tối ưu hiệu suất Rendering.
+\section{Ứng dụng AI trong giám sát thi}
+Ngoài AI Tutor, Gemini còn có thể được sử dụng để \textbf{tóm tắt tín hiệu chống gian lận} dựa trên nhật ký sự kiện thi, giúp giáo viên giảm tải khi phải xem nhiều log.
 
 % ======================================================
 % CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
 % ======================================================
 \chapter{PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG}
 
-\section{Phân tích yêu cầu chức năng}
-\subsection{Vai trò Giáo viên}
-Quản lý khóa học, tạo bài tập thông minh (Quiz/Essay), chấm bài hỗ trợ bởi AI và giám sát thi cử.
-\subsection{Vai trò Học sinh}
-Tương tác với AI Tutor, làm bài tập, nhận phản hồi tức thì và theo dõi lộ trình học tập.
+\section{Giới thiệu chương}
+ Chương 3 trình bày phân tích và thiết kế hệ thống \textbf{EduVerse} dựa trên hiện thực triển khai. Nội dung tập trung làm rõ đối tượng sử dụng, yêu cầu chức năng/phi chức năng và thiết kế các thành phần cốt lõi. Trọng tâm thiết kế được nhấn mạnh ở hai mô-đun: \textbf{AI Tutor theo kiến trúc RAG} và \textbf{giám sát thi/chống gian lận dựa trên event log kết hợp AI tổng hợp}.
 
-\section{Thiết kế cơ sở dữ liệu}
-Mô tả các thực thể chính dựa trên Schema Prisma:
+\section{Phân tích hệ thống}
+\subsection{Đối tượng sử dụng (Actor) và vai trò (Role)}
+ EduVerse phục vụ các tác nhân chính:
 \begin{itemize}
-    \item \texttt{User}: Quản lý thông tin và phân quyền người dùng.
-    \item \texttt{LessonEmbedding}: Lưu trữ các đoạn văn bản đã được vector hóa của bài học.
-    \item \texttt{ExamEvent}: Ghi lại các hành vi bất thường trong quá trình thi.
+    \item \textbf{Học sinh (STUDENT):} tham gia lớp, học bài, làm bài tập/kiểm tra, tương tác AI Tutor.
+    \item \textbf{Giáo viên (TEACHER):} tạo lớp, quản lý khóa học/bài học, tạo bài tập (Quiz/Essay), theo dõi tiến độ và giám sát thi.
+    \item \textbf{Phụ huynh (PARENT):} liên kết với học sinh, theo dõi tiến độ/kết quả và nhận tóm tắt định kỳ.
+    \item \textbf{Quản trị viên (ADMIN):} quản trị người dùng và cấu hình hệ thống; theo dõi nhật ký hoạt động.
 \end{itemize}
+
+\subsection{Yêu cầu chức năng}
+ Các yêu cầu chức năng được mô tả theo tác nhân sử dụng chính như sau:
+ \begin{itemize}
+     \item \textbf{Khách (chưa đăng nhập):} đăng ký, đăng nhập, quên/đặt lại mật khẩu.
+     \item \textbf{Học sinh:} tham gia lớp; xem bài học và học liệu; làm bài (quiz/essay); nộp bài; nhận thông báo; nhắn tin; tương tác AI Tutor.
+     \item \textbf{Giáo viên:} tạo và quản lý lớp học; quản lý khóa học/bài học; tạo bài tập/đề kiểm tra; theo dõi tiến độ và kết quả; giám sát thi dựa trên event log và nhận hỗ trợ tổng hợp bằng AI.
+     \item \textbf{Phụ huynh:} liên kết với học sinh; theo dõi tiến độ/kết quả; trao đổi với giáo viên.
+     \item \textbf{Quản trị viên:} quản trị người dùng và cấu hình hệ thống; theo dõi nhật ký hoạt động.
+ \end{itemize}
+
+\subsection{Yêu cầu phi chức năng}
+\begin{itemize}
+    \item \textbf{Bảo mật và phân quyền:} hệ thống dùng NextAuth (JWT strategy) và middleware điều hướng/phân quyền theo role; các API nhạy cảm giới hạn theo vai trò (ví dụ: teacher-only, admin-only) \cite{nextauth}.
+    \item \textbf{Kiểm soát lạm dụng (rate limit):} các API nhạy cảm (reset password, AI Tutor, AI anti-cheat, cập nhật cấu hình hệ thống) áp dụng rate limit theo IP và/hoặc user.
+    \item \textbf{Khả năng truy vết:} hệ thống ghi audit log cho các hành vi quan trọng và lưu event log cho giám sát thi.
+\end{itemize}
+
+\section{Thiết kế hệ thống}
+\subsection{Thiết kế kiến trúc}
+ EduVerse triển khai theo mô hình \textbf{Client--Server} trong một codebase Next.js: client UI gửi request đến API Routes; API Routes thực thi nghiệp vụ, truy cập dữ liệu qua Prisma và gọi dịch vụ AI.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{../out/docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}{
+        \includegraphics[width=0.95\textwidth]{../out/docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}
+    }{
+        \IfFileExists{out/docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}{
+            \includegraphics[width=0.95\textwidth]{out/docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}
+        }{
+            \IfFileExists{docs/luanvan/figures/uml/EduVerse_System_Context.png}{
+                \includegraphics[width=0.95\textwidth]{docs/luanvan/figures/uml/EduVerse_System_Context.png}
+            }{
+                \IfFileExists{figures/uml/EduVerse_System_Context.png}{
+                    \includegraphics[width=0.95\textwidth]{figures/uml/EduVerse_System_Context.png}
+                }{
+                    \framebox{\parbox{0.95\textwidth}{\centering\vspace{1cm}Context Diagram (PlantUML PNG)\vspace{1cm}}}
+                }
+            }
+        }
+    }
+    \caption{Sơ đồ bối cảnh hệ thống EduVerse}
+    \label{fig:context-eduverse}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{../out/docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}{
+        \includegraphics[width=0.95\textwidth]{../out/docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}
+    }{
+        \IfFileExists{out/docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}{
+            \includegraphics[width=0.95\textwidth]{out/docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}
+        }{
+            \IfFileExists{docs/luanvan/figures/uml/EduVerse_Component_Architecture.png}{
+                \includegraphics[width=0.95\textwidth]{docs/luanvan/figures/uml/EduVerse_Component_Architecture.png}
+            }{
+                \IfFileExists{figures/uml/EduVerse_Component_Architecture.png}{
+                    \includegraphics[width=0.95\textwidth]{figures/uml/EduVerse_Component_Architecture.png}
+                }{
+                    \framebox{\parbox{0.95\textwidth}{\centering\vspace{1cm}Component/Architecture Diagram (PlantUML PNG)\vspace{1cm}}}
+                }
+            }
+        }
+    }
+    \caption{Kiến trúc tổng thể hệ thống EduVerse}
+    \label{fig:component-architecture}
+\end{figure}
+
+\subsection{Thiết kế Use Case}
+\Needspace{0.9\textheight}
+\subsubsection{Use Case tổng thể hệ thống}
+\begin{figure}[H]
+    \centering
+    \IfFileExists{../out/docs/luanvan/figures/uml/usecase-overall/usecase-overall.png}{
+        \includegraphics[width=0.95\textwidth,height=0.85\textheight,keepaspectratio]{../out/docs/luanvan/figures/uml/usecase-overall/usecase-overall.png}
+    }{
+        \IfFileExists{out/docs/luanvan/figures/uml/usecase-overall/usecase-overall.png}{
+            \includegraphics[width=0.95\textwidth,height=0.85\textheight,keepaspectratio]{out/docs/luanvan/figures/uml/usecase-overall/usecase-overall.png}
+        }{
+            \IfFileExists{docs/luanvan/figures/uml/usecase-overall.png}{
+                \includegraphics[width=0.95\textwidth,height=0.85\textheight,keepaspectratio]{docs/luanvan/figures/uml/usecase-overall.png}
+            }{
+                \IfFileExists{figures/uml/usecase-overall.png}{
+                    \includegraphics[width=0.95\textwidth,height=0.85\textheight,keepaspectratio]{figures/uml/usecase-overall.png}
+                }{
+                    \framebox{\parbox{0.95\textwidth}{\centering\vspace{1cm}Use Case Diagram (PlantUML PNG)\vspace{1cm}}}
+                }
+            }
+        }
+    }
+    \caption{Use Case tổng thể hệ thống EduVerse}
+    \label{fig:usecase-overall}
+\end{figure}
+
+\Needspace{0.9\textheight}
+\subsubsection{Use Case module giám sát thi và chống gian lận}
+\begin{figure}[H]
+    \centering
+    \IfFileExists{../out/docs/luanvan/figures/uml/usecase-anti-cheat/usecase-anti-cheat.png}{
+        \includegraphics[width=0.95\textwidth,height=0.85\textheight,keepaspectratio]{../out/docs/luanvan/figures/uml/usecase-anti-cheat/usecase-anti-cheat.png}
+    }{
+        \IfFileExists{out/docs/luanvan/figures/uml/usecase-anti-cheat/usecase-anti-cheat.png}{
+            \includegraphics[width=0.95\textwidth,height=0.85\textheight,keepaspectratio]{out/docs/luanvan/figures/uml/usecase-anti-cheat/usecase-anti-cheat.png}
+        }{
+            \IfFileExists{docs/luanvan/figures/uml/usecase-anti-cheat.png}{
+                \includegraphics[width=0.95\textwidth,height=0.85\textheight,keepaspectratio]{docs/luanvan/figures/uml/usecase-anti-cheat.png}
+            }{
+                \IfFileExists{figures/uml/usecase-anti-cheat.png}{
+                    \includegraphics[width=0.95\textwidth,height=0.85\textheight,keepaspectratio]{figures/uml/usecase-anti-cheat.png}
+                }{
+                    \framebox{\parbox{0.95\textwidth}{\centering\vspace{1cm}Use Case Diagram (PlantUML PNG)\vspace{1cm}}}
+                }
+            }
+        }
+    }
+    \caption{Use Case tổng quan module giám sát thi và chống gian lận}
+    \label{fig:usecase-anti-cheat}
+\end{figure}
+
+\subsection{Thiết kế cơ sở dữ liệu}
+Hệ thống sử dụng Prisma ORM kết nối PostgreSQL \cite{prisma,postgresql}. Hình \ref{fig:db-core} minh họa mối quan hệ giữa các thực thể dữ liệu cốt lõi; Bảng \ref{tab:db-core} tóm tắt các nhóm dữ liệu và vai trò tương ứng.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{docs/luanvan/figures/uml/EduVerse_DB_Core.png}{
+        \includegraphics[height=0.9\textheight,keepaspectratio]{docs/luanvan/figures/uml/EduVerse_DB_Core.png}
+    }{
+        \IfFileExists{figures/uml/EduVerse_DB_Core.png}{
+            \includegraphics[height=0.9\textheight,keepaspectratio]{figures/uml/EduVerse_DB_Core.png}
+        }{
+            \IfFileExists{../../out/docs/luanvan/figures/uml/db-core/EduVerse_DB_Core.png}{
+                \includegraphics[height=0.9\textheight,keepaspectratio]{../../out/docs/luanvan/figures/uml/db-core/EduVerse_DB_Core.png}
+            }{
+                \IfFileExists{../out/docs/luanvan/figures/uml/db-core/EduVerse_DB_Core.png}{
+                    \includegraphics[height=0.9\textheight,keepaspectratio]{../out/docs/luanvan/figures/uml/db-core/EduVerse_DB_Core.png}
+                }{
+                    \IfFileExists{out/docs/luanvan/figures/uml/db-core/EduVerse_DB_Core.png}{
+                        \includegraphics[height=0.9\textheight,keepaspectratio]{out/docs/luanvan/figures/uml/db-core/EduVerse_DB_Core.png}
+                    }{
+                        \framebox{\parbox{0.95\textwidth}{\centering\vspace{1cm}Database Diagram (PlantUML PNG)\vspace{1cm}}}
+                    }
+                }
+            }
+        }
+    }
+    \caption{Sơ đồ cơ sở dữ liệu cốt lõi của hệ thống EduVerse}
+    \label{fig:db-core}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|p{3.2cm}|p{11.7cm}|}
+\hline
+\textbf{Nhóm dữ liệu} & \textbf{Vai trò} \\ \hline
+Người dùng & Các bảng: \texttt{users} (\texttt{User}). Lưu thông tin tài khoản, vai trò (\texttt{UserRole}), thời điểm chọn vai trò (\texttt{roleSelectedAt}). \\ \hline
+Khôi phục mật khẩu & Các bảng: \texttt{password\_resets} (\texttt{PasswordReset}). Lưu mã xác nhận đặt lại mật khẩu, thời hạn (\texttt{expires}) và trạng thái hoàn thành (\texttt{completed}). \\ \hline
+Lớp học & Các bảng: \texttt{classrooms}, \texttt{classroom\_students}. Tổ chức lớp học, liên kết học sinh--lớp. \\ \hline
+Khóa học/bài học & Các bảng: \texttt{courses}, \texttt{lessons}, \texttt{lesson\_attachments}. Lưu nội dung bài học và tệp đính kèm; là nguồn tri thức cho RAG Tutor. \\ \hline
+RAG embedding & Bảng: \texttt{lesson\_embedding\_chunks}. Lưu các đoạn (chunk) đã embedding bằng pgvector để truy vấn tương đồng theo Top-$k$ \cite{pgvector}. \\ \hline
+Bài tập/quiz & Các bảng: \texttt{assignments}, \texttt{questions}, \texttt{question\_options}. Lưu bài tập dạng ESSAY/QUIZ, cấu trúc câu hỏi và đáp án. \\ \hline
+Nộp bài (ESSAY) & Bảng: \texttt{assignment\_submissions}. Lưu bài tự luận dạng nội dung, điểm và phản hồi. \\ \hline
+Nộp bài (tệp) & Các bảng: \texttt{submissions}, \texttt{submission\_files}. Lưu metadata tệp nộp bài (\texttt{storagePath}, \texttt{mimeType}, \texttt{sizeBytes}). \\ \hline
+Giám sát thi & Các bảng: \texttt{exam\_events}, \texttt{assignment\_attempts}. Lưu nhật ký sự kiện thi (event log) và thông tin attempt. \\ \hline
+Chat & Các bảng: \texttt{conversations}, \texttt{conversation\_participants}, \texttt{messages}, \texttt{chat\_attachments}. Lưu hội thoại và tin nhắn. \\ \hline
+Hệ thống/Audit & Các bảng: \texttt{system\_settings}, \texttt{audit\_logs}. Lưu cấu hình hệ thống và nhật ký hoạt động phục vụ truy vết. \\ \hline
+\end{tabular}
+\caption{Các bảng dữ liệu cốt lõi trong hệ thống EduVerse }
+\label{tab:db-core}
+\end{table}
+
+
 
 % ======================================================
 % CHƯƠNG 4: HIỆN THỰC HÓA HỆ THỐNG
@@ -221,11 +480,11 @@ Mô tả các thực thể chính dựa trên Schema Prisma:
 \chapter{HIỆN THỰC HÓA HỆ THỐNG}
 
 \section{Xây dựng trợ lý ảo AI Tutor}
-Mô tả chi tiết quá trình hiện thực hóa tệp \texttt{src/lib/rag/indexLessonEmbeddings.ts}. Cách sử dụng \texttt{pgvector} trong PostgreSQL để lưu trữ và truy vấn vector.
+Mô tả cơ chế chỉ mục hóa bài học và truy vấn ngữ nghĩa phục vụ AI Tutor. Cơ chế này khai thác \texttt{pgvector} trên PostgreSQL để lưu trữ và truy vấn vector embedding.
 
 \section{Hệ thống đánh giá và giám sát thi cử}
 \subsection{Cơ chế tự động chấm bài}
-Sử dụng Prompt Engineering để hướng dẫn Gemini chấm bài tự luận dựa trên Rubric của giáo viên.
+Kỹ thuật Prompt Engineering được sử dụng để hướng dẫn Gemini chấm bài tự luận dựa trên Rubric do giáo viên cung cấp.
 \subsection{Phát hiện hành vi đáng ngờ}
 Phân tích logic trong \texttt{suspicious-behavior.ts}: Theo dõi chuyển đổi Tab, phím tắt cấm và mất kết nối.
 
@@ -260,6 +519,12 @@ Tích hợp nhận diện khuôn mặt để xác thực danh tính học sinh k
 \begin{thebibliography}{99}
 \addcontentsline{toc}{chapter}{Tài liệu tham khảo}
 \bibitem{nextjs} Vercel, "Next.js 14 Documentation," 2024. [Online]. Available: \url{https://nextjs.org/docs}.
+\bibitem{nextauth} NextAuth.js, "NextAuth.js Documentation," 2024. [Online]. Available: \url{https://next-auth.js.org}.
+\bibitem{prisma} Prisma, "Prisma Documentation," 2024. [Online]. Available: \url{https://www.prisma.io/docs}.
+\bibitem{postgresql} The PostgreSQL Global Development Group, "PostgreSQL Documentation," 2024. [Online]. Available: \url{https://www.postgresql.org/docs/}.
+\bibitem{pgvector} pgvector, "pgvector: Open-source vector similarity search for Postgres," 2024. [Online]. Available: \url{https://github.com/pgvector/pgvector}.
+\bibitem{supabase} Supabase, "Supabase Documentation," 2024. [Online]. Available: \url{https://supabase.com/docs}.
+\bibitem{plantuml} PlantUML, "PlantUML Documentation," 2024. [Online]. Available: \url{https://plantuml.com/}.
 \bibitem{gemini} Google DeepMind, "Gemini: A Family of Highly Capable Multimodal Models," 2023.
 \bibitem{rag} Lewis, P., et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks," NeurIPS, 2020.
 \end{thebibliography}

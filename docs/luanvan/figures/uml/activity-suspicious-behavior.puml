@@ -1,0 +1,37 @@
+@startuml activity-suspicious-behavior
+title Activity - Phát hiện hành vi đáng ngờ trong phiên thi
+
+!pragma layout smetana
+
+start
+:Khởi tạo phiên thi (Exam Session);
+:Thiết lập AntiCheatConfig + FallbackConfig;
+
+repeat
+:Theo dõi tín hiệu (network/visibility/focus/clipboard);
+if (Mất kết nối?) then (Có)
+  :Log SESSION_PAUSED\n(metadata.disconnectType);
+  :Auto-save bài làm;
+  :Yêu cầu/áp dụng grace period;
+  :Log SESSION_RESUMED khi reconnect;
+endif
+
+if (Chuyển tab / mất focus?) then (Có)
+  :Log TAB_SWITCH_DETECTED hoặc\nSESSION_PAUSED (PAGE_HIDDEN/WINDOW_BLUR);
+endif
+
+if (Copy/Paste?) then (Có)
+  :Log COPY_PASTE_ATTEMPT;
+endif
+
+:Phân tích pattern (disconnect nhiều,\ntrả lời nhanh, pattern đáp án,\nchuyển tab liên tục...);
+if (Vượt ngưỡng nghi ngờ?) then (Có)
+  :Log SUSPICIOUS_BEHAVIOR_DETECTED;
+  :Gắn mức độ (LOW/MEDIUM/HIGH/CRITICAL);
+endif
+repeat while (Phiên thi còn IN_PROGRESS?)
+
+:Kết thúc / Nộp bài;
+stop
+
+@enduml

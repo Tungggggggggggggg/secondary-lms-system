@@ -1,0 +1,47 @@
+@startuml EduVerse_Component_Architecture
+title EduVerse - Sơ đồ kiến trúc tổng thể (Component Diagram)
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor "Học sinh" as Student
+actor "Giáo viên" as Teacher
+actor "Phụ huynh" as Parent
+actor "Quản trị viên" as Admin
+
+package "EduVerse (Next.js App Router)" {
+  [Web UI\n(Dashboard/Pages)] as WebUI
+  [API Routes\n(Server)] as Api
+
+  component "Auth\n(NextAuth)" as Auth
+  component "RAG Indexing\n(Index Embeddings)" as RagIndex
+  component "AI Tutor\n(RAG Chat)" as Tutor
+  component "Exam Monitoring\n(Anti-cheat)" as AntiCheat
+
+  WebUI --> Api : HTTPS
+  Api --> Auth : xác thực/phiên
+  Api --> Tutor : hỏi/đáp
+  Api --> RagIndex : tạo/chỉ mục embedding
+  Api --> AntiCheat : ghi sự kiện\nphân tích nghi ngờ
+}
+
+database "PostgreSQL" as PG
+component "pgvector\n(Vector Search)" as PGVector
+cloud "Supabase Storage" as Supabase
+cloud "Google Gemini API" as Gemini
+
+Api --> PG : Prisma ORM\nCRUD
+PGVector --> PG : extension
+Tutor --> PGVector : truy vấn Top-k
+RagIndex --> Gemini : tạo embedding
+Tutor --> Gemini : sinh câu trả lời
+AntiCheat --> PG : lưu exam_events\ntruy vấn log
+Api --> Supabase : upload/download\nsigned URL
+
+Student --> WebUI
+Teacher --> WebUI
+Parent --> WebUI
+Admin --> WebUI
+
+@enduml
