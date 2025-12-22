@@ -149,7 +149,7 @@
 
 \chapter*{Lời cam đoan}
 \addcontentsline{toc}{chapter}{Lời cam đoan}
-Tôi xin cam đoan đây là công trình nghiên cứu của riêng tôi dước sự hướng dẫn của giảng viên hướng dẫn. Các kết quả nêu trong luận văn là trung thực và chưa từng được công bố trong bất kỳ công trình nào khác. Mọi sự giúp đỡ cho việc thực hiện luận văn này đã được cảm ơn và các thông tin trích dẫn trong luận văn đã được chỉ rõ nguồn gốc.
+Tôi xin cam đoan đây là công trình nghiên cứu của riêng tôi dưới sự hướng dẫn của giảng viên hướng dẫn. Các kết quả nêu trong luận văn là trung thực và chưa từng được công bố trong bất kỳ công trình nào khác. Mọi sự giúp đỡ cho việc thực hiện luận văn này đã được cảm ơn và các thông tin trích dẫn trong luận văn đã được chỉ rõ nguồn gốc.
 
 \chapter*{Lời mở đầu}
 \addcontentsline{toc}{chapter}{Lời mở đầu}
@@ -194,107 +194,115 @@ Trong kỷ nguyên giáo dục 4.0, vai trò của giáo viên đang dịch chuy
 \chapter{CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ}
 
 \section{Tổng quan nền tảng công nghệ}
-Hệ thống \textbf{EduVerse} được hiện thực hóa dước dạng ứng dụng Web theo mô hình full-stack, trong đó lớp giao diện và lớp xử lý nghiệp vụ (API) được tổ chức thống nhất. Nhóm công nghệ trọng tâm gồm: Next.js (App Router) cho kiến trúc web hiện đại \cite{nextjs}, NextAuth.js cho xác thực và quản lý phiên đăng nhập \cite{nextauth}, Prisma ORM cho truy cập dữ liệu \cite{prisma}, PostgreSQL cho lưu trữ quan hệ \cite{postgresql}, pgvector cho truy xuất tương đồng vector phục vụ RAG \cite{pgvector}, Supabase Storage cho lưu trữ tệp nộp bài \cite{supabase}, và Gemini API cho các tác vụ AI (embedding và sinh nội dung) \cite{gemini}.
+Hệ thống \textbf{EduVerse} được hiện thực hóa dưới dạng ứng dụng Web theo mô hình full-stack, trong đó lớp giao diện và lớp xử lý nghiệp vụ (API) được tổ chức thống nhất. Nhóm công nghệ trọng tâm gồm: Next.js (App Router) cho kiến trúc web hiện đại \cite{nextjs}, NextAuth.js cho xác thực và quản lý phiên đăng nhập \cite{nextauth}, Prisma ORM cho truy cập dữ liệu \cite{prisma}, PostgreSQL cho lưu trữ quan hệ \cite{postgresql}, pgvector cho truy xuất tương đồng vector phục vụ RAG \cite{pgvector}, Supabase Storage cho lưu trữ tệp nộp bài \cite{supabase}, và Gemini API cho các tác vụ AI (embedding và sinh nội dung) \cite{gemini}.
 
 \begin{table}[htbp]
 \centering
 \small
-\begin{tabular}{|p{3.2cm}|p{5.2cm}|p{5.2cm}|}
+\begin{tabular}{|p{3.4cm}|p{5.1cm}|p{5.1cm}|}
 \hline
-\textbf{Công nghệ} & \textbf{Vai trò trong hệ thống} & \textbf{Lý do lựa chọn} \\ \hline
-Next.js (App Router) \cite{nextjs} & Full-stack Web framework; tổ chức routing, rendering, API Routes & Hỗ trợ kiến trúc hiện đại, tối ưu hiệu năng và bảo mật khi triển khai logic phía server \\ \hline
-NextAuth.js \cite{nextauth} & Xác thực người dùng, quản lý phiên đăng nhập & Tích hợp đăng nhập linh hoạt, đồng thời hỗ trợ quản lý session/role cho phân quyền \\ \hline
-Prisma ORM \cite{prisma} & Truy cập dữ liệu type-safe, migrations, ánh xạ mô hình dữ liệu & Giảm lỗi truy vấn, tăng tính nhất quán và hỗ trợ mở rộng schema có kiểm soát \\ \hline
+\textbf{Công nghệ (phiên bản)} & \textbf{Vai trò trong hệ thống} & \textbf{Lý do lựa chọn} \\ \hline
+Next.js App Router (14.2.33) \cite{nextjs} & Full-stack Web framework; routing, rendering, API Routes & Thống nhất UI và API trong cùng codebase; hỗ trợ triển khai logic nhạy cảm phía server; tối ưu hiệu năng và bảo mật \\ \hline
+NextAuth.js (4.24.11) \cite{nextauth} & Xác thực người dùng, quản lý phiên đăng nhập (JWT), RBAC & Hỗ trợ đa cơ chế đăng nhập (Credentials, OAuth) và cho phép kiểm soát phiên/role nhất quán ở middleware và API \\ \hline
+Prisma ORM (6.19.0) \cite{prisma} & Truy cập dữ liệu type-safe, migrations, ánh xạ mô hình dữ liệu & Giảm lỗi truy vấn, tăng tính nhất quán và hỗ trợ mở rộng schema có kiểm soát \\ \hline
 PostgreSQL \cite{postgresql} & Cơ sở dữ liệu quan hệ lưu dữ liệu nghiệp vụ & Đảm bảo ACID, ổn định và phù hợp dữ liệu có quan hệ phức tạp (khóa học, bài tập, sự kiện thi) \\ \hline
 pgvector \cite{pgvector} & Lưu embedding và truy vấn tương đồng vector phục vụ RAG & Cho phép truy xuất ngữ nghĩa ngay trên Postgres, thống nhất hạ tầng dữ liệu \\ \hline
-Supabase Storage \cite{supabase} & Lưu trữ tệp nộp bài, cấp signed URL & Tách tải lưu trữ file khỏi DB, hỗ trợ truy cập an toàn theo thời hạn \\ \hline
-Gemini API \cite{gemini} & Tạo embedding và sinh nội dung (AI Tutor, tóm tắt hỗ trợ) & Khả năng sinh ngôn ngữ tự nhiên và tạo embedding phục vụ truy xuất/giải thích \\ \hline
+Supabase Storage (2.76.1) \cite{supabase} & Lưu trữ tệp nộp bài, cấp signed URL & Tách tải lưu trữ file khỏi DB, hỗ trợ truy cập an toàn theo thời hạn \\ \hline
+Gemini API (\texttt{@google/generative-ai} 0.24.1) \cite{gemini} & Tạo embedding và sinh nội dung (AI Tutor, tóm tắt hỗ trợ) & Khả năng sinh ngôn ngữ tự nhiên và tạo embedding phục vụ truy xuất/giải thích \\ \hline
+SWR (2.3.6) & Fetching/caching dữ liệu phía client (revalidate) & Đơn giản hóa đồng bộ dữ liệu UI, giảm tải gọi lại API và cải thiện trải nghiệm người dùng \\ \hline
+Vitest (4.0.15) & Kiểm thử tự động (unit test) & Tối ưu tốc độ chạy test; phù hợp dự án TypeScript/ESM và CI \\ \hline
+lucide-react (0.546.0) & Bộ biểu tượng UI cho dashboard & Đồng bộ thiết kế icon, dễ mở rộng và tái sử dụng ở nhiều portal \\ \hline
 \end{tabular}
-\caption{Tóm tắt công nghệ sử dụng trong hệ thống EduVerse}
+\caption{Tóm tắt Tech Stack sử dụng trong hệ thống EduVerse}
+\label{tab:tech-stack}
 \end{table}
 
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabular}{|p{3cm}|p{5.3cm}|p{5.3cm}|}
-\hline
-\textbf{Tiêu chí} & \textbf{RAG \cite{rag}} & \textbf{LLM thuần} \\ \hline
-Nguồn tri thức & Dựa trên tài liệu nội bộ (bài giảng) được truy xuất theo câu hỏi & Chủ yếu dựa trên tri thức đã học trong quá trình huấn luyện \\ \hline
-Tính kiểm chứng & Có thể truy vết theo đoạn truy xuất; dễ giải thích tại sao trả lời như vậy & Khó truy vết nguồn; dễ sinh nội dung không có trong tài liệu \\ \hline
-Rủi ro "ảo giác" & Thấp hơn do bị ràng buộc bởi ngữ cảnh truy xuất & Cao hơn, đặc biệt với câu hỏi đặc thù nội dung lớp học \\ \hline
-Chi phí cập nhật tri thức & Cập nhật bằng cách thay tài liệu/embedding (không cần huấn luyện lại) & Thường cần fine-tune hoặc chờ model mới để cập nhật tri thức \\ \hline
-Phù hợp giáo dục & Phù hợp khi cần bám sát học liệu và chuẩn hóa nội dung & Phù hợp cho gợi ý chung, nhưng cần kiểm soát chặt khi dùng như nguồn kiến thức \\ \hline
-\end{tabular}
-\caption{So sánh RAG và LLM thuần trong bối cảnh hệ thống học tập}
-\end{table}
+ \begin{table}[htbp]
+ \centering
+ \small
+ \begin{tabular}{|p{3cm}|p{5.3cm}|p{5.3cm}|}
+ \hline
+ \textbf{Tiêu chí} & \textbf{RAG \cite{rag}} & \textbf{LLM thuần} \\ \hline
+ Nguồn tri thức & Dựa trên tài liệu nội bộ (bài giảng) được truy xuất theo câu hỏi & Chủ yếu dựa trên tri thức đã học trong quá trình huấn luyện \\ \hline
+ Tính kiểm chứng & Có thể truy vết theo đoạn truy xuất; dễ giải thích tại sao trả lời như vậy & Khó truy vết nguồn; dễ sinh nội dung không có trong tài liệu \\ \hline
+ Rủi ro "ảo giác" & Thấp hơn do bị ràng buộc bởi ngữ cảnh truy xuất & Cao hơn, đặc biệt với câu hỏi đặc thù nội dung lớp học \\ \hline
+ Chi phí cập nhật tri thức & Cập nhật bằng cách thay tài liệu/embedding (không cần huấn luyện lại) & Thường cần fine-tune hoặc chờ model mới để cập nhật tri thức \\ \hline
+ Phù hợp giáo dục & Phù hợp khi cần bám sát học liệu và chuẩn hóa nội dung & Phù hợp cho gợi ý chung, nhưng cần kiểm soát chặt khi dùng như nguồn kiến thức \\ \hline
+ \end{tabular}
+ \caption{So sánh RAG và LLM thuần trong bối cảnh hệ thống học tập}
+ \end{table}
 
-\section{Kiến trúc tổng thể hệ thống}
-Về mặt kiến trúc, EduVerse có thể xem như một hệ thống gồm bốn lớp chính:
-\begin{itemize}
-    \item \textbf{Lớp giao diện (Presentation):} các trang dashboard cho học sinh/giáo viên, tập trung vào thao tác học tập, làm bài và theo dõi kết quả.
-    \item \textbf{Lớp dịch vụ ứng dụng (Application/API):} các API Routes xử lý nghiệp vụ (xác thực, nộp bài, ghi sự kiện thi, gọi AI Tutor, tóm tắt chống gian lận), đóng vai trò ranh giới bảo mật và kiểm soát truy cập.
-    \item \textbf{Lớp dữ liệu (Data):} PostgreSQL lưu dữ liệu quan hệ, kết hợp pgvector để truy vấn vector; Supabase Storage lưu tệp đính kèm.
-    \item \textbf{Lớp dịch vụ AI (External AI Service):} Gemini API đảm nhiệm embedding và sinh phản hồi.
-\end{itemize}
-Trong bối cảnh Next.js, các API Routes và logic truy xuất dữ liệu được thực thi phía server, giúp đảm bảo các tác vụ nhạy cảm (khoá API, truy vấn dữ liệu) không bị lộ ra phía client \cite{nextjs}.
+ \section{Kiến trúc tổng thể hệ thống}
+ Về mặt kiến trúc, EduVerse có thể xem như một hệ thống gồm bốn lớp chính:
+ \begin{itemize}
+     \item \textbf{Lớp giao diện (Presentation):} các trang dashboard cho học sinh/giáo viên, tập trung vào thao tác học tập, làm bài và theo dõi kết quả.
+     \item \textbf{Lớp dịch vụ ứng dụng (Application/API):} các API Routes xử lý nghiệp vụ (xác thực, nộp bài, ghi sự kiện thi, gọi AI Tutor, tóm tắt chống gian lận), đóng vai trò ranh giới bảo mật và kiểm soát truy cập.
+     \item \textbf{Lớp dữ liệu (Data):} PostgreSQL lưu dữ liệu quan hệ, kết hợp pgvector để truy vấn vector; Supabase Storage lưu tệp đính kèm.
+     \item \textbf{Lớp dịch vụ AI (External AI Service):} Gemini API đảm nhiệm embedding và sinh phản hồi.
+ \end{itemize}
+ Trong bối cảnh Next.js, các API Routes và logic truy xuất dữ liệu được thực thi phía server, giúp đảm bảo các tác vụ nhạy cảm (khoá API, truy vấn dữ liệu) không bị lộ ra phía client \cite{nextjs}.
 
-\section{Kiến trúc Web: Next.js App Router và React}
-Next.js App Router cung cấp cơ chế định tuyến theo thư mục và hỗ trợ Server Components, giúp tách bạch phần render phía server và tương tác phía client. Trong EduVerse, API Routes được dùng để đóng gói các nghiệp vụ nhạy cảm (ví dụ gọi AI, truy cập cơ sở dữ liệu), qua đó hạn chế lộ khóa dịch vụ và giảm tải cho phía client \cite{nextjs}.
+ \section{Kiến trúc Web: Next.js App Router và React}
+ Next.js App Router cung cấp cơ chế định tuyến theo thư mục và hỗ trợ Server Components, giúp tách bạch phần render phía server và tương tác phía client. Trong EduVerse, API Routes được dùng để đóng gói các nghiệp vụ nhạy cảm (ví dụ gọi AI, truy cập cơ sở dữ liệu), qua đó hạn chế lộ khóa dịch vụ và giảm tải cho phía client \cite{nextjs}.
 
-Ở cấp độ triển khai, App Router giúp thống nhất các luồng:
-\begin{itemize}
-    \item \textbf{SSR/Server Components:} phù hợp khi cần render dữ liệu theo người dùng (ví dụ thông tin lớp học, bài tập), giảm thời gian chờ nhờ trả về HTML đã có dữ liệu.
-    \item \textbf{Client Components:} xử lý tương tác trực tiếp (làm bài kiểm tra, thao tác nộp bài, theo dõi trạng thái) và các hành vi cần bắt sự kiện theo thời gian thực.
-    \item \textbf{API Routes:} cung cấp endpoint thống nhất cho client, đồng thời là nơi áp dụng các chính sách bảo mật (xác thực, phân quyền, giới hạn tần suất).
-\end{itemize}
+ Ở cấp độ triển khai, App Router giúp thống nhất các luồng:
+ \begin{itemize}
+     \item \textbf{SSR/Server Components:} phù hợp khi cần render dữ liệu theo người dùng (ví dụ thông tin lớp học, bài tập), giảm thời gian chờ nhờ trả về HTML đã có dữ liệu.
+     \item \textbf{Client Components:} xử lý tương tác trực tiếp (làm bài kiểm tra, thao tác nộp bài, theo dõi trạng thái) và các hành vi cần bắt sự kiện theo thời gian thực.
+     \item \textbf{API Routes:} cung cấp endpoint thống nhất cho client, đồng thời là nơi áp dụng các chính sách bảo mật (xác thực, phân quyền, giới hạn tần suất).
+ \end{itemize}
 
-\section{Xác thực và phân quyền: NextAuth.js}
-Hệ thống sử dụng NextAuth.js để hiện thực hóa đăng nhập và quản lý phiên làm việc của người dùng. Cách tiếp cận này cho phép tích hợp nhiều nhà cung cấp đăng nhập (ví dụ OAuth) và đồng thời hỗ trợ cơ chế Credentials khi cần. Dữ liệu phiên (session) được sử dụng để thực thi phân quyền theo vai trò (giáo viên, học sinh, quản trị, phụ huynh) trong các API và luồng điều hướng \cite{nextauth}.
+ \section{Xác thực và phân quyền: NextAuth.js}
+ Hệ thống sử dụng NextAuth.js để hiện thực hóa đăng nhập và quản lý phiên làm việc của người dùng. Cách tiếp cận này cho phép tích hợp nhiều nhà cung cấp đăng nhập (ví dụ OAuth) và đồng thời hỗ trợ cơ chế Credentials khi cần. Dữ liệu phiên (session) được sử dụng để thực thi phân quyền theo vai trò (giáo viên, học sinh, quản trị, phụ huynh) trong các API và luồng điều hướng \cite{nextauth}.
 
-Về mô hình triển khai, NextAuth.js cung cấp cơ chế quản lý phiên dựa trên JWT hoặc session lưu trong cơ sở dữ liệu. Khi người dùng đăng nhập, hệ thống tạo thông tin phiên để:
-\begin{itemize}
-    \item định danh người dùng (id/email);
-    \item gắn \textbf{vai trò (role)} để kiểm soát truy cập chức năng;
-    \item đảm bảo tính nhất quán khi truy cập các API Routes.
-\end{itemize}
+ Về mô hình triển khai, NextAuth.js cung cấp cơ chế quản lý phiên dựa trên JWT hoặc session lưu trong cơ sở dữ liệu. Khi người dùng đăng nhập, hệ thống tạo thông tin phiên để:
+ \begin{itemize}
+     \item định danh người dùng (id/email);
+     \item gắn \textbf{vai trò (role)} để kiểm soát truy cập chức năng;
+     \item đảm bảo tính nhất quán khi truy cập các API Routes.
+ \end{itemize}
 
-\subsection{Phân quyền theo vai trò (RBAC) và bảo vệ truy cập}
-EduVerse áp dụng RBAC (Role-Based Access Control) để tách biệt quyền truy cập giữa học sinh và giáo viên, đặc biệt với các chức năng nhạy cảm như xem sự kiện thi, tạo cấu hình chống gian lận, hoặc gọi API tóm tắt chống gian lận. Trong kiến trúc Next.js, phân quyền có thể được thực thi đồng thời ở:
-\begin{itemize}
-    \item \textbf{Tầng điều hướng (middleware):} chặn truy cập sớm vào các tuyến không phù hợp với vai trò.
-    \item \textbf{Tầng API Routes:} kiểm tra phiên/role trước khi truy vấn dữ liệu hoặc trả kết quả.
-\end{itemize}
-Cách tiếp cận phòng thủ nhiều lớp (defense in depth) giúp giảm rủi ro truy cập trái phép ngay cả khi client bị giả mạo \cite{nextjs,nextauth}.
+ \subsection{Phân quyền theo vai trò (RBAC) và bảo vệ truy cập}
+ EduVerse áp dụng RBAC (Role-Based Access Control) với bốn vai trò \texttt{STUDENT}, \texttt{TEACHER}, \texttt{PARENT}, \texttt{ADMIN}. Điểm khác biệt trong hiện thực của hệ thống là cơ chế \textbf{multi-portal trong cùng một ứng dụng Next.js duy nhất}: mỗi vai trò sử dụng một không gian chức năng riêng dưới các tuyến \texttt{/dashboard/student}, \texttt{/dashboard/teacher}, \texttt{/dashboard/parent}, \texttt{/dashboard/admin}, nhưng vẫn dùng chung cơ chế xác thực và hạ tầng API.
 
-\section{Tầng dữ liệu: Prisma ORM và PostgreSQL}
-Prisma đóng vai trò lớp ánh xạ đối tượng--quan hệ (ORM), giúp truy cập dữ liệu thông qua client kiểu tĩnh (type-safe) trong TypeScript, giảm lỗi truy vấn và tăng tính nhất quán khi phát triển \cite{prisma}. Dữ liệu nghiệp vụ cốt lõi (người dùng, khóa học/bài học, bài tập, lần làm bài, sự kiện thi) được lưu trong PostgreSQL nhờ đặc tính ACID, khả năng mở rộng và hệ sinh thái phong phú \cite{postgresql}.
+ Để đảm bảo người dùng không truy cập nhầm hoặc cố ý truy cập chéo vai trò, hệ thống triển khai cơ chế phân quyền theo hướng \textbf{phòng thủ nhiều lớp (defense in depth)}:
+ \begin{itemize}
+     \item \textbf{Tầng phiên (Session/JWT):} Sau đăng nhập, thông tin \texttt{role} và thời điểm xác nhận vai trò \texttt{roleSelectedAt} được đồng bộ vào JWT/session.
+     \item \textbf{Tầng điều hướng (Middleware):} chặn truy cập sớm vào các tuyến không phù hợp với vai trò; bắt buộc chọn vai trò trước khi vào portal dựa trên \texttt{roleSelectedAt}; đồng thời chặn cross-role giữa các portal.
+     \item \textbf{Tầng API Routes:} kiểm tra phiên/role trước khi truy vấn dữ liệu hoặc trả kết quả, đặc biệt với các API nhạy cảm (admin-only, teacher-only).
+ \end{itemize}
+ Cách tiếp cận phòng thủ nhiều lớp (defense in depth) giúp giảm rủi ro truy cập trái phép ngay cả khi client bị giả mạo \cite{nextjs,nextauth}.
 
-\section{Cơ sở dữ liệu vector: pgvector}
-Để phục vụ truy xuất ngữ nghĩa cho AI Tutor, EduVerse lưu trữ embedding dước dạng vector trong PostgreSQL thông qua phần mở rộng pgvector \cite{pgvector}. Việc lưu vector cùng hệ quản trị quan hệ giúp thống nhất hạ tầng dữ liệu, đồng thời cho phép truy vấn tương đồng (similarity search) trực tiếp trên cùng một nguồn dữ liệu.
+ \section{Tầng dữ liệu: Prisma ORM và PostgreSQL}
+ Prisma đóng vai trò lớp ánh xạ đối tượng--quan hệ (ORM), giúp truy cập dữ liệu thông qua client kiểu tĩnh (type-safe) trong TypeScript, giảm lỗi truy vấn và tăng tính nhất quán khi phát triển \cite{prisma}. Dữ liệu nghiệp vụ cốt lõi (người dùng, khóa học/bài học, bài tập, lần làm bài, sự kiện thi) được lưu trong PostgreSQL nhờ đặc tính ACID, khả năng mở rộng và hệ sinh thái phong phú \cite{postgresql}.
 
-\section{Lưu trữ tệp: Supabase Storage}
-Đối với các bài nộp dạng tệp (ví dụ bài tự luận đính kèm), hệ thống sử dụng Supabase Storage để lưu trữ và cấp phát liên kết truy cập an toàn theo thời hạn (signed URL) \cite{supabase}.
+ \section{Cơ sở dữ liệu vector: pgvector}
+ Để phục vụ truy xuất ngữ nghĩa cho AI Tutor, EduVerse lưu trữ embedding dưới dạng vector trong PostgreSQL thông qua phần mở rộng pgvector \cite{pgvector}. Việc lưu vector cùng hệ quản trị quan hệ giúp thống nhất hạ tầng dữ liệu, đồng thời cho phép truy vấn tương đồng (similarity search) trực tiếp trên cùng một nguồn dữ liệu.
 
-\section{Mô hình ngôn ngữ lớn (LLM) và Gemini API}
-Gemini API được dùng cho hai nhóm tác vụ: (i) \textbf{tạo embedding} cho tài liệu bài giảng và câu hỏi của học sinh, và (ii) \textbf{sinh câu trả lời} dựa trên ngữ cảnh được truy xuất \cite{gemini}.
+ \section{Lưu trữ tệp: Supabase Storage}
+ Đối với các bài nộp dạng tệp (ví dụ bài tự luận đính kèm), hệ thống sử dụng Supabase Storage để lưu trữ và cấp phát liên kết truy cập an toàn theo thời hạn (signed URL) \cite{supabase}.
 
-\section{Kiến trúc RAG (Retrieval-Augmented Generation)}
-RAG là nền tảng kỹ thuật của AI Tutor, kết hợp truy xuất tri thức từ nguồn dữ liệu nội bộ và sinh câu trả lời bằng mô hình ngôn ngữ. So với cách chỉ dùng LLM thuần túy, RAG giúp giảm hiện tượng "ảo giác" và tăng khả năng kiểm chứng nhờ bám theo tài liệu bài giảng \cite{rag}.
+ \section{Mô hình ngôn ngữ lớn (LLM) và Gemini API}
+ Gemini API được dùng cho hai nhóm tác vụ: (i) \textbf{tạo embedding} cho tài liệu bài giảng và câu hỏi của học sinh, và (ii) \textbf{sinh câu trả lời} dựa trên ngữ cảnh được truy xuất \cite{gemini}.
 
-\section{Ứng dụng AI trong giám sát thi}
-Ngoài AI Tutor, Gemini còn có thể được sử dụng để \textbf{tóm tắt tín hiệu chống gian lận} dựa trên nhật ký sự kiện thi, giúp giáo viên giảm tải khi phải xem nhiều log.
+ \section{Kiến trúc RAG (Retrieval-Augmented Generation)}
+ RAG là nền tảng kỹ thuật của AI Tutor, kết hợp truy xuất tri thức từ nguồn dữ liệu nội bộ và sinh câu trả lời bằng mô hình ngôn ngữ. So với cách chỉ dùng LLM thuần túy, RAG giúp giảm hiện tượng "ảo giác" và tăng khả năng kiểm chứng nhờ bám theo tài liệu bài giảng \cite{rag}.
+
+ \section{Ứng dụng AI trong giám sát thi}
+ Ngoài AI Tutor, Gemini còn có thể được sử dụng để \textbf{tóm tắt tín hiệu chống gian lận} dựa trên nhật ký sự kiện thi, giúp giáo viên giảm tải khi phải xem nhiều log.
 
 % ======================================================
 % CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
 % ======================================================
+
 \chapter{PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG}
 
 \section{Giới thiệu chương}
- Chương 3 trình bày phân tích và thiết kế hệ thống \textbf{EduVerse} dựa trên hiện thực triển khai. Nội dung tập trung làm rõ đối tượng sử dụng, yêu cầu chức năng/phi chức năng và thiết kế các thành phần cốt lõi. Trọng tâm thiết kế được nhấn mạnh ở hai mô-đun: \textbf{AI Tutor theo kiến trúc RAG} và \textbf{giám sát thi/chống gian lận dựa trên event log kết hợp AI tổng hợp}.
+Chương 3 trình bày phân tích và thiết kế hệ thống \textbf{EduVerse} dựa trên hiện thực triển khai. Nội dung tập trung làm rõ đối tượng sử dụng, yêu cầu chức năng/phi chức năng và thiết kế các thành phần cốt lõi. Trọng tâm thiết kế được nhấn mạnh ở hai mô-đun: \textbf{AI Tutor theo kiến trúc RAG} và \textbf{giám sát thi/chống gian lận dựa trên event log kết hợp AI tổng hợp}.
 
 \section{Phân tích hệ thống}
 \subsection{Đối tượng sử dụng (Actor) và vai trò (Role)}
- EduVerse phục vụ các tác nhân chính:
+EduVerse phục vụ các tác nhân chính:
 \begin{itemize}
     \item \textbf{Học sinh (STUDENT):} tham gia lớp, học bài, làm bài tập/kiểm tra, tương tác AI Tutor.
     \item \textbf{Giáo viên (TEACHER):} tạo lớp, quản lý khóa học/bài học, tạo bài tập (Quiz/Essay), theo dõi tiến độ và giám sát thi.
@@ -303,14 +311,14 @@ Ngoài AI Tutor, Gemini còn có thể được sử dụng để \textbf{tóm t
 \end{itemize}
 
 \subsection{Yêu cầu chức năng}
- Các yêu cầu chức năng được mô tả theo tác nhân sử dụng chính như sau:
- \begin{itemize}
-     \item \textbf{Khách (chưa đăng nhập):} đăng ký, đăng nhập, quên/đặt lại mật khẩu.
-     \item \textbf{Học sinh:} tham gia lớp; xem bài học và học liệu; làm bài (quiz/essay); nộp bài; nhận thông báo; nhắn tin; tương tác AI Tutor.
-     \item \textbf{Giáo viên:} tạo và quản lý lớp học; quản lý khóa học/bài học; tạo bài tập/đề kiểm tra; theo dõi tiến độ và kết quả; giám sát thi dựa trên event log và nhận hỗ trợ tổng hợp bằng AI.
-     \item \textbf{Phụ huynh:} liên kết với học sinh; theo dõi tiến độ/kết quả; trao đổi với giáo viên.
-     \item \textbf{Quản trị viên:} quản trị người dùng và cấu hình hệ thống; theo dõi nhật ký hoạt động.
- \end{itemize}
+Các yêu cầu chức năng được mô tả theo tác nhân sử dụng chính như sau:
+\begin{itemize}
+    \item \textbf{Khách (chưa đăng nhập):} đăng ký, đăng nhập, quên/đặt lại mật khẩu.
+    \item \textbf{Học sinh:} tham gia lớp; xem bài học và học liệu; làm bài (quiz/essay); nộp bài; nhận thông báo; nhắn tin; tương tác AI Tutor.
+    \item \textbf{Giáo viên:} tạo và quản lý lớp học; quản lý khóa học/bài học; tạo bài tập/đề kiểm tra; theo dõi tiến độ và kết quả; giám sát thi dựa trên event log và nhận hỗ trợ tổng hợp bằng AI.
+    \item \textbf{Phụ huynh:} liên kết với học sinh; theo dõi tiến độ/kết quả; trao đổi với giáo viên.
+    \item \textbf{Quản trị viên:} quản trị người dùng và cấu hình hệ thống; theo dõi nhật ký hoạt động.
+\end{itemize}
 
 \subsection{Yêu cầu phi chức năng}
 \begin{itemize}
@@ -321,7 +329,7 @@ Ngoài AI Tutor, Gemini còn có thể được sử dụng để \textbf{tóm t
 
 \section{Thiết kế hệ thống}
 \subsection{Thiết kế kiến trúc}
- EduVerse triển khai theo mô hình \textbf{Client--Server} trong một codebase Next.js: client UI gửi request đến API Routes; API Routes thực thi nghiệp vụ, truy cập dữ liệu qua Prisma và gọi dịch vụ AI.
+EduVerse triển khai theo mô hình \textbf{Client--Server} trong một codebase Next.js: client UI gửi request đến API Routes; API Routes thực thi nghiệp vụ, truy cập dữ liệu qua Prisma và gọi dịch vụ AI.
 
 \begin{figure}[H]
     \centering
@@ -472,28 +480,152 @@ Hệ thống/Audit & Các bảng: \texttt{system\_settings}, \texttt{audit\_logs
 \label{tab:db-core}
 \end{table}
 
-
-
 % ======================================================
 % CHƯƠNG 4: HIỆN THỰC HÓA HỆ THỐNG
 % ======================================================
+
 \chapter{HIỆN THỰC HÓA HỆ THỐNG}
 
-\section{Xây dựng trợ lý ảo AI Tutor}
-Mô tả cơ chế chỉ mục hóa bài học và truy vấn ngữ nghĩa phục vụ AI Tutor. Cơ chế này khai thác \texttt{pgvector} trên PostgreSQL để lưu trữ và truy vấn vector embedding.
+\section{Mô-đun AI Tutor theo kiến trúc RAG}
+Phần này trình bày chi tiết quy trình hiện thực AI Tutor trong EduVerse theo hướng Retrieval-Augmented Generation (RAG). Trong phiên bản triển khai, hệ thống \textbf{không sử dụng LlamaIndex}, mà xây dựng pipeline nội bộ để kiểm soát việc chunking, indexing và truy vấn ngữ nghĩa trên cùng hạ tầng PostgreSQL.
+
+\subsection{Chuẩn bị dữ liệu và chunking nội dung bài học}
+Nguồn tri thức của AI Tutor là dữ liệu bài học (lesson) do giáo viên biên soạn. Trước khi tạo embedding, hệ thống thực hiện chunking nhằm cân bằng giữa: (i) độ dài ngữ cảnh đủ lớn để giữ ý nghĩa, và (ii) giới hạn độ dài để đảm bảo hiệu quả tính toán embedding.
+
+Cụ thể, nội dung lesson được ghép theo dạng \texttt{\# <title>\textbackslash n\textbackslash n<content>} và đưa qua hàm chunking. Thuật toán ưu tiên tách theo đoạn (phân cách bởi \texttt{\textbackslash n\textbackslash n}); nếu một đoạn vẫn vượt ngưỡng, hệ thống fallback sang tách theo từ để đảm bảo mỗi chunk không vượt quá \texttt{maxChars}. Tham số mặc định \texttt{maxChars=1200} được sử dụng trong quá trình indexing.
+
+\subsection{Tạo embedding bằng Gemini Embedding}
+Đối với mỗi chunk, hệ thống gọi Gemini Embedding model \texttt{gemini-embedding-001} \cite{gemini} để tạo vector biểu diễn ngữ nghĩa. Embedding được tiêu chuẩn hóa về số chiều \texttt{1536}. Trong hiện thực, chunk bài học sử dụng task type \texttt{RETRIEVAL\_DOCUMENT} và câu hỏi học sinh sử dụng \texttt{RETRIEVAL\_QUERY} để tối ưu truy vấn.
+
+Hệ thống có cơ chế retry với backoff (tối đa theo cấu hình) cho các lỗi tạm thời (ví dụ 429/rate limit), đồng thời kiểm tra ràng buộc số chiều embedding để tránh ghi dữ liệu sai định dạng.
+
+\subsection{Lưu trữ embedding và truy vấn vector similarity bằng pgvector}
+Embedding sau khi tạo được lưu vào bảng \texttt{lesson\_embedding\_chunks}. Mỗi chunk được định danh theo cặp khóa \texttt{(lessonId, chunkIndex)}; hệ thống dùng \texttt{contentHash} (SHA-256) để phát hiện chunk không đổi và \textbf{bỏ qua indexing} khi nội dung giữ nguyên, giúp giảm chi phí gọi API embedding.
+
+Khi học sinh đặt câu hỏi, hệ thống:
+\begin{enumerate}
+    \item tạo embedding cho câu hỏi;
+    \item truy vấn các chunk gần nhất theo khoảng cách vector trong PostgreSQL;
+    \item ghép các chunk Top-$k$ vào prompt làm ngữ cảnh trả lời.
+\end{enumerate}
+
+Truy vấn similarity sử dụng toán tử khoảng cách của pgvector dưới dạng \texttt{("embedding" <=> queryVector::vector) AS distance}, sau đó sắp xếp \texttt{ORDER BY distance ASC} và lấy \texttt{LIMIT topK}. Kết quả là danh sách các đoạn nguồn được dùng để ràng buộc câu trả lời của AI Tutor, nhằm giảm hiện tượng “ảo giác” \cite{rag}.
+
+\subsection{Tổ chức pipeline indexing (teacher-trigger và cron)}
+Hệ thống hỗ trợ hai cách kích hoạt indexing:
+\begin{itemize}
+    \item \textbf{Teacher-trigger:} giáo viên gọi endpoint indexing theo khóa học để tạo hoặc làm mới embedding khi cập nhật lesson.
+    \item \textbf{Cron indexing:} tiến trình định kỳ quét lesson cập nhật và thực hiện indexing, có xác thực bằng bí mật cron.
+\end{itemize}
+Cả hai luồng đều dùng chung hàm indexing, bảo đảm tính nhất quán về chunking, embedding và cách ghi dữ liệu.
+
+\subsection{Lý do chọn pgvector thay vì Vector DB tách biệt}
+EduVerse ưu tiên sử dụng pgvector \cite{pgvector} thay vì một vector database tách biệt nhằm đạt các mục tiêu kiến trúc sau:
+\begin{itemize}
+    \item \textbf{Thống nhất hạ tầng dữ liệu:} dữ liệu quan hệ và dữ liệu vector cùng nằm trong PostgreSQL \cite{postgresql}.
+    \item \textbf{Tính nhất quán và quản trị:} giảm số lượng hệ thống phụ trợ, giảm độ phức tạp vận hành và rủi ro lệch dữ liệu.
+    \item \textbf{Đơn giản hóa backup/audit:} một nguồn dữ liệu trung tâm giúp sao lưu, phục hồi và truy vết dễ hơn.
+\end{itemize}
 
 \section{Hệ thống đánh giá và giám sát thi cử}
 \subsection{Cơ chế tự động chấm bài}
-Kỹ thuật Prompt Engineering được sử dụng để hướng dẫn Gemini chấm bài tự luận dựa trên Rubric do giáo viên cung cấp.
-\subsection{Phát hiện hành vi đáng ngờ}
-Phân tích logic trong \texttt{suspicious-behavior.ts}: Theo dõi chuyển đổi Tab, phím tắt cấm và mất kết nối.
+Đối với bài tự luận (ESSAY), hệ thống hỗ trợ giáo viên bằng cơ chế gợi ý chấm điểm: server lấy nội dung bài nộp, kết hợp thông tin đề bài và rubric, sau đó gọi Gemini để sinh gợi ý điểm số và nhận xét. Các API AI được áp dụng giới hạn tần suất (rate limit) nhằm giảm nguy cơ lạm dụng tài nguyên dịch vụ AI.
+
+\subsection{Phát hiện hành vi đáng ngờ và tổng hợp báo cáo chống gian lận (Anti-cheat)}
+Trong EduVerse, dữ liệu chống gian lận được thu thập dưới dạng \textbf{event log} trong quá trình học sinh làm bài quiz. Các sự kiện được ghi nhận tại giao diện thi (client) và lưu về server để phục vụ phân tích.
+
+\subsubsection{Thu thập dữ liệu: ánh xạ hành vi trình duyệt sang exam events}
+Các tín hiệu gian lận trọng yếu trong hiện thực bao gồm:
+\begin{itemize}
+    \item \textbf{Chuyển tab (visibilitychange):} khi \texttt{document.hidden = true}, hệ thống ghi event \texttt{TAB\_SWITCH\_DETECTED} với nguồn \texttt{visibilitychange}.
+    \item \textbf{Mất focus cửa sổ (blur):} khi \texttt{window.blur} xảy ra, hệ thống cũng ghi \texttt{TAB\_SWITCH\_DETECTED} với nguồn \texttt{window\_blur}.
+    \item \textbf{Clipboard/context menu:} hệ thống chặn thao tác copy/paste và ghi event \texttt{COPY\_PASTE\_ATTEMPT} với nguồn \texttt{contextmenu} hoặc phím tắt tương ứng.
+    \item \textbf{Thoát fullscreen:} khi bắt buộc fullscreen và học sinh thoát fullscreen, hệ thống ghi event \texttt{FULLSCREEN\_EXIT}.
+\end{itemize}
+
+\subsubsection{Thuật toán tính điểm: suspicionScore theo rule-based scoring}
+Server tính điểm nghi ngờ \texttt{suspicionScore} theo cơ chế rule-based, ánh xạ từng loại event sang một rule với trọng số và mức trần điểm. Mỗi rule có dạng:
+\begin{quote}
+\texttt{points = min(maxPoints, count * pointsPerHit)}
+\end{quote}
+Điểm tổng được chặn trong khoảng $[0,100]$. Trong hiện thực, các rule trọng yếu và tham số tương ứng bao gồm:
+\begin{itemize}
+    \item \textbf{Thoát fullscreen:} \texttt{pointsPerHit=20}, \texttt{maxPoints=40}.
+    \item \textbf{Chuyển tab:} \texttt{pointsPerHit=12}, \texttt{maxPoints=60}.
+    \item \textbf{Clipboard/context menu:} \texttt{pointsPerHit=8}, \texttt{maxPoints=24}.
+    \item \textbf{Phím tắt nghi ngờ:} \texttt{pointsPerHit=6}, \texttt{maxPoints=18}.
+\end{itemize}
+Từ tổng điểm, hệ thống suy ra mức rủi ro \texttt{riskLevel} (low/medium/high) để hỗ trợ giáo viên ra quyết định.
+
+\subsubsection{Chuyển đổi logs thành báo cáo ngôn ngữ tự nhiên bằng AI}
+Sau khi có kết quả rule-based (\texttt{suspicionScore}, \texttt{riskLevel} và \texttt{breakdown}), hệ thống gọi Gemini để sinh báo cáo ngắn gọn cho giáo viên theo dạng JSON cấu trúc. Đầu vào của mô hình AI là payload đã được server-side giới hạn và làm an toàn (giới hạn số events, chuẩn hóa kiểu dữ liệu), và đầu ra được parse/validate bằng ràng buộc schema để tránh nội dung sai định dạng.
 
 \section{Giao diện người dùng (UI/UX)}
-Sử dụng Tailwind CSS và các thành phần từ Shadcn UI để tạo ra một giao diện tối giản, tập trung vào trải nghiệm học tập (Learning-centric design).
+EduVerse sử dụng Tailwind CSS và các thành phần UI tái sử dụng để xây dựng dashboard theo vai trò. Việc tổ chức UI theo multi-portal giúp đảm bảo mỗi nhóm người dùng (học sinh/giáo viên/phụ huynh/quản trị) có luồng thao tác rõ ràng, đồng thời giảm nguy cơ truy cập nhầm chức năng.
+
+\section{Đề xuất và bổ sung biểu đồ (Mermaid) cho Chương 4}
+Phần này cung cấp ba biểu đồ dạng Mermaid để phục vụ mô tả chi tiết quy trình trong chương hiện thực hóa. Mã Mermaid được trình bày dưới dạng listing để có thể tái sử dụng.
+
+\subsection{Biểu đồ trình tự: Nộp bài dạng tệp}
+\begin{lstlisting}[caption={Sequence Diagram (Mermaid): Quy trình nộp bài dạng tệp},label={lst:seq-file-submission}]
+sequenceDiagram
+  autonumber
+  actor S as Student (Browser)
+  participant SB as Supabase Storage
+  participant API as Next.js API (/api/submissions)
+  participant DB as PostgreSQL (Prisma)
+
+  S->>SB: Upload file to bucket (submissions/{assignmentId}/{studentId}/...)
+  SB-->>S: Upload OK (storagePath)
+
+  S->>API: POST /api/submissions {assignmentId, files[], status=draft}
+  API->>API: Validate JWT + role=STUDENT
+  API->>API: Validate storagePath (prefix, no '..', match studentId)
+  API->>DB: Upsert submission + replace submission_files metadata
+  DB-->>API: OK (submissionId)
+  API-->>S: 201 Created {submissionId}
+
+  S->>API: PUT /api/submissions/{submissionId} (confirm submit)
+  API->>DB: Check max_attempts + current submission status
+  DB-->>API: OK
+  API-->>S: 200 OK
+\end{lstlisting}
+
+\subsection{Biểu đồ luồng: RAG Tutor}
+\begin{lstlisting}[caption={Flow Diagram (Mermaid): Quy trình RAG Tutor},label={lst:flow-rag}]
+flowchart TD
+  A[Student question] --> B[API /api/ai/tutor/chat]
+  B --> C{Auth + role=STUDENT}
+  C -->|OK| D{Student in classroom?}
+  D -->|OK| E[Create query embedding (gemini-embedding-001)]
+  E --> F[Vector search in Postgres: embedding <=> queryVec]
+  F --> G[Top-k chunks as sources]
+  G --> H[Build prompt: instruction + sources + history]
+  H --> I[Gemini generate answer]
+  I --> J[Return answer + sources]
+  C -->|Fail| X[401/403]
+  D -->|Fail| Y[403 Forbidden]
+\end{lstlisting}
+
+\subsection{Biểu đồ logic: Anti-cheat scoring và AI summary}
+\begin{lstlisting}[caption={Flow Diagram (Mermaid): Anti-cheat scoring và AI summary},label={lst:flow-anti-cheat}]
+flowchart TD
+  A[Exam UI events: visibilitychange, blur, contextmenu, fullscreen exit] --> B[Store exam_events]
+  B --> C[Teacher requests /api/ai/anti-cheat/summary]
+  C --> D{Auth + role=TEACHER + isOwner(assignment)}
+  D -->|OK| E[Fetch events (<=250) ordered by time]
+  E --> F[Compute suspicionScore (rule-based)]
+  F --> G[Build safe payload: score + breakdown + event snapshots]
+  G --> H[Gemini generate JSON summary]
+  H --> I[Validate JSON by schema]
+  I --> J[Return report to Teacher]
+  D -->|Fail| X[401/403]
+\end{lstlisting}
 
 % ======================================================
 % CHƯƠNG 5: ĐÁNH GIÁ VÀ THỬ NGHIỆM
 % ======================================================
+
 \chapter{ĐÁNH GIÁ VÀ THỬ NGHIỆM}
 
 \section{Đánh giá độ chính xác của AI Tutor}
@@ -505,6 +637,7 @@ Phân tích thời gian phản hồi khi truy xuất Vector và khả năng ch�
 % ======================================================
 % CHƯƠNG 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
 % ======================================================
+
 \chapter{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
 
 \section{Kết quả đạt được}
