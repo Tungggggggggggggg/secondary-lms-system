@@ -30,7 +30,7 @@
 \usepackage{indentfirst}
 \usepackage{titlesec}
 \usepackage{listings}
-\usepackage{color}
+\usepackage[table]{xcolor}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{tabularx}
@@ -48,6 +48,20 @@
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinelanguage{JavaScript}{
+    keywords={await,break,case,catch,class,const,continue,debugger,default,delete,do,else,export,extends,false,finally,for,function,if,import,in,instanceof,let,new,null,return,super,switch,this,throw,true,try,typeof,var,void,while,with,yield},
+    keywordstyle=\color{magenta},
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]',
+    morestring=[b]",
+}
+
+\lstdefinelanguage{TypeScript}[]{JavaScript}{
+    keywords={any,as,boolean,constructor,declare,enum,get,module,namespace,number,private,protected,public,readonly,require,set,string,type,undefined,unknown},
+}
 
 \lstset{
     backgroundcolor=\color{backcolour},   
@@ -409,40 +423,17 @@ EduVerse triển khai theo mô hình \textbf{Client--Server} trong một codebas
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{../out/docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}{
-        \includegraphics[width=0.95\textwidth]{../out/docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}
+    \IfFileExists{docs/luanvan/figures/uml/EduVerse_Component_Architecture.png}{
+        \includegraphics[width=0.95\textwidth]{docs/luanvan/figures/uml/EduVerse_Component_Architecture.png}
     }{
-        \IfFileExists{out/docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}{
-            \includegraphics[width=0.95\textwidth]{out/docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}
+        \IfFileExists{out/docs/luanvan/figures/uml/EduVerse_Component_Architecture.png}{
+            \includegraphics[width=0.95\textwidth]{out/docs/luanvan/figures/uml/EduVerse_Component_Architecture.png}
         }{
-            \IfFileExists{docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}{
-                \includegraphics[width=0.95\textwidth]{docs/luanvan/figures/uml/context-eduverse/EduVerse_System_Context.png}
+            \IfFileExists{../out/docs/luanvan/figures/uml/EduVerse_Component_Architecture.png}{
+                \includegraphics[width=0.95\textwidth]{../out/docs/luanvan/figures/uml/EduVerse_Component_Architecture.png}
             }{
-                \IfFileExists{figures/uml/context-eduverse/EduVerse_System_Context.png}{
-                    \includegraphics[width=0.95\textwidth]{figures/uml/context-eduverse/EduVerse_System_Context.png}
-                }{
-                    \framebox{\parbox{0.95\textwidth}{\centering\vspace{1cm}Context Diagram (PlantUML PNG)\vspace{1cm}}}
-                }
-            }
-        }
-    }
-    \caption{Sơ đồ bối cảnh hệ thống EduVerse}
-    \label{fig:context-eduverse}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{../out/docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}{
-        \includegraphics[width=0.95\textwidth]{../out/docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}
-    }{
-        \IfFileExists{out/docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}{
-            \includegraphics[width=0.95\textwidth]{out/docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}
-        }{
-            \IfFileExists{docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}{
-                \includegraphics[width=0.95\textwidth]{docs/luanvan/figures/uml/component-architecture/EduVerse_Component_Architecture.png}
-            }{
-                \IfFileExists{figures/uml/component-architecture/EduVerse_Component_Architecture.png}{
-                    \includegraphics[width=0.95\textwidth]{figures/uml/component-architecture/EduVerse_Component_Architecture.png}
+                \IfFileExists{figures/uml/EduVerse_Component_Architecture.png}{
+                    \includegraphics[width=0.95\textwidth]{figures/uml/EduVerse_Component_Architecture.png}
                 }{
                     \framebox{\parbox{0.95\textwidth}{\centering\vspace{1cm}Component/Architecture Diagram (PlantUML PNG)\vspace{1cm}}}
                 }
@@ -519,22 +510,17 @@ EduVerse triển khai theo mô hình \textbf{Client--Server} trong một codebas
     \label{fig:usecase-teacher}
 \end{figure}
 
-\subsubsection{Bảng đặc tả Use Case trọng tâm}
-Phần này trình bày đặc tả chi tiết cho hai Use Case trọng tâm, đại diện cho mục tiêu cốt lõi của hệ thống: (i) học sinh tương tác với AI Tutor theo kiến trúc RAG, (ii) giáo viên xem báo cáo chống gian lận dựa trên event log và điểm nghi ngờ.
-
-\renewcommand{\arraystretch}{1.5} % Giúp bảng thông thoáng hơn
-
 \begin{table}[H]
 \centering
 \small
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash\bfseries}p{4cm}|X|}
+\begin{tabularx}{\textwidth}{|p{3.4cm}|X|}
 \hline
-\rowcolor[gray]{0.9} \multicolumn{2}{|c|}{\textbf{Bảng 3.1: Đặc tả Use Case: Học sinh tương tác với AI Tutor}} \\ \hline
-Tác nhân & Học sinh (STUDENT) \\ \hline
-Tiền điều kiện & (1) Học sinh đã đăng nhập và thuộc lớp. (2) Bài học tồn tại. (3) Lesson đã được lập chỉ mục embedding. \\ \hline
-Luồng sự kiện chính & \textbf{B1.} Mở giao diện AI Tutor. \newline \textbf{B2.} Nhập câu hỏi. \newline \textbf{B3.} Hệ thống xác thực và kiểm tra giới hạn tần suất. \newline \textbf{B4.} Tạo embedding và truy vấn Top-$k$ đoạn học liệu liên quan. \newline \textbf{B5.} Gọi LLM sinh phản hồi dựa trên ngữ cảnh bài giảng. \newline \textbf{B6.} Trả về câu trả lời kèm nguồn tham khảo. \\ \hline
-Luồng ngoại lệ & \textbf{E1.} Vượt quá lượt hỏi: trả lỗi 429. \newline \textbf{E2.} Chưa có dữ liệu embedding: trả thông báo hướng dẫn. \\ \hline
+\textbf{Tác nhân} & Học sinh (STUDENT) \\ \hline
+\textbf{Tiền điều kiện} & (1) Học sinh đã đăng nhập và thuộc lớp. (2) Bài học tồn tại. (3) Lesson đã được lập chỉ mục embedding. \\ \hline
+\textbf{Luồng sự kiện chính} & \textbf{B1.} Mở giao diện AI Tutor. \newline \textbf{B2.} Nhập câu hỏi. \newline \textbf{B3.} Hệ thống xác thực và kiểm tra giới hạn tần suất. \newline \textbf{B4.} Tạo embedding và truy vấn Top-$k$ đoạn học liệu liên quan. \newline \textbf{B5.} Gọi LLM sinh phản hồi dựa trên ngữ cảnh bài giảng. \newline \textbf{B6.} Trả về câu trả lời kèm nguồn tham khảo. \\ \hline
+\textbf{Luồng ngoại lệ} & \textbf{E1.} Vượt quá lượt hỏi: trả lỗi 429. \newline \textbf{E2.} Chưa có dữ liệu embedding: trả thông báo hướng dẫn. \\ \hline
 \end{tabularx}
+\caption{Đặc tả Use Case: Học sinh tương tác với AI Tutor}
 \label{tab:uc-student-ai-tutor}
 \end{table}
 
@@ -543,12 +529,11 @@ Luồng ngoại lệ & \textbf{E1.} Vượt quá lượt hỏi: trả lỗi 429.
 \small
 \begin{tabularx}{\textwidth}{|p{3.4cm}|X|}
 \hline
-\textbf{Hạng mục} & \textbf{Đặc tả Use Case: Giáo viên xem báo cáo Anti-cheat} \\ \hline
-Tác nhân & Giáo viên (TEACHER) \\ \hline
-Tiền điều kiện & (1) Giáo viên đã đăng nhập. (2) Giáo viên là chủ sở hữu assignment/quiz. (3) Có dữ liệu \texttt{exam\_events} cho attempt cần xem. \\ \hline
-Luồng sự kiện chính & \textbf{B1.} Mở trang báo cáo giám sát thi của quiz.\\ \textbf{B2.} Tải danh sách attempt và thống kê số lượng sự kiện.\\ \textbf{B3.} Chuẩn hóa \texttt{eventType} và tính \texttt{suspicionScore} theo rule-based.\\ \textbf{B4.} Phân loại \texttt{riskLevel} và hiển thị breakdown theo từng rule.\\ \textbf{B5.} Xem chi tiết timeline sự kiện theo attempt. \\ \hline
-Luồng ngoại lệ & \textbf{E1.} Không phải chủ sở hữu assignment: trả HTTP 403.\\ \textbf{E2.} Không có event log: hiển thị empty state và vẫn trả dữ liệu nhất quán. \\ \hline
-Hậu điều kiện & Giáo viên có căn cứ định lượng (điểm) và định tính (timeline) để đánh giá liêm chính học thuật. \\ \hline
+\textbf{Tác nhân} & Giáo viên (TEACHER) \\ \hline
+\textbf{Tiền điều kiện} & (1) Giáo viên đã đăng nhập. (2) Giáo viên là chủ sở hữu assignment/quiz. (3) Có dữ liệu \texttt{exam\_events} cho attempt cần xem. \\ \hline
+\textbf{Luồng sự kiện chính} & \textbf{B1.} Mở trang báo cáo giám sát thi của quiz.\newline \textbf{B2.} Tải danh sách attempt và thống kê số lượng sự kiện.\newline \textbf{B3.} Chuẩn hóa \texttt{eventType} và tính \texttt{suspicionScore} theo rule-based.\newline \textbf{B4.} Phân loại \texttt{riskLevel} và hiển thị breakdown theo từng rule.\newline \textbf{B5.} Xem chi tiết timeline sự kiện theo attempt. \\ \hline
+\textbf{Luồng ngoại lệ} & \textbf{E1.} Không phải chủ sở hữu assignment: trả HTTP 403.\newline \textbf{E2.} Không có event log: hiển thị empty state và vẫn trả dữ liệu nhất quán. \\ \hline
+\textbf{Hậu điều kiện} & Giáo viên có căn cứ định lượng (điểm) và định tính (timeline) để đánh giá liêm chính học thuật. \\ \hline
 \end{tabularx}
 \caption{Đặc tả Use Case: Giáo viên xem báo cáo Anti-cheat}
 \label{tab:uc-teacher-anti-cheat}

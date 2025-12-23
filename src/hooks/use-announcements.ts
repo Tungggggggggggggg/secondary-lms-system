@@ -81,7 +81,8 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
         if (filters?.q) params.set("q", filters.q);
         if (filters?.sort) params.set("sort", filters.sort);
         if (typeof filters?.hasAttachment !== "undefined") params.set("hasAttachment", String(!!filters.hasAttachment));
-        const res = await fetch(`/api/classrooms/${classroomId}/announcements?${params.toString()}`);
+        const url = `/api/classrooms/${classroomId}/announcements?${params.toString()}`;
+        const res = await fetch(url, enableCreate ? { cache: "no-store" } : undefined);
         const json = await res.json();
         if (!res.ok) throw new Error(json?.message || "Không thể tải thông báo");
         const nextItems = (json.data || []) as AnnouncementItem[];

@@ -8,6 +8,7 @@ import {
   isTeacherOfClassroom,
 } from "@/lib/api-utils";
 import { enforceRateLimit, RateLimitError } from "@/lib/http/rate-limit";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 // GET: Lấy danh sách comments của một announcement (teacher owner hoặc student trong lớp)
 export async function GET(
@@ -383,11 +384,14 @@ export async function POST(
     // Lấy parentId nếu có (cho reply comments)
     const parentId = body?.parentId ? body.parentId.toString().trim() : null;
 
+    let parentAuthorId: string | null = null;
+    let parentAuthorRole: string | null = null;
+
     // Validate parentId nếu có (phải tồn tại và thuộc cùng announcement)
     if (parentId) {
       const parentComment = await prisma.announcementComment.findUnique({
         where: { id: parentId },
-        select: { announcementId: true },
+        select: { announcementId: true, authorId: true, author: { select: { role: true } } },
       });
 
       if (!parentComment) {
@@ -397,6 +401,9 @@ export async function POST(
       if (parentComment.announcementId !== announcementId) {
         return errorResponse(400, "Parent comment does not belong to this announcement", { requestId });
       }
+
+      parentAuthorId = parentComment.authorId;
+      parentAuthorRole = (parentComment.author as { role?: string } | null | undefined)?.role ?? null;
     }
 
     const created = await prisma.announcementComment.create({
@@ -414,6 +421,36 @@ export async function POST(
         author: { select: { id: true, fullname: true, email: true } },
       },
     });
+
+    try {
+      const classroom = await prisma.classroom.findUnique({
+        where: { id: classroomId },
+        select: { teacherId: true },
+      });
+
+      const teacherId = classroom?.teacherId;
+      if (teacherId && teacherId !== user.id) {
+        await notificationRepo.add(teacherId, {
+          type: "TEACHER_ANNOUNCEMENT_COMMENT_NEW",
+          title: "Bình luận mới trong bài đăng",
+          description: (content || "").slice(0, 200),
+          actionUrl: `/dashboard/teacher/classrooms/${classroomId}/announcements/${announcementId}`,
+          dedupeKey: `annComment:${announcementId}:${created.id}`,
+          meta: { announcementId, classroomId, commentId: created.id },
+        });
+      }
+
+      if (parentId && parentAuthorId && parentAuthorRole === "STUDENT" && parentAuthorId !== user.id) {
+        await notificationRepo.add(parentAuthorId, {
+          type: "STUDENT_ANNOUNCEMENT_REPLY",
+          title: "Có người trả lời bình luận của bạn",
+          description: (content || "").slice(0, 200),
+          actionUrl: `/dashboard/student/classes/${classroomId}/announcements/${announcementId}`,
+          dedupeKey: `annReply:${announcementId}:${parentId}:${created.id}`,
+          meta: { announcementId, classroomId, parentId, commentId: created.id },
+        });
+      }
+    } catch {}
 
     return NextResponse.json(
       { success: true, data: created, requestId },

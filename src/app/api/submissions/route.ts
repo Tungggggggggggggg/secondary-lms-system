@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
@@ -193,6 +194,41 @@ export async function PUT(req: NextRequest) {
         }
 
         await prisma.submission.update({ where: { id: submission.id }, data: { status: "submitted" } });
+
+        try {
+            const teacherRow = await prisma.assignmentClassroom.findFirst({
+                where: {
+                    assignmentId,
+                    classroom: {
+                        students: {
+                            some: { studentId: user.id },
+                        },
+                    },
+                },
+                select: {
+                    classroomId: true,
+                    classroom: { select: { teacherId: true } },
+                },
+            });
+
+            const teacherId = teacherRow?.classroom?.teacherId;
+            if (teacherId) {
+                const assignmentRow = await prisma.assignment.findUnique({
+                    where: { id: assignmentId },
+                    select: { id: true, title: true },
+                });
+
+                await notificationRepo.add(teacherId, {
+                    type: "TEACHER_SUBMISSION_NEED_GRADING",
+                    title: `Cần chấm bài (file): ${assignmentRow?.title || "Bài tập"}`,
+                    description: "Có học sinh vừa nộp bài dạng file.",
+                    actionUrl: `/dashboard/teacher/assignments/${assignmentId}/submissions/files`,
+                    dedupeKey: `fileSubmit:${assignmentId}:${user.id}:${submission.id}`,
+                    meta: { assignmentId, studentId: user.id, submissionId: submission.id, classroomId: teacherRow?.classroomId },
+                });
+            }
+        } catch {}
+
         return NextResponse.json({ success: true });
     } catch (error: unknown) {
         console.error("[ERROR] [PUT] /api/submissions", error);

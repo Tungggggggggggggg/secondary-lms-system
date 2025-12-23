@@ -5,6 +5,7 @@ import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils';
 import { prisma } from '@/lib/prisma';
 import { coercePrismaJson } from '@/lib/prisma-json';
 import { AssignmentData } from '@/types/assignment-builder';
+import { notificationRepo } from '@/lib/repositories/notification-repo';
 
 const quizOptionSchema = z
   .object({
@@ -284,6 +285,28 @@ export async function POST(request: NextRequest) {
           classroomId: classroomId
         }))
       });
+
+      try {
+        const memberships = await prisma.classroomStudent.findMany({
+          where: { classroomId: { in: classroomIds } },
+          select: { classroomId: true, studentId: true },
+        });
+
+        const title = `Bài tập mới: ${assignment.title}`;
+        const actionUrl = `/dashboard/student/assignments/${assignment.id}`;
+        await Promise.allSettled(
+          memberships.map((m: { classroomId: string; studentId: string }) =>
+            notificationRepo.add(m.studentId, {
+              type: "STUDENT_ASSIGNMENT_ASSIGNED",
+              title,
+              description: "Giáo viên đã giao một bài tập mới cho lớp của bạn.",
+              actionUrl,
+              dedupeKey: `assign:${m.classroomId}:${assignment.id}:${m.studentId}`,
+              meta: { classroomId: m.classroomId, assignmentId: assignment.id },
+            })
+          )
+        );
+      } catch {}
     }
 
     // Handle file attachments for Essay (if any)

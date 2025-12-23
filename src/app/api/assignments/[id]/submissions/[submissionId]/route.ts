@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 const putSchema = z
   .object({
@@ -119,6 +120,37 @@ export async function PUT(
         },
       },
     });
+
+    try {
+      const actionUrlStudent = `/dashboard/student/assignments/${assignmentId}`;
+      await notificationRepo.add(submission.studentId, {
+        type: "STUDENT_GRADED",
+        title: `Đã có điểm: ${submission.assignment.title}`,
+        description: "Giáo viên đã chấm bài và gửi phản hồi.",
+        actionUrl: actionUrlStudent,
+        dedupeKey: `graded:${assignmentId}:${submission.studentId}:${submissionId}`,
+        meta: { assignmentId, submissionId },
+      });
+
+      const parentLinks = await prisma.parentStudent.findMany({
+        where: { studentId: submission.studentId, status: "ACTIVE" },
+        select: { parentId: true },
+      });
+
+      const actionUrlParent = `/dashboard/parent/progress`;
+      await Promise.allSettled(
+        parentLinks.map((p: { parentId: string }) =>
+          notificationRepo.add(p.parentId, {
+            type: "PARENT_CHILD_GRADED",
+            title: `Con bạn đã có điểm: ${submission.assignment.title}`,
+            description: `${submission.student.fullname || "Học sinh"} đã được chấm bài.`,
+            actionUrl: actionUrlParent,
+            dedupeKey: `pgraded:${assignmentId}:${submission.studentId}:${submissionId}:${p.parentId}`,
+            meta: { assignmentId, studentId: submission.studentId, submissionId },
+          })
+        )
+      );
+    } catch {}
 
     return NextResponse.json(
       {

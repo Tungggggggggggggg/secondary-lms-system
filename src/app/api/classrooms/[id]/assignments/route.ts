@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isTeacherOfClassroom, isTeacherOfAssignment } from "@/lib/api-utils";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 const postSchema = z
   .object({
@@ -215,6 +216,28 @@ export async function POST(
         },
       },
     });
+
+    try {
+      const students = await prisma.classroomStudent.findMany({
+        where: { classroomId },
+        select: { studentId: true },
+      });
+
+      const title = `Bài tập mới: ${assignmentClassroom.assignment.title}`;
+      const actionUrl = `/dashboard/student/assignments/${assignmentId}`;
+      await Promise.allSettled(
+        students.map((s: { studentId: string }) =>
+          notificationRepo.add(s.studentId, {
+            type: "STUDENT_ASSIGNMENT_ASSIGNED",
+            title,
+            description: "Giáo viên đã giao một bài tập mới cho lớp của bạn.",
+            actionUrl,
+            dedupeKey: `assign:${classroomId}:${assignmentId}:${s.studentId}`,
+            meta: { classroomId, assignmentId },
+          })
+        )
+      );
+    } catch {}
 
     return NextResponse.json(
       {

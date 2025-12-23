@@ -5,6 +5,7 @@ import { errorResponse, getAuthenticatedUser, getStudentClassroomForAssignment }
 import { autoGradeQuiz, validateQuizSubmission } from "@/lib/auto-grade";
 import crypto from "crypto";
 import type { Prisma } from "@prisma/client";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 const paramsSchema = z
   .object({
@@ -313,6 +314,27 @@ export async function POST(
         },
       },
     });
+
+    try {
+      const assignmentRow = await prisma.assignment.findUnique({
+        where: { id: assignmentId },
+        select: { id: true, title: true, authorId: true },
+      });
+
+      if (assignmentRow?.authorId) {
+        const needsGrading = assignment.type === "ESSAY" && calculatedGrade === null;
+        await notificationRepo.add(assignmentRow.authorId, {
+          type: needsGrading ? "TEACHER_SUBMISSION_NEED_GRADING" : "TEACHER_SUBMISSION_NEW",
+          title: needsGrading
+            ? `Cần chấm bài: ${assignmentRow.title}`
+            : `Bài nộp mới: ${assignmentRow.title}`,
+          description: "Có học sinh vừa nộp bài.",
+          actionUrl: `/dashboard/teacher/assignments/${assignmentId}/submissions`,
+          dedupeKey: `subNew:${assignmentId}:${user.id}:${nextAttempt}`,
+          meta: { assignmentId, studentId: user.id, attempt: nextAttempt },
+        });
+      }
+    } catch {}
 
     // Đánh dấu AssignmentAttempt đã kết thúc cho attempt hiện tại nếu tồn tại
     try {

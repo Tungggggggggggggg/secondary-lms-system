@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { coercePrismaJson } from "@/lib/prisma-json";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 import {
   errorResponse,
   getAuthenticatedUser,
@@ -157,6 +158,44 @@ export async function POST(req: NextRequest) {
         metadata: prismaMetadata,
       },
     });
+
+    try {
+      const warningEvents = new Set<string>([
+        "TAB_SWITCH",
+        "WINDOW_BLUR",
+        "FULLSCREEN_EXIT",
+        "COPY",
+        "PASTE",
+        "DEVTOOLS_OPEN",
+        "MULTI_DEVICE",
+        "DISCONNECT",
+      ]);
+      const criticalEvents = new Set<string>([
+        "FULLSCREEN_EXIT",
+        "DEVTOOLS_OPEN",
+        "MULTI_DEVICE",
+      ]);
+
+      if (warningEvents.has(eventType)) {
+        const assignment = await prisma.assignment.findUnique({
+          where: { id: assignmentId },
+          select: { id: true, title: true, authorId: true },
+        });
+
+        if (assignment?.authorId) {
+          const minuteBucket = Math.floor(Date.now() / 60000);
+          await notificationRepo.add(assignment.authorId, {
+            type: "TEACHER_ANTI_CHEAT_ALERT",
+            title: `Cảnh báo thi: ${assignment.title}`,
+            description: `Sự kiện đáng ngờ: ${eventType}`,
+            severity: criticalEvents.has(eventType) ? "CRITICAL" : "WARNING",
+            actionUrl: `/dashboard/teacher/exams/monitor?assignmentId=${encodeURIComponent(assignmentId)}`,
+            dedupeKey: `exam:${assignmentId}:${me.id}:${eventType}:${minuteBucket}`,
+            meta: { assignmentId, studentId: me.id, eventType, attempt: typeof attempt === "number" ? attempt : null },
+          });
+        }
+      }
+    } catch {}
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: unknown) {

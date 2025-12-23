@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 const paramsSchema = z
   .object({
@@ -217,7 +218,7 @@ export async function POST(
     const [assignmentMeta, existingSubmission] = await Promise.all([
       prisma.assignment.findUnique({
         where: { id: assignmentId },
-        select: { id: true, type: true, lockAt: true, dueDate: true },
+        select: { id: true, title: true, authorId: true, type: true, lockAt: true, dueDate: true },
       }),
       prisma.assignmentSubmission.findFirst({
         where: { assignmentId, studentId: user.id },
@@ -291,6 +292,20 @@ export async function POST(
         },
       },
     });
+
+    try {
+      const teacherId = assignmentMeta.authorId;
+      if (teacherId && teacherId !== user.id) {
+        await notificationRepo.add(teacherId, {
+          type: "TEACHER_ASSIGNMENT_COMMENT_NEW",
+          title: `Bình luận mới: ${assignmentMeta.title}`,
+          description: content.slice(0, 200),
+          actionUrl: `/dashboard/teacher/assignments/${assignmentId}`,
+          dedupeKey: `aComment:${assignmentId}:${comment.id}`,
+          meta: { assignmentId, questionId: targetQuestionId, commentId: comment.id, studentId: user.id },
+        });
+      }
+    } catch {}
 
     return NextResponse.json(
       {

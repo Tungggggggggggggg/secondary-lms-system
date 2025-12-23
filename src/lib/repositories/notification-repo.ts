@@ -2,15 +2,25 @@ import { settingsRepo } from "@/lib/repositories/settings-repo";
 
 export type NotificationItem = {
   id: string;
+  type?: string;
   title: string;
   description?: string;
   createdAt: string;
   read: boolean;
+  actionUrl?: string;
+  severity?: "INFO" | "WARNING" | "CRITICAL";
+  dedupeKey?: string;
+  meta?: unknown;
 };
 
 type CreateNotificationInput = {
+  type?: string;
   title: string;
   description?: string;
+  actionUrl?: string;
+  severity?: "INFO" | "WARNING" | "CRITICAL";
+  dedupeKey?: string;
+  meta?: unknown;
 };
 
 type ListOptions = {
@@ -52,8 +62,18 @@ function isNotificationItem(value: unknown): value is NotificationItem {
   if (typeof value.id !== "string") return false;
   if (typeof value.title !== "string") return false;
   if (typeof value.createdAt !== "string") return false;
-  if (typeof value.read !== "boolean") return false;
+  if (value.read !== undefined && typeof value.read !== "boolean") return false;
   if (value.description !== undefined && typeof value.description !== "string") return false;
+  if (value.type !== undefined && typeof value.type !== "string") return false;
+  if (value.actionUrl !== undefined && typeof value.actionUrl !== "string") return false;
+  if (value.dedupeKey !== undefined && typeof value.dedupeKey !== "string") return false;
+  if (
+    value.severity !== undefined &&
+    value.severity !== "INFO" &&
+    value.severity !== "WARNING" &&
+    value.severity !== "CRITICAL"
+  )
+    return false;
   return true;
 }
 
@@ -62,7 +82,12 @@ async function readList(userId: string): Promise<NotificationItem[]> {
   if (!Array.isArray(raw)) return [];
   const items: NotificationItem[] = [];
   for (const it of raw) {
-    if (isNotificationItem(it)) items.push(it);
+    if (isNotificationItem(it)) {
+      items.push({
+        ...it,
+        read: typeof it.read === "boolean" ? it.read : false,
+      });
+    }
   }
   return items;
 }
@@ -78,17 +103,47 @@ export const notificationRepo = {
   async add(userId: string, input: CreateNotificationInput): Promise<NotificationItem> {
     const title = normalizeText(input.title, 120);
     const description = input.description ? normalizeText(input.description, 500) : undefined;
+    const type = input.type ? normalizeText(input.type, 80) : undefined;
+    const actionUrl = input.actionUrl ? normalizeText(input.actionUrl, 1000) : undefined;
+    const severity = input.severity ?? "INFO";
+    const dedupeKey = input.dedupeKey ? normalizeText(input.dedupeKey, 200) : undefined;
+    const meta = input.meta;
 
     const next: NotificationItem = {
       id: generateId(),
+      type,
       title,
       description,
       createdAt: nowIso(),
       read: false,
+      actionUrl,
+      severity,
+      dedupeKey,
+      meta,
     };
 
     const current = await readList(userId);
-    const merged = [next, ...current].slice(0, 200);
+
+    let merged: NotificationItem[];
+    if (dedupeKey) {
+      const idx = current.findIndex((i) => i.dedupeKey === dedupeKey);
+      if (idx >= 0) {
+        const existed = current[idx];
+        const updated: NotificationItem = {
+          ...existed,
+          ...next,
+          id: existed.id,
+          createdAt: nowIso(),
+          read: existed.read,
+        };
+        merged = [updated, ...current.slice(0, idx), ...current.slice(idx + 1)];
+      } else {
+        merged = [next, ...current];
+      }
+    } else {
+      merged = [next, ...current];
+    }
+    merged = merged.slice(0, 200);
     await writeList(userId, merged);
     return next;
   },

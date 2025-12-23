@@ -9,6 +9,7 @@ import {
   isStudentInClassroom,
   getRequestId,
 } from "@/lib/api-utils";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 const getQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -194,6 +195,34 @@ export async function POST(
         updatedAt: true,
       },
     });
+
+    try {
+      const classroomStudents = await prisma.classroomStudent.findMany({
+        where: { classroomId },
+        select: { studentId: true },
+      });
+
+      const actionUrl = `/dashboard/student/classes/${classroomId}/announcements/${created.id}`;
+      const snippet = created.content.length > 140 ? `${created.content.slice(0, 140)}...` : created.content;
+
+      await Promise.all(
+        classroomStudents.map((cs) =>
+          notificationRepo.add(cs.studentId, {
+            type: "STUDENT_ANNOUNCEMENT_NEW",
+            title: "Bảng tin mới",
+            description: snippet,
+            actionUrl,
+            dedupeKey: `announcement:new:${created.id}:${cs.studentId}`,
+            meta: { classroomId, announcementId: created.id },
+          })
+        )
+      );
+    } catch (err) {
+      console.error(
+        `[WARN] Failed to create announcement notifications {requestId:${requestId}}`,
+        err
+      );
+    }
 
     return NextResponse.json(
       { success: true, data: created, requestId },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 const bodySchema = z
   .object({
@@ -48,6 +49,47 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             feedback: feedback?.trim() || null,
           },
         });
+
+    try {
+      const assignment = await prisma.assignment.findUnique({
+        where: { id: assignmentId },
+        select: { id: true, title: true },
+      });
+
+      const actionUrlStudent = `/dashboard/student/assignments/${assignmentId}`;
+      await notificationRepo.add(studentId, {
+        type: "STUDENT_GRADED",
+        title: `Đã có điểm: ${assignment?.title || "Bài tập"}`,
+        description: "Giáo viên đã chấm bài và gửi phản hồi.",
+        actionUrl: actionUrlStudent,
+        dedupeKey: `filegraded:${assignmentId}:${studentId}:${updated.id}`,
+        meta: { assignmentId, submissionId: updated.id },
+      });
+
+      const parentLinks = await prisma.parentStudent.findMany({
+        where: { studentId, status: "ACTIVE" },
+        select: { parentId: true },
+      });
+
+      const studentRow = await prisma.user.findUnique({
+        where: { id: studentId },
+        select: { fullname: true },
+      });
+
+      const actionUrlParent = `/dashboard/parent/progress`;
+      await Promise.allSettled(
+        parentLinks.map((p: { parentId: string }) =>
+          notificationRepo.add(p.parentId, {
+            type: "PARENT_CHILD_GRADED",
+            title: `Con bạn đã có điểm: ${assignment?.title || "Bài tập"}`,
+            description: `${studentRow?.fullname || "Học sinh"} đã được chấm bài.`,
+            actionUrl: actionUrlParent,
+            dedupeKey: `pfilegraded:${assignmentId}:${studentId}:${updated.id}:${p.parentId}`,
+            meta: { assignmentId, studentId, submissionId: updated.id },
+          })
+        )
+      );
+    } catch {}
 
     return NextResponse.json({ success: true, data: { id: updated.id, grade: updated.grade, feedback: updated.feedback } }, { status: 200 });
   } catch (error: unknown) {
