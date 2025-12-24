@@ -2,10 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import TextareaAutosize from "react-textarea-autosize";
+import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import RateLimitDialog, { getRetryAfterSecondsFromResponse } from "@/components/shared/RateLimitDialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Copy, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 type ChatMessage =
   | { role: "user"; content: string }
@@ -31,28 +37,181 @@ type ChatSource = {
   lessonTitle: string | null;
 };
 
+const assistantMarkdownComponents: Components = {
+  a: ({ href, children, ...props }) => (
+    <a
+      href={typeof href === "string" ? href : undefined}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="underline underline-offset-2 text-foreground hover:opacity-80"
+      {...props}
+    >
+      {children}
+    </a>
+  ),
+  h1: ({ children, ...props }) => (
+    <h1 className="m-0 my-1 text-base font-semibold" {...props}>
+      {children}
+    </h1>
+  ),
+  h2: ({ children, ...props }) => (
+    <h2 className="m-0 my-1 text-base font-semibold" {...props}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children, ...props }) => (
+    <h3 className="m-0 my-1 text-sm font-semibold" {...props}>
+      {children}
+    </h3>
+  ),
+  h4: ({ children, ...props }) => (
+    <h4 className="m-0 my-1 text-sm font-semibold" {...props}>
+      {children}
+    </h4>
+  ),
+  h5: ({ children, ...props }) => (
+    <h5 className="m-0 my-1 text-sm font-semibold" {...props}>
+      {children}
+    </h5>
+  ),
+  h6: ({ children, ...props }) => (
+    <h6 className="m-0 my-1 text-sm font-semibold" {...props}>
+      {children}
+    </h6>
+  ),
+  blockquote: ({ children, ...props }) => (
+    <blockquote className="m-0 my-2 border-l-2 border-border pl-3 text-muted-foreground" {...props}>
+      {children}
+    </blockquote>
+  ),
+  hr: (props) => <hr className="my-2 border-border" {...props} />,
+  p: ({ children, ...props }) => (
+    <p className="m-0 whitespace-normal break-words" {...props}>
+      {children}
+    </p>
+  ),
+  ul: ({ children, ...props }) => (
+    <ul className="my-1 list-disc pl-5 space-y-0.5 marker:text-muted-foreground" {...props}>
+      {children}
+    </ul>
+  ),
+  ol: ({ children, ...props }) => (
+    <ol className="my-1 list-decimal pl-5 space-y-0.5 marker:text-muted-foreground" {...props}>
+      {children}
+    </ol>
+  ),
+  li: ({ children, ...props }) => (
+    <li className="whitespace-normal break-words" {...props}>
+      {children}
+    </li>
+  ),
+  input: ({ ...props }) => (
+    <input
+      {...props}
+      className="mr-2 align-middle"
+      disabled
+    />
+  ),
+  table: ({ children, ...props }) => (
+    <div className="my-2 overflow-x-auto">
+      <table className="w-full border-collapse text-sm" {...props}>
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children, ...props }) => (
+    <thead className="bg-muted/40" {...props}>
+      {children}
+    </thead>
+  ),
+  th: ({ children, ...props }) => (
+    <th className="border border-border px-2 py-1 text-left font-semibold" {...props}>
+      {children}
+    </th>
+  ),
+  td: ({ children, ...props }) => (
+    <td className="border border-border px-2 py-1 align-top" {...props}>
+      {children}
+    </td>
+  ),
+  tr: ({ children, ...props }) => (
+    <tr className="odd:bg-background even:bg-muted/20" {...props}>
+      {children}
+    </tr>
+  ),
+  pre: ({ children, ...props }) => (
+    <pre
+      className="my-2 overflow-x-auto rounded-xl border border-border bg-background/60 p-3 text-[13px] leading-5 [&>code]:border-0 [&>code]:bg-transparent [&>code]:px-0 [&>code]:py-0"
+      {...props}
+    >
+      {children}
+    </pre>
+  ),
+  code: ({ children, ...props }) => (
+    <code
+      className="rounded-md border border-border bg-background/60 px-1 py-0.5 font-mono text-[13px]"
+      {...props}
+    >
+      {children}
+    </code>
+  ),
+};
+
 function sanitizeAssistantContent(text: string): string {
   // Xóa các đoạn đánh dấu nội bộ dạng (Lesson xxx#y) để học sinh không thấy ID
-  let result = text.replace(/\(\s*Lesson [^)]+\)/gi, "");
+  const cleaned = text.replace(/\(\s*Lesson [^)]+\)/gi, "");
 
-  // Thêm xuống dòng trước các mục lớn dạng "**Tiêu đề:**" để dễ đọc
-  result = result.replace(/\s*\*\*(.+?)\*\*:/g, "\n\n**$1**:");
+  // Chỉ chuẩn hoá dòng trống ở ngoài code fence để tránh làm hỏng định dạng code.
+  const parts = cleaned.split(/```/);
+  const normalized = parts
+    .map((part, index) => {
+      if (index % 2 === 1) return part;
 
-  // Các bullet từ nguồn thường có dạng "* **Tiêu đề**" -> chuyển thành dòng mới bắt đầu bằng "•"
-  result = result.replace(/\*\s+\*\*/g, "\n• **");
+      const lines = part.split("\n");
+      const out: string[] = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i] ?? "";
+        const markerOnly = /^\s*([-*+]|•)\s*$/.test(line);
+        if (!markerOnly) {
+          out.push(line);
+          continue;
+        }
 
-  // Chuẩn hoá: không cho quá 2 dòng trống liên tiếp
-  result = result.replace(/\n{3,}/g, "\n\n");
+        const nextLine = lines[i + 1];
+        if (typeof nextLine !== "string") {
+          continue;
+        }
 
-  // Gom bớt khoảng trắng thừa (nhưng giữ xuống dòng)
-  result = result
-    .split(/\n/)
-    .map((line) => line.replace(/\s{2,}/g, " ").trimEnd())
-    .join("\n");
+        const nextTrim = nextLine.trim();
+        if (nextTrim.length === 0) {
+          continue;
+        }
 
-  return result.trim();
+        const indentMatch = /^\s*/.exec(line);
+        const indent = indentMatch ? indentMatch[0] : "";
+        const markerChar = line.trim().startsWith("•") ? "-" : (line.trim()[0] ?? "-");
+        out.push(`${indent}${markerChar} ${nextTrim}`);
+        i += 1;
+      }
+
+      return out
+        .join("\n")
+        // Bỏ dòng trống trước một list item (giúp list không bị cách quá xa như ảnh)
+        .replace(/\n\s*\n(?=\s*([-*+]|•)\s+\S)/g, "\n")
+        // Chuẩn hoá: không cho quá 2 dòng trống liên tiếp
+        .replace(/\n{3,}/g, "\n\n");
+    })
+    .join("```");
+
+  return normalized.trim();
 }
 
+/**
+ * Chat Tutor (RAG) dành cho học sinh theo từng bài học.
+ * Input: `classId`, `lessonId`.
+ * Output: UI chat + gọi API `/api/ai/tutor/chat`.
+ * Side effects: Lưu lịch sử chat vào localStorage theo lesson.
+ */
 export default function LessonTutorChat(props: { classId: string; lessonId: string }) {
   const { classId, lessonId } = props;
 
@@ -200,6 +359,10 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
   const [rateLimitOpen, setRateLimitOpen] = useState(false);
   const [rateLimitRetryAfterSeconds, setRateLimitRetryAfterSeconds] = useState(0);
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScrollRef = useRef(true);
+
   const lastUserMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i]?.role === "user") return messages[i] as { role: "user"; content: string };
@@ -207,16 +370,35 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
     return null;
   }, [messages]);
 
-  const send = async (text: string) => {
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    shouldAutoScrollRef.current = nearBottom;
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAutoScrollRef.current) return;
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const send = async (text: string, options?: { appendUserMessage?: boolean }) => {
+    const appendUserMessage = options?.appendUserMessage ?? true;
     const content = text.trim();
     if (!content || loading) return;
 
-    const history = messages
-      .slice(-20)
-      .map((m) => ({ role: m.role, content: m.content }));
+    const historyBase =
+      !appendUserMessage && messages.length > 0 && messages[messages.length - 1]?.role === "user" &&
+      (messages[messages.length - 1] as { role: "user"; content: string }).content.trim() === content
+        ? messages.slice(0, -1)
+        : messages;
 
-    setMessages((prev) => [...prev, { role: "user", content }]);
-    setInput("");
+    const history = historyBase.slice(-20).map((m) => ({ role: m.role, content: m.content }));
+
+    if (appendUserMessage) {
+      setMessages((prev) => [...prev, { role: "user", content }]);
+      setInput("");
+    }
 
     try {
       setLoading(true);
@@ -319,7 +501,7 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
         retryAfterSeconds={rateLimitRetryAfterSeconds}
         onRetry={async () => {
           if (lastUserMessage) {
-            await send(lastUserMessage.content);
+            await send(lastUserMessage.content, { appendUserMessage: false });
           }
         }}
       />
@@ -418,7 +600,16 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
           </div>
         )}
 
-        <div className="space-y-3">
+        <div
+          ref={scrollRef}
+          onScroll={() => {
+            const el = scrollRef.current;
+            if (!el) return;
+            const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+            shouldAutoScrollRef.current = nearBottom;
+          }}
+          className="space-y-3 max-h-[60vh] overflow-y-auto overflow-x-hidden pr-1 scrollbar-stable overscroll-contain"
+        >
           {messages.length === 0 ? (
             <div className="text-sm text-muted-foreground">
               Hãy đặt câu hỏi về bài học (ví dụ: "Tóm tắt ý chính", "Giải thích khái niệm X").
@@ -430,14 +621,45 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
 
               return (
                 <div key={idx} className={m.role === "user" ? "text-right" : "text-left"}>
-                  <div
-                    className={
-                      m.role === "user"
-                        ? "inline-block rounded-2xl bg-green-600 text-white px-3 py-2 text-sm max-w-[90%] whitespace-pre-wrap"
-                        : "inline-block rounded-2xl bg-muted text-foreground px-3 py-2 text-sm max-w-[90%] whitespace-pre-wrap"
-                    }
-                  >
-                    {displayContent}
+                  <div className="inline-flex flex-col items-start gap-1 max-w-[90%]">
+                    <div
+                      className={
+                        m.role === "user"
+                          ? "inline-block rounded-2xl bg-green-600 text-white px-3 py-2 text-sm whitespace-pre-wrap break-words"
+                          : "inline-block rounded-2xl bg-muted text-foreground px-3 py-2 text-sm whitespace-normal break-words leading-relaxed"
+                      }
+                    >
+                      {m.role === "assistant" ? (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeSanitize]}
+                          components={assistantMarkdownComponents}
+                        >
+                          {displayContent}
+                        </ReactMarkdown>
+                      ) : (
+                        displayContent
+                      )}
+                    </div>
+
+                    {m.role === "assistant" && displayContent && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(displayContent);
+                            toast.success("Đã sao chép câu trả lời");
+                          } catch {
+                            toast.error("Không thể sao chép. Vui lòng thử lại.");
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md px-1"
+                        title="Sao chép"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Sao chép</span>
+                      </button>
+                    )}
                   </div>
 
                   {m.role === "assistant" && m.sources && m.sources.length > 0 && (
@@ -481,6 +703,19 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
               );
             })
           )}
+
+          {loading && (
+            <div className="text-left">
+              <div className="inline-block rounded-2xl bg-muted text-foreground px-3 py-2 text-sm max-w-[90%]">
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>AI đang trả lời...</span>
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div ref={endRef} />
         </div>
 
         <div className="flex items-end gap-2 pt-2 border-t border-border">
@@ -489,6 +724,12 @@ export default function LessonTutorChat(props: { classId: string; lessonId: stri
             maxRows={6}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send(input);
+              }
+            }}
             placeholder="Nhập câu hỏi..."
             className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
