@@ -10,6 +10,7 @@ import { checkRateLimit, getClientIp } from "@/lib/security/rateLimit";
 import { auditRepo } from "@/lib/repositories/audit-repo";
 import { computeQuizAntiCheatScore } from "@/lib/exam-session/antiCheatScoring";
 import { generateAntiCheatAiSummary } from "@/lib/ai/gemini-anti-cheat-summary";
+import { withPerformanceTracking } from "@/lib/performance-monitor";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,20 @@ const requestSchema = z.object({
   studentId: z.string().min(1),
   attempt: z.number().int().min(1).max(999).optional().nullable(),
 });
+
+function parseRetryAfterSecondsFromGeminiErrorMessage(message: string): number | null {
+  const m1 = message.match(/retry(?:\s+in)?\s+([0-9.]+)s/i);
+  if (m1?.[1]) {
+    const n = Number(m1[1]);
+    if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+  }
+  const m2 = message.match(/retryDelay"\s*:\s*"(\d+)s"/i);
+  if (m2?.[1]) {
+    const n = Number(m2[1]);
+    if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+  }
+  return null;
+}
 
 function rateLimitResponse(retryAfterSeconds: number) {
   return NextResponse.json(
@@ -36,7 +51,8 @@ function rateLimitResponse(retryAfterSeconds: number) {
  * Teacher-only: sinh tóm tắt chống gian lận từ exam_events (quiz).
  */
 export async function POST(req: NextRequest) {
-  try {
+  return withPerformanceTracking("/api/ai/anti-cheat/summary", "POST", async () => {
+    try {
     const teacher = await getAuthenticatedUser(req);
     if (!teacher) return errorResponse(401, "Unauthorized");
     if (teacher.role !== "TEACHER") return errorResponse(403, "Forbidden");
@@ -181,6 +197,10 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     console.error("[API /api/ai/anti-cheat/summary] Error", error);
     if (error instanceof Error) {
+      if (/\[GoogleGenerativeAI Error\]/i.test(error.message) && /\[429 Too Many Requests\]/i.test(error.message)) {
+        const retryAfterSeconds = parseRetryAfterSecondsFromGeminiErrorMessage(error.message) ?? 30;
+        return rateLimitResponse(retryAfterSeconds);
+      }
       if (/GEMINI_API_KEY/i.test(error.message)) {
         return errorResponse(500, "Dịch vụ AI chưa được cấu hình.");
       }
@@ -202,6 +222,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return errorResponse(500, "Internal server error");
-  }
+    const isDev = process.env.NODE_ENV === "development";
+    return errorResponse(500, "Internal server error", isDev
+      ? {
+          errorMessage: error instanceof Error ? error.message : String(error),
+        }
+      : undefined);
+    }
+  })();
 }

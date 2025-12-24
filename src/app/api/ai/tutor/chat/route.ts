@@ -12,6 +12,7 @@ import {
   generateContentWithModelFallback,
   getDefaultFastModelCandidates,
 } from "@/lib/ai/geminiModelFallback";
+import { withPerformanceTracking } from "@/lib/performance-monitor";
 
 export const runtime = "nodejs";
 
@@ -57,7 +58,8 @@ type RetrievedChunk = {
  * Student-only: RAG tutor dựa trên lesson embeddings trong lớp.
  */
 export async function POST(req: NextRequest) {
-  try {
+  return withPerformanceTracking("/api/ai/tutor/chat", "POST", async () => {
+    try {
     const user = await getAuthenticatedUser(req);
     if (!user) return errorResponse(401, "Unauthorized");
     if (user.role !== "STUDENT") return errorResponse(403, "Forbidden - Student role required");
@@ -246,5 +248,6 @@ export async function POST(req: NextRequest) {
       }
     }
     return errorResponse(500, "Internal server error");
-  }
+    }
+  })();
 }

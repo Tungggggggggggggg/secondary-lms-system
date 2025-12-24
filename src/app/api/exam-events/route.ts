@@ -9,6 +9,7 @@ import {
   getStudentClassroomForAssignment,
   isTeacherOfAssignment,
 } from "@/lib/api-utils";
+import { withPerformanceTracking } from "@/lib/performance-monitor";
 
 const getQuerySchema = z.object({
   assignmentId: z.string().min(1),
@@ -17,6 +18,7 @@ const getQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).optional().default(100),
   from: z.string().datetime({ offset: true }).optional(),
   to: z.string().datetime({ offset: true }).optional(),
+  countOnly: z.string().optional(),
 });
 
 const postBodySchema = z.object({
@@ -49,6 +51,7 @@ export async function GET(req: NextRequest) {
       limit: searchParams.get("limit") || undefined,
       from: searchParams.get("from") || undefined,
       to: searchParams.get("to") || undefined,
+      countOnly: searchParams.get("countOnly") || undefined,
     });
 
     if (!parsed.success) {
@@ -57,7 +60,10 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const { assignmentId, studentId, attempt, limit, from, to } = parsed.data;
+    const { assignmentId, studentId, attempt, limit, from, to, countOnly } = parsed.data;
+
+    const countOnlyEnabled =
+      typeof countOnly === "string" && (countOnly.trim() === "1" || countOnly.trim().toLowerCase() === "true");
 
     const allowed = await isTeacherOfAssignment(me.id, assignmentId);
     if (!allowed) return errorResponse(403, "Forbidden");
@@ -81,6 +87,14 @@ export async function GET(req: NextRequest) {
       where.createdAt = {};
       if (fromDate) where.createdAt.gte = fromDate;
       if (toDate) where.createdAt.lte = toDate;
+    }
+
+    if (countOnlyEnabled) {
+      const recordedEvents = await prisma.examEvent.count({ where });
+      return NextResponse.json(
+        { success: true, data: { recordedEvents } },
+        { status: 200 }
+      );
     }
 
     const events = await prisma.examEvent.findMany({
@@ -114,7 +128,8 @@ export async function GET(req: NextRequest) {
  * @sideEffects Insert examEvent record
  */
 export async function POST(req: NextRequest) {
-  try {
+  return withPerformanceTracking("/api/exam-events", "POST", async () => {
+    try {
     const me = await getAuthenticatedUser(req);
     if (!me) return errorResponse(401, "Unauthorized");
     if (me.role !== "STUDENT") return errorResponse(403, "Forbidden");
@@ -198,8 +213,9 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch (error: unknown) {
-    console.error("[ERROR] [POST] /api/exam-events", error);
-    return errorResponse(500, "Internal server error");
-  }
+    } catch (error: unknown) {
+      console.error("[ERROR] [POST] /api/exam-events", error);
+      return errorResponse(500, "Internal server error");
+    }
+  })();
 }

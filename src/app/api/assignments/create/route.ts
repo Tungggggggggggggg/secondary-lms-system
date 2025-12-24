@@ -23,6 +23,7 @@ const quizQuestionSchema = z
     content: z.string().min(1).max(20_000),
     type: z.enum(['SINGLE', 'MULTIPLE', 'TRUE_FALSE', 'FILL_BLANK']),
     order: z.number().int().min(1).optional(),
+    explanation: z.string().max(5000).optional(),
     options: z.array(quizOptionSchema).min(1),
   })
   .strict();

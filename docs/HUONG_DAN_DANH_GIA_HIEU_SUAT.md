@@ -161,10 +161,15 @@ Trong repo bạn đã có sẵn module:
   - `exportMetrics()`
 
 ### 6.2 Khoảng trống hiện tại (cần bổ sung để “lấy số liệu ra được”)
-- Metrics đang **in-memory**, chưa có “cổng xuất số liệu” tiện dùng.
-- Do đó kế hoạch triển khai nên có 1 bước:
-  - Tạo endpoint admin-only (ví dụ `GET /api/performance`) để **xem/xuất metrics**.
-  - Hoặc ghi log ra file/console và trích xuất.
+- [x] Metrics đang **in-memory** nhưng đã có “cổng xuất số liệu” tiện dùng.
+- [x] Đã có endpoint admin-only để **xem/xuất metrics**:
+  - `GET /api/performance?timeRangeMinutes=60`
+- [x] Đã có cơ chế reset/clear metrics trước mỗi kịch bản:
+  - `DELETE /api/performance`
+- [x] Đã xuất và lưu metrics JSON theo kịch bản:
+  - `docs/metrics/S1_metrics.json`
+  - `docs/metrics/S2_metrics.json`
+  - `docs/metrics/S3_metrics.json`
 
 > Khi thầy hỏi “số liệu đâu?”, bạn trả lời:  
 > **Số liệu được lấy từ metrics/log do hệ thống ghi nhận trong quá trình chạy thực nghiệm, sau đó tổng hợp vào bảng ở Chương 5.**
@@ -194,17 +199,17 @@ Mỗi request sẽ có `duration` (ms) và `success`.
 
 ### Ngày 1: Chuẩn bị & instrument
 - **Output cần đạt**:
-  - 3 endpoint được gắn tracking (E1/E2/E3).
-  - Có cơ chế xuất metrics (API admin-only hoặc log).
-  - Dataset test đủ (lesson có embeddings, quiz có events).
+  - [x] 3 endpoint được gắn tracking (E1/E2/E3).
+  - [x] Có cơ chế xuất metrics (API admin-only).
+  - [x] Dataset test đủ (lesson có embeddings, quiz có events).
 - **Checklist**:
   - Xác định `classId`, `lessonId`, `assignmentId`, `studentId`, `attempt`.
   - Đảm bảo `.env` có `GEMINI_API_KEY` và Supabase DB connection hoạt động.
 
 ### Ngày 2: Chạy thực nghiệm & thu thập
 - **Output cần đạt**:
-  - Bộ metrics thô cho từng kịch bản S1/S2/S3.
-  - Reliability: có `sentEvents` và `recordedEvents`.
+  - [x] Bộ metrics thô cho từng kịch bản S1/S2/S3.
+  - [~] Reliability: có `sentEvents` và `recordedEvents` (khuyến nghị bổ sung bước đếm bản ghi thực tế để đưa vào bảng reliability riêng).
 - **Checklist**:
   - Chạy đúng số request và có khoảng nghỉ để không vượt rate-limit AI.
   - Xuất metrics theo `timeRangeMinutes` đủ rộng (ví dụ 30–60 phút).
@@ -214,8 +219,8 @@ Mỗi request sẽ có `duration` (ms) và `success`.
 
 ### Ngày 3: Viết vào luận văn (Chương 5)
 - **Output cần đạt**:
-  - Bảng “Kết quả thực nghiệm” đổi từ “giả lập” → “đo thật”
-  - Có mô tả môi trường + phương pháp + hạn chế.
+  - [x] Bảng “Kết quả thực nghiệm” đổi từ “giả lập” → “đo thật”.
+  - [x] Có mô tả môi trường + phương pháp + hạn chế.
 - **Checklist nội dung viết**:
   - Môi trường (local Windows + Supabase + Gemini)
   - Kịch bản S1/S2/S3
@@ -267,11 +272,14 @@ Ví dụ cấu trúc:
 ---
 
 ## 11) Cách bạn trình bày với thầy (mẫu nói ngắn gọn)
-- **“Em đánh giá hiệu suất theo 3 luồng trọng tâm của hệ thống: Tutor RAG, ghi ExamEvent, và AI Anti-cheat Summary. Em đo trực tiếp trên hệ thống chạy thật (local Windows, DB Supabase) bằng cách ghi nhận thời gian xử lý mỗi request (avg/P95/max) và tỉ lệ lỗi. Dữ liệu đo được xuất từ hệ thống và tổng hợp thành bảng trong Chương 5, kèm mô tả môi trường đo và hạn chế do phụ thuộc Gemini và network.”**
+- **“Em đánh giá hiệu suất theo 3 luồng trọng tâm của hệ thống: Tutor RAG, ghi ExamEvent, và AI Anti-cheat Summary. Em đo trực tiếp trên hệ thống chạy thật (local Windows, DB Supabase) bằng cách ghi nhận thởi gian xử lý mỗi request (avg/P95/max) và tỉ lệ lỗi. Dữ liệu đo được xuất từ hệ thống và tổng hợp thành bảng trong Chương 5, kèm mô tả môi trường đo và hạn chế do phụ thuộc Gemini và network.”**
 
 ---
 
-# Việc còn lại để biến kế hoạch thành số liệu thật
-Hiện để bạn “có số liệu đâu” một cách thuyết phục, bạn cần **implement 2 thứ**:
-- Gắn tracking cho E1/E2/E3
-- Có cơ chế export/xem metrics (API admin-only)
+# Trạng thái triển khai (cập nhật theo tiến độ hiện tại)
+- [x] Tracking E1/E2/E3 đã có.
+- [x] Export/clear metrics đã có qua `/api/performance`.
+- [x] Đã chạy đủ 3 kịch bản S1/S2/S3 và lưu JSON metrics.
+- [x] Đã cập nhật số liệu thật vào bảng Chương 5 trong `docs/luanvan/luanvan.tex`.
+ - [x] Đã ước lượng reliability cho S2: 300/300 request POST `/api/exam-events` trả về 200 trong lần đo (successRate ≈ 100\%).
+

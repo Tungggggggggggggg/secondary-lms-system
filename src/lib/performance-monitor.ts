@@ -10,6 +10,7 @@ interface PerformanceMetric {
   timestamp: Date
   userId?: string
   success: boolean
+  statusCode?: number
   error?: string
 }
 
@@ -115,8 +116,14 @@ class PerformanceMonitor {
   }
 }
 
-// Singleton instance
-export const performanceMonitor = new PerformanceMonitor()
+const globalForPerformanceMonitor = globalThis as unknown as {
+  __eduversePerformanceMonitor?: PerformanceMonitor
+}
+
+export const performanceMonitor =
+  globalForPerformanceMonitor.__eduversePerformanceMonitor ?? new PerformanceMonitor()
+
+globalForPerformanceMonitor.__eduversePerformanceMonitor = performanceMonitor
 
 /**
  * Middleware wrapper để tự động track performance
@@ -130,9 +137,11 @@ export function withPerformanceTracking<T extends any[], R>(
     const startTime = Date.now()
     let success = true
     let error: string | undefined
+    let statusCode: number | undefined
+    let result: R | undefined
 
     try {
-      const result = await fn(...args)
+      result = await fn(...args)
       return result
     } catch (err) {
       success = false
@@ -140,6 +149,13 @@ export function withPerformanceTracking<T extends any[], R>(
       throw err
     } finally {
       const duration = Date.now() - startTime
+
+      const responseLike = result as unknown as { status?: number } | undefined
+      if (responseLike && typeof responseLike.status === 'number') {
+        statusCode = responseLike.status
+        success = statusCode < 400
+        if (!success && !error) error = `HTTP ${statusCode}`
+      }
       
       performanceMonitor.recordMetric({
         endpoint,
@@ -147,6 +163,7 @@ export function withPerformanceTracking<T extends any[], R>(
         duration,
         timestamp: new Date(),
         success,
+        statusCode,
         error
       })
     }

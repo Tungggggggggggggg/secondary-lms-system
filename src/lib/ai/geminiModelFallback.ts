@@ -20,6 +20,16 @@ function isModelNotFoundError(err: unknown): boolean {
   );
 }
 
+function isQuotaOrRateLimitError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return (
+    /\[429 Too Many Requests\]/i.test(err.message) ||
+    /Quota exceeded/i.test(err.message) ||
+    /retry in [0-9.]+s/i.test(err.message) ||
+    /retryDelay"\s*:\s*"\d+s"/i.test(err.message)
+  );
+}
+
 /**
  * Gọi generateContent với danh sách model candidate; nếu gặp lỗi model-not-found thì tự fallback.
  *
@@ -62,6 +72,9 @@ export async function generateContentWithModelFallback(
       if (isModelNotFoundError(err)) {
         continue;
       }
+      if (isQuotaOrRateLimitError(err)) {
+        continue;
+      }
       throw err;
     }
   }
@@ -78,7 +91,7 @@ export async function generateContentWithModelFallback(
  * @returns mảng model name
  */
 export function getDefaultFastModelCandidates(): string[] {
-  return ["gemini-2.5-flash-lite"];
+  return ["gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"];
 }
 
 /**
