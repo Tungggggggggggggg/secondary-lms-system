@@ -151,7 +151,7 @@ export default function LoginForm() {
                     🎓
                 </div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                    Chào mừng đến với EduFun!
+                    Chào mừng đến với EduVerse!
                 </h1>
                 <p className="text-sm text-gray-600">
                     Học tập thú vị cùng Lịch sử, Địa lý & Tiếng Anh

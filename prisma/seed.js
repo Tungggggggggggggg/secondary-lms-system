@@ -12,17 +12,91 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
-async function upsertUser(email, fullname, role) {
-  const passwordHash = await bcrypt.hash('123456', 10);
-  return prisma.user.upsert({
-    where: { email },
-    update: { fullname, role },
-    create: { email, fullname, role, password: passwordHash },
+const SEED_USERS = String(process.env.SEED_USERS || '').toLowerCase() === '1' || String(process.env.SEED_USERS || '').toLowerCase() === 'true';
+const SEED_CLEANUP_LEGACY_USERS = String(process.env.SEED_CLEANUP_LEGACY_USERS || '').toLowerCase() === '1' || String(process.env.SEED_CLEANUP_LEGACY_USERS || '').toLowerCase() === 'true';
+const SEED_DRY_RUN = String(process.env.SEED_DRY_RUN || '').toLowerCase() === '1' || String(process.env.SEED_DRY_RUN || '').toLowerCase() === 'true';
+
+function safeDbInfo(databaseUrl) {
+  if (!databaseUrl) return null;
+  try {
+    const u = new URL(databaseUrl);
+    const db = (u.pathname || '/').replace(/^\//, '') || '(no-db)';
+    const port = u.port ? `:${u.port}` : '';
+    return `${u.hostname}${port}/${db}`;
+  } catch {
+    return '(invalid DATABASE_URL)';
+  }
+}
+
+async function pickFirstUserByRole(role) {
+  return prisma.user.findFirst({
+    where: { role },
+    orderBy: { createdAt: 'asc' },
   });
+}
+
+async function upsertUser(email, fullname, role) {
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    if (
+      SEED_USERS &&
+      existing.role === role &&
+      (existing.roleSelectedAt === null || existing.roleSelectedAt === undefined)
+    ) {
+      try {
+        return await prisma.user.update({
+          where: { id: existing.id },
+          data: { roleSelectedAt: new Date() },
+        });
+      } catch {
+        return existing;
+      }
+    }
+    return existing;
+  }
+  if (!SEED_USERS) {
+    throw new Error(`[SEED] Missing user ${email}. Set SEED_USERS=1 to allow creating seed users.`);
+  }
+  const passwordHash = await bcrypt.hash('123456', 10);
+  return prisma.user.create({
+    data: { email, fullname, role, password: passwordHash, roleSelectedAt: new Date() },
+  });
+}
+
+async function upsertSystemSetting(key, value) {
+  await prisma.systemSetting.upsert({
+    where: { key },
+    update: { value },
+    create: { key, value },
+    select: { key: true },
+  });
+}
+
+async function mergeNotificationSetting(userId, itemsToPrepend) {
+  const key = `notifications:${userId}`;
+  const existing = await prisma.systemSetting.findUnique({ where: { key }, select: { value: true } });
+  const current = Array.isArray(existing?.value) ? existing.value : [];
+  const dedupeKeys = new Set(
+    itemsToPrepend
+      .map((x) => (x && typeof x === 'object' && x !== null ? x.dedupeKey : undefined))
+      .filter((x) => typeof x === 'string' && x.length > 0)
+  );
+  const filtered = dedupeKeys.size
+    ? current.filter((x) => {
+        if (!x || typeof x !== 'object') return true;
+        const dk = x.dedupeKey;
+        return !(typeof dk === 'string' && dedupeKeys.has(dk));
+      })
+    : current;
+  const next = [...itemsToPrepend, ...filtered].slice(0, 200);
+  await upsertSystemSetting(key, next);
 }
 
 async function main() {
   console.log('[SEED] Start');
+
+  const dbInfo = safeDbInfo(process.env.DATABASE_URL);
+  if (dbInfo) console.log(`[SEED] DB: ${dbInfo}`);
 
   // Get real users from database (PARENT and STUDENT roles)
   const existingParents = await prisma.user.findMany({
@@ -37,29 +111,55 @@ async function main() {
 
   console.log(`[SEED] Found ${existingParents.length} parents and ${existingStudents.length} students in database`);
 
-  // Cleanup legacy example.com users to keep dataset clean (avoid FK issues by updating email instead of delete)
-  const legacyUsers = await prisma.user.findMany({
-    where: { email: { endsWith: '@example.com' } },
-    select: { id: true, email: true },
-  });
-  for (const u of legacyUsers) {
-    const local = u.email.split('@')[0].toLowerCase().replace(/[^a-z0-9.+_-]/g, '') || 'user';
-    let newEmail = `${local}+legacy.${u.id.slice(-4)}@gmail.com`;
-    try {
-      await prisma.user.update({ where: { id: u.id }, data: { email: newEmail } });
-    } catch (e) {
-      // fallback with random suffix if unique constraint
-      const rand = Math.random().toString(36).slice(2, 6);
-      newEmail = `${local}+legacy.${rand}@gmail.com`;
-      try { await prisma.user.update({ where: { id: u.id }, data: { email: newEmail } }); } catch {}
+  const teacherCount = await prisma.user.count({ where: { role: 'TEACHER' } });
+  const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+  console.log(`[SEED] User counts: TEACHER=${teacherCount}, ADMIN=${adminCount}, STUDENT=${existingStudents.length}, PARENT=${existingParents.length}`);
+
+  if (SEED_DRY_RUN) {
+    console.log('[SEED] DRY_RUN enabled. Exiting without writing data.');
+    return;
+  }
+
+  if (SEED_USERS && SEED_CLEANUP_LEGACY_USERS) {
+    // Cleanup legacy example.com users to keep dataset clean (avoid FK issues by updating email instead of delete)
+    const legacyUsers = await prisma.user.findMany({
+      where: { email: { endsWith: '@example.com' } },
+      select: { id: true, email: true },
+    });
+    for (const u of legacyUsers) {
+      const local = u.email.split('@')[0].toLowerCase().replace(/[^a-z0-9.+_-]/g, '') || 'user';
+      let newEmail = `${local}+legacy.${u.id.slice(-4)}@gmail.com`;
+      try {
+        await prisma.user.update({ where: { id: u.id }, data: { email: newEmail } });
+      } catch (e) {
+        // fallback with random suffix if unique constraint
+        const rand = Math.random().toString(36).slice(2, 6);
+        newEmail = `${local}+legacy.${rand}@gmail.com`;
+        try { await prisma.user.update({ where: { id: u.id }, data: { email: newEmail } }); } catch {}
+      }
     }
   }
 
-  // Only create default users if they don't exist (Gmail + tên Việt)
-  const superAdmin = await upsertUser('superadmin.nguyenhoangnam@gmail.com', 'Nguyễn Hoàng Nam', 'TEACHER');
-  const admin = await upsertUser('admin.tranthilan@gmail.com', 'Trần Thị Lan', 'ADMIN');
-  const teacher = await upsertUser('giaovien.thanhha@gmail.com', 'Nguyễn Thị Thanh Hà', 'TEACHER');
-  
+  let superAdmin;
+  let admin;
+  let teacher;
+
+  if (SEED_USERS) {
+    // Only create default users if they don't exist (Gmail + tên Việt)
+    superAdmin = await upsertUser('superadmin.nguyenhoangnam@gmail.com', 'Nguyễn Hoàng Nam', 'TEACHER');
+    admin = await upsertUser('admin.tranthilan@gmail.com', 'Trần Thị Lan', 'ADMIN');
+    teacher = await upsertUser('giaovien.thanhha@gmail.com', 'Nguyễn Thị Thanh Hà', 'TEACHER');
+  } else {
+    teacher = await pickFirstUserByRole('TEACHER');
+    admin = await pickFirstUserByRole('ADMIN');
+    superAdmin = teacher;
+  }
+
+  if (!teacher) {
+    throw new Error('[SEED] No TEACHER user found. Create one manually or re-run with SEED_USERS=1.');
+  }
+  if (!superAdmin) superAdmin = teacher;
+
   // Organization default
   const org = await prisma.organization.upsert({
     where: { id: 'default-org' },
@@ -73,11 +173,13 @@ async function main() {
     update: {},
     create: { organizationId: org.id, userId: superAdmin.id, roleInOrg: 'OWNER' },
   });
-  await prisma.organizationMember.upsert({
-    where: { organizationId_userId: { organizationId: org.id, userId: admin.id } },
-    update: {},
-    create: { organizationId: org.id, userId: admin.id, roleInOrg: 'ADMIN' },
-  });
+  if (admin) {
+    await prisma.organizationMember.upsert({
+      where: { organizationId_userId: { organizationId: org.id, userId: admin.id } },
+      update: {},
+      create: { organizationId: org.id, userId: admin.id, roleInOrg: 'ADMIN' },
+    });
+  }
 
   // Classroom by teacher (only if teacher exists and no classroom exists)
   const existingClassroom = await prisma.classroom.findFirst({
@@ -95,218 +197,36 @@ async function main() {
         organizationId: org.id,
       },
     });
+  }
 
-    // Add students to classroom (use real students from database)
-    if (existingStudents.length > 0) {
-      for (const student of existingStudents.slice(0, 5)) { // Add first 5 students
-        try {
-          await prisma.classroomStudent.upsert({
-            where: {
-              classroomId_studentId: {
-                classroomId: classroom.id,
-                studentId: student.id,
-              },
-            },
-            update: {},
-            create: {
+  // Ensure teacher is a member of org
+  await prisma.organizationMember.upsert({
+    where: { organizationId_userId: { organizationId: org.id, userId: teacher.id } },
+    update: {},
+    create: { organizationId: org.id, userId: teacher.id, roleInOrg: 'TEACHER' },
+  });
+
+  // Add up to 5 existing students to classroom (no user mutation)
+  if (existingStudents.length > 0) {
+    for (const student of existingStudents.slice(0, 5)) {
+      try {
+        await prisma.classroomStudent.upsert({
+          where: {
+            classroomId_studentId: {
               classroomId: classroom.id,
               studentId: student.id,
             },
-          });
-        } catch (error) {
-          // Skip if already exists
-        }
-      }
-    }
-  }
-
-  // Course by teacher (only create if doesn't exist)
-  let course = await prisma.course.findFirst({
-    where: { authorId: teacher.id, title: 'Toán 12 - Hàm số' },
-  });
-
-  if (!course && classroom) {
-    course = await prisma.course.create({
-      data: {
-        title: 'Toán 12 - Hàm số',
-        description: 'Chuyên đề hàm số',
-        authorId: teacher.id,
-        organizationId: org.id,
-      },
-    });
-
-    // Link classroom - course
-    await prisma.classroomCourse.upsert({
-      where: {
-        classroomId_courseId: {
-          classroomId: classroom.id,
-          courseId: course.id,
-        },
-      },
-      update: {},
-      create: { classroomId: classroom.id, courseId: course.id },
-    });
-
-    // Assignment and link
-    const assignment = await prisma.assignment.create({
-      data: {
-        title: 'Bài tập hàm số tuần 1',
-        description: 'Giải các bài toán về đạo hàm',
-        dueDate: new Date(Date.now() + 7 * 86400000),
-        authorId: teacher.id,
-        courseId: course.id,
-        type: 'ESSAY',
-        organizationId: org.id,
-      },
-    });
-    
-    await prisma.assignmentClassroom.upsert({
-      where: {
-        classroomId_assignmentId: {
-          classroomId: classroom.id,
-          assignmentId: assignment.id,
-        },
-      },
-      update: {},
-      create: { classroomId: classroom.id, assignmentId: assignment.id },
-    });
-
-    // Announcement (PENDING to test moderation) - only if we have students
-    const studentsForAnnouncement = await prisma.user.findMany({
-      where: { role: 'STUDENT' },
-      select: { id: true },
-      take: 1,
-    });
-
-    if (studentsForAnnouncement.length > 0) {
-      const ann = await prisma.announcement.create({
-        data: {
-          classroomId: classroom.id,
-          authorId: teacher.id,
-          content: 'Thông báo chờ duyệt: tuần này kiểm tra 15p.',
-          status: 'PENDING',
-          organizationId: org.id,
-        },
-      });
-
-      // Comment (PENDING) - use first student from database
-      await prisma.announcementComment.create({
-        data: {
-          announcementId: ann.id,
-          authorId: studentsForAnnouncement[0].id,
-          content: 'Em đã nhận thông báo ạ!',
-          status: 'PENDING',
-        },
-      });
-    }
-  }
-
-  // Create parent-student relationships from real data in database
-  console.log('[SEED] Creating parent-student relationships...');
-  
-  // Get fresh data after potential user creation
-  const allParents = await prisma.user.findMany({
-    where: { role: 'PARENT' },
-    select: { id: true, email: true, fullname: true },
-  });
-
-  const allStudents = await prisma.user.findMany({
-    where: { role: 'STUDENT' },
-    select: { id: true, email: true, fullname: true },
-  });
-
-  // Create relationships: match parents with students
-  // Each parent can have multiple students, each student can have multiple parents
-  const relationshipsCreated = [];
-  
-  if (allParents.length > 0 && allStudents.length > 0) {
-    // Create relationships: assign students to parents in a round-robin fashion
-    for (let i = 0; i < Math.min(allStudents.length, allParents.length * 2); i++) {
-      const student = allStudents[i % allStudents.length];
-      const parent = allParents[Math.floor(i / 2) % allParents.length];
-      
-      try {
-        // Check if relationship already exists
-        const existing = await prisma.parentStudent.findUnique({
-          where: {
-            parentId_studentId: {
-              parentId: parent.id,
-              studentId: student.id,
-            },
+          },
+          update: {},
+          create: {
+            classroomId: classroom.id,
+            studentId: student.id,
           },
         });
-
-        if (!existing) {
-          const relationship = await prisma.parentStudent.create({
-            data: {
-              parentId: parent.id,
-              studentId: student.id,
-            },
-          });
-          relationshipsCreated.push({
-            parent: parent.fullname,
-            student: student.fullname,
-          });
-        }
       } catch (error) {
-        // Skip if relationship already exists or other error
-        if (!error.message?.includes('Unique constraint')) {
-          console.error(`[SEED] Error creating relationship: ${error.message}`);
-        }
+        // Skip if already exists
       }
     }
-    
-    console.log(`[SEED] Created ${relationshipsCreated.length} parent-student relationships`);
-    relationshipsCreated.forEach(rel => {
-      console.log(`[SEED]   - ${rel.parent} <-> ${rel.student}`);
-    });
-  } else {
-    console.log('[SEED] No parents or students found to create relationships');
-  }
-
-  // Some audit logs
-  await prisma.auditLog.createMany({
-    data: [
-      { actorId: superAdmin.id, action: 'SEED_INIT', entityType: 'SYSTEM', entityId: 'seed' },
-      { actorId: admin.id, action: 'ORG_MEMBER_ADD', entityType: 'ORGANIZATION', entityId: org.id },
-    ],
-  });
-
-  const SEED_MODE = process.env.SEED_MODE || '';
-  if (SEED_MODE === 'reset-minimal') {
-    const demoClasses = await prisma.classroom.findMany({ where: { code: '12A2-DEMO' }, select: { id: true } });
-    for (const c of demoClasses) {
-      const classId = c.id;
-      await prisma.conversation.deleteMany({ where: { classId } });
-      const clsStudents = await prisma.classroomStudent.findMany({ where: { classroomId: classId }, select: { studentId: true } });
-      const studentIds = clsStudents.map((s) => s.studentId);
-      const dms = await prisma.conversation.findMany({ where: { type: 'DM' }, include: { participants: true } });
-      for (const dm of dms) {
-        const ids = dm.participants.map((p) => p.userId);
-        if (ids.length === 2 && ids.some((id) => studentIds.includes(id))) {
-          await prisma.conversation.delete({ where: { id: dm.id } });
-        }
-      }
-      await prisma.announcement.deleteMany({ where: { classroomId: classId } });
-      const classroomCourses = await prisma.classroomCourse.findMany({ where: { classroomId: classId }, select: { courseId: true } });
-      for (const cc of classroomCourses) {
-        const courseId = cc.courseId;
-        const assignments = await prisma.assignment.findMany({ where: { courseId }, select: { id: true } });
-        const aIds = assignments.map((a) => a.id);
-        if (aIds.length) {
-          await prisma.submission.deleteMany({ where: { assignmentId: { in: aIds } } });
-          await prisma.assignmentSubmission.deleteMany({ where: { assignmentId: { in: aIds } } });
-          await prisma.assignmentClassroom.deleteMany({ where: { classroomId: classId, assignmentId: { in: aIds } } });
-          await prisma.assignment.deleteMany({ where: { id: { in: aIds } } });
-        }
-        await prisma.classroomCourse.deleteMany({ where: { classroomId: classId, courseId } });
-        await prisma.lesson.deleteMany({ where: { courseId } });
-        try { await prisma.course.delete({ where: { id: courseId } }); } catch {}
-      }
-      await prisma.classroomStudent.deleteMany({ where: { classroomId: classId } });
-      try { await prisma.classroom.delete({ where: { id: classId } }); } catch {}
-    }
-    await prisma.auditLog.deleteMany({ where: { entityType: 'SYSTEM', entityId: 'seed', action: 'SEED_INIT' } });
   }
 
   // Minimal, clean dataset for UI coverage
@@ -317,26 +237,42 @@ async function main() {
     'Nguyễn Gia Huy', 'Trần Khánh Ly', 'Phạm Minh Khang', 'Lê Thu Hà',
     'Đỗ Quang Khánh', 'Bùi Phương Anh', 'Hoàng Thảo My', 'Phan Ngọc Bích'
   ];
-  const createdStudents = [];
-  for (let i = 0; i < baseStudentNames.length; i++) {
-    const name = baseStudentNames[i];
-    const email = `${name.normalize('NFD').replace(/\p{Diacritic}/gu, '')}`
-      .toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, '.') + `.${i+1}@gmail.com`;
-    const u = await upsertUser(email, name, 'STUDENT');
-    createdStudents.push(u);
+  let createdStudents = [];
+  if (SEED_USERS) {
+    for (let i = 0; i < baseStudentNames.length; i++) {
+      const name = baseStudentNames[i];
+      const email = `${name.normalize('NFD').replace(/\p{Diacritic}/gu, '')}`
+        .toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, '.') + `.${i+1}@gmail.com`;
+      const u = await upsertUser(email, name, 'STUDENT');
+      createdStudents.push(u);
+    }
+  } else {
+    createdStudents = await prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      orderBy: { createdAt: 'asc' },
+      take: 8,
+    });
   }
 
   const baseParentNames = [
     'Nguyễn Thị Mai', 'Trần Văn Long', 'Lê Thu Trang', 'Phạm Minh Châu',
     'Đỗ Hải Nam', 'Bùi Thị Hồng', 'Hoàng Anh Dũng', 'Phan Thuý Vy'
   ];
-  const createdParents = [];
-  for (let i = 0; i < baseParentNames.length; i++) {
-    const name = baseParentNames[i];
-    const email = `${name.normalize('NFD').replace(/\p{Diacritic}/gu, '')}`
-      .toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, '.') + `.${i+1}@gmail.com`;
-    const u = await upsertUser(email, name, 'PARENT');
-    createdParents.push(u);
+  let createdParents = [];
+  if (SEED_USERS) {
+    for (let i = 0; i < baseParentNames.length; i++) {
+      const name = baseParentNames[i];
+      const email = `${name.normalize('NFD').replace(/\p{Diacritic}/gu, '')}`
+        .toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, '.') + `.${i+1}@gmail.com`;
+      const u = await upsertUser(email, name, 'PARENT');
+      createdParents.push(u);
+    }
+  } else {
+    createdParents = await prisma.user.findMany({
+      where: { role: 'PARENT' },
+      orderBy: { createdAt: 'asc' },
+      take: 8,
+    });
   }
 
   // Second classroom for teacher2
@@ -353,8 +289,8 @@ async function main() {
     });
   }
 
-  // Attach up to 8 students to classroom2 and link parents 1-1
-  for (let i = 0; i < Math.min(8, createdStudents.length); i++) {
+  // Attach up to 8 students to classroom2 and link parents 1-1 (if both exist)
+  for (let i = 0; i < Math.min(8, createdStudents.length, createdParents.length); i++) {
     const stu = createdStudents[i];
     const par = createdParents[i];
     if (!stu || !par) break;
@@ -381,22 +317,27 @@ async function main() {
         organizationId: org.id,
       },
     });
-    await prisma.classroomCourse.upsert({
-      where: { classroomId_courseId: { classroomId: classroom2.id, courseId: course2.id } },
-      update: {},
-      create: { classroomId: classroom2.id, courseId: course2.id },
+  }
+
+  await prisma.classroomCourse.upsert({
+    where: { classroomId_courseId: { classroomId: classroom2.id, courseId: course2.id } },
+    update: {},
+    create: { classroomId: classroom2.id, courseId: course2.id },
+  });
+
+  const lessonTitles = ['Giới hạn hàm số', 'Đạo hàm và vi phân', 'Ứng dụng đạo hàm'];
+  const existingLessons = await prisma.lesson.findMany({ where: { courseId: course2.id }, select: { title: true } });
+  const existingLessonTitles = new Set(existingLessons.map((l) => l.title));
+  for (let idx = 0; idx < lessonTitles.length; idx++) {
+    if (existingLessonTitles.has(lessonTitles[idx])) continue;
+    await prisma.lesson.create({
+      data: {
+        title: lessonTitles[idx],
+        content: `Nội dung bài ${idx + 1} về ${lessonTitles[idx].toLowerCase()}.`,
+        order: idx + 1,
+        courseId: course2.id,
+      },
     });
-    const lessonTitles = ['Giới hạn hàm số', 'Đạo hàm và vi phân', 'Ứng dụng đạo hàm'];
-    for (let idx = 0; idx < lessonTitles.length; idx++) {
-      await prisma.lesson.create({
-        data: {
-          title: lessonTitles[idx],
-          content: `Nội dung bài ${idx + 1} về ${lessonTitles[idx].toLowerCase()}.`,
-          order: idx + 1,
-          courseId: course2.id,
-        },
-      });
-    }
   }
 
   // Assignments: 1 Essay + 1 Quiz
@@ -414,12 +355,12 @@ async function main() {
         organizationId: org.id,
       },
     });
-    await prisma.assignmentClassroom.upsert({
-      where: { classroomId_assignmentId: { classroomId: classroom2.id, assignmentId: essay.id } },
-      update: {},
-      create: { classroomId: classroom2.id, assignmentId: essay.id },
-    });
   }
+  await prisma.assignmentClassroom.upsert({
+    where: { classroomId_assignmentId: { classroomId: classroom2.id, assignmentId: essay.id } },
+    update: {},
+    create: { classroomId: classroom2.id, assignmentId: essay.id },
+  });
 
   const quizTitle = 'Trắc nghiệm giới hạn và đạo hàm (5 câu)';
   let quiz = await prisma.assignment.findFirst({ where: { title: quizTitle, courseId: course2.id } });
@@ -435,6 +376,16 @@ async function main() {
         organizationId: org.id,
       },
     });
+  }
+
+  await prisma.assignmentClassroom.upsert({
+    where: { classroomId_assignmentId: { classroomId: classroom2.id, assignmentId: quiz.id } },
+    update: {},
+    create: { classroomId: classroom2.id, assignmentId: quiz.id },
+  });
+
+  const quizQuestionCount = await prisma.question.count({ where: { assignmentId: quiz.id } });
+  if (quizQuestionCount === 0) {
     const qDefs = [
       { content: 'Giới hạn lim_{x->0} (sin x)/x bằng bao nhiêu?', type: 'SINGLE', options: [
         { label: 'A', content: '0', isCorrect: false },
@@ -462,15 +413,11 @@ async function main() {
     ];
     for (let i = 0; i < qDefs.length; i++) {
       const q = await prisma.question.create({ data: { content: qDefs[i].content, type: qDefs[i].type, order: i + 1, assignmentId: quiz.id } });
-      for (const opt of qDefs[i].options) {
-        await prisma.option.create({ data: { label: opt.label, content: opt.content, isCorrect: opt.isCorrect, order: 1, questionId: q.id } });
+      for (let j = 0; j < qDefs[i].options.length; j++) {
+        const opt = qDefs[i].options[j];
+        await prisma.option.create({ data: { label: opt.label, content: opt.content, isCorrect: opt.isCorrect, order: j + 1, questionId: q.id } });
       }
     }
-    await prisma.assignmentClassroom.upsert({
-      where: { classroomId_assignmentId: { classroomId: classroom2.id, assignmentId: quiz.id } },
-      update: {},
-      create: { classroomId: classroom2.id, assignmentId: quiz.id },
-    });
   }
 
   // Minimal submissions (first 4 students submit essay)
@@ -490,12 +437,43 @@ async function main() {
     }
   }
 
+  // File-submission models (Submission + SubmissionFile) - DB-only placeholders
+  if (createdStudents[0]) {
+    const sub = await prisma.submission.findFirst({ where: { assignmentId: essay.id, studentId: createdStudents[0].id } });
+    const submission = sub
+      ? sub
+      : await prisma.submission.create({ data: { assignmentId: essay.id, studentId: createdStudents[0].id, status: 'submitted' } });
+
+    const hasFile = await prisma.submissionFile.findFirst({ where: { submissionId: submission.id } });
+    if (!hasFile) {
+      await prisma.submissionFile.create({
+        data: {
+          submissionId: submission.id,
+          fileName: 'bai-lam-demo.pdf',
+          mimeType: 'application/pdf',
+          sizeBytes: 120_000,
+          storagePath: `submissions/${essay.id}/${createdStudents[0].id}/seed-demo.pdf`,
+        },
+      });
+    }
+  }
+
   // Announcements for classroom2
   const annContent = 'Tuần này kiểm tra 15 phút chương Giới hạn.';
   const existingAnn = await prisma.announcement.findFirst({ where: { classroomId: classroom2.id, content: annContent } });
   if (!existingAnn) {
-    const ann = await prisma.announcement.create({ data: { classroomId: classroom2.id, authorId: teacher2.id, content: annContent, status: 'PENDING', organizationId: org.id } });
-    await prisma.announcementComment.create({ data: { announcementId: ann.id, authorId: createdStudents[0]?.id || teacher2.id, content: 'Đã rõ ạ!' } });
+    const ann = await prisma.announcement.create({
+      data: {
+        classroomId: classroom2.id,
+        authorId: teacher2.id,
+        content: annContent,
+        status: 'PENDING',
+        organizationId: org.id,
+      },
+    });
+    if (createdStudents[0]) {
+      await prisma.announcementComment.create({ data: { announcementId: ann.id, authorId: createdStudents[0].id, content: 'Đã rõ ạ!' } });
+    }
   }
 
   // Chat: TRIAD + DM for classroom2
@@ -510,38 +488,186 @@ async function main() {
           createdById: teacher2.id,
           classId: classroom2.id,
           contextStudentId: stu0.id,
-          participants: { create: [
-            { userId: teacher2.id, roleInConv: 'TEACHER' },
-            { userId: stu0.id, roleInConv: 'STUDENT' },
-            { userId: par0.id, roleInConv: 'PARENT' },
-          ]},
-          messages: { create: [
-            { senderId: teacher2.id, content: 'Chào anh/chị và em, đây là nhóm trao đổi về kết quả học tập.' },
-            { senderId: par0.id, content: 'Cảm ơn cô, mong cô hỗ trợ thêm cho cháu.' },
-            { senderId: stu0.id, content: 'Em sẽ cố gắng ạ.' },
-          ]},
+          participants: {
+            create: [
+              { userId: teacher2.id, roleInConv: 'TEACHER' },
+              { userId: stu0.id, roleInConv: 'STUDENT' },
+              { userId: par0.id, roleInConv: 'PARENT' },
+            ],
+          },
+          messages: {
+            create: [
+              { senderId: teacher2.id, content: 'Chào anh/chị và em, đây là nhóm trao đổi về kết quả học tập.' },
+              { senderId: par0.id, content: 'Cảm ơn cô, mong cô hỗ trợ thêm cho cháu.' },
+              { senderId: stu0.id, content: 'Em sẽ cố gắng ạ.' },
+            ],
+          },
         },
       });
     }
   }
+
   const stu1 = createdStudents[1];
   if (stu1) {
-    const dm = await prisma.conversation.findFirst({ where: { type: 'DM', participants: { some: { userId: teacher2.id } } } });
-    if (!dm) {
+    const dm = await prisma.conversation.findFirst({
+      where: { type: 'DM', participants: { some: { userId: teacher2.id } } },
+      include: { participants: true },
+    });
+    const dmHasStu1 = dm && dm.participants.some((p) => p.userId === stu1.id);
+    if (!dm || !dmHasStu1) {
       await prisma.conversation.create({
         data: {
           type: 'DM',
           createdById: teacher2.id,
-          participants: { create: [
-            { userId: teacher2.id, roleInConv: 'TEACHER' },
-            { userId: stu1.id, roleInConv: 'STUDENT' },
-          ]},
-          messages: { create: [
-            { senderId: teacher2.id, content: 'Chào em, có khó khăn gì trong phần đạo hàm không?' },
-            { senderId: stu1.id, content: 'Dạ em đang xem lại ví dụ 2 ạ.' },
-          ]},
+          participants: {
+            create: [
+              { userId: teacher2.id, roleInConv: 'TEACHER' },
+              { userId: stu1.id, roleInConv: 'STUDENT' },
+            ],
+          },
+          messages: {
+            create: [
+              { senderId: teacher2.id, content: 'Chào em, có khó khăn gì trong phần đạo hàm không?' },
+              { senderId: stu1.id, content: 'Dạ em đang xem lại ví dụ 2 ạ.' },
+            ],
+          },
         },
       });
+    }
+  }
+
+  // Seed quiz attempt + exam events (anti-cheat coverage)
+  if (quiz && createdStudents.length > 0) {
+    const demoStudents = createdStudents.slice(0, 2);
+    for (const stu of demoStudents) {
+      await prisma.assignmentAttempt.upsert({
+        where: { assignmentId_studentId_attemptNumber: { assignmentId: quiz.id, studentId: stu.id, attemptNumber: 1 } },
+        update: {},
+        create: {
+          assignmentId: quiz.id,
+          studentId: stu.id,
+          attemptNumber: 1,
+          shuffleSeed: Math.floor(Math.random() * 1000000),
+          timeLimitMinutes: 15,
+          status: 'FINISHED',
+          endedAt: new Date(Date.now() - 2 * 60_000),
+        },
+      });
+
+      const hasEvents = await prisma.examEvent.findFirst({
+        where: { assignmentId: quiz.id, studentId: stu.id, attempt: 1 },
+        select: { id: true },
+      });
+      if (!hasEvents) {
+        const base = Date.now() - 10 * 60_000;
+        const events = [
+          { dt: 5_000, type: 'TAB_SWITCH', meta: { count: 1 } },
+          { dt: 20_000, type: 'WINDOW_BLUR', meta: { count: 1 } },
+          { dt: 35_000, type: 'COPY', meta: { count: 1 } },
+          { dt: 55_000, type: 'PASTE', meta: { count: 1 } },
+          { dt: 75_000, type: 'FULLSCREEN_EXIT', meta: { count: 1 } },
+          { dt: 95_000, type: 'DEVTOOLS_OPEN', meta: { count: 1 } },
+        ];
+        await prisma.examEvent.createMany({
+          data: events.map((e) => ({
+            assignmentId: quiz.id,
+            studentId: stu.id,
+            attempt: 1,
+            eventType: e.type,
+            createdAt: new Date(base + e.dt),
+            metadata: e.meta,
+          })),
+        });
+      }
+    }
+  }
+
+  // Seed notifications via system_settings (notificationRepo)
+  {
+    const nowIso = new Date().toISOString();
+    const mk = (suffix) => `n_seed_${Date.now()}_${suffix}_${Math.random().toString(36).slice(2)}`;
+    await mergeNotificationSetting(teacher2.id, [
+      {
+        id: mk('t1'),
+        type: 'SYSTEM',
+        title: 'Seed dữ liệu mẫu thành công',
+        description: 'Dữ liệu demo đã được tạo để test UI nhanh.',
+        createdAt: nowIso,
+        read: false,
+        severity: 'INFO',
+        dedupeKey: 'seed:teacher:system_ok',
+      },
+      {
+        id: mk('t2'),
+        type: 'TEACHER_ANTI_CHEAT_ALERT',
+        title: 'Cảnh báo thi (demo)',
+        description: 'Có học sinh rời fullscreen / mở devtools (demo).',
+        createdAt: nowIso,
+        read: false,
+        severity: 'WARNING',
+        actionUrl: '/dashboard/teacher/exams/monitor',
+        dedupeKey: 'seed:teacher:anti_cheat_alert',
+      },
+    ]);
+
+    if (createdStudents[0]) {
+      await mergeNotificationSetting(createdStudents[0].id, [
+        {
+          id: mk('s1'),
+          type: 'STUDENT_ASSIGNMENT_DUE_24H',
+          title: 'Nhắc hạn nộp (demo)',
+          description: 'Bạn có bài sắp đến hạn, vui lòng kiểm tra.',
+          createdAt: nowIso,
+          read: false,
+          severity: 'INFO',
+          dedupeKey: 'seed:student:due_24h',
+        },
+      ]);
+    }
+    if (createdParents[0]) {
+      await mergeNotificationSetting(createdParents[0].id, [
+        {
+          id: mk('p1'),
+          type: 'PARENT_WEEKLY_SUMMARY',
+          title: 'Tóm tắt tuần (demo)',
+          description: 'Có báo cáo tiến độ học tập mới.',
+          createdAt: nowIso,
+          read: false,
+          severity: 'INFO',
+          actionUrl: '/dashboard/parent/progress',
+          dedupeKey: 'seed:parent:weekly_summary',
+        },
+      ]);
+    }
+  }
+
+  // Approved + pinned announcement sample
+  {
+    const approvedContent = 'Thông báo đã duyệt (demo): Lịch học bù chiều thứ 6.';
+    const existed = await prisma.announcement.findFirst({ where: { classroomId: classroom2.id, content: approvedContent } });
+    if (!existed) {
+      const ann = await prisma.announcement.create({
+        data: {
+          classroomId: classroom2.id,
+          authorId: teacher2.id,
+          content: approvedContent,
+          status: 'APPROVED',
+          pinnedAt: new Date(),
+          moderatedAt: new Date(),
+          moderatedById: teacher2.id,
+          organizationId: org.id,
+        },
+      });
+      if (createdStudents[0]) {
+        await prisma.announcementComment.create({
+          data: {
+            announcementId: ann.id,
+            authorId: createdStudents[0].id,
+            content: 'Dạ em cảm ơn cô ạ!',
+            status: 'APPROVED',
+          },
+        });
+      }
     }
   }
 

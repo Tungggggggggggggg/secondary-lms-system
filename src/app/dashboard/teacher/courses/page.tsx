@@ -7,10 +7,9 @@ import CourseList from "@/components/teacher/courses/CourseList";
 import CourseStats from "@/components/teacher/courses/CourseStats";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
-import { PageHeader } from "@/components/shared";
-import { Plus, Search } from "lucide-react";
+import { EmptyState, FilterBar, PageHeader } from "@/components/shared";
+import { BookOpen, Plus, Search } from "lucide-react";
 
 type CourseListItem = {
   id: string;
@@ -91,33 +90,39 @@ export default function CoursesPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={breadcrumbItems} />
+      <Breadcrumb items={breadcrumbItems} color="blue" className="mb-2" />
 
       <PageHeader
         title="Khóa học của tôi"
         subtitle="Quản lý và theo dõi tất cả khóa học của bạn"
         role="teacher"
-        actions={
-          <Button
-            type="button"
-            onClick={() => {
-              router.push("/dashboard/teacher/courses/new");
-            }}
-            size="lg"
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Tạo khóa học mới</span>
-          </Button>
-        }
       />
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          color="blue"
+          variant="primary"
+          onClick={() => {
+            router.push("/dashboard/teacher/courses/new");
+          }}
+          className="inline-flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Tạo khóa học mới
+        </Button>
+      </div>
 
       {/* Stats Overview */}
       <CourseStats courses={courses} isLoading={isLoading} />
 
       {/* Filter & Search (có thể thêm sau) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-4">
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        color="blue"
+        placeholder="Tìm kiếm khóa học..."
+        right={
           <Select
             value={sortKey}
             onChange={(e) => {
@@ -127,29 +132,61 @@ export default function CoursesPage() {
               }
             }}
             color="blue"
+            className="h-11 min-w-[180px]"
+            aria-label="Sắp xếp khóa học"
           >
             <option value="recent">Gần đây nhất</option>
             <option value="oldest">Cũ nhất</option>
             <option value="name">Theo tên</option>
             <option value="classrooms">Số lớp sử dụng</option>
           </Select>
-        </div>
-        <div className="relative w-full sm:w-80">
-          <Input
-            type="text"
-            placeholder="Tìm kiếm khóa học..."
-            aria-label="Tìm kiếm khóa học"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            color="blue"
-            className="pl-10 pr-4"
-          />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-        </div>
-      </div>
+        }
+        onReset={() => {
+          setSearch("");
+          setSortKey("recent");
+        }}
+      />
 
       {/* Course List */}
-      <CourseList items={visibleCourses} isLoading={isLoading} error={errorMessage} onRetry={() => mutate()} />
+      {!isLoading && !errorMessage && courses.length === 0 ? (
+        <EmptyState
+          variant="teacher"
+          icon={<BookOpen className="h-12 w-12 text-blue-600" />}
+          title="Bạn chưa có khóa học nào"
+          description="Bắt đầu bằng việc tạo khóa học đầu tiên để thêm bài học và giao bài tập."
+          action={
+            <Button
+              type="button"
+              color="blue"
+              onClick={() => router.push("/dashboard/teacher/courses/new")}
+            >
+              Tạo khóa học đầu tiên
+            </Button>
+          }
+        />
+      ) : !isLoading && !errorMessage && courses.length > 0 && visibleCourses.length === 0 ? (
+        <EmptyState
+          variant="teacher"
+          icon={<Search className="h-12 w-12 text-blue-600" />}
+          title="Không tìm thấy khóa học nào phù hợp với bộ lọc"
+          description="Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại sắp xếp."
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              color="blue"
+              onClick={() => {
+                setSearch("");
+                setSortKey("recent");
+              }}
+            >
+              Đặt lại bộ lọc
+            </Button>
+          }
+        />
+      ) : (
+        <CourseList items={visibleCourses} isLoading={isLoading} error={errorMessage} onRetry={() => mutate()} />
+      )}
     </div>
   );
 }

@@ -7,88 +7,100 @@ import { settingsRepo } from '@/lib/repositories/settings-repo';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-  providers: [
+const providers: NonNullable<NextAuthOptions['providers']> = [];
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+if (googleClientId && googleClientSecret) {
+  providers.push(
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-    }),
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Mật khẩu', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+    })
+  );
+}
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          select: {
-            id: true,
-            email: true,
-            password: true,
-            fullname: true,
-            role: true,
-            roleSelectedAt: true,
-          },
-        });
+providers.push(
+  CredentialsProvider({
+    name: 'Credentials',
+    credentials: {
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Mật khẩu', type: 'password' },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) {
+        return null;
+      }
 
-        if (!user || !user.password) {
-          return null;
-        }
+      const user = await prisma.user.findUnique({
+        where: { email: credentials.email },
+        select: {
+          id: true,
+          email: true,
+          password: true,
+          fullname: true,
+          role: true,
+          roleSelectedAt: true,
+        },
+      });
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+      if (!user || !user.password) {
+        return null;
+      }
 
-        if (!isPasswordValid) {
-          return null;
-        }
+      const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
-        // Chặn đăng nhập nếu tài khoản đã bị khoá qua SystemSetting.disabled_users
-        try {
-          const disabledSetting = await settingsRepo.get('disabled_users');
-          let isDisabled = false;
-          if (Array.isArray(disabledSetting)) {
-            for (const item of disabledSetting) {
-              if (typeof item === 'string' && item === user.id) {
-                isDisabled = true;
-                break;
-              }
-              if (
-                item &&
-                typeof item === 'object' &&
-                typeof (item as { id?: unknown }).id === 'string' &&
-                (item as { id?: unknown }).id === user.id
-              ) {
-                isDisabled = true;
-                break;
-              }
+      if (!isPasswordValid) {
+        return null;
+      }
+
+      // Chặn đăng nhập nếu tài khoản đã bị khoá qua SystemSetting.disabled_users
+      try {
+        const disabledSetting = await settingsRepo.get('disabled_users');
+        let isDisabled = false;
+        if (Array.isArray(disabledSetting)) {
+          for (const item of disabledSetting) {
+            if (typeof item === 'string' && item === user.id) {
+              isDisabled = true;
+              break;
+            }
+            if (
+              item &&
+              typeof item === 'object' &&
+              typeof (item as { id?: unknown }).id === 'string' &&
+              (item as { id?: unknown }).id === user.id
+            ) {
+              isDisabled = true;
+              break;
             }
           }
-          if (isDisabled) {
-            // Trả về null để NextAuth coi là đăng nhập thất bại
-            return null;
-          }
-        } catch (e) {
-          console.error('[Auth] Lỗi khi kiểm tra disabled_users', e);
         }
+        if (isDisabled) {
+          // Trả về null để NextAuth coi là đăng nhập thất bại
+          return null;
+        }
+      } catch (e) {
+        console.error('[Auth] Lỗi khi kiểm tra disabled_users', e);
+      }
 
-        // Trả về user nếu xác thực thành công
-        // Đảm bảo rằng đối tượng user trả về có ít nhất một trường `id` và `email`
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.fullname,
-          fullname: user.fullname, // Also include fullname explicitly
-          role: user.role,
-          roleSelectedAt: user.roleSelectedAt ? user.roleSelectedAt.toISOString() : null,
-        };
-      },
-    }),
-  ],
+      // Trả về user nếu xác thực thành công
+      // Đảm bảo rằng đối tượng user trả về có ít nhất một trường `id` và `email`
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.fullname,
+        fullname: user.fullname, // Also include fullname explicitly
+        role: user.role,
+        roleSelectedAt: user.roleSelectedAt ? user.roleSelectedAt.toISOString() : null,
+      };
+    },
+  })
+);
+
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
+  providers,
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
