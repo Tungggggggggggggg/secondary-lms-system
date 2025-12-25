@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Label from "../ui/label";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 
 export default function LoginForm() {
     const [email, setEmail] = useState("");
@@ -16,7 +16,7 @@ export default function LoginForm() {
     const router = useRouter();
     const { toast } = useToast();
     const [showPassword, setShowPassword] = useState(false);
-    
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -40,45 +40,90 @@ export default function LoginForm() {
 
         setIsLoading(true);
         try {
-            const result = await signIn('credentials', {
+            const result = await signIn("credentials", {
                 redirect: false,
                 email,
                 password,
             });
 
             if (result?.error) {
-                console.error('Login error', result.error);
-                toast({ 
-                    title: '❌ Đăng nhập thất bại!', 
-                    description: result.error || 'Email hoặc mật khẩu không đúng.', 
-                    variant: 'destructive' 
-                });
+                console.error("Login error", result.error);
+
+                // Kiểm tra xem tài khoản có đang bị khoá hay không
+                try {
+                    const res = await fetch("/api/auth/check-locked", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email }),
+                    });
+                    const json = await res.json();
+                    if (res.ok && json?.locked) {
+                        const reason = typeof json.reason === "string" && json.reason.trim().length > 0
+                            ? json.reason.trim()
+                            : null;
+                        toast({
+                            title: "❌ Tài khoản đã bị khoá",
+                            description:
+                                reason
+                                    ? `Tài khoản của bạn đã bị khoá. Lý do: ${reason}`
+                                    : "Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.",
+                            variant: "destructive",
+                        });
+                    } else {
+                        toast({
+                            title: "❌ Đăng nhập thất bại!",
+                            description: "Email hoặc mật khẩu không đúng.",
+                            variant: "destructive",
+                        });
+                    }
+                } catch (err) {
+                    console.error("check-locked error", err);
+                    toast({
+                        title: "❌ Đăng nhập thất bại!",
+                        description: "Email hoặc mật khẩu không đúng.",
+                        variant: "destructive",
+                    });
+                }
                 return;
             }
 
-            toast({ 
-                title: '🎉 Đăng nhập thành công!', 
-                description: 'Chào mừng bạn đến với LMS!' 
+            toast({
+                title: "🎉 Đăng nhập thành công!",
+                description: "Chào mừng bạn đến với LMS!",
             });
 
             try {
-                const justRegistered = typeof window !== 'undefined' ? localStorage.getItem('justRegistered') : null;
-                if (justRegistered) {
-                    localStorage.removeItem('justRegistered');
-                    router.push('/auth/select-role');
+                const session = await getSession();
+                const roleSelectedAt = session?.user?.roleSelectedAt;
+                if (!roleSelectedAt) {
+                    router.push("/auth/select-role");
+                    return;
+                }
+
+                const role = session?.user?.role?.toString().toUpperCase();
+                if (role === "ADMIN") {
+                    router.push("/dashboard/admin/dashboard");
+                } else if (role === "TEACHER") {
+                    router.push("/dashboard/teacher/dashboard");
+                } else if (role === "PARENT") {
+                    router.push("/dashboard/parent/dashboard");
                 } else {
-                    router.push('/');
+                    // Mặc định STUDENT
+                    router.push("/dashboard/student/dashboard");
                 }
             } catch (err) {
-                console.warn('Redirect decision failed, defaulting to /', err);
-                router.push('/');
+                console.warn(
+                    "Redirect decision failed, defaulting to /dashboard",
+                    err
+                );
+                router.push("/dashboard");
             }
         } catch (err: unknown) {
-            console.error('Login error (client)', err);
-            toast({ 
-                title: '❌ Có lỗi xảy ra!', 
-                description: 'Vui lòng thử lại sau.', 
-                variant: 'destructive' 
+            console.error("Login error (client)", err);
+            toast({
+                title: "❌ Có lỗi xảy ra!",
+                description: "Vui lòng thử lại sau.",
+                variant: "destructive",
             });
         } finally {
             setIsLoading(false);
@@ -90,10 +135,12 @@ export default function LoginForm() {
             {/* Back to home button */}
             <div className="absolute top-4 left-4">
                 <Link href="/" aria-label="Quay về trang chủ" tabIndex={-1}>
-                    <button className="text-sm text-gray-500 hover:text-gray-700">← Trang chủ</button>
+                    <button className="text-sm text-gray-500 hover:text-gray-700">
+                        ← Trang chủ
+                    </button>
                 </Link>
             </div>
-            
+
             {/* Logo Section */}
             <div className="text-center mb-1">
                 <div
@@ -104,7 +151,7 @@ export default function LoginForm() {
                     🎓
                 </div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                    Chào mừng đến với EduFun!
+                    Chào mừng đến với EduVerse!
                 </h1>
                 <p className="text-sm text-gray-600">
                     Học tập thú vị cùng Lịch sử, Địa lý & Tiếng Anh
@@ -185,7 +232,9 @@ export default function LoginForm() {
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-4 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition-transform"
-                            aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                            aria-label={
+                                showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                            }
                         >
                             {showPassword ? "🙉" : "🙈"}
                         </button>

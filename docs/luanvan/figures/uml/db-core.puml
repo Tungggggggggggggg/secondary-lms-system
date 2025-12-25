@@ -1,0 +1,298 @@
+@startuml EduVerse_DB_Core
+title EduVerse - Sơ đồ cơ sở dữ liệu (Core Database Diagram)
+
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "users\n(User)" as users {
+  * id : String
+  --
+  email : String
+  role : UserRole
+  roleSelectedAt : DateTime?
+  createdAt : DateTime
+}
+
+entity "password_resets\n(PasswordReset)" as password_resets {
+  * id : String
+  --
+  email : String
+  token : String
+  expires : DateTime
+  completed : Boolean
+}
+
+entity "classrooms\n(Classroom)" as classrooms {
+  * id : String
+  --
+  code : String
+  teacherId : String
+  organizationId : String?
+}
+
+entity "classroom_students\n(ClassroomStudent)" as classroom_students {
+  * id : String
+  --
+  classroomId : String
+  studentId : String
+  joinedAt : DateTime
+}
+
+entity "courses\n(Course)" as courses {
+  * id : String
+  --
+  authorId : String
+  organizationId : String?
+}
+
+entity "lessons\n(Lesson)" as lessons {
+  * id : String
+  --
+  courseId : String
+  order : Int
+}
+
+entity "lesson_attachments\n(LessonAttachment)" as lesson_attachments {
+  * id : String
+  --
+  lessonId : String
+  storagePath : String
+  mimeType : String
+  sizeBytes : Int
+}
+
+entity "lesson_embedding_chunks\n(LessonEmbeddingChunk)" as lesson_embedding_chunks {
+  * id : String
+  --
+  lessonId : String
+  courseId : String
+  chunkIndex : Int
+}
+
+entity "assignments\n(Assignment)" as assignments {
+  * id : String
+  --
+  authorId : String
+  courseId : String?
+  organizationId : String?
+  type : AssignmentType
+}
+
+entity "questions\n(Question)" as questions {
+  * id : String
+  --
+  assignmentId : String
+  type : QuestionType
+}
+
+entity "question_options\n(Option)" as question_options {
+  * id : String
+  --
+  questionId : String
+  isCorrect : Boolean
+}
+
+entity "assignment_submissions\n(AssignmentSubmission)" as assignment_submissions {
+  * id : String
+  --
+  assignmentId : String
+  studentId : String
+  attempt : Int
+}
+
+entity "submissions\n(Submission)" as submissions {
+  * id : String
+  --
+  assignmentId : String
+  studentId : String
+  status : String
+}
+
+entity "submission_files\n(SubmissionFile)" as submission_files {
+  * id : String
+  --
+  submissionId : String
+  storagePath : String
+  mimeType : String
+  sizeBytes : Int
+}
+
+entity "exam_events\n(ExamEvent)" as exam_events {
+  * id : String
+  --
+  assignmentId : String
+  studentId : String
+  attempt : Int?
+  eventType : String
+}
+
+entity "assignment_attempts\n(AssignmentAttempt)" as assignment_attempts {
+  * id : String
+  --
+  assignmentId : String
+  studentId : String
+  attemptNumber : Int
+  startedAt : DateTime
+}
+
+entity "announcements\n(Announcement)" as announcements {
+  * id : String
+  --
+  classroomId : String
+  authorId : String
+  pinnedAt : DateTime?
+}
+
+entity "announcement_comments\n(AnnouncementComment)" as announcement_comments {
+  * id : String
+  --
+  announcementId : String
+  authorId : String
+  parentId : String?
+}
+
+entity "announcement_attachments\n(AnnouncementAttachment)" as announcement_attachments {
+  * id : String
+  --
+  announcementId : String
+  uploadedById : String
+  path : String
+}
+
+entity "conversations\n(Conversation)" as conversations {
+  * id : String
+  --
+  createdById : String
+  classId : String?
+  contextStudentId : String?
+}
+
+entity "conversation_participants\n(ConversationParticipant)" as conversation_participants {
+  * id : String
+  --
+  conversationId : String
+  userId : String
+  joinedAt : DateTime
+}
+
+entity "messages\n(Message)" as messages {
+  * id : String
+  --
+  conversationId : String
+  senderId : String
+  parentId : String?
+}
+
+entity "chat_attachments\n(ChatAttachment)" as chat_attachments {
+  * id : String
+  --
+  messageId : String
+  storagePath : String
+}
+
+entity "organizations\n(Organization)" as organizations {
+  * id : String
+  --
+  status : OrganizationStatus
+}
+
+entity "organization_members\n(OrganizationMember)" as organization_members {
+  * id : String
+  --
+  organizationId : String
+  userId : String
+  roleInOrg : OrgRole?
+}
+
+entity "parent_students\n(ParentStudent)" as parent_students {
+  * id : String
+  --
+  parentId : String
+  studentId : String
+  status : LinkStatus
+}
+
+entity "system_settings\n(SystemSetting)" as system_settings {
+  * key : String
+  --
+  value : Json?
+}
+
+entity "audit_logs\n(AuditLog)" as audit_logs {
+  * id : String
+  --
+  actorId : String
+  organizationId : String?
+  action : String
+  createdAt : DateTime
+}
+
+entity "sessions\n(Session)" as sessions {
+  * id : String
+  --
+  userId : String
+  expires : DateTime
+}
+
+users ||--o{ sessions : userId
+users ||--o{ classrooms : teacherId
+classrooms ||--o{ classroom_students : classroomId
+users ||--o{ classroom_students : studentId
+
+users ||--o{ courses : authorId
+courses ||--o{ lessons : courseId
+lessons ||--o{ lesson_attachments : lessonId
+lessons ||--o{ lesson_embedding_chunks : lessonId
+courses ||--o{ lesson_embedding_chunks : courseId
+
+users ||--o{ assignments : authorId
+courses ||--o{ assignments : courseId
+assignments ||--o{ questions : assignmentId
+questions ||--o{ question_options : questionId
+
+assignments ||--o{ assignment_submissions : assignmentId
+users ||--o{ assignment_submissions : studentId
+
+assignments ||--o{ submissions : assignmentId
+users ||--o{ submissions : studentId
+submissions ||--o{ submission_files : submissionId
+
+assignments ||--o{ exam_events : assignmentId
+users ||--o{ exam_events : studentId
+
+assignments ||--o{ assignment_attempts : assignmentId
+users ||--o{ assignment_attempts : studentId
+
+classrooms ||--o{ announcements : classroomId
+users ||--o{ announcements : authorId
+announcements ||--o{ announcement_comments : announcementId
+users ||--o{ announcement_comments : authorId
+announcement_comments ||--o{ announcement_comments : parentId
+announcements ||--o{ announcement_attachments : announcementId
+users ||--o{ announcement_attachments : uploadedById
+
+users ||--o{ conversations : createdById
+classrooms ||--o{ conversations : classId
+users ||--o{ conversations : contextStudentId
+conversations ||--o{ conversation_participants : conversationId
+users ||--o{ conversation_participants : userId
+conversations ||--o{ messages : conversationId
+users ||--o{ messages : senderId
+messages ||--o{ messages : parentId
+messages ||--o{ chat_attachments : messageId
+
+organizations ||--o{ organization_members : organizationId
+users ||--o{ organization_members : userId
+organizations ||--o{ classrooms : organizationId
+organizations ||--o{ courses : organizationId
+organizations ||--o{ assignments : organizationId
+
+users ||--o{ parent_students : parentId
+users ||--o{ parent_students : studentId
+
+users ||--o{ audit_logs : actorId
+organizations ||--o{ audit_logs : organizationId
+
+@enduml

@@ -140,3 +140,17 @@ vite.config.ts.timestamp-*
 
 src/generated/prisma
 generated/prisma
+
+*.aux
+*.toc
+*.lof
+*.lot
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.run.xml
+*.bcf
+*.pdf

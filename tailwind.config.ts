@@ -11,6 +11,14 @@ const config: Config = {
             colors: {
                 background: "hsl(var(--background))",
                 foreground: "hsl(var(--foreground))",
+                card: {
+                    DEFAULT: "hsl(var(--card))",
+                    foreground: "hsl(var(--card-foreground))",
+                },
+                popover: {
+                    DEFAULT: "hsl(var(--popover))",
+                    foreground: "hsl(var(--popover-foreground))",
+                },
                 primary: {
                     DEFAULT: "hsl(var(--primary))",
                     foreground: "hsl(var(--primary-foreground))",
@@ -35,6 +43,13 @@ const config: Config = {
                 input: "hsl(var(--input))",
                 ring: "hsl(var(--ring))",
                 radius: "var(--radius)",
+                coolors: {
+                    ink: "#264653",
+                    primary: "#2A9D8F",
+                    highlight: "#E9C46A",
+                    accent: "#F4A261",
+                    secondary: "#E76F51",
+                },
             },
             fontFamily: {
                 roboto: ["var(--font-roboto)"],

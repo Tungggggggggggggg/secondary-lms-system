@@ -1,0 +1,31 @@
+@startuml
+title Anti-cheat scoring và AI summary (Activity)
+
+start
+:Trong lúc làm Quiz,
+client phát hiện event
+(tab switch/fullscreen/clipboard...);
+:POST /api/exam-events;
+:Server validate + giới hạn payload;
+:Persist exam_events vào DB;
+
+:Teacher mở trang monitor;
+:Load danh sách event theo attempt;
+:Compute suspicionScore\n(rule-based + cap điểm);
+
+if (Teacher yêu cầu AI summary?) then (Có)
+  :POST /api/ai/anti-cheat/summary;
+  :Xác thực role TEACHER\n+ ownership;
+  :Rate limit (IP + teacher);
+  :Fetch tối đa 250 events;
+  :Compute suspicionScore + breakdown;
+  :Gọi Gemini tạo tóm tắt\n(structured JSON);
+  :Parse/validate output;
+  :Trả về summary + score + riskLevel;
+else (Không)
+  :Chỉ hiển thị score + breakdown;
+endif
+
+stop
+
+@enduml

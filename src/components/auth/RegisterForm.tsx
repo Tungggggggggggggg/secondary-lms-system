@@ -4,9 +4,11 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "../../hooks/use-toast";
+import { signIn } from "next-auth/react";
 import Button from "../ui/button";
 import Input from "../ui/input";
 import Label from "../ui/label";
+import { passwordSchema } from "@/lib/validation/password.schema";
 
 function checkPasswordStrength(password: string) {
     let strength = 0;
@@ -62,9 +64,11 @@ export default function RegisterForm() {
             return;
         }
 
-        if (password.length < 6) {
+        const passwordParsed = passwordSchema.safeParse(password);
+        if (!passwordParsed.success) {
+            const msg = passwordParsed.error.issues[0]?.message || "Mật khẩu không hợp lệ";
             toast({
-                title: "⚠️ Mật khẩu phải có ít nhất 6 ký tự!",
+                title: `⚠️ ${msg}!`,
                 variant: "destructive",
             });
             return;
@@ -108,13 +112,19 @@ export default function RegisterForm() {
 
             toast({ title: '🎉 Đăng ký thành công! Chào mừng bạn!', variant: 'success' });
 
-            try {
-                localStorage.setItem('justRegistered', '1');
-            } catch (err) {
-                console.warn('Could not write to localStorage', err);
+            const loginResult = await signIn("credentials", {
+                redirect: false,
+                email,
+                password,
+            });
+
+            if (loginResult?.error) {
+                console.error("Auto login after register failed", loginResult.error);
+                router.push('/auth/login');
+                return;
             }
 
-            router.push('/auth/login');
+            router.push('/auth/select-role');
         } catch (err) {
             console.error('Register error (client)', err);
             toast({ 

@@ -1,0 +1,280 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { errorResponse, getAuthenticatedUser, getStudentAssignmentForQuestion } from "@/lib/api-utils";
+import { notificationRepo } from "@/lib/repositories/notification-repo";
+
+const paramsSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+  })
+  .strict();
+
+const getQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  })
+  .strict();
+
+const postBodySchema = z
+  .object({
+    content: z.string().min(1).max(5000),
+  })
+  .strict();
+
+interface StudentQuestionCommentRow {
+  id: string;
+  content: string;
+  createdAt: Date;
+  user: {
+    id: string;
+    fullname: string | null;
+    email: string;
+  };
+}
+
+/**
+ * GET /api/students/questions/[id]/comments
+ * Lấy comments của question (pagination)
+ * OPTIMIZED: Sử dụng helper function để giảm nested includes
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Sử dụng getAuthenticatedUser với caching
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
+    }
+
+    const questionId = parsedParams.data.id;
+
+    // Optimize: Kiểm tra student có trong classroom nào có question này không (single query)
+    const assignmentId = await getStudentAssignmentForQuestion(user.id, questionId);
+    if (!assignmentId) {
+      return errorResponse(403, "Forbidden - Not a member of this assignment's classroom");
+    }
+
+    // POLICY: Không cho bình luận khi đang làm bài QUIZ
+    // Chỉ cho phép sau khi đã nộp (có submission) HOẶC sau khi đến thời điểm lockAt/dueDate
+    const [assignmentMeta, existingSubmission] = await Promise.all([
+      prisma.assignment.findUnique({ where: { id: assignmentId }, select: { id: true, type: true, lockAt: true, dueDate: true } }),
+      prisma.assignmentSubmission.findFirst({ where: { assignmentId, studentId: user.id }, select: { id: true } }),
+    ]);
+    if (!assignmentMeta) {
+      return errorResponse(404, "Assignment not found");
+    }
+    if (assignmentMeta.type === "QUIZ") {
+      const lockedAt = assignmentMeta.lockAt ?? assignmentMeta.dueDate;
+      const now = new Date();
+      const locked = lockedAt ? now > new Date(lockedAt) : false;
+      const canComment = !!existingSubmission || locked;
+      if (!canComment) {
+        return errorResponse(
+          403,
+          "Bạn chỉ có thể bình luận sau khi nộp bài hoặc sau khi bài kiểm tra kết thúc."
+        );
+      }
+    }
+
+    // Parse pagination params
+    const url = new URL(req.url);
+    const parsedQuery = getQuerySchema.safeParse({
+      page: url.searchParams.get("page") ?? undefined,
+      limit: url.searchParams.get("limit") ?? undefined,
+    });
+    if (!parsedQuery.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedQuery.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
+    }
+
+    const { page, limit } = parsedQuery.data;
+    const skip = (page - 1) * limit;
+
+    // Parallel queries: Count và fetch comments
+    const [total, comments] = await Promise.all([
+      prisma.questionComment.count({
+        where: { questionId },
+      }),
+      prisma.questionComment.findMany({
+        where: { questionId },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              fullname: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip,
+      }),
+    ]);
+
+    // Transform data
+    const commentsData = comments.map((comment: StudentQuestionCommentRow) => ({
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.createdAt.toISOString(),
+      user: comment.user,
+    }) as const);
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          comments: commentsData,
+          total,
+          page,
+          hasMore: skip + commentsData.length < total,
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
+    console.error(
+      "[ERROR] [GET] /api/students/questions/[id]/comments - Error:",
+      error
+    );
+    return errorResponse(500, "Internal server error");
+  }
+}
+
+/**
+ * POST /api/students/questions/[id]/comments
+ * Tạo comment mới cho question
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Sử dụng getAuthenticatedUser với caching
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized");
+    if (user.role !== "STUDENT") return errorResponse(403, "Forbidden");
+
+    const parsedParams = paramsSchema.safeParse(params);
+    if (!parsedParams.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedParams.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
+    }
+
+    const questionId = parsedParams.data.id;
+
+    const rawBody: unknown = await req.json().catch(() => null);
+    const parsedBody = postBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsedBody.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+      });
+    }
+
+    const content = parsedBody.data.content.trim();
+
+    // Optimize: Kiểm tra student có trong classroom nào có question này không (single query)
+    const assignmentId = await getStudentAssignmentForQuestion(user.id, questionId);
+    if (!assignmentId) {
+      return errorResponse(403, "Forbidden - Not a member of this assignment's classroom");
+    }
+
+    // Verify question exists (lightweight check)
+    const questionExists = await prisma.question.findFirst({
+      where: {
+        id: questionId,
+        assignmentId,
+      },
+      select: { id: true },
+    });
+
+    if (!questionExists) {
+      return errorResponse(404, "Question not found");
+    }
+
+    // Tạo comment
+    const comment = await prisma.questionComment.create({
+      data: {
+        questionId,
+        userId: user.id,
+        content: content.trim(),
+      },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            fullname: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    try {
+      const assignment = await prisma.assignment.findUnique({
+        where: { id: assignmentId },
+        select: { id: true, title: true, authorId: true },
+      });
+
+      const teacherId = assignment?.authorId;
+      if (teacherId && teacherId !== user.id) {
+        await notificationRepo.add(teacherId, {
+          type: "TEACHER_ASSIGNMENT_COMMENT_NEW",
+          title: `Bình luận mới: ${assignment?.title || "Bài tập"}`,
+          description: content.slice(0, 200),
+          actionUrl: `/dashboard/teacher/assignments/${assignmentId}`,
+          dedupeKey: `qComment:${questionId}:${comment.id}`,
+          meta: { assignmentId, questionId, commentId: comment.id, studentId: user.id },
+        });
+      }
+    } catch {}
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Comment created successfully",
+        data: {
+          id: comment.id,
+          content: comment.content,
+          createdAt: comment.createdAt.toISOString(),
+          user: comment.user,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error: unknown) {
+    console.error(
+      "[ERROR] [POST] /api/students/questions/[id]/comments - Error:",
+      error
+    );
+    return errorResponse(500, "Internal server error");
+  }
+}
+
+

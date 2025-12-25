@@ -1,0 +1,2422 @@
+{
+  "success": true,
+  "data": {
+    "timeRangeMinutes": 60,
+    "stats": {
+      "totalRequests": 300,
+      "averageResponseTime": 5875,
+      "slowRequests": 300,
+      "errorRate": 0,
+      "topSlowEndpoints": [
+        {
+          "endpoint": "POST /api/exam-events",
+          "averageDuration": 5875,
+          "maxDuration": 10700,
+          "requestCount": 300
+        }
+      ]
+    },
+    "metrics": [
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6170,
+        "timestamp": "2025-12-24T18:02:20.043Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7498,
+        "timestamp": "2025-12-24T18:02:27.569Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6117,
+        "timestamp": "2025-12-24T18:02:33.710Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6204,
+        "timestamp": "2025-12-24T18:02:39.945Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6202,
+        "timestamp": "2025-12-24T18:02:46.171Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6387,
+        "timestamp": "2025-12-24T18:02:52.584Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6570,
+        "timestamp": "2025-12-24T18:02:59.185Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6450,
+        "timestamp": "2025-12-24T18:03:05.660Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6319,
+        "timestamp": "2025-12-24T18:03:12.004Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6291,
+        "timestamp": "2025-12-24T18:03:18.322Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6103,
+        "timestamp": "2025-12-24T18:03:24.455Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7372,
+        "timestamp": "2025-12-24T18:03:31.859Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6157,
+        "timestamp": "2025-12-24T18:03:38.039Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6307,
+        "timestamp": "2025-12-24T18:03:44.373Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6158,
+        "timestamp": "2025-12-24T18:03:50.555Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6243,
+        "timestamp": "2025-12-24T18:03:56.823Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6383,
+        "timestamp": "2025-12-24T18:04:03.231Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6615,
+        "timestamp": "2025-12-24T18:04:09.872Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7550,
+        "timestamp": "2025-12-24T18:04:17.446Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6803,
+        "timestamp": "2025-12-24T18:04:24.280Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6679,
+        "timestamp": "2025-12-24T18:04:30.983Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7804,
+        "timestamp": "2025-12-24T18:04:38.816Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6548,
+        "timestamp": "2025-12-24T18:04:45.388Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6700,
+        "timestamp": "2025-12-24T18:04:52.115Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6359,
+        "timestamp": "2025-12-24T18:04:58.498Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6458,
+        "timestamp": "2025-12-24T18:05:04.981Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6311,
+        "timestamp": "2025-12-24T18:05:11.323Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6501,
+        "timestamp": "2025-12-24T18:05:17.847Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7417,
+        "timestamp": "2025-12-24T18:05:25.292Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6173,
+        "timestamp": "2025-12-24T18:05:31.488Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6361,
+        "timestamp": "2025-12-24T18:05:37.872Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 5935,
+        "timestamp": "2025-12-24T18:05:43.829Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6108,
+        "timestamp": "2025-12-24T18:05:49.977Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6511,
+        "timestamp": "2025-12-24T18:05:56.513Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 5958,
+        "timestamp": "2025-12-24T18:06:02.498Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6166,
+        "timestamp": "2025-12-24T18:06:08.690Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6004,
+        "timestamp": "2025-12-24T18:06:14.722Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6240,
+        "timestamp": "2025-12-24T18:06:20.986Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6281,
+        "timestamp": "2025-12-24T18:06:27.293Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6163,
+        "timestamp": "2025-12-24T18:06:33.481Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6256,
+        "timestamp": "2025-12-24T18:06:39.760Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7041,
+        "timestamp": "2025-12-24T18:06:46.829Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6386,
+        "timestamp": "2025-12-24T18:06:53.241Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6156,
+        "timestamp": "2025-12-24T18:06:59.426Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6117,
+        "timestamp": "2025-12-24T18:07:05.566Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6293,
+        "timestamp": "2025-12-24T18:07:11.888Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6211,
+        "timestamp": "2025-12-24T18:07:18.125Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6390,
+        "timestamp": "2025-12-24T18:07:24.539Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6309,
+        "timestamp": "2025-12-24T18:07:30.873Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6100,
+        "timestamp": "2025-12-24T18:07:36.994Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6454,
+        "timestamp": "2025-12-24T18:07:43.471Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7087,
+        "timestamp": "2025-12-24T18:07:50.584Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6348,
+        "timestamp": "2025-12-24T18:07:56.958Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6034,
+        "timestamp": "2025-12-24T18:08:03.016Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6121,
+        "timestamp": "2025-12-24T18:08:09.167Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6312,
+        "timestamp": "2025-12-24T18:08:15.506Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6134,
+        "timestamp": "2025-12-24T18:08:21.668Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6323,
+        "timestamp": "2025-12-24T18:08:28.016Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6386,
+        "timestamp": "2025-12-24T18:08:34.426Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 8221,
+        "timestamp": "2025-12-24T18:08:42.673Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7920,
+        "timestamp": "2025-12-24T18:08:50.620Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7060,
+        "timestamp": "2025-12-24T18:08:57.705Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6803,
+        "timestamp": "2025-12-24T18:09:04.538Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6710,
+        "timestamp": "2025-12-24T18:09:11.271Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6935,
+        "timestamp": "2025-12-24T18:09:18.234Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6468,
+        "timestamp": "2025-12-24T18:09:24.727Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6637,
+        "timestamp": "2025-12-24T18:09:31.393Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6361,
+        "timestamp": "2025-12-24T18:09:37.779Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6706,
+        "timestamp": "2025-12-24T18:09:44.507Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6491,
+        "timestamp": "2025-12-24T18:09:51.022Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7336,
+        "timestamp": "2025-12-24T18:09:58.381Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6469,
+        "timestamp": "2025-12-24T18:10:04.869Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6540,
+        "timestamp": "2025-12-24T18:10:11.433Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6603,
+        "timestamp": "2025-12-24T18:10:18.057Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7499,
+        "timestamp": "2025-12-24T18:10:25.582Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6244,
+        "timestamp": "2025-12-24T18:10:31.851Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6336,
+        "timestamp": "2025-12-24T18:10:38.213Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6529,
+        "timestamp": "2025-12-24T18:10:44.770Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6141,
+        "timestamp": "2025-12-24T18:10:50.934Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6428,
+        "timestamp": "2025-12-24T18:10:57.388Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7025,
+        "timestamp": "2025-12-24T18:11:04.440Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6465,
+        "timestamp": "2025-12-24T18:11:10.930Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6122,
+        "timestamp": "2025-12-24T18:11:17.076Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6077,
+        "timestamp": "2025-12-24T18:11:23.177Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6233,
+        "timestamp": "2025-12-24T18:11:29.435Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6202,
+        "timestamp": "2025-12-24T18:11:35.661Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6334,
+        "timestamp": "2025-12-24T18:11:42.022Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6351,
+        "timestamp": "2025-12-24T18:11:48.402Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6251,
+        "timestamp": "2025-12-24T18:11:54.680Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6478,
+        "timestamp": "2025-12-24T18:12:01.183Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7115,
+        "timestamp": "2025-12-24T18:12:08.323Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6487,
+        "timestamp": "2025-12-24T18:12:14.837Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6311,
+        "timestamp": "2025-12-24T18:12:21.175Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6263,
+        "timestamp": "2025-12-24T18:12:27.462Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6328,
+        "timestamp": "2025-12-24T18:12:33.813Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6388,
+        "timestamp": "2025-12-24T18:12:40.226Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6337,
+        "timestamp": "2025-12-24T18:12:46.589Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6351,
+        "timestamp": "2025-12-24T18:12:52.961Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6086,
+        "timestamp": "2025-12-24T18:12:59.071Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6451,
+        "timestamp": "2025-12-24T18:13:05.546Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7380,
+        "timestamp": "2025-12-24T18:13:12.954Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6581,
+        "timestamp": "2025-12-24T18:13:19.563Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6380,
+        "timestamp": "2025-12-24T18:13:25.966Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6519,
+        "timestamp": "2025-12-24T18:13:32.514Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6431,
+        "timestamp": "2025-12-24T18:13:38.967Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6349,
+        "timestamp": "2025-12-24T18:13:45.340Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6447,
+        "timestamp": "2025-12-24T18:13:51.809Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6417,
+        "timestamp": "2025-12-24T18:13:58.251Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6367,
+        "timestamp": "2025-12-24T18:14:04.646Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6195,
+        "timestamp": "2025-12-24T18:14:10.869Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7337,
+        "timestamp": "2025-12-24T18:14:18.230Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6440,
+        "timestamp": "2025-12-24T18:14:24.696Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6305,
+        "timestamp": "2025-12-24T18:14:31.024Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6311,
+        "timestamp": "2025-12-24T18:14:37.359Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6135,
+        "timestamp": "2025-12-24T18:14:43.517Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6239,
+        "timestamp": "2025-12-24T18:14:49.780Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6567,
+        "timestamp": "2025-12-24T18:14:56.369Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6171,
+        "timestamp": "2025-12-24T18:15:02.566Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6676,
+        "timestamp": "2025-12-24T18:15:09.263Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6476,
+        "timestamp": "2025-12-24T18:15:15.765Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7506,
+        "timestamp": "2025-12-24T18:15:23.298Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3734,
+        "timestamp": "2025-12-24T18:15:27.058Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3493,
+        "timestamp": "2025-12-24T18:15:30.578Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3580,
+        "timestamp": "2025-12-24T18:15:34.181Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3584,
+        "timestamp": "2025-12-24T18:15:37.787Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3681,
+        "timestamp": "2025-12-24T18:15:41.497Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3618,
+        "timestamp": "2025-12-24T18:15:45.140Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3596,
+        "timestamp": "2025-12-24T18:15:48.761Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3605,
+        "timestamp": "2025-12-24T18:15:52.389Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3622,
+        "timestamp": "2025-12-24T18:15:56.035Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3620,
+        "timestamp": "2025-12-24T18:15:59.683Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3611,
+        "timestamp": "2025-12-24T18:16:03.323Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3578,
+        "timestamp": "2025-12-24T18:16:06.927Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3640,
+        "timestamp": "2025-12-24T18:16:10.587Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3605,
+        "timestamp": "2025-12-24T18:16:14.218Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3733,
+        "timestamp": "2025-12-24T18:16:17.975Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4183,
+        "timestamp": "2025-12-24T18:16:22.183Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3586,
+        "timestamp": "2025-12-24T18:16:25.790Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3879,
+        "timestamp": "2025-12-24T18:16:29.699Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3546,
+        "timestamp": "2025-12-24T18:16:33.269Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3541,
+        "timestamp": "2025-12-24T18:16:36.834Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3730,
+        "timestamp": "2025-12-24T18:16:40.590Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3842,
+        "timestamp": "2025-12-24T18:16:44.460Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3568,
+        "timestamp": "2025-12-24T18:16:48.052Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3626,
+        "timestamp": "2025-12-24T18:16:51.706Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3664,
+        "timestamp": "2025-12-24T18:16:55.395Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3582,
+        "timestamp": "2025-12-24T18:16:59.002Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4829,
+        "timestamp": "2025-12-24T18:17:03.860Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4147,
+        "timestamp": "2025-12-24T18:17:08.036Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3923,
+        "timestamp": "2025-12-24T18:17:11.987Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3844,
+        "timestamp": "2025-12-24T18:17:15.860Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3751,
+        "timestamp": "2025-12-24T18:17:19.636Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4320,
+        "timestamp": "2025-12-24T18:17:23.980Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3780,
+        "timestamp": "2025-12-24T18:17:27.780Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3796,
+        "timestamp": "2025-12-24T18:17:31.597Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3564,
+        "timestamp": "2025-12-24T18:17:35.190Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3715,
+        "timestamp": "2025-12-24T18:17:38.931Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3670,
+        "timestamp": "2025-12-24T18:17:42.628Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3640,
+        "timestamp": "2025-12-24T18:17:46.294Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3656,
+        "timestamp": "2025-12-24T18:17:49.971Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3638,
+        "timestamp": "2025-12-24T18:17:53.633Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3628,
+        "timestamp": "2025-12-24T18:17:57.286Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3581,
+        "timestamp": "2025-12-24T18:18:00.893Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3727,
+        "timestamp": "2025-12-24T18:18:04.645Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 5119,
+        "timestamp": "2025-12-24T18:18:09.790Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4301,
+        "timestamp": "2025-12-24T18:18:14.115Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3923,
+        "timestamp": "2025-12-24T18:18:18.062Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3977,
+        "timestamp": "2025-12-24T18:18:22.064Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4367,
+        "timestamp": "2025-12-24T18:18:26.453Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3861,
+        "timestamp": "2025-12-24T18:18:30.341Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3721,
+        "timestamp": "2025-12-24T18:18:34.083Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3509,
+        "timestamp": "2025-12-24T18:18:37.614Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3582,
+        "timestamp": "2025-12-24T18:18:41.221Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3841,
+        "timestamp": "2025-12-24T18:18:45.081Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4934,
+        "timestamp": "2025-12-24T18:18:50.045Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4483,
+        "timestamp": "2025-12-24T18:18:54.549Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4083,
+        "timestamp": "2025-12-24T18:18:58.657Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3853,
+        "timestamp": "2025-12-24T18:19:02.535Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3751,
+        "timestamp": "2025-12-24T18:19:06.313Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3778,
+        "timestamp": "2025-12-24T18:19:10.113Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3852,
+        "timestamp": "2025-12-24T18:19:13.988Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3706,
+        "timestamp": "2025-12-24T18:19:17.716Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3667,
+        "timestamp": "2025-12-24T18:19:21.412Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3578,
+        "timestamp": "2025-12-24T18:19:25.014Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 4337,
+        "timestamp": "2025-12-24T18:19:29.378Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3624,
+        "timestamp": "2025-12-24T18:19:33.025Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3643,
+        "timestamp": "2025-12-24T18:19:36.690Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3687,
+        "timestamp": "2025-12-24T18:19:40.402Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3634,
+        "timestamp": "2025-12-24T18:19:44.062Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3731,
+        "timestamp": "2025-12-24T18:19:47.815Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3662,
+        "timestamp": "2025-12-24T18:19:51.505Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3614,
+        "timestamp": "2025-12-24T18:19:55.146Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3666,
+        "timestamp": "2025-12-24T18:19:58.836Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3672,
+        "timestamp": "2025-12-24T18:20:02.530Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3669,
+        "timestamp": "2025-12-24T18:20:06.224Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3563,
+        "timestamp": "2025-12-24T18:20:09.812Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3651,
+        "timestamp": "2025-12-24T18:20:13.491Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3721,
+        "timestamp": "2025-12-24T18:20:17.236Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 3552,
+        "timestamp": "2025-12-24T18:20:20.812Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6621,
+        "timestamp": "2025-12-24T18:20:27.460Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7406,
+        "timestamp": "2025-12-24T18:20:34.903Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6365,
+        "timestamp": "2025-12-24T18:20:41.294Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6247,
+        "timestamp": "2025-12-24T18:20:47.562Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6078,
+        "timestamp": "2025-12-24T18:20:53.668Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7911,
+        "timestamp": "2025-12-24T18:21:01.605Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6750,
+        "timestamp": "2025-12-24T18:21:08.376Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6589,
+        "timestamp": "2025-12-24T18:21:14.990Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6567,
+        "timestamp": "2025-12-24T18:21:21.586Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6422,
+        "timestamp": "2025-12-24T18:21:28.032Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6855,
+        "timestamp": "2025-12-24T18:21:34.909Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7675,
+        "timestamp": "2025-12-24T18:21:42.608Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6679,
+        "timestamp": "2025-12-24T18:21:49.313Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6466,
+        "timestamp": "2025-12-24T18:21:55.805Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6355,
+        "timestamp": "2025-12-24T18:22:02.186Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6654,
+        "timestamp": "2025-12-24T18:22:08.868Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6300,
+        "timestamp": "2025-12-24T18:22:15.195Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6220,
+        "timestamp": "2025-12-24T18:22:21.440Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6251,
+        "timestamp": "2025-12-24T18:22:27.717Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 5928,
+        "timestamp": "2025-12-24T18:22:33.676Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6469,
+        "timestamp": "2025-12-24T18:22:40.174Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7243,
+        "timestamp": "2025-12-24T18:22:47.439Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6380,
+        "timestamp": "2025-12-24T18:22:53.841Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6180,
+        "timestamp": "2025-12-24T18:23:00.046Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6142,
+        "timestamp": "2025-12-24T18:23:06.214Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6402,
+        "timestamp": "2025-12-24T18:23:12.639Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 10700,
+        "timestamp": "2025-12-24T18:23:23.360Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 8288,
+        "timestamp": "2025-12-24T18:23:31.670Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7336,
+        "timestamp": "2025-12-24T18:23:39.027Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7101,
+        "timestamp": "2025-12-24T18:23:46.157Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7870,
+        "timestamp": "2025-12-24T18:23:54.049Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7231,
+        "timestamp": "2025-12-24T18:24:01.304Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6450,
+        "timestamp": "2025-12-24T18:24:07.777Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6601,
+        "timestamp": "2025-12-24T18:24:14.399Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6464,
+        "timestamp": "2025-12-24T18:24:20.886Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6486,
+        "timestamp": "2025-12-24T18:24:27.391Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6549,
+        "timestamp": "2025-12-24T18:24:33.962Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 10038,
+        "timestamp": "2025-12-24T18:24:44.020Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7811,
+        "timestamp": "2025-12-24T18:24:51.855Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 8003,
+        "timestamp": "2025-12-24T18:24:59.881Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7140,
+        "timestamp": "2025-12-24T18:25:07.045Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6353,
+        "timestamp": "2025-12-24T18:25:13.431Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6404,
+        "timestamp": "2025-12-24T18:25:19.854Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6283,
+        "timestamp": "2025-12-24T18:25:26.160Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6156,
+        "timestamp": "2025-12-24T18:25:32.340Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6069,
+        "timestamp": "2025-12-24T18:25:38.434Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6200,
+        "timestamp": "2025-12-24T18:25:44.658Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6015,
+        "timestamp": "2025-12-24T18:25:50.698Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6260,
+        "timestamp": "2025-12-24T18:25:56.983Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7142,
+        "timestamp": "2025-12-24T18:26:04.147Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 5951,
+        "timestamp": "2025-12-24T18:26:10.119Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6327,
+        "timestamp": "2025-12-24T18:26:16.469Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6104,
+        "timestamp": "2025-12-24T18:26:22.597Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6430,
+        "timestamp": "2025-12-24T18:26:29.052Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6140,
+        "timestamp": "2025-12-24T18:26:35.216Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6101,
+        "timestamp": "2025-12-24T18:26:41.345Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6371,
+        "timestamp": "2025-12-24T18:26:47.743Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6109,
+        "timestamp": "2025-12-24T18:26:53.876Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6315,
+        "timestamp": "2025-12-24T18:27:00.217Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7268,
+        "timestamp": "2025-12-24T18:27:07.511Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6171,
+        "timestamp": "2025-12-24T18:27:13.709Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6331,
+        "timestamp": "2025-12-24T18:27:20.064Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6101,
+        "timestamp": "2025-12-24T18:27:26.190Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6391,
+        "timestamp": "2025-12-24T18:27:32.604Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6285,
+        "timestamp": "2025-12-24T18:27:38.917Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6132,
+        "timestamp": "2025-12-24T18:27:45.071Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6344,
+        "timestamp": "2025-12-24T18:27:51.445Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6127,
+        "timestamp": "2025-12-24T18:27:57.597Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6396,
+        "timestamp": "2025-12-24T18:28:04.020Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7228,
+        "timestamp": "2025-12-24T18:28:11.275Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6349,
+        "timestamp": "2025-12-24T18:28:17.656Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6209,
+        "timestamp": "2025-12-24T18:28:23.891Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6376,
+        "timestamp": "2025-12-24T18:28:30.293Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6358,
+        "timestamp": "2025-12-24T18:28:36.673Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6068,
+        "timestamp": "2025-12-24T18:28:42.767Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6425,
+        "timestamp": "2025-12-24T18:28:49.219Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 10559,
+        "timestamp": "2025-12-24T18:28:59.803Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7765,
+        "timestamp": "2025-12-24T18:29:07.596Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7018,
+        "timestamp": "2025-12-24T18:29:14.641Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6999,
+        "timestamp": "2025-12-24T18:29:21.664Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6507,
+        "timestamp": "2025-12-24T18:29:28.197Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6315,
+        "timestamp": "2025-12-24T18:29:34.537Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6542,
+        "timestamp": "2025-12-24T18:29:41.103Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6562,
+        "timestamp": "2025-12-24T18:29:47.688Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6609,
+        "timestamp": "2025-12-24T18:29:54.324Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6389,
+        "timestamp": "2025-12-24T18:30:00.739Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6289,
+        "timestamp": "2025-12-24T18:30:07.053Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 9407,
+        "timestamp": "2025-12-24T18:30:16.482Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6838,
+        "timestamp": "2025-12-24T18:30:23.344Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6794,
+        "timestamp": "2025-12-24T18:30:30.162Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6421,
+        "timestamp": "2025-12-24T18:30:36.605Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6507,
+        "timestamp": "2025-12-24T18:30:43.133Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6684,
+        "timestamp": "2025-12-24T18:30:49.841Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6464,
+        "timestamp": "2025-12-24T18:30:56.328Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6726,
+        "timestamp": "2025-12-24T18:31:03.078Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6579,
+        "timestamp": "2025-12-24T18:31:09.685Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 7972,
+        "timestamp": "2025-12-24T18:31:17.681Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6626,
+        "timestamp": "2025-12-24T18:31:24.333Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6579,
+        "timestamp": "2025-12-24T18:31:30.936Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6426,
+        "timestamp": "2025-12-24T18:31:37.385Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/exam-events",
+        "method": "POST",
+        "duration": 6631,
+        "timestamp": "2025-12-24T18:31:44.040Z",
+        "success": true,
+        "statusCode": 200
+      }
+    ]
+  }
+}

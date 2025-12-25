@@ -1,3 +1,98 @@
-﻿export default function DashboardLayout() {
-    return (<div>DashboardLayout</div>);
+﻿"use client";
+
+import type { ReactNode } from "react";
+import { useEffect } from "react";
+import { useSidebarState } from "@/hooks/useSidebarState";
+import DashboardTopbar from "@/components/layout/DashboardTopbar";
+import type { CSSProperties } from "react";
+import SystemStatusGate from "@/components/shared/SystemStatusGate";
+
+type DashboardRole = "teacher" | "student" | "parent" | "admin";
+
+interface DashboardLayoutProps {
+  role: DashboardRole;
+  sidebarStateKey: string;
+  sidebar: ReactNode;
+  children: ReactNode;
+  rightAside?: ReactNode;
+  lockContentScroll?: boolean;
+  wrapContent?: boolean;
+  contentClassName?: string;
+}
+
+export default function DashboardLayout({
+  role,
+  sidebarStateKey,
+  sidebar,
+  children,
+  rightAside,
+  lockContentScroll = false,
+  wrapContent = true,
+  contentClassName = "p-8 space-y-8",
+}: DashboardLayoutProps) {
+  const { expanded, toggle } = useSidebarState(sidebarStateKey);
+  type CSSVars = CSSProperties & Record<`--${string}`,
+    string
+  >;
+  const containerVars: CSSVars = {
+    "--sb-w-expanded": "280px",
+    "--sb-w-collapsed": "64px",
+  };
+
+  const surfaceClass =
+    role === "admin"
+      ? "bg-background text-foreground"
+      : role === "teacher"
+      ? "teacher-surface"
+      : role === "student"
+      ? "student-surface"
+      : role === "parent"
+      ? "parent-surface"
+      : "bg-gray-50";
+
+  useEffect(() => {
+    const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+    if (!isMobile) return;
+    const body = document.body;
+    if (expanded) body.classList.add("overflow-hidden");
+    else body.classList.remove("overflow-hidden");
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && expanded) toggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      body.classList.remove("overflow-hidden");
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [expanded, toggle]);
+
+  const content = wrapContent ? (
+    <div className={contentClassName}>{children}</div>
+  ) : (
+    children
+  );
+
+  return (
+    <div
+      className={`flex ${lockContentScroll ? "h-screen overflow-hidden" : "min-h-screen"} ${surfaceClass}`}
+      style={containerVars}
+    >
+      {sidebar}
+      <button
+        type="button"
+        aria-label="Đóng sidebar"
+        onClick={toggle}
+        className={`lg:hidden fixed inset-0 z-40 bg-slate-900/40 transition-opacity ${expanded ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      />
+      <main
+        className={`flex-1 p-0 transition-[margin-left] duration-300 ease-in-out ml-0 ${
+          expanded ? "lg:ml-[var(--sb-w-expanded)]" : "lg:ml-[var(--sb-w-collapsed)]"
+        } flex flex-col ${lockContentScroll ? "h-screen overflow-hidden" : "min-h-screen"}`}
+      >
+        <DashboardTopbar role={role} />
+        <SystemStatusGate role={role}>{content}</SystemStatusGate>
+      </main>
+      {rightAside}
+    </div>
+  );
 }

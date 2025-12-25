@@ -4,6 +4,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { passwordSchema } from '@/lib/validation/password.schema';
 
 interface NewPasswordStepProps {
   onSubmit: (password: string) => Promise<void>;
@@ -61,9 +62,10 @@ export default function NewPasswordStep({ onSubmit, isLoading }: NewPasswordStep
       throw new Error('Mật khẩu xác nhận không khớp!');
     }
 
-    const allRequirementsMet = Object.values(requirements).every(Boolean);
-    if (!allRequirementsMet) {
-      throw new Error('Mật khẩu chưa đáp ứng đủ yêu cầu!');
+    const parsed = passwordSchema.safeParse(password);
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message || 'Mật khẩu chưa đáp ứng đủ yêu cầu!';
+      throw new Error(msg);
     }
 
     await onSubmit(password);

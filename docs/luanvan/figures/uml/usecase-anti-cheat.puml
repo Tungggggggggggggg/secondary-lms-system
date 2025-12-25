@@ -1,0 +1,32 @@
+@startuml usecase-anti-cheat
+title Use Case - Giám sát thi và chống gian lận (EduVerse)
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Học sinh" as Student
+actor "Giáo viên" as Teacher
+actor "Quản trị viên" as Admin
+
+rectangle "EduVerse" {
+  usecase "Tham gia làm bài kiểm tra (Quiz)" as UC_TakeQuiz
+  usecase "Gửi sự kiện thi" as UC_SendEvent
+  usecase "Phát hiện hành vi đáng ngờ" as UC_Detect
+  usecase "Xem nhật ký sự kiện thi" as UC_ViewLogs
+  usecase "Tóm tắt chống gian lận bằng AI" as UC_AISummary
+  usecase "Cấu hình chống gian lận" as UC_Config
+  usecase "Quản trị người dùng/hệ thống" as UC_Admin
+}
+
+Student --> UC_TakeQuiz
+Student --> UC_SendEvent
+UC_SendEvent ..> UC_Detect : <<include>>
+
+Teacher --> UC_ViewLogs
+Teacher --> UC_Config
+Teacher --> UC_AISummary
+UC_ViewLogs ..> UC_AISummary : <<extend>>
+
+Admin --> UC_Admin
+
+@enduml

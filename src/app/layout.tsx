@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
+import { Toaster as SonnerToaster } from "sonner";
 import NextAuthProvider from "@/components/providers/NextAuthProvider";
+import { ConfirmProvider } from "@/components/providers/ConfirmProvider";
+import { PromptProvider } from "@/components/providers/PromptProvider";
+import CommandPaletteProvider from "@/components/providers/CommandPaletteProvider";
+import SWRProvider from "@/components/providers/SWRProvider";
 
 // Configure Roboto font for the entire application
 const roboto = Roboto({
@@ -54,9 +59,18 @@ export default function RootLayout({
                 data-gr-ext-installed=""
             >
                 <NextAuthProvider>
-                    {children}
+                    <ConfirmProvider>
+                        <PromptProvider>
+                            <CommandPaletteProvider>
+                                <SWRProvider>
+                                    {children}
+                                </SWRProvider>
+                            </CommandPaletteProvider>
+                        </PromptProvider>
+                    </ConfirmProvider>
                 </NextAuthProvider>
                 <Toaster />
+                <SonnerToaster position="top-right" />
             </body>
         </html>
     );

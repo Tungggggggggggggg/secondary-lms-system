@@ -1,0 +1,66 @@
+@startuml
+title ERD rút gọn: User -> Classroom -> Course -> Lesson -> Embedding
+hide circle
+skinparam linetype ortho
+
+entity "User" as User {
+  * id : string <<PK>>
+  --
+  role : enum
+}
+
+entity "Classroom" as Classroom {
+  * id : string <<PK>>
+  --
+  teacherId : string <<FK>>
+}
+
+entity "ClassroomStudent" as ClassroomStudent {
+  * id : string <<PK>>
+  --
+  classroomId : string <<FK>>
+  studentId : string <<FK>>
+}
+
+entity "Course" as Course {
+  * id : string <<PK>>
+  --
+  title : string
+}
+
+entity "ClassroomCourse" as ClassroomCourse {
+  * id : string <<PK>>
+  --
+  classroomId : string <<FK>>
+  courseId : string <<FK>>
+}
+
+entity "Lesson" as Lesson {
+  * id : string <<PK>>
+  --
+  courseId : string <<FK>>
+  title : string
+}
+
+entity "LessonEmbeddingChunk" as Chunk {
+  * id : string <<PK>>
+  --
+  lessonId : string <<FK>>
+  courseId : string <<FK>>
+  chunkIndex : int
+  contentHash : string
+  embedding : vector
+}
+
+User ||--o{ Classroom : teacherId
+Classroom ||--o{ ClassroomStudent : has
+User ||--o{ ClassroomStudent : studentId
+
+Classroom ||--o{ ClassroomCourse : links
+Course ||--o{ ClassroomCourse : links
+
+Course ||--o{ Lesson : contains
+Lesson ||--o{ Chunk : chunks
+Course ||--o{ Chunk : course
+
+@enduml

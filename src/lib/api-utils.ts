@@ -1,0 +1,332 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
+import prisma from "@/lib/prisma";
+import { settingsRepo } from "@/lib/repositories/settings-repo";
+import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+
+const USER_ROLES = [
+  "TEACHER",
+  "STUDENT",
+  "PARENT",
+  "ADMIN",
+] as const;
+
+export type UserRole = (typeof USER_ROLES)[number];
+
+type AuthUser = {
+  id: string;
+  email: string;
+  fullname: string | null;
+  role: UserRole | string;
+  password: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * Request-scoped cache để tránh query user nhiều lần trong cùng một request
+ * Sử dụng WeakMap để tự động cleanup khi request kết thúc
+ */
+const userCache = new WeakMap<NextRequest, AuthUser | null>();
+
+/**
+ * Lấy authenticated user từ session với request-scoped caching
+ * Giảm thiểu database queries bằng cách cache user trong cùng một request
+ * 
+ * @param req - NextRequest object để dùng làm cache key
+ * @param requiredRole - Role yêu cầu (optional, nếu không có thì chỉ check authenticated)
+ * @returns User object hoặc null nếu không authenticated/authorized
+ * 
+ * @example
+ * const user = await getAuthenticatedUser(req, UserRole.STUDENT);
+ * if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+ */
+export async function getAuthenticatedUser(
+  req: NextRequest,
+  requiredRole?: UserRole
+): Promise<AuthUser | null> {
+  // Kiểm tra cache trước
+  if (userCache.has(req)) {
+    const cachedUser = userCache.get(req) ?? null;
+    if (!cachedUser) return null;
+    if (requiredRole && cachedUser.role !== requiredRole) return null;
+    return cachedUser;
+  }
+
+  try {
+    // Lấy session
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      userCache.set(req, null);
+      return null;
+    }
+
+    // Query user từ database
+    const user = (await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: {
+        id: true,
+        email: true,
+        fullname: true,
+        role: true,
+        password: true, // Cần thiết cho một số checks
+        createdAt: true,
+        updatedAt: true,
+      },
+    })) as AuthUser | null;
+
+    // Chặn người dùng bị khoá theo system settings (disabled_users)
+    if (user) {
+      try {
+        let isDisabled = false;
+        const disabledSetting = await settingsRepo.get("disabled_users");
+        if (Array.isArray(disabledSetting)) {
+          for (const item of disabledSetting) {
+            if (typeof item === "string" && item === user.id) {
+              isDisabled = true;
+              break;
+            }
+            if (
+              item &&
+              typeof item === "object" &&
+              typeof (item as { id?: unknown }).id === "string" &&
+              (item as { id?: unknown }).id === user.id
+            ) {
+              isDisabled = true;
+              break;
+            }
+          }
+        }
+        if (isDisabled) {
+          userCache.set(req, null);
+          return null;
+        }
+      } catch {}
+    }
+
+    // Cache user cho request này
+    userCache.set(req, user);
+
+    // Kiểm tra role nếu có yêu cầu
+    if (user && requiredRole && user.role !== requiredRole) {
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    console.error("[ERROR] [getAuthenticatedUser] Error:", error);
+    userCache.set(req, null);
+    return null;
+  }
+}
+
+/**
+ * Tạo requestId cho logging theo request.
+ */
+export function getRequestId(req?: NextRequest): string {
+  try {
+    const headerId = req?.headers.get("x-request-id");
+    return headerId || crypto.randomUUID();
+  } catch {
+    return Math.random().toString(36).slice(2);
+  }
+}
+
+/**
+ * Tạo phản hồi lỗi chuẩn hóa.
+ */
+export function errorResponse(
+  status: number,
+  message: string,
+  meta?: Record<string, unknown>
+) {
+  const metaObj: Record<string, unknown> = meta ? { ...meta } : {};
+
+  // Không cho phép override các field chuẩn hoá
+  delete metaObj.success;
+  delete metaObj.error;
+  delete metaObj.message;
+
+  const detailsValue: unknown = metaObj.details === undefined ? null : metaObj.details;
+
+  return NextResponse.json(
+    {
+      ...metaObj,
+      success: false,
+      error: true,
+      message,
+      details: detailsValue,
+    },
+    { status }
+  );
+}
+
+/**
+ * Wrapper thêm logging quanh handler.
+ */
+export function withApiLogging<Args extends unknown[]>(
+  handler: (...args: Args) => Promise<Response>,
+  action: string
+): (...args: Args) => Promise<Response> {
+  return async (...args: Args) => {
+    const req = args[0] as NextRequest | undefined;
+    const requestId = getRequestId(req);
+    const start = Date.now();
+    try {
+      return await handler(...args);
+    } catch (err: unknown) {
+      const ms = Date.now() - start;
+      console.error(`[ERROR] ${action} FAIL {requestId:${requestId}, ms:${ms}}`, err);
+      throw err;
+    }
+  };
+}
+
+/**
+ * Helper function để check user có trong classroom không
+ * Optimize: Sử dụng direct query thay vì nested includes
+ * 
+ * @param userId - User ID
+ * @param classroomId - Classroom ID
+ * @returns boolean
+ */
+export async function isStudentInClassroom(
+  userId: string,
+  classroomId: string
+): Promise<boolean> {
+  const membership = await prisma.classroomStudent.findFirst({
+    where: {
+      studentId: userId,
+      classroomId,
+    },
+    select: { id: true }, // Chỉ cần check existence
+  });
+
+  return !!membership;
+}
+
+/**
+ * Helper function để check teacher có sở hữu classroom không
+ * 
+ * @param teacherId - Teacher ID
+ * @param classroomId - Classroom ID
+ * @returns boolean
+ */
+export async function isTeacherOfClassroom(
+  teacherId: string,
+  classroomId: string
+): Promise<boolean> {
+  const classroom = await prisma.classroom.findFirst({
+    where: {
+      id: classroomId,
+      teacherId,
+    },
+    select: { id: true }, // Chỉ cần check existence
+  });
+
+  return !!classroom;
+}
+
+/**
+ * Helper function để check student có trong classroom nào có assignment này không
+ * Optimize: Single query thay vì nested includes
+ * 
+ * @param studentId - Student ID
+ * @param assignmentId - Assignment ID
+ * @returns Classroom ID hoặc null
+ */
+export async function getStudentClassroomForAssignment(
+  studentId: string,
+  assignmentId: string
+): Promise<string | null> {
+  // Query trực tiếp với join
+  const assignmentClassroom = await prisma.assignmentClassroom.findFirst({
+    where: {
+      assignmentId,
+      classroom: {
+        students: {
+          some: {
+            studentId,
+          },
+        },
+      },
+    },
+    select: {
+      classroomId: true,
+    },
+  });
+
+  return assignmentClassroom?.classroomId || null;
+}
+
+/**
+ * Helper function để check teacher có sở hữu assignment không
+ * 
+ * @param teacherId - Teacher ID
+ * @param assignmentId - Assignment ID
+ * @returns boolean
+ */
+export async function isTeacherOfAssignment(
+  teacherId: string,
+  assignmentId: string
+): Promise<boolean> {
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      id: assignmentId,
+      authorId: teacherId,
+    },
+    select: { id: true },
+  });
+
+  return !!assignment;
+}
+
+/**
+ * Helper function để check student có trong classroom nào có question này không
+ * Optimize: Single query thay vì nested includes
+ * 
+ * @param studentId - Student ID
+ * @param questionId - Question ID
+ * @returns Assignment ID hoặc null
+ */
+export async function getStudentAssignmentForQuestion(
+  studentId: string,
+  questionId: string
+): Promise<string | null> {
+  const question = await prisma.question.findFirst({
+    where: { id: questionId },
+    select: {
+      assignmentId: true,
+      assignment: {
+        select: {
+          id: true,
+          classrooms: {
+            select: {
+              classroomId: true,
+              classroom: {
+                select: {
+                  students: {
+                    where: { studentId },
+                    select: { id: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!question) return null;
+
+  // Kiểm tra student có trong classroom nào có assignment này không
+  const hasAccess = question.assignment.classrooms.some(
+    (ac: { classroom: { students: unknown[] } }) =>
+      ac.classroom.students.length > 0
+  );
+
+  return hasAccess ? question.assignmentId : null;
+}
+

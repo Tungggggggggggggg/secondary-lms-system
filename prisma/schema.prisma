@@ -1,6 +1,3 @@
-// Schema Prisma cho hệ thống LMS
-// Tối ưu hóa cho xác thực credentials và quản lý phiên làm việc
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,56 +5,705 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// Model User - Quản lý thông tin người dùng
 model User {
-  // Thông tin xác thực
-  id       String  @id @default(cuid())
-  email    String  @unique // Email dùng để đăng nhập
-  password String  // Mật khẩu đã được mã hóa
+  id                              String                     @id @default(cuid())
+  email                           String                     @unique
+  password                        String
+  fullname                        String
+  createdAt                       DateTime                   @default(now())
+  updatedAt                       DateTime                   @updatedAt
+  role                            UserRole                   @default(STUDENT)
+  roleSelectedAt                  DateTime?
+  announcementAttachmentsUploaded AnnouncementAttachment[]
+  announcementCommentsAuthored    AnnouncementComment[]
+  announcementsAuthored           Announcement[]
+  assignmentFilesUploaded         AssignmentFile[]
+  submissions                     AssignmentSubmission[]
+  createdAssignments              Assignment[]
+  auditLogs                       AuditLog[]
+  studentClassrooms               ClassroomStudent[]
+  teacherClassrooms               Classroom[]                @relation("TeacherClassrooms")
+  createdCourses                  Course[]
+  organizationMemberships         OrganizationMember[]
+  parentInvitations               ParentStudentInvitation[]  @relation("ParentInvitations")
+  studentInvitations              ParentStudentInvitation[]  @relation("StudentInvitations")
+  parentLinkRequests              ParentStudentLinkRequest[] @relation("ParentLinkRequests")
+  studentLinkRequests             ParentStudentLinkRequest[] @relation("StudentLinkRequests")
+  parentRelations                 ParentStudent[]            @relation("ParentRelations")
+  studentRelations                ParentStudent[]            @relation("StudentRelations")
+  questionComments                QuestionComment[]
+  sessions                        Session[]
+  conversationsCreated            Conversation[]             @relation("UserConversationsCreated")
+  conversationsAsContextStudent   Conversation[]             @relation("ConversationContextStudent")
+  conversationParticipants        ConversationParticipant[]
+  examEvents                      ExamEvent[]
+  assignmentAttempts              AssignmentAttempt[]
+  messagesSent                    Message[]
 
-  // Thông tin cá nhân
-  fullname String  // Họ và tên đầy đủ
-  role     String? // Vai trò: 'teacher' | 'student' | 'parent'
-
-  // Metadata
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Quan hệ
-  sessions Session[]
-
+  @@index([email])
+  @@index([role, createdAt])
   @@map("users")
 }
 
-// Model Session - Quản lý phiên đăng nhập
 model Session {
-  // Thông tin phiên
   id           String   @id @default(cuid())
   sessionToken String   @unique
   expires      DateTime
-
-  // Quan hệ với User
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
-// Model PasswordReset - Quản lý yêu cầu đặt lại mật khẩu
 model PasswordReset {
-  // Thông tin token reset
-  id         String   @id @default(cuid())
-  email      String   // Email của người dùng yêu cầu reset
-  token      String   @unique // Mã xác thực 6 số
-  expires    DateTime // Thời gian hết hạn của mã
-  completed  Boolean  @default(false) // Trạng thái đã reset password chưa
-  
-  // Metadata
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("password_resets")
+}
+
+model Classroom {
+  id             String                @id @default(cuid())
+  name           String
+  description    String?
+  code           String                @unique
+  icon           String                @default("📚")
+  maxStudents    Int                   @default(30)
+  isActive       Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  teacherId      String
+  organizationId String?
+  announcements  Announcement[]
+  assignments    AssignmentClassroom[]
+  courses        ClassroomCourse[]
+  students       ClassroomStudent[]
+  conversations  Conversation[]        @relation("ClassroomConversations")
+  organization   Organization?         @relation(fields: [organizationId], references: [id])
+  teacher        User                  @relation("TeacherClassrooms", fields: [teacherId], references: [id])
+
+  @@index([teacherId])
+  @@index([teacherId, isActive])
+  @@index([teacherId, isActive, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("classrooms")
+}
+
+model Course {
+  id             String            @id @default(cuid())
+  title          String
+  description    String?
+  coverImage     String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  authorId       String
+  organizationId String?
+  assignments    Assignment[]
+  classrooms     ClassroomCourse[]
+  author         User              @relation(fields: [authorId], references: [id])
+  organization   Organization?     @relation(fields: [organizationId], references: [id])
+  lessons        Lesson[]
+  embeddingChunks LessonEmbeddingChunk[]
+
+  @@index([organizationId, createdAt])
+  @@map("courses")
+}
+
+model Lesson {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  embeddingChunks LessonEmbeddingChunk[]
+  attachments     LessonAttachment[]
+
+  @@map("lessons")
+}
+
+model LessonAttachment {
+  id          String   @id @default(cuid())
+  lessonId    String
+  name        String
+  storagePath String
+  mimeType    String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, createdAt])
+  @@map("lesson_attachments")
+}
+
+model LessonEmbeddingChunk {
+  id          String   @id
+  lessonId    String
+  courseId    String
+  chunkIndex  Int
+  content     String
+  contentHash String
+  embedding   Unsupported("vector")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, chunkIndex])
+  @@index([courseId])
+  @@map("lesson_embedding_chunks")
+}
+
+model Assignment {
+  id               String                 @id @default(cuid())
+  title            String
+  description      String?
+  dueDate          DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  courseId         String?
+  authorId         String
+  type             AssignmentType         @default(ESSAY)
+  lockAt           DateTime?
+  openAt           DateTime?
+  timeLimitMinutes Int?
+  subject          String?
+  submission_format String?               @db.VarChar(20)
+  max_attempts     Int?
+  anti_cheat_config Json?
+  organizationId   String?
+  classrooms       AssignmentClassroom[]
+  files            AssignmentFile[]
+  submissions      AssignmentSubmission[]
+  author           User                   @relation(fields: [authorId], references: [id])
+  course           Course?                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  organization     Organization?          @relation(fields: [organizationId], references: [id])
+  questions        Question[]
+  examEvents       ExamEvent[]
+  attempts         AssignmentAttempt[]
+
+  @@index([authorId])
+  @@index([authorId, createdAt])
+  @@index([authorId, type, createdAt])
+  @@index([dueDate])
+  @@index([organizationId, createdAt])
+  @@map("assignments")
+}
+
+model ExamEvent {
+  id           String     @id @default(cuid())
+  assignmentId String
+  studentId    String
+  attempt      Int?
+  eventType    String     @db.VarChar(32)
+  createdAt    DateTime   @default(now())
+  metadata     Json?
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId, createdAt])
+  @@index([studentId, createdAt])
+  @@map("exam_events")
+}
+
+model AssignmentAttempt {
+  id                String     @id @default(cuid())
+  assignmentId      String
+  studentId         String
+  attemptNumber     Int
+  shuffleSeed       Int
+  antiCheatConfig   Json?
+  timeLimitMinutes  Int?
+  startedAt         DateTime  @default(now())
+  endedAt           DateTime?
+  status            String?    @db.VarChar(20)
+  assignment        Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student           User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId, attemptNumber])
+  @@index([assignmentId, startedAt])
+  @@index([studentId, startedAt])
+  @@map("assignment_attempts")
+}
+
+model Question {
+  id           String            @id @default(cuid())
+  content      String
+  type         QuestionType      @default(SINGLE)
+  order        Int
+  assignmentId String
+  comments     QuestionComment[]
+  options      Option[]
+  assignment   Assignment        @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId, order])
+  @@map("questions")
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  label      String
+  content    String
+  isCorrect  Boolean  @default(false)
+  order      Int
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_options")
+}
+
+model QuestionComment {
+  id         String   @id @default(cuid())
+  content    String
+  createdAt  DateTime @default(now())
+  questionId String
+  userId     String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, createdAt])
+  @@map("question_comments")
+}
+
+model AssignmentSubmission {
+  id           String     @id @default(cuid())
+  content      String
+  grade        Float?
+  feedback     String?
+  submittedAt  DateTime   @default(now())
+  assignmentId String
+  studentId    String
+  attempt      Int        @default(1)
+  presentation Json?
+  contentSnapshot Json?
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId, attempt])
+  @@index([assignmentId, studentId])
+  @@index([assignmentId, grade])
+  @@index([studentId, submittedAt])
+  @@index([studentId, assignmentId, submittedAt])
+  @@map("assignment_submissions")
+}
+
+model ClassroomStudent {
+  id          String    @id @default(cuid())
+  joinedAt    DateTime  @default(now())
+  classroomId String
+  studentId   String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  student     User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, studentId])
+  @@index([studentId])
+  @@index([studentId, joinedAt])
+  @@index([classroomId])
+  @@map("classroom_students")
+}
+
+model ClassroomCourse {
+  id          String    @id @default(cuid())
+  addedAt     DateTime  @default(now())
+  classroomId String
+  courseId    String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, courseId])
+  @@map("classroom_courses")
+}
+
+model AssignmentClassroom {
+  id           String     @id @default(cuid())
+  addedAt      DateTime   @default(now())
+  classroomId  String
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  classroom    Classroom  @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, assignmentId])
+  @@index([assignmentId])
+  @@index([classroomId])
+  @@index([classroomId, addedAt])
+  @@map("assignment_classrooms")
+}
+
+model AssignmentFile {
+  id           String     @id @default(cuid())
+  name         String
+  path         String
+  size         Int
+  mimeType     String
+  createdAt    DateTime   @default(now())
+  assignmentId String
+  uploadedById String
+  file_type    String?    @default("SUBMISSION") @db.VarChar(20)
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  uploadedBy   User       @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@index([createdAt])
+  @@index([file_type], map: "idx_assignment_files_file_type")
+  @@map("assignment_files")
+}
+
+model Announcement {
+  id               String                   @id @default(cuid())
+  content          String
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  classroomId      String
+  authorId         String
+  pinnedAt         DateTime?
+  moderatedAt      DateTime?
+  moderatedById    String?
+  moderationReason String?
+  status           ModerationStatus         @default(APPROVED)
+  organizationId   String?
+  commentsLocked   Boolean                  @default(false) @map("comments_locked")
+  attachments      AnnouncementAttachment[]
+  comments         AnnouncementComment[]
+  author           User                     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  classroom        Classroom                @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  organization     Organization?            @relation(fields: [organizationId], references: [id])
+
+  @@index([classroomId, pinnedAt, createdAt])
+  @@index([authorId])
+  @@index([status, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("announcements")
+}
+
+model AnnouncementComment {
+  id               String                @id @default(cuid())
+  content          String
+  createdAt        DateTime              @default(now())
+  announcementId   String
+  authorId         String
+  parentId         String?
+  moderatedAt      DateTime?
+  moderatedById    String?
+  moderationReason String?
+  status           ModerationStatus      @default(APPROVED)
+  announcement     Announcement          @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  author           User                  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent           AnnouncementComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          AnnouncementComment[] @relation("CommentReplies")
+
+  @@index([announcementId, createdAt])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([status, createdAt])
+  @@map("announcement_comments")
+}
+
+model AnnouncementAttachment {
+  id             String       @id @default(cuid())
+  name           String
+  path           String
+  size           Int
+  mimeType       String
+  createdAt      DateTime     @default(now())
+  announcementId String
+  uploadedById   String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  uploadedBy     User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([announcementId])
+  @@index([createdAt])
+  @@index([announcementId, createdAt])
+  @@map("announcement_attachments")
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  studentId    String
+  status       String           @default("submitted")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  files        SubmissionFile[]
+
+  @@index([assignmentId, studentId])
+  @@map("submissions")
+}
+
+model SubmissionFile {
+  id           String     @id @default(cuid())
+  submissionId String
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  storagePath  String
+  createdAt    DateTime   @default(now())
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@map("submission_files")
+}
+
+model Organization {
+  id            String               @id @default(cuid())
+  name          String
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  slug          String?              @unique
+  status        OrganizationStatus   @default(ACTIVE)
+  announcements Announcement[]
+  assignments   Assignment[]
+  auditLogs     AuditLog[]
+  classrooms    Classroom[]
+  courses       Course[]
+  members       OrganizationMember[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  roleInOrg      OrgRole?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId], name: "organizationId_userId")
+  @@index([userId])
+  @@index([organizationId, createdAt])
+  @@map("organization_members")
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  actorId        String
+  action         String
+  entityType     String
+  entityId       String
+  metadata       Json?
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime      @default(now())
+  actorRole      String?
+  organizationId String?
+  actor          User          @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
+
+model ParentStudent {
+  id                 String     @id @default(cuid())
+  createdAt          DateTime   @default(now())
+  parentId           String
+  studentId          String
+  initiatedBy        String?
+  metadata           Json?
+  parentConfirmedAt  DateTime?
+  status             LinkStatus @default(ACTIVE)
+  studentConfirmedAt DateTime?
+  parent             User       @relation("ParentRelations", fields: [parentId], references: [id], onDelete: Cascade)
+  student            User       @relation("StudentRelations", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId], name: "parentId_studentId")
+  @@index([parentId])
+  @@index([studentId])
+  @@index([status])
+  @@index([status, createdAt])
+  @@map("parent_students")
+}
+
+model ParentStudentInvitation {
+  id        String            @id @default(cuid())
+  code      String            @unique
+  status    LinkRequestStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  studentId String
+  parentId  String?
+  parent    User?             @relation("ParentInvitations", fields: [parentId], references: [id])
+  student   User              @relation("StudentInvitations", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([code])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("parent_student_invitations")
+}
+
+model ParentStudentLinkRequest {
+  id          String            @id @default(cuid())
+  status      LinkRequestStatus @default(PENDING)
+  message     String?
+  createdAt   DateTime          @default(now())
+  respondedAt DateTime?
+  expiresAt   DateTime
+  parentId    String
+  studentId   String
+  parent      User              @relation("ParentLinkRequests", fields: [parentId], references: [id], onDelete: Cascade)
+  student     User              @relation("StudentLinkRequests", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@index([parentId])
+  @@index([studentId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("parent_student_link_requests")
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json?
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+// ==========================
+// Messaging models
+// ==========================
+model Conversation {
+  id               String                    @id @default(cuid())
+  type             ConversationType          @default(DM)
+  createdAt        DateTime                  @default(now())
+  createdById      String
+  classId          String?
+  contextStudentId String?
+  participants     ConversationParticipant[]
+  messages         Message[]
+
+  createdBy      User       @relation("UserConversationsCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  class          Classroom? @relation("ClassroomConversations", fields: [classId], references: [id])
+  contextStudent User?      @relation("ConversationContextStudent", fields: [contextStudentId], references: [id])
+
+  @@index([createdAt])
+  @@index([classId])
+  @@index([contextStudentId])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  roleInConv     String?
+  lastReadAt     DateTime?
+  joinedAt       DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String            @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  createdAt      DateTime          @default(now())
+  attachments    ChatAttachment[]
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // For message replies
+  parentId       String?           @map("parent_id")
+  parent         Message?          @relation("MessageReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies        Message[]         @relation("MessageReplies")
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([parentId])
+  @@map("messages")
+}
+
+model ChatAttachment {
+  id          String   @id @default(cuid())
+  messageId   String
+  name        String
+  mimeType    String
+  sizeBytes   Int
+  storagePath String
+  createdAt   DateTime @default(now())
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("chat_attachments")
+}
+
+
+enum ConversationType {
+  DM
+  TRIAD
+  GROUP
+}
+
+enum UserRole {
+  TEACHER
+  STUDENT
+  PARENT
+  ADMIN
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum AssignmentType {
+  ESSAY
+  QUIZ
+}
+
+enum QuestionType {
+  SINGLE
+  MULTIPLE
+  ESSAY
+  TRUE_FALSE
+  FILL_BLANK
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LinkStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  EXPIRED
+}
+
+enum LinkRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
 }

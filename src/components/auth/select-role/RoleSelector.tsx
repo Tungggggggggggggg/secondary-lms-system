@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import RoleCard from './RoleCard';
 import { useSession, signOut } from 'next-auth/react';
+import { useConfirm } from '@/components/providers/ConfirmProvider';
 
 // Định nghĩa các vai trò có sẵn - Giảm xuống 3 features quan trọng nhất
 const ROLES = {
@@ -53,6 +55,7 @@ export default function RoleSelector() {
   const { toast } = useToast();
   const { data: session, update } = useSession();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const confirm = useConfirm();
 
   // Xử lý chọn vai trò
   const handleRoleSelect = (role: RoleType) => {
@@ -66,13 +69,19 @@ export default function RoleSelector() {
   // Xử lý quay lại
   const handleGoBack = async () => {
     if (selectedRole && !isLoading) {
-      const confirmed = window.confirm('Bạn có chắc muốn quay lại? Lựa chọn của bạn sẽ không được lưu.');
+      const confirmed = await confirm({
+        title: 'Xác nhận quay lại',
+        description: 'Bạn có chắc muốn quay lại? Lựa chọn của bạn sẽ không được lưu.',
+        confirmText: 'Quay lại',
+        cancelText: 'Hủy',
+        variant: 'warning',
+      });
       if (!confirmed) return;
     }
 
     toast({ title: '🔙 Đang quay lại trang trước...', variant: 'default' });
 
-    if (session?.user?.id && selectedRole) {
+    if (session?.user?.id) {
       try {
         await signOut({ redirect: false });
       } catch (err) {
@@ -95,7 +104,9 @@ export default function RoleSelector() {
 
     try {
       setIsLoading(true);
+      console.log('[RoleSelector] Starting role update process', { selectedRole });
 
+      // Bước 1: Gọi API để cập nhật role trong database
       const res = await fetch('/api/users/role', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -114,11 +125,35 @@ export default function RoleSelector() {
         return;
       }
 
-      try {
-        await update?.();
-      } catch (err) {
-        console.error('[RoleSelector] session update failed:', err);
+      console.log('[RoleSelector] Role updated in database successfully', { newRole: selectedRole });
+
+      // Bước 2: Cập nhật session để fetch role mới từ database
+      // Điều này sẽ trigger JWT callback với trigger='update'
+      if (!update) {
+        console.error('[RoleSelector] session.update function not available');
+        toast({
+          title: '❌ Lỗi hệ thống',
+          description: 'Không thể cập nhật phiên làm việc. Vui lòng đăng xuất và đăng nhập lại.',
+          variant: 'destructive',
+        });
+        return;
       }
+
+      console.log('[RoleSelector] Triggering session update...');
+      try {
+        await update();
+        console.log('[RoleSelector] Session update completed');
+      } catch (err) {
+        console.error('[RoleSelector] Session update failed:', err);
+        toast({
+          title: '⚠️ Cảnh báo',
+          description: 'Phiên làm việc chưa được cập nhật. Bạn có thể cần đăng nhập lại.',
+          variant: 'destructive',
+        });
+      }
+
+      // Bước 3: Không dùng delay nữa, vì API đã set roleSelectedAt và middleware chỉ dựa trên JWT
+      // Không cần chờ đợi, có thể chuyển hướng ngay lập tức
 
       const roleMessages: Record<RoleType, string> = {
         teacher: '👨‍🏫 Chào mừng Giáo viên! Đang chuyển đến trang quản lý...',
@@ -128,7 +163,9 @@ export default function RoleSelector() {
 
       toast({ title: roleMessages[selectedRole], variant: 'success' });
 
-      router.push(`/dashboard/${selectedRole}`);
+      // Bước 4: Chuyển hướng đến dashboard tương ứng
+      console.log('[RoleSelector] Redirecting to dashboard', { role: selectedRole });
+      router.push(`/dashboard/${selectedRole}/dashboard`);
     } catch (error) {
       console.error('[RoleSelector] Error updating role:', error);
       toast({

@@ -4,25 +4,27 @@
 
 @layer base {
     :root {
+        --header-height: 60px;
         --background: 0 0% 100%;
-        --foreground: 224 71.4% 4.1%;
+        --foreground: 197 37% 24%;
         --card: 0 0% 100%;
-        --card-foreground: 224 71.4% 4.1%;
+        --card-foreground: 197 37% 24%;
         --popover: 0 0% 100%;
-        --popover-foreground: 224 71.4% 4.1%;
-        --primary: 230 94% 82%;
+        --popover-foreground: 197 37% 24%;
+        --primary: 173 58% 39%;
         --primary-foreground: 210 20% 98%;
-        --secondary: 260 94% 77%;
-        --secondary-foreground: 220.9 39.3% 11%;
+        --secondary: 12 76% 61%;
+        --secondary-foreground: 210 20% 98%;
         --muted: 220 14.3% 95.9%;
         --muted-foreground: 220 8.9% 46.1%;
-        --accent: 317 94% 78%;
-        --accent-foreground: 220.9 39.3% 11%;
+        --accent: 27 87% 67%;
+        --accent-foreground: 197 37% 24%;
+        --highlight: 43 74% 66%;
         --destructive: 0 84.2% 60.2%;
         --destructive-foreground: 210 20% 98%;
         --border: 220 13% 91%;
         --input: 220 13% 91%;
-        --ring: 262.1 83.3% 57.8%;
+        --ring: 173 58% 39%;
         --radius: 0.5rem;
     }
 
@@ -47,6 +49,44 @@
         --input: 215 27.9% 16.9%;
         --ring: 263.4 70% 50.4%;
     }
+
+    .theme-admin {
+        --background: 210 40% 98%;
+        --foreground: 222.2 47.4% 11.2%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 47.4% 11.2%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 47.4% 11.2%;
+        --primary: 243 75% 59%;
+        --primary-foreground: 210 20% 98%;
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+        --destructive: 346.8 77.2% 49.8%;
+        --destructive-foreground: 210 20% 98%;
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 243 75% 59%;
+        --radius: 0.75rem;
+    }
+
+    .theme-teacher {
+        --primary: 221 83% 53%;
+        --ring: 221 83% 53%;
+    }
+
+    .theme-student {
+        --primary: 142 71% 45%;
+        --ring: 142 71% 45%;
+    }
+
+    .theme-parent {
+        --primary: 38 92% 50%;
+        --ring: 38 92% 50%;
+    }
 }
 
 @layer base {
@@ -60,47 +100,6 @@
         -moz-osx-font-smoothing: grayscale;
     }
 }
-
-/* ============================================
-   CRITICAL: Fallback để đảm bảo nội dung hiển thị
-   ngay cả khi JavaScript/GSAP chưa load
-   ============================================ */
-.hero-content h1,
-.hero-content p,
-.hero-cta,
-.hero-stats,
-.hero-mockup,
-.floating-card-1,
-.floating-card-2,
-.subject-card,
-.feature-item,
-.role-card {
-    /* Mặc định hiển thị - GSAP sẽ override khi chạy */
-    opacity: 1 !important;
-    visibility: visible !important;
-}
-
-/* Float Animations */
-/* @keyframes float {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    33% { transform: translate(30px, -30px) rotate(120deg); }
-    66% { transform: translate(-20px, 20px) rotate(240deg); }
-} */
-
-/* @keyframes floatCard {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-15px); }
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-
-@keyframes spin {
-    from { transform: rotateY(0deg); }
-    to { transform: rotateY(360deg); }
-} */
 
 /* Animation mới cho Hero Mockup - chỉ float nhẹ nhàng, KHÔNG xoay */
 @keyframes floatGentle {
@@ -128,14 +127,6 @@
     }
 }
 
-.animate-float {
-    animation: float 15s infinite ease-in-out;
-}
-
-.animate-float-delay {
-    animation: float 20s infinite ease-in-out;
-}
-
 .animate-float-slow {
     animation: floatGentle 6s infinite ease-in-out;
 }
@@ -145,43 +136,6 @@
     animation: float3D 8s infinite ease-in-out;
     transform-style: preserve-3d;
     perspective: 1000px;
-}
-
-/* Navigation Links Underline Animation */
-.nav-links a {
-    position: relative;
-}
-
-.nav-links a::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 0;
-    width: 0;
-    height: 3px;
-    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)));
-    border-radius: 2px;
-    transition: all 0.3s ease;
-}
-
-.nav-links a:hover::after {
-    width: 100%;
-}
-
-/* Navbar Scroll Effect */
-#navbar.scrolled {
-    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-}
-
-/* Role Card Hover */
-.role-card:hover .role-card-icon {
-    animation: spin 0.6s ease-in-out;
-}
-
-/* Mobile Menu */
-.mobile-menu-active .nav-links,
-.mobile-menu-active .nav-cta {
-    display: flex;
 }
 
 /* Utility Classes */
@@ -211,7 +165,7 @@
 /* Custom Scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--primary)) #e5e7eb;
+    scrollbar-color: #9ca3af #e5e7eb;
 }
 
 *::-webkit-scrollbar {
@@ -223,19 +177,44 @@
 }
 
 *::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--primary));
+    background-color: #9ca3af;
     border-radius: 20px;
     border: 2px solid theme('colors.gray.200');
 }
 
-/* Progress Bars */
-.progress-fill {
-    transition: width 2s ease;
+.scrollbar-hover {
+    scrollbar-width: none;
+}
+.scrollbar-hover:hover {
+    scrollbar-width: thin;
+}
+.scrollbar-hover::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+}
+.scrollbar-hover::-webkit-scrollbar:horizontal {
+    height: 0px;
+}
+.scrollbar-hover:hover::-webkit-scrollbar {
+    width: 8px;
+}
+.scrollbar-hover:hover::-webkit-scrollbar:horizontal {
+    height: 0px;
 }
 
-/* Subject Cards */
-.subject-card:hover::before {
-    transform: scaleX(1);
+.overscroll-contain {
+    overscroll-behavior: contain;
+}
+
+.scrollbar-stable {
+    scrollbar-width: thin;
+}
+.scrollbar-stable::-webkit-scrollbar {
+    width: 8px;
+    height: 0px;
+}
+.scrollbar-stable::-webkit-scrollbar:horizontal {
+    height: 0px;
 }
 
 /* Button Styles */
@@ -253,4 +232,22 @@ button:focus-visible,
 input:focus-visible,
 a:focus-visible {
     @apply outline-2 outline-primary outline-offset-2;
+}
+
+@layer utilities {
+  .parent-surface { @apply bg-gradient-to-b from-amber-50/60 to-orange-50/40; }
+  .parent-card { @apply border-amber-100 bg-gradient-to-br from-amber-50/40 to-orange-50/20; }
+  .parent-border { @apply border-amber-200; }
+  .parent-accent { @apply text-amber-700; }
+  .parent-accent-strong { @apply text-amber-900; }
+  .student-surface { @apply bg-gradient-to-b from-green-50/60 to-emerald-50/40; }
+  .student-card { @apply border-green-100 bg-gradient-to-br from-green-50/40 to-emerald-50/20; }
+  .student-border { @apply border-green-200; }
+  .student-accent { @apply text-green-700; }
+  .student-accent-strong { @apply text-green-900; }
+  .teacher-surface { @apply bg-gradient-to-b from-blue-50/60 to-indigo-50/40; }
+  .teacher-card { @apply border-blue-100 bg-gradient-to-br from-blue-50/40 to-indigo-50/20; }
+  .teacher-border { @apply border-blue-200; }
+  .teacher-accent { @apply text-blue-700; }
+  .teacher-accent-strong { @apply text-blue-900; }
 }

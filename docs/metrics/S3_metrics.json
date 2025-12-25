@@ -1,0 +1,86 @@
+{
+  "success": true,
+  "data": {
+    "timeRangeMinutes": 60,
+    "stats": {
+      "totalRequests": 8,
+      "averageResponseTime": 10504,
+      "slowRequests": 8,
+      "errorRate": 0,
+      "topSlowEndpoints": [
+        {
+          "endpoint": "POST /api/ai/anti-cheat/summary",
+          "averageDuration": 10504,
+          "maxDuration": 12128,
+          "requestCount": 8
+        }
+      ]
+    },
+    "metrics": [
+      {
+        "endpoint": "/api/ai/anti-cheat/summary",
+        "method": "POST",
+        "duration": 10243,
+        "timestamp": "2025-12-24T19:38:15.638Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/ai/anti-cheat/summary",
+        "method": "POST",
+        "duration": 10198,
+        "timestamp": "2025-12-24T19:39:35.872Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/ai/anti-cheat/summary",
+        "method": "POST",
+        "duration": 10375,
+        "timestamp": "2025-12-24T19:40:56.278Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/ai/anti-cheat/summary",
+        "method": "POST",
+        "duration": 10304,
+        "timestamp": "2025-12-24T19:42:16.606Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/ai/anti-cheat/summary",
+        "method": "POST",
+        "duration": 9936,
+        "timestamp": "2025-12-24T19:43:36.570Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/ai/anti-cheat/summary",
+        "method": "POST",
+        "duration": 10704,
+        "timestamp": "2025-12-24T19:44:57.302Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/ai/anti-cheat/summary",
+        "method": "POST",
+        "duration": 12128,
+        "timestamp": "2025-12-24T19:46:19.456Z",
+        "success": true,
+        "statusCode": 200
+      },
+      {
+        "endpoint": "/api/ai/anti-cheat/summary",
+        "method": "POST",
+        "duration": 10147,
+        "timestamp": "2025-12-24T19:47:39.633Z",
+        "success": true,
+        "statusCode": 200
+      }
+    ]
+  }
+}
