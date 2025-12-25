@@ -72,10 +72,17 @@ export default function QuizAssignmentForm({
   const singleQuestionMode = !!anti?.singleQuestionMode;
   const enableFuzzyFillBlank = !!anti?.enableFuzzyFillBlank;
   const fuzzyThreshold: number = typeof anti?.fuzzyThreshold === "number" ? Math.min(0.5, Math.max(0, anti.fuzzyThreshold)) : 0.2;
+  const hasSecurityConfig = requireFullscreen || detectTabSwitch || disableCopyPaste;
+  const hasDisplayConfig = shuffleQuestionsFlag || shuffleOptionsFlag || singleQuestionMode;
   const maxAttempts = assignment.maxAttempts ?? null;
   const latestAttempt = assignment.latestAttempt ?? 0;
   const allowNewAttempt = assignment.allowNewAttempt ?? false;
-  const [gateOpen, setGateOpen] = useState<boolean>(Boolean((allowNewAttempt && isSubmitted) || requireFullscreen || detectTabSwitch || disableCopyPaste || shuffleQuestionsFlag || shuffleOptionsFlag || singleQuestionMode));
+  const [gateOpen, setGateOpen] = useState<boolean>(() => {
+    // Nếu đã nộp và không được phép làm lại thì không cần màn "Bắt đầu làm".
+    // Ngược lại, luôn mở gate để học sinh phải bấm "Bắt đầu làm" trước khi vào bài.
+    if (isSubmitted && !allowNewAttempt) return false;
+    return true;
+  });
   const [isNewAttempt, setIsNewAttempt] = useState<boolean>(false);
   const [questionOrder, setQuestionOrder] = useState<string[] | null>(null);
   const [optionOrders, setOptionOrders] = useState<Record<string, string[]> | null>(null);
@@ -326,15 +333,12 @@ export default function QuizAssignmentForm({
   // Initialize startedAt from storage or now when interactive
   useEffect(() => {
     if (disabledMode) return;
-    const now = new Date();
-    const stored = typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
-    if (stored) {
+    try {
+      const stored = typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
+      if (!stored) return;
       const d = new Date(stored);
       if (!isNaN(d.getTime())) setStartedAt(d);
-    } else {
-      setStartedAt(now);
-      try { window.localStorage.setItem(storageKey, now.toISOString()); } catch {}
-    }
+    } catch {}
   }, [disabledMode, storageKey]);
 
   // Poll trạng thái attempt để đồng bộ với can thiệp của giáo viên (gia hạn, pause, terminate)
@@ -742,24 +746,30 @@ export default function QuizAssignmentForm({
           <h3 className="text-xl font-bold text-foreground">Bắt đầu làm bài</h3>
           <p className="text-sm text-muted-foreground mt-2">Vui lòng xác nhận cài đặt trước khi bắt đầu.</p>
         </div>
-        <div className="grid sm:grid-cols-2 gap-4 text-sm">
-          <div className="p-3 rounded-lg border border-border bg-muted/40">
-            <div className="font-semibold text-foreground">Cấu hình bảo mật</div>
-            <ul className="mt-2 space-y-1 text-muted-foreground">
-              <li>{requireFullscreen ? "Yêu cầu fullscreen" : "Không yêu cầu fullscreen"}</li>
-              <li>{detectTabSwitch ? "Phát hiện chuyển tab" : "Không phát hiện chuyển tab"}</li>
-              <li>{disableCopyPaste ? "Vô hiệu hóa copy/paste" : "Cho phép copy/paste"}</li>
-            </ul>
+        {(hasSecurityConfig || hasDisplayConfig) && (
+          <div className="grid sm:grid-cols-2 gap-4 text-sm">
+            {hasSecurityConfig && (
+              <div className="p-3 rounded-lg border border-border bg-muted/40">
+                <div className="font-semibold text-foreground">Cấu hình bảo mật</div>
+                <ul className="mt-2 space-y-1 text-muted-foreground">
+                  <li>{requireFullscreen ? "Yêu cầu fullscreen" : "Không yêu cầu fullscreen"}</li>
+                  <li>{detectTabSwitch ? "Phát hiện chuyển tab" : "Không phát hiện chuyển tab"}</li>
+                  <li>{disableCopyPaste ? "Vô hiệu hóa copy/paste" : "Cho phép copy/paste"}</li>
+                </ul>
+              </div>
+            )}
+            {hasDisplayConfig && (
+              <div className="p-3 rounded-lg border border-border bg-muted/40">
+                <div className="font-semibold text-foreground">Cấu hình hiển thị</div>
+                <ul className="mt-2 space-y-1 text-muted-foreground">
+                  <li>{shuffleQuestionsFlag ? "Xáo thứ tự câu hỏi" : "Giữ nguyên thứ tự câu hỏi"}</li>
+                  <li>{shuffleOptionsFlag ? "Xáo thứ tự đáp án" : "Giữ nguyên thứ tự đáp án"}</li>
+                  <li>{singleQuestionMode ? "Chế độ từng câu một" : "Hiển thị tất cả câu"}</li>
+                </ul>
+              </div>
+            )}
           </div>
-          <div className="p-3 rounded-lg border border-border bg-muted/40">
-            <div className="font-semibold text-foreground">Cấu hình hiển thị</div>
-            <ul className="mt-2 space-y-1 text-muted-foreground">
-              <li>{shuffleQuestionsFlag ? "Xáo thứ tự câu hỏi" : "Giữ nguyên thứ tự câu hỏi"}</li>
-              <li>{shuffleOptionsFlag ? "Xáo thứ tự đáp án" : "Giữ nguyên thứ tự đáp án"}</li>
-              <li>{singleQuestionMode ? "Chế độ từng câu một" : "Hiển thị tất cả câu"}</li>
-            </ul>
-          </div>
-        </div>
+        )}
         <div className="mt-4 text-sm text-muted-foreground">
           {maxAttempts != null && (
             <div> Lần làm: {(latestAttempt as number)}/{(maxAttempts as number)}{attemptsLeft != null ? ` • Còn lại: ${attemptsLeft}` : ""}</div>
