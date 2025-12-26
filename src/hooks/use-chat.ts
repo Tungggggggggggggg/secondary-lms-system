@@ -30,13 +30,13 @@ export type MessageDTO = {
   parentMessage?: { content: string; sender: { fullname: string } } | null;
   };
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
 export function useConversations() {
-  const { data, error, isLoading, mutate } = useSWR("/api/chat/conversations", fetcher, {
-    refreshInterval: 15000,
-    dedupingInterval: 10000,
+  const { data, error, isLoading, mutate } = useSWR<{ success?: boolean; data?: unknown }>("/api/chat/conversations", {
+    refreshInterval: 30000,
+    dedupingInterval: 45000,
     revalidateOnFocus: true,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
   });
   return {
     conversations: (data?.data || []) as ConversationItem[],
@@ -48,10 +48,12 @@ export function useConversations() {
 
 export function useMessages(conversationId?: string) {
   const key = conversationId ? `/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}` : null;
-  const { data, error, isLoading, mutate } = useSWR(key, fetcher, {
-    refreshInterval: 8000,
-    dedupingInterval: 5000,
+  const { data, error, isLoading, mutate } = useSWR<{ success?: boolean; data?: unknown }>(key, {
+    refreshInterval: 10000,
+    dedupingInterval: 15000,
     revalidateOnFocus: true,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
   });
   return {
     messages: (data?.data || []) as MessageDTO[],
@@ -85,10 +87,12 @@ export async function markRead(conversationId: string) {
 
 
 export function useUnreadTotal() {
-  const { data } = useSWR("/api/chat/unread-total", fetcher, {
+  const { data } = useSWR<{ total?: unknown }>("/api/chat/unread-total", {
     refreshInterval: 60000,
     dedupingInterval: 45000,
     revalidateOnFocus: true,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
   });
   return (data?.total as number) || 0;
 }

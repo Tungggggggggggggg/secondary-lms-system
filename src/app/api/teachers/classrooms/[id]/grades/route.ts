@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
 import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
-import { Prisma } from "@prisma/client";
+import { join, sqltag as sql } from "@prisma/client/runtime/library";
 
 interface TeacherClassroomAssignmentSummary {
   id: string;
@@ -121,7 +121,8 @@ export async function GET(
       ])
     );
 
-    const latestSubmissions = await prisma.$queryRaw<LatestSubmissionRow[]>(Prisma.sql`
+    const latestSubmissions = ((await prisma.$queryRaw(
+      sql`
       SELECT DISTINCT ON (s."studentId", s."assignmentId")
         s.id,
         s."studentId" as "studentId",
@@ -130,10 +131,11 @@ export async function GET(
         s.feedback,
         s."submittedAt" as "submittedAt"
       FROM "assignment_submissions" s
-      WHERE s."assignmentId" IN (${Prisma.join(assignmentIds)})
-        AND s."studentId" IN (${Prisma.join(studentIds)})
+      WHERE s."assignmentId" IN (${join(assignmentIds)})
+        AND s."studentId" IN (${join(studentIds)})
       ORDER BY s."studentId", s."assignmentId", s.attempt DESC
-    `);
+    `
+    )) as unknown) as LatestSubmissionRow[];
 
     const submissionRows = latestSubmissions.map((s) => {
       const student = studentById.get(s.studentId);

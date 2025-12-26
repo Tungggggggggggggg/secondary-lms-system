@@ -29,6 +29,7 @@ import {
 import { generateClassroomCode } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { passwordSchema } from "@/lib/validation/password.schema";
+import fetcher from "@/lib/fetcher";
 
 type ClassroomItem = {
   id: string;
@@ -146,12 +147,9 @@ export default function AdminClassroomsPage() {
       if (nextStatus) params.set("status", nextStatus);
       if (nextSearch.trim()) params.set("q", nextSearch.trim());
 
-      const res = await fetch(`/api/admin/classrooms?${params.toString()}`, { cache: "no-store" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải danh sách lớp học");
-      }
-
+      const json = await fetcher<{ success: true; data: ClassroomsResponse }>(
+        `/api/admin/classrooms?${params.toString()}`
+      );
       const data = json.data as ClassroomsResponse;
       setItems(data.items || []);
       setPage(data.page);
@@ -285,11 +283,10 @@ export default function AdminClassroomsPage() {
       const params = new URLSearchParams();
       if (q.trim()) params.set("q", q.trim());
       params.set("limit", "100");
-      const res = await fetch(`/api/admin/teachers?${params.toString()}`, { cache: "no-store" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải danh sách giáo viên");
-      }
+
+      const json = await fetcher<{ success: true; data?: { items?: unknown } }>(
+        `/api/admin/teachers?${params.toString()}`
+      );
       const items = (json?.data?.items ?? []) as TeacherOption[];
       setTeacherOptions(Array.isArray(items) ? items : []);
     } catch (e) {
@@ -311,11 +308,10 @@ export default function AdminClassroomsPage() {
       const params = new URLSearchParams();
       if (q.trim()) params.set("q", q.trim());
       params.set("limit", "100");
-      const res = await fetch(`/api/admin/teachers?${params.toString()}`, { cache: "no-store" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải danh sách giáo viên");
-      }
+
+      const json = await fetcher<{ success: true; data?: { items?: unknown } }>(
+        `/api/admin/teachers?${params.toString()}`
+      );
       const items = (json?.data?.items ?? []) as TeacherOption[];
       setChangeTeacherOptions(Array.isArray(items) ? items : []);
     } catch (e) {
@@ -663,11 +659,12 @@ export default function AdminClassroomsPage() {
       sp.set("pageSize", String(studentsPageSize));
       if (q) sp.set("q", q);
 
-      const res = await fetch(`/api/admin/classrooms/${classroomId}/students?${sp.toString()}`, { cache: "no-store" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải danh sách học sinh");
-      }
+      const json = await fetcher<{ success: true; data: {
+        items: Array<{ id: string; email: string; fullname: string | null; joinedAt: string }>;
+        page: number;
+        pageSize: number;
+        total: number;
+      } }>(`/api/admin/classrooms/${classroomId}/students?${sp.toString()}`);
 
       const data = json.data as {
         items: Array<{ id: string; email: string; fullname: string | null; joinedAt: string }>;

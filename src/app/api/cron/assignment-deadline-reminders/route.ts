@@ -153,14 +153,14 @@ const handler = withApiLogging(async (req: NextRequest) => {
 
   async function processAssignment(kind: "DUE_24H" | "DUE_3H" | "OVERDUE", a: { id: string; title: string; lockAt: Date | null; dueDate: Date | null }) {
     // Find all students who have this assignment via assignment_classrooms -> classroom_students
-    const classroomStudents = await prisma.classroomStudent.findMany({
+    const classroomStudents = (await prisma.classroomStudent.findMany({
       where: {
         classroom: {
           assignments: { some: { assignmentId: a.id } },
         },
       },
       select: { studentId: true, classroomId: true },
-    });
+    })) as Array<{ studentId: string; classroomId: string }>;
 
     const studentIds = Array.from(new Set(classroomStudents.map((x) => x.studentId)));
     if (studentIds.length === 0) {

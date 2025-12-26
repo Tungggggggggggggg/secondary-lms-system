@@ -29,11 +29,11 @@ export async function GET(
     const ok = await isStudentInClassroom(user.id, classId);
     if (!ok) return errorResponse(403, "Forbidden - Not a member of this classroom");
 
-    const classroomCourses = await prisma.classroomCourse.findMany({
+    const classroomCourses = (await prisma.classroomCourse.findMany({
       where: { classroomId: classId },
       select: { courseId: true },
       take: 200,
-    });
+    })) as Array<{ courseId: string }>;
 
     const courseIds = classroomCourses.map((x) => x.courseId);
     if (courseIds.length === 0) {
@@ -95,7 +95,7 @@ export async function GET(
           prevLessonId: prev?.id ?? null,
           nextLessonId: next?.id ?? null,
           attachments:
-            lesson.attachments?.map((a) => ({
+            lesson.attachments?.map((a: any) => ({
               id: a.id,
               name: a.name,
               storagePath: a.storagePath,

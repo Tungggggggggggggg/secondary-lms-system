@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
-import { Prisma } from "@prisma/client";
+import { join, sqltag as sql } from "@prisma/client/runtime/library";
 
 interface StudentGradesSubmissionRow {
   id: string;
@@ -114,7 +114,8 @@ export async function GET(_req: NextRequest) {
     }
 
     const [submissionsRows, assignments, assignmentClassrooms] = await Promise.all([
-      prisma.$queryRaw<LatestSubmissionRow[]>(Prisma.sql`
+      (prisma.$queryRaw(
+        sql`
         SELECT DISTINCT ON (s."assignmentId")
           s.id,
           s."assignmentId" as "assignmentId",
@@ -124,9 +125,10 @@ export async function GET(_req: NextRequest) {
           s.attempt
         FROM "assignment_submissions" s
         WHERE s."studentId" = ${authUser.id}
-          AND s."assignmentId" IN (${Prisma.join(assignmentIdList)})
+          AND s."assignmentId" IN (${join(assignmentIdList)})
         ORDER BY s."assignmentId", s.attempt DESC
-      `),
+      `
+      ) as unknown) as LatestSubmissionRow[],
 
       prisma.assignment.findMany({
         where: { id: { in: assignmentIdList } },

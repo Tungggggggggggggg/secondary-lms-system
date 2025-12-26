@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
 import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
-import { Prisma } from "@prisma/client";
+import { join, sqltag as sql } from "@prisma/client/runtime/library";
 
 interface TeacherStudentSubmissionRow {
   id: string;
@@ -66,7 +66,7 @@ export async function GET(
       where: { classroomId },
       select: { assignmentId: true },
     });
-    const assignmentIds = ac.map(
+    const assignmentIds: string[] = ac.map(
       (x: { assignmentId: string }) => x.assignmentId,
     );
     if (assignmentIds.length === 0) {
@@ -76,7 +76,8 @@ export async function GET(
       );
     }
 
-    const latestRows = await prisma.$queryRaw<LatestSubmissionRow[]>(Prisma.sql`
+    const latestRows = ((await prisma.$queryRaw(
+      sql`
       SELECT DISTINCT ON (s."assignmentId")
         s.id,
         s."assignmentId" as "assignmentId",
@@ -90,9 +91,10 @@ export async function GET(
       FROM "assignment_submissions" s
       JOIN "assignments" a ON a.id = s."assignmentId"
       WHERE s."studentId" = ${studentId}
-        AND s."assignmentId" IN (${Prisma.join(assignmentIds)})
+        AND s."assignmentId" IN (${join(assignmentIds)})
       ORDER BY s."assignmentId", s.attempt DESC
-    `);
+    `
+    )) as unknown) as LatestSubmissionRow[];
 
     const latestSubmissions = latestRows.map((r): TeacherStudentSubmissionRow => ({
       id: r.id,
@@ -127,7 +129,7 @@ export async function GET(
     }));
 
     const submittedAssignmentIds = new Set<string>(latestSubmissions.map((s) => s.assignmentId));
-    const missingAssignmentIds = assignmentIds.filter((aid) => !submittedAssignmentIds.has(aid));
+    const missingAssignmentIds = assignmentIds.filter((aid: string) => !submittedAssignmentIds.has(aid));
 
     const assignments = (await prisma.assignment.findMany({
       where: { id: { in: missingAssignmentIds } },

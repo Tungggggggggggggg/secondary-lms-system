@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { Prisma } from "@prisma/client";
+import { empty, join, sqltag as sql } from "@prisma/client/runtime/library";
 import { TaskType } from "@google/generative-ai";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isStudentInClassroom } from "@/lib/api-utils";
@@ -95,11 +95,11 @@ export async function POST(req: NextRequest) {
     const ok = await isStudentInClassroom(user.id, classId);
     if (!ok) return errorResponse(403, "Forbidden - Not a member of this classroom");
 
-    const classroomCourses = await prisma.classroomCourse.findMany({
+    const classroomCourses = (await prisma.classroomCourse.findMany({
       where: { classroomId: classId },
       select: { courseId: true },
       take: 200,
-    });
+    })) as Array<{ courseId: string }>;
 
     const courseIds = classroomCourses.map((x) => x.courseId);
     if (courseIds.length === 0) {
@@ -130,8 +130,8 @@ export async function POST(req: NextRequest) {
 
     const queryVec = `[${queryEmbedding.join(",")}]`;
 
-    const chunks = await prisma.$queryRaw<RetrievedChunk[]>(
-      Prisma.sql`
+    const chunks = (await prisma.$queryRaw(
+      sql`
         SELECT
           "lessonId",
           "courseId",
@@ -139,12 +139,12 @@ export async function POST(req: NextRequest) {
           "content",
           ("embedding" <=> ${queryVec}::vector) as distance
         FROM "lesson_embedding_chunks"
-        WHERE "courseId" IN (${Prisma.join(filteredCourseIds)})
-        ${filteredLessonId ? Prisma.sql`AND "lessonId" = ${filteredLessonId}` : Prisma.empty}
+        WHERE "courseId" IN (${join(filteredCourseIds)})
+        ${filteredLessonId ? sql`AND "lessonId" = ${filteredLessonId}` : empty}
         ORDER BY distance ASC
         LIMIT ${topK};
       `
-    );
+    )) as RetrievedChunk[];
 
     if (!chunks || chunks.length === 0) {
       return NextResponse.json(
@@ -162,11 +162,11 @@ export async function POST(req: NextRequest) {
     }
 
     const uniqueLessonIds = Array.from(new Set(chunks.map((c) => c.lessonId)));
-    const lessonRows = await prisma.lesson.findMany({
+    const lessonRows = (await prisma.lesson.findMany({
       where: { id: { in: uniqueLessonIds } },
       select: { id: true, title: true },
       take: 50,
-    });
+    })) as Array<{ id: string; title: string }>;
     const lessonTitleById = new Map<string, string>(lessonRows.map((l) => [l.id, l.title]));
 
     const apiKey = process.env.GEMINI_API_KEY;

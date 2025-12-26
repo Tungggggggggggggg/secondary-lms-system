@@ -71,10 +71,10 @@ export async function POST(req: NextRequest) {
           return errorResponse(403, "Chỉ hỗ trợ nhắn tin trực tiếp với giáo viên");
         }
 
-        const children = await prisma.parentStudent.findMany({
+        const children = (await prisma.parentStudent.findMany({
           where: { parentId: user.id, status: "ACTIVE" },
           select: { studentId: true },
-        });
+        })) as Array<{ studentId: string }>;
         const studentIds = children.map((c) => c.studentId);
         if (studentIds.length === 0) {
           return errorResponse(403, "Không có quyền nhắn tin với giáo viên này");

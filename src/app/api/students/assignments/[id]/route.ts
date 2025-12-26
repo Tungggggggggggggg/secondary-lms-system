@@ -181,12 +181,12 @@ export async function GET(
           email: classroom.teacher.email,
         },
       },
-      questions: assignmentData.questions.map((q) => ({
+      questions: assignmentData.questions.map((q: any) => ({
         id: q.id,
         content: q.content,
         type: q.type,
         order: q.order,
-        options: q.options.map((opt) => ({
+        options: q.options.map((opt: any) => ({
           id: opt.id,
           label: opt.label,
           content: opt.content,

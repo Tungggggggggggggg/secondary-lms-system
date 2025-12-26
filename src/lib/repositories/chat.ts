@@ -87,9 +87,7 @@ export async function listConversations(userId: string): Promise<ConversationLis
     orderBy: { joinedAt: "desc" },
   });
 
-  const unreadRows = await prisma.$queryRaw<
-    Array<{ conversationId: string; cnt: bigint }>
-  >`
+  const unreadRows = (await prisma.$queryRaw`
     SELECT m."conversationId" as "conversationId", COUNT(*)::bigint as cnt
     FROM "messages" m
     JOIN "conversation_participants" cp
@@ -98,7 +96,7 @@ export async function listConversations(userId: string): Promise<ConversationLis
       AND m."senderId" <> ${userId}
       AND m."createdAt" > COALESCE(cp."lastReadAt", to_timestamp(0))
     GROUP BY m."conversationId";
-  `;
+  `) as Array<{ conversationId: string; cnt: bigint }>;
 
   const unreadByConversationId = new Map<string, number>(
     unreadRows.map((r) => [r.conversationId, Number(r.cnt)])
@@ -348,13 +346,13 @@ export async function searchMessages(userId: string, query: string) {
     take: 20,
   });
 
-  return messages.map(msg => ({
+  return messages.map((msg: any) => ({
     id: msg.id,
     content: msg.content,
     createdAt: msg.createdAt.toISOString(),
     senderName: msg.sender.fullname,
     conversationId: msg.conversationId,
-    conversationName: msg.conversation.participants.map(p => p.user.fullname).join(', '),
+    conversationName: msg.conversation.participants.map((p: any) => p.user.fullname).join(', '),
   }));
 }
 
@@ -392,13 +390,13 @@ export async function listAttachments(conversationId: string) {
     take: 100,
   });
 
-  const links = messagesWithLinks.flatMap(msg => {
+  const links = messagesWithLinks.flatMap((msg: any) => {
     const found = msg.content.match(urlRegex);
-    return found ? found.map(url => ({ url, createdAt: msg.createdAt.toISOString() })) : [];
+    return found ? found.map((url: string) => ({ url, createdAt: msg.createdAt.toISOString() })) : [];
   });
 
   return {
-    files: attachments.map(att => ({
+    files: attachments.map((att: any) => ({
       id: att.id,
       name: att.name,
       mimeType: att.mimeType,

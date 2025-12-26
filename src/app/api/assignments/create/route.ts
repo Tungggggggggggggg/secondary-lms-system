@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils';
 import { prisma } from '@/lib/prisma';
 import { coercePrismaJson } from '@/lib/prisma-json';
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare assignment data for database
-    const assignmentCreateData: Prisma.AssignmentUncheckedCreateInput = {
+    const assignmentCreateData: any = {
       title: assignmentData.title.trim(),
       description: assignmentData.description?.trim() || null,
       subject: assignmentData.subject?.trim() || null,
@@ -237,27 +237,27 @@ export async function POST(request: NextRequest) {
         assignmentId: assignment.id,
       }));
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         await tx.question.createMany({
           data: questionsData.map((q) => ({
             content: q.content,
             type: q.type,
             order: q.order,
-            assignmentId: q.assignmentId,
+            assignmentId: assignment.id,
           })),
         });
 
-        const createdQuestions = await tx.question.findMany({
+        const createdQuestions = (await tx.question.findMany({
           where: { assignmentId: assignment.id },
           select: { id: true, order: true },
           orderBy: { order: 'asc' },
-        });
+        })) as Array<{ id: string; order: number }>;
 
         const questionIdByOrder = new Map<number, string>(
-          createdQuestions.map((q) => [q.order, q.id])
+          createdQuestions.map((q: { id: string; order: number }) => [q.order, q.id])
         );
 
-        const optionsData = normalizedQuestions.flatMap((q, qIndex) => {
+        const optionsData = normalizedQuestions.flatMap((q: QuizQuestionInput, qIndex) => {
           const questionOrder = qIndex + 1;
           const questionId = questionIdByOrder.get(questionOrder);
           if (!questionId) return [];

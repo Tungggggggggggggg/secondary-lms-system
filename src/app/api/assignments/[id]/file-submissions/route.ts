@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
         if (!isOwner) return errorResponse(403, "Forbidden");
 
-        const submissions = await prisma.submission.findMany({
+        const submissions = (await prisma.submission.findMany({
             where: { assignmentId },
             select: {
                 id: true,
@@ -23,14 +23,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
                 files: { select: { id: true } },
             },
             orderBy: { createdAt: "desc" },
-        });
+        })) as Array<{ id: string; createdAt: Date; studentId: string; files: Array<{ id: string }> }>;
 
         const studentIds = Array.from(new Set(submissions.map((s) => s.studentId)));
-        const students = studentIds.length
-          ? await prisma.user.findMany({
+        const students: Array<{ id: string; fullname: string | null; email: string }> = studentIds.length
+          ? ((await prisma.user.findMany({
               where: { id: { in: studentIds } },
               select: { id: true, fullname: true, email: true },
-            })
+            })) as Array<{ id: string; fullname: string | null; email: string }>)
           : [];
         const studentMap = new Map<string, { id: string; fullname: string | null; email: string }>(
           students.map((s) => [s.id, s])

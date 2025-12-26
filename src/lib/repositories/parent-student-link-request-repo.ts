@@ -11,31 +11,10 @@ export type Paginated<T> = {
   total: number;
 };
 
-type ParentStudentLinkRequestWithStudent = Prisma.ParentStudentLinkRequestGetPayload<{
-  include: {
-    student: {
-      select: {
-        id: true;
-        email: true;
-        fullname: true;
-        role: true;
-      };
-    };
-  };
-}>;
+// Permissive local types for list results; avoid relying on non-exported Prisma helper types
+type ParentStudentLinkRequestWithStudent = any;
 
-type ParentStudentLinkRequestWithParent = Prisma.ParentStudentLinkRequestGetPayload<{
-  include: {
-    parent: {
-      select: {
-        id: true;
-        email: true;
-        fullname: true;
-        role: true;
-      };
-    };
-  };
-}>;
+type ParentStudentLinkRequestWithParent = any;
 
 export const parentStudentLinkRequestRepo = {
   /**

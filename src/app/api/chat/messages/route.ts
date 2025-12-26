@@ -41,13 +41,13 @@ export async function POST(req: NextRequest) {
 
     try {
       if (user.role === "TEACHER") {
-        const participants = await prisma.conversationParticipant.findMany({
+        const participants = (await prisma.conversationParticipant.findMany({
           where: { conversationId },
           select: {
             userId: true,
             user: { select: { role: true, fullname: true } },
           },
-        });
+        })) as Array<{ userId: string; user: { role: string; fullname: string | null } | null }>;
 
         const teacherName = user.fullname || "Giáo viên";
         const parentIds = participants

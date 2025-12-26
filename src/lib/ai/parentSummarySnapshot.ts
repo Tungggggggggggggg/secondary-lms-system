@@ -28,10 +28,10 @@ export async function buildParentSummarySnapshot(params: {
   const safeWindowDays = Math.min(Math.max(Math.floor(params.windowDays), 7), 90);
   const fromDate = new Date(params.now.getTime() - safeWindowDays * 24 * 60 * 60 * 1000);
 
-  const classroomLinks = await prisma.classroomStudent.findMany({
+  const classroomLinks = (await prisma.classroomStudent.findMany({
     where: { studentId: params.childId },
     select: { classroomId: true },
-  });
+  })) as Array<{ classroomId: string }>;
 
   const classroomIds = classroomLinks.map((cs) => cs.classroomId);
   if (classroomIds.length === 0) {
@@ -46,10 +46,10 @@ export async function buildParentSummarySnapshot(params: {
     };
   }
 
-  const assignmentLinks = await prisma.assignmentClassroom.findMany({
+  const assignmentLinks = (await prisma.assignmentClassroom.findMany({
     where: { classroomId: { in: classroomIds } },
     select: { assignmentId: true },
-  });
+  })) as Array<{ assignmentId: string }>;
 
   const assignmentIds = Array.from(new Set(assignmentLinks.map((a) => a.assignmentId)));
   if (assignmentIds.length === 0) {
@@ -64,7 +64,7 @@ export async function buildParentSummarySnapshot(params: {
     };
   }
 
-  const [assignments, assignmentClassrooms, submissions] = await Promise.all([
+  const [assignments, assignmentClassrooms, submissions] = (await Promise.all([
     prisma.assignment.findMany({
       where: {
         id: { in: assignmentIds },
@@ -102,7 +102,11 @@ export async function buildParentSummarySnapshot(params: {
       orderBy: { submittedAt: "desc" },
       take: 120,
     }),
-  ]);
+  ])) as [
+    Array<{ id: string; title: string; type: string; dueDate: Date | null; lockAt: Date | null }>,
+    Array<{ assignmentId: string; classroom: { name: string } }>,
+    Array<{ id: string; assignmentId: string; submittedAt: Date; grade: number | null; feedback: string | null }>,
+  ];
 
   const assignmentById = new Map(assignments.map((a) => [a.id, a]));
 

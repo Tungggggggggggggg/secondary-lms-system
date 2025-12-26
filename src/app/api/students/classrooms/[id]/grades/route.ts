@@ -157,7 +157,7 @@ export async function GET(
       ),
     );
 
-    const missingAssignments = await prisma.assignment.findMany({
+    const missingAssignments = (await prisma.assignment.findMany({
       where: {
         id: {
           in: assignmentIdList.filter(
@@ -172,19 +172,12 @@ export async function GET(
         dueDate: true,
         lockAt: true,
       },
-    });
+    })) as Array<{ id: string; title: string; type: string; dueDate: Date | null; lockAt: Date | null }>;
 
     const now = new Date();
 
     // Tạo các grade entry ảo với điểm 0 cho bài chưa nộp
-    const missingGrades = missingAssignments.map(
-      (assignment: {
-        id: string;
-        title: string;
-        type: string;
-        dueDate: Date | null;
-        lockAt: Date | null;
-      }) => {
+    const missingGrades = missingAssignments.map((assignment) => {
       const isPastDue = isAssignmentOverdue(assignment, now);
       const effectiveDeadline = getEffectiveDeadline(assignment);
 
@@ -199,7 +192,7 @@ export async function GET(
         submittedAt: null as string | null,
         status: isPastDue ? "graded" : "pending",
       };
-    });
+    }) as Array<{ grade: number | null }>;
 
     const grades = [...submissionGrades, ...missingGrades];
 

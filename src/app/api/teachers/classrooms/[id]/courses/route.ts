@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
     });
     if (!classroom) return errorResponse(404, "Classroom not found");
 
-    const items = await prisma.classroomCourse.findMany({
+    const items = (await prisma.classroomCourse.findMany({
       where: { classroomId },
       orderBy: { addedAt: "desc" },
       take: 200,
@@ -34,7 +34,11 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
         addedAt: true,
         course: { select: { id: true, title: true, description: true, coverImage: true, updatedAt: true } },
       },
-    });
+    })) as Array<{
+      id: string;
+      addedAt: Date;
+      course: { id: string; title: string; description: string | null; coverImage: string | null; updatedAt: Date };
+    }>;
 
     return NextResponse.json(
       {

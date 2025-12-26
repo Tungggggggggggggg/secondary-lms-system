@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfAssignment } from "@/lib/api-utils";
@@ -71,7 +70,7 @@ export async function GET(
     const skip = (page - 1) * limit;
 
     // Xây dựng where clause
-    const whereClause: Prisma.AssignmentSubmissionWhereInput = {
+    const whereClause: any = {
       assignmentId,
     };
 

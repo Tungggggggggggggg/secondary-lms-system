@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import fetcher from "@/lib/fetcher";
 
 type TeacherOption = {
   id: string;
@@ -193,11 +194,10 @@ export default function AdminClassroomDetailPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/admin/classrooms/${classroomId}`, { cache: "no-store" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải thông tin lớp");
-      }
+
+      const json = await fetcher<{ success: true; data: ClassroomDetail }>(
+        `/api/admin/classrooms/${classroomId}`
+      );
       setClassroom(json.data as ClassroomDetail);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Có lỗi xảy ra");
@@ -287,12 +287,11 @@ export default function AdminClassroomDetailPage() {
       const params = new URLSearchParams();
       params.set("limit", "100");
       if (q.trim()) params.set("q", q.trim());
-      const res = await fetch(`/api/admin/teachers?${params.toString()}`, { cache: "no-store" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải danh sách giáo viên");
-      }
-      const data = json.data as { items: TeacherOption[] };
+
+      const json = await fetcher<{ success: true; data?: { items?: unknown } }>(
+        `/api/admin/teachers?${params.toString()}`
+      );
+      const data = json.data as { items?: TeacherOption[] };
       setTeacherOptions(Array.isArray(data?.items) ? data.items : []);
     } catch {
       setTeacherOptions([]);
@@ -312,13 +311,9 @@ export default function AdminClassroomDetailPage() {
       params.set("pageSize", String(studentsPageSize));
       if (nextSearch.trim()) params.set("q", nextSearch.trim());
 
-      const res = await fetch(`/api/admin/classrooms/${classroomId}/students?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải danh sách học sinh");
-      }
+      const json = await fetcher<{ success: true; data: StudentsResponse }>(
+        `/api/admin/classrooms/${classroomId}/students?${params.toString()}`
+      );
 
       const data = json.data as StudentsResponse;
       setStudents(Array.isArray(data?.items) ? data.items : []);

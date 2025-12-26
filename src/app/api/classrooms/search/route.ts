@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 
@@ -54,7 +53,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Build Prisma where clause
-        const where: Prisma.ClassroomWhereInput = {
+        const where: any = {
             isActive: true,
             // Exclude classes the student already joined
             students: { none: { studentId: userId } },

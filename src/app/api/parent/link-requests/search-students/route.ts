@@ -70,7 +70,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
     };
 
     // Tìm học sinh
-    const [studentsRaw, total] = await Promise.all([
+    const [studentsRaw, total] = (await Promise.all([
       prisma.user.findMany({
         where,
         take: limit,
@@ -96,7 +96,16 @@ export const GET = withApiLogging(async (req: NextRequest) => {
         orderBy: { fullname: "asc" },
       }),
       prisma.user.count({ where }),
-    ]);
+    ])) as [
+      Array<{
+        id: string;
+        email: string;
+        fullname: string | null;
+        role: string;
+        studentClassrooms: ParentSearchStudentClassroomRow[];
+      }>,
+      number,
+    ];
 
     // Kiểm tra xem đã có link hoặc request chưa
     const studentIds = studentsRaw.map((s) => s.id);

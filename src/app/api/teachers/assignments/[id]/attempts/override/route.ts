@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
@@ -46,7 +45,7 @@ export async function POST(
     const { studentId, attemptNumber, action, minutes, reason } = parsedBody.data;
 
     // Tìm attempt hiện tại của học sinh
-    const attemptWhere: Prisma.AssignmentAttemptWhereInput = {
+    const attemptWhere: any = {
       assignmentId,
       studentId,
       ...(typeof attemptNumber === "number" ? { attemptNumber } : {}),
@@ -62,7 +61,7 @@ export async function POST(
     }
 
     const now = new Date();
-    const updateData: Prisma.AssignmentAttemptUpdateInput = {};
+    const updateData: any = {};
 
     switch (action) {
       case "EXTEND_TIME": {
@@ -126,7 +125,7 @@ export async function POST(
             attemptId: updatedAttempt.id,
             attemptNumber: updatedAttempt.attemptNumber,
             at: now.toISOString(),
-          } as Prisma.InputJsonValue,
+          } as any,
         },
       });
     } catch (e) {

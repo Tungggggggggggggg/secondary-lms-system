@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { coercePrismaJson } from "@/lib/prisma-json";
-import { Prisma } from "@prisma/client";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
 
 type NotificationRow = {
@@ -20,6 +19,7 @@ type NotificationDelegate = {
   upsert: (args: unknown) => Promise<unknown>;
   create: (args: unknown) => Promise<unknown>;
   createMany: (args: unknown) => Promise<unknown>;
+  deleteMany: (args: unknown) => Promise<unknown>;
   count: (args: unknown) => Promise<unknown>;
   findMany: (args: unknown) => Promise<unknown>;
   findFirst: (args: unknown) => Promise<unknown>;
@@ -61,9 +61,13 @@ type AddManyInput = {
   input: CreateNotificationInput;
 };
 
+// Retention: giới hạn số notifications lưu trên DB cho mỗi user.
+// Legacy (system_settings JSON) đã mặc định trim ~200 item, nên chỉ cần áp dụng cho DB mode.
+const MAX_NOTIFICATIONS_PER_USER = 500;
+
 function normalizeMeta(
   value: unknown
-): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+): any {
   return coercePrismaJson(value);
 }
 
@@ -151,6 +155,27 @@ async function readLegacyList(userId: string): Promise<NotificationItem[]> {
 
 async function writeLegacyList(userId: string, items: NotificationItem[]): Promise<void> {
   await settingsRepo.set(getLegacyKey(userId), items);
+}
+
+async function trimUserNotifications(userId: string): Promise<void> {
+  if (!prismaNotification) return;
+  try {
+    const oldRows = (await prismaNotification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      skip: MAX_NOTIFICATIONS_PER_USER,
+      select: { id: true },
+    } as unknown)) as Array<{ id: string }>;
+
+    if (!oldRows.length) return;
+
+    await prismaNotification.deleteMany({
+      where: { id: { in: oldRows.map((r) => r.id) } },
+    } as unknown);
+  } catch (err: unknown) {
+    if (!shouldFallbackToLegacyOnError(err)) throw err;
+    logLegacyFallback("trimUserNotifications(deleteMany)", err);
+  }
 }
 
 function rowToItem(row: NotificationRow): NotificationItem {
@@ -321,6 +346,7 @@ export const notificationRepo = {
           },
         })) as NotificationRow;
 
+        await trimUserNotifications(userId);
         return rowToItem(saved);
       } catch (err: unknown) {
         if (!shouldFallbackToLegacyOnError(err)) throw err;
@@ -366,6 +392,7 @@ export const notificationRepo = {
         },
       })) as NotificationRow;
 
+      await trimUserNotifications(userId);
       return rowToItem(saved);
     } catch (err: unknown) {
       if (!shouldFallbackToLegacyOnError(err)) throw err;
@@ -431,6 +458,11 @@ export const notificationRepo = {
           data: rows,
           skipDuplicates: true,
         } as unknown);
+
+        const userIds = Array.from(new Set(chunk.map((it) => it.userId)));
+        for (const uid of userIds) {
+          await trimUserNotifications(uid);
+        }
       } catch (err: unknown) {
         if (!shouldFallbackToLegacyOnError(err)) throw err;
         logLegacyFallback("addMany(createMany)", err);

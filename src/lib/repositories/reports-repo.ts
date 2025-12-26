@@ -110,7 +110,7 @@ export const reportsRepo = {
           ORDER BY 1 ASC
         `;
 
-    return rows.map((r) => ({ date: r.date, count: Number(r.count) }));
+    return rows.map((r: GrowthRow) => ({ date: r.date, count: Number(r.count) }));
   },
 };
 

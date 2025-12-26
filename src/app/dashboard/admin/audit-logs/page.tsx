@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import fetcher from "@/lib/fetcher";
 
 type AuditLogItem = {
   id: string;
@@ -56,14 +57,9 @@ export default function AdminAuditLogsPage() {
       if (toFilter) params.set("to", toFilter);
       if (cursorParam) params.set("cursor", cursorParam);
 
-      const res = await fetch(`/api/admin/audit-logs?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const json = await res.json();
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải audit logs");
-      }
-
+      const json = await fetcher<{ success: true; data: AuditResponse }>(
+        `/api/admin/audit-logs?${params.toString()}`
+      );
       const data = json.data as AuditResponse;
       setLogs((prev) => (reset ? data.items : [...prev, ...data.items]));
       setCursor(data.nextCursor);

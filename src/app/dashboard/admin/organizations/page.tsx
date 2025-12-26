@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import fetcher from "@/lib/fetcher";
 
 type OrgStatus = "ACTIVE" | "INACTIVE";
 
@@ -89,25 +90,10 @@ export default function AdminOrganizationsPage() {
       if (cursorParam) params.set("cursor", cursorParam);
       params.set("limit", "20");
 
-      const res = await fetch(`/api/admin/organizations?${params.toString()}`, { cache: "no-store" });
-      const json = (await res.json().catch(() => ({}))) as unknown;
-
-      const ok =
-        typeof json === "object" &&
-        json !== null &&
-        (json as { success?: unknown }).success === true;
-
-      if (!res.ok || !ok) {
-        const msg =
-          typeof json === "object" &&
-          json !== null &&
-          typeof (json as { message?: unknown }).message === "string"
-            ? (json as { message: string }).message
-            : "Không thể tải danh sách organizations";
-        throw new Error(msg);
-      }
-
-      const data = (json as { data?: unknown }).data as ListResponse;
+      const json = await fetcher<{ success: true; data: ListResponse }>(
+        `/api/admin/organizations?${params.toString()}`
+      );
+      const data = json.data as ListResponse;
       const list = Array.isArray(data?.items) ? data.items : [];
       setItems((prev) => (reset ? list : [...prev, ...list]));
       setNextCursor(typeof data?.nextCursor === "string" ? data.nextCursor : null);

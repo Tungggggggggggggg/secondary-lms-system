@@ -144,35 +144,61 @@ Hiện codebase còn nhiều chỗ dùng `fetch({ cache: "no-store" })` hoặc S
 
 Khuyến nghị:
 
-- Rà soát và giảm `no-store` ở các trang/hook gọi liên tục, ưu tiên:
-  - `src/hooks/use-announcements.ts`
-  - `src/hooks/use-teacher-submissions.ts`
-  - `src/hooks/use-admin-stats.ts`
-  - `src/hooks/use-chat.ts`
-  - các trang admin trong `src/app/dashboard/admin/*`
-- Chuẩn hoá fetcher dùng chung (ưu tiên dùng `src/lib/fetcher.ts`) để thống nhất parse error + không lặp code.
+- Checklist triển khai (đánh dấu sau mỗi lần refactor):
+  - [x] Chuẩn hoá fetcher dùng chung: `src/lib/fetcher.ts`
+  - [x] `src/hooks/use-announcements.ts`
+  - [x] `src/hooks/use-teacher-submissions.ts`
+  - [x] `src/hooks/use-admin-stats.ts`
+  - [x] `src/hooks/use-chat.ts`
+  - [ ] các trang admin trong `src/app/dashboard/admin/*`
+    - [x] `src/app/dashboard/admin/users/page.tsx`
+    - [x] `src/app/dashboard/admin/users/[id]/page.tsx`
+    - [x] `src/app/dashboard/admin/classrooms/page.tsx`
+    - [x] `src/app/dashboard/admin/classrooms/[id]/page.tsx`
+    - [x] `src/app/dashboard/admin/audit-logs/page.tsx`
+    - [x] `src/app/dashboard/admin/settings/page.tsx`
+    - [x] `src/app/dashboard/admin/organizations/page.tsx`
+    - [x] `src/app/dashboard/admin/organizations/[id]/page.tsx`
+
 - Tận dụng `Cache-Control` phía server thay vì ép `no-store` phía client.
 
 ### 4.2. Chat polling (đo lường rồi tinh chỉnh)
 
-- `use-chat.ts` đang refresh khá thường xuyên (`8s`, `15s`, ...). Với DB latency cao có thể tạo tải nền lớn.
-- Khuyến nghị:
-  - Tăng `dedupingInterval`, giảm `refreshInterval`, hoặc chỉ refresh khi tab focus.
-  - Nếu cần realtime: cân nhắc WebSocket / SSE thay vì polling.
-- Rà soát thêm index cần thiết (nếu chưa có): `messages(conversationId, createdAt)`.
+-[x] `use-chat.ts` đang refresh khá thường xuyên (`8s`, `15s`, ...). Với DB latency cao có thể tạo tải nền lớn.
+-[x] Khuyến nghị:
+  -[x] Tăng `dedupingInterval`, giảm `refreshInterval`, hoặc chỉ refresh khi tab focus.
+  -[x] Nếu cần realtime: cân nhắc WebSocket / SSE thay vì polling.
+-[x] Rà soát thêm index cần thiết (nếu chưa có): `messages(conversationId, createdAt)`.
+
+- Đã triển khai (2025-12-27):
+  - `useConversations()`: `refreshInterval = 30s`, `dedupingInterval = 45s`, `revalidateOnFocus = true`, tắt `refreshWhenHidden` / `refreshWhenOffline`.
+  - `useMessages()`: `refreshInterval = 10s`, `dedupingInterval = 15s`, `revalidateOnFocus = true`, tắt `refreshWhenHidden` / `refreshWhenOffline`.
+  - `useUnreadTotal()`: giữ `refreshInterval = 60s`, `dedupingInterval = 45s`, tắt `refreshWhenHidden` / `refreshWhenOffline`.
 
 ### 4.3. Notifications (hoàn thiện sau migrate)
 
 - Khi đã migrate DB:
-  - Theo dõi log `legacy_fallback` để đảm bảo không còn fallback.
-  - Xác định chính sách retention (giới hạn số notification lưu theo user) và pagination.
+  -[x] Theo dõi log `legacy_fallback` để đảm bảo không còn fallback.
+  -[x] Xác định chính sách retention (giới hạn số notification lưu theo user) và pagination.
+  -[x] Đã triển khai (2025-12-27):
+    - `notificationRepo` (DB mode) tự động trim tối đa ~500 notifications gần nhất trên mỗi user bằng `trimUserNotifications()` sau khi `add()`/`addMany()` (legacy JSON vẫn giữ ngưỡng ~200). 
+    - API `/api/notifications` dùng `notificationRepo.list(user.id, { limit: 50 })` để trả về tối đa 50 notification mới nhất + `countUnread()` để tính unread chính xác.
 
 ### 4.4. Observability / đo lường
 
 - Bật/thu thập số liệu:
-  - Prisma query log (slow query warning).
-  - Postgres `pg_stat_statements` (nếu môi trường cho phép).
-- Theo dõi p95/p99 cho các endpoint dashboard chính.
+  -[x] Prisma query log (slow query warning).
+  -[x] Postgres `pg_stat_statements` (nếu môi trường cho phép).
+-[x] Theo dõi p95/p99 cho các endpoint dashboard chính.
+  - Đã triển khai (2025-12-27):
+    - `src/lib/prisma.ts`: bật Prisma log ở chế độ phát triển với event `query` và log `[SLOW QUERY]` cho các query > 1000ms.
+    - `src/lib/performance-monitor.ts`: lưu trữ tối đa 1000 metrics gần nhất, log `[SLOW_API]` / `[VERY_SLOW_API]`, và tính thêm `p50` / `p95` / `p99` cho thời gian phản hồi.
+    - Bọc một số endpoint quan trọng bằng `withPerformanceTracking()` để tự động ghi metric:
+      - `GET /api/assignments` (teacher list assignments)
+      - `POST /api/ai/tutor/chat`
+      - `POST /api/ai/anti-cheat/summary`
+      - `POST /api/exam-events`
+      - `GET /api/teachers/dashboard/stats`
 
 ## 5) Checklist kiểm chứng (sau khi áp dụng)
 
@@ -184,13 +210,36 @@ Khuyến nghị:
 
 ### 5.2. Manual check (UI + Network)
 
-- Điều hướng dashboard teacher/student:
-  - Không còn middleware gọi nội bộ `/api/system/settings`.
-  - Badge notifications hiển thị đúng `unread`.
-  - Upload/tải `lesson_attachments` không còn 500.
-- Chrome DevTools → Network:
-  - Kiểm tra có request storm không (nhiều request trùng key trong vài giây).
-  - So sánh TTFB trước/sau.
+- Luồng 1 – Dashboard teacher:
+  - [x ] Đăng nhập bằng tài khoản **teacher**, mở dashboard chính.
+  - [x ] Kiểm tra các thẻ thống kê (stats / performance / tasks / goals / activities) hiển thị bình thường, không lỗi 500.
+  - [ x] Mở Chrome DevTools → tab **Network**, filter `teachers/dashboard`:
+    - [ x] Mỗi endpoint `/api/teachers/dashboard/*` chỉ được gọi **1 lần** khi load trang (không bị gọi lặp nhiều lần do nhiều component trùng key).
+    - [x ] Các response có header `Cache-Control` đúng như cấu hình (`private, max-age=10, stale-while-revalidate=50` hoặc tương đương).
+
+- Luồng 2 – Notifications:
+  - [ x] Thực hiện 1–2 hành động sinh notification (gửi announcement, chấm bài, gửi tin nhắn teacher → parent).
+  - [x ] Mở UI có `NotificationBell`:
+    - [x ] Badge `unread` hiển thị đúng số chưa đọc (so sánh với response `/api/notifications` → field `unread`).
+    - [x ] Mở panel, bấm **"Đánh dấu đã đọc tất cả"** (hoặc tương đương):
+      - [ x] Request `POST /api/notifications/mark-all-read` thành công.
+      - [ x] Badge `unread` về 0 sau khi panel refresh.
+    - [ x] Click vào 1 notification:
+      - [x ] Gửi `PATCH /api/notifications/:id` đánh dấu đã đọc.
+      - [x ] Điều hướng tới đúng `actionUrl` (nếu có).
+
+- Luồng 3 – Lesson attachments:
+  - [ ] Từ role teacher, upload 1 file đính kèm cho lesson (lesson attachments) từ UI.
+  - [ ] Reload trang, bấm tải lại file vừa upload:
+    - [ ] Không còn lỗi 500.
+    - [ ] File tải về mở được, nội dung đúng.
+
+- Chrome DevTools → Network (polling / request storm):
+  - [ x] Mở đồng thời dashboard teacher + 1–2 trang chat, để yên 1–2 phút.
+  - [x ] Trong tab Network, filter lần lượt theo `/api/chat/*`, `/api/notifications`, `/api/system/settings`:
+    - [x ] Không xuất hiện nhiều request trùng URL sát nhau trong vài giây (không có request storm).
+    - [x ] Khoảng cách giữa các lần poll khớp với cấu hình `refreshInterval` mới (ví dụ: 10s cho messages, 30s cho conversations, 60s cho unread total).
+ 
 
 ### 5.3. Log/DB check
 
@@ -201,14 +250,37 @@ Khuyến nghị:
 ## 6) Checklist rà soát nút nghẽn tiếp theo (cho người tiếp quản)
 
 - **DB / Prisma**
-  - Đảm bảo pool size phù hợp; tránh serialize queries.
-  - Rà soát N+1 (`include`/`select`), payload lớn, thiếu index.
-  - Dùng `EXPLAIN (ANALYZE, BUFFERS)` cho query p95 cao.
+  - [ ] Kiểm tra cấu hình `DATABASE_URL` trên từng môi trường:
+    - [ ] Có dùng pooler (PgBouncer/Supabase pooler) nếu hạ tầng cho phép.
+    - [ ] Pool size/phân bổ connection phù hợp tải thực tế, không để `connection_limit=1`.
+  - [ ] Dựa trên log `[SLOW QUERY]` / APM, liệt kê top 5–10 query có **p95/p99 cao nhất**.
+  - Với từng query chậm:
+    - [ ] Chạy `EXPLAIN (ANALYZE, BUFFERS)` trên DB thật hoặc staging dữ liệu tương đương.
+    - [ ] Kiểm tra kế hoạch thực thi: có dùng index đúng không, có full scan/bloated index không.
+    - [ ] Nếu thiếu index cho các cột trong `WHERE` / `JOIN` / `ORDER BY`, thiết kế thêm index (ưu tiên index tổng hợp phục vụ nhiều truy vấn).
+    - [ ] Rà soát code Prisma tương ứng:
+      - [ ] Giảm N+1 (chuyển từ nhiều query nhỏ sang 1 query với `IN` / `DISTINCT ON` / join phù hợp).
+      - [ ] Dùng `select` thay vì `include` nếu chỉ cần một số trường.
+      - [ ] Hạn chế load JSON/payload lớn nếu không dùng đến.
+
 - **API**
-  - Endpoint nào `take` quá lớn (vd `take: 500`) → cân nhắc pagination.
-  - Batch write khi có loop theo user/classroom.
+  - [ ] Rà soát các endpoint trả về danh sách lớn:
+    - [ ] Tìm trong code các chỗ `take: 500` / `take: 1000` / không giới hạn `take`.
+    - [ ] Với mỗi endpoint dạng list, xác định **page size hợp lý** (ví dụ 20–100 tuỳ màn hình) và chuẩn hoá pagination (cursor/offset).
+  - [ ] Tìm các chỗ ghi DB trong vòng lặp:
+    - [ ] Nếu đang gọi `create`/`update` trong loop theo user/classroom, cân nhắc chuyển sang `createMany` / `updateMany` / batch `upsert` tương tự `notificationRepo.addMany()`.
+    - [ ] Đảm bảo mọi thao tác batch đều bọc trong transaction nếu cần tính nhất quán.
+  - [ ] Với những API hay được gọi nền (polling, dashboard widgets), đảm bảo:
+    - [ ] Có `Cache-Control` hợp lý.
+    - [ ] Logic SQL tối ưu, không filter/sort nặng trên dữ liệu đã load về JS.
+
 - **Frontend**
-  - Tránh `cache: "no-store"` mặc định.
-  - Tránh SWR `refreshInterval` dày ở nhiều component cùng lúc.
-  - Tránh mount nhiều component cùng gọi 1 endpoint nhưng khác key.
+  - [ ] Tìm toàn bộ `fetch({ cache: "no-store" })` và các chỗ ép `cache: "no-store"`:
+    - [ ] Giải thích được lý do phải no-store (ví dụ: export file, dữ liệu cực realtime); nếu không, chuyển sang dùng fetcher mặc định + rely vào `Cache-Control` server.
+  - [ ] Rà soát các hook dùng SWR:
+    - [ ] Tìm `refreshInterval` < 10s hoặc nhiều hook khác nhau cùng poll → gộp lại / nới interval / chỉ poll khi tab focus.
+    - [ ] Chuẩn hoá `dedupingInterval`, `revalidateOnFocus`, `refreshWhenHidden`, `refreshWhenOffline` tương tự `use-chat` để tránh request storm.
+  - [ ] Kiểm tra những màn hình có nhiều component cùng gọi 1 endpoint:
+    - [ ] Đảm bảo chúng dùng chung hook/fetcher với cùng key (để SWR/dedup hoạt động), tránh mỗi component gọi 1 key khác nhau.
+    - [ ] Nếu cần nhiều view trên cùng dữ liệu, cân nhắc state chung ở parent hoặc context thay vì fetch lại.
 
