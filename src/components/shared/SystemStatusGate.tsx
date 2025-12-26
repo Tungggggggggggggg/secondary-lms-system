@@ -25,7 +25,11 @@ export default function SystemStatusGate({
   role: DashboardRole;
   children: ReactNode;
 }) {
-  const { data, isLoading, mutate } = useSWR<SettingsResponse>("/api/system/settings");
+  const { data, isLoading, mutate } = useSWR<SettingsResponse>("/api/system/settings", {
+    keepPreviousData: true,
+    revalidateOnMount: true,
+    dedupingInterval: 60_000,
+  });
 
   useEffect(() => {
     const refresh = () => {

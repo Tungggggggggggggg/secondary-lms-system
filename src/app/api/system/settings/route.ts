@@ -49,7 +49,7 @@ export const GET = withApiLogging(async (req: NextRequest) => {
       {
         status: 200,
         headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Cache-Control": "private, max-age=5, stale-while-revalidate=55",
         },
       }
     );

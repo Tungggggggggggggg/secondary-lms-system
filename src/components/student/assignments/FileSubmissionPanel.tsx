@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -353,6 +353,9 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                         <div className="p-6 space-y-4">
                             <DialogHeader className="p-0">
                                 <DialogTitle className="text-lg">Chỉnh sửa tệp</DialogTitle>
+                                <DialogDescription className="sr-only">
+                                    Đổi tên, tải xuống hoặc xóa tệp trước khi lưu nháp hoặc nộp bài.
+                                </DialogDescription>
                             </DialogHeader>
                             <p className="text-xs text-muted-foreground">Đặt lại tên hiển thị trước khi lưu nháp hoặc nộp.</p>
 

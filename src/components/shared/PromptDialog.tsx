@@ -51,8 +51,10 @@ export default function PromptDialog({
       >
         <DialogHeader>
           <DialogTitle className="text-lg">{title}</DialogTitle>
-          {description && (
+          {description ? (
             <DialogDescription className="text-gray-600">{description}</DialogDescription>
+          ) : (
+            <DialogDescription className="sr-only">Hộp thoại nhập liệu.</DialogDescription>
           )}
         </DialogHeader>
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-2 space-y-2">

@@ -60,11 +60,27 @@ export async function listConversations(userId: string): Promise<ConversationLis
   const prismaAny = prisma as any;
   const cps = await prismaAny.conversationParticipant.findMany({
     where: { userId },
-    include: {
+    select: {
+      conversationId: true,
+      lastReadAt: true,
       conversation: {
-        include: {
-          participants: { include: { user: { select: { id: true, fullname: true, role: true } } } },
-          messages: { orderBy: { createdAt: "desc" }, take: 1 },
+        select: {
+          id: true,
+          type: true,
+          createdAt: true,
+          classId: true,
+          contextStudentId: true,
+          participants: {
+            select: {
+              userId: true,
+              user: { select: { fullname: true, role: true } },
+            },
+          },
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { id: true, content: true, createdAt: true, senderId: true },
+          },
         },
       },
     },
@@ -88,34 +104,31 @@ export async function listConversations(userId: string): Promise<ConversationLis
     unreadRows.map((r) => [r.conversationId, Number(r.cnt)])
   );
 
-  const items = await Promise.all(
-    cps.map(async (cp: any) => {
-      const unreadCount = unreadByConversationId.get(cp.conversationId) ?? 0;
-      return {
-        id: cp.conversation.id,
-        type: cp.conversation.type,
-        createdAt: cp.conversation.createdAt.toISOString(),
-        classId: cp.conversation.classId,
-        contextStudentId: cp.conversation.contextStudentId,
-        lastMessage: cp.conversation.messages[0]
-          ? {
-              id: cp.conversation.messages[0].id,
-              content: cp.conversation.messages[0].content,
-              createdAt: cp.conversation.messages[0].createdAt.toISOString(),
-              senderId: cp.conversation.messages[0].senderId,
-            }
-          : null,
-        participants: cp.conversation.participants.map((p: any) => ({
-          userId: p.userId,
-          fullname: p.user.fullname,
-          role: p.user.role,
-        })),
-        self: { userId, lastReadAt: cp.lastReadAt?.toISOString() ?? null },
-        unreadCount,
-      } as ConversationListItem;
-    })
-  );
-  return items;
+  return (cps as any[]).map((cp: any) => {
+    const unreadCount = unreadByConversationId.get(cp.conversationId) ?? 0;
+    return {
+      id: cp.conversation.id,
+      type: cp.conversation.type,
+      createdAt: cp.conversation.createdAt.toISOString(),
+      classId: cp.conversation.classId,
+      contextStudentId: cp.conversation.contextStudentId,
+      lastMessage: cp.conversation.messages[0]
+        ? {
+            id: cp.conversation.messages[0].id,
+            content: cp.conversation.messages[0].content,
+            createdAt: cp.conversation.messages[0].createdAt.toISOString(),
+            senderId: cp.conversation.messages[0].senderId,
+          }
+        : null,
+      participants: cp.conversation.participants.map((p: any) => ({
+        userId: p.userId,
+        fullname: p.user.fullname,
+        role: p.user.role,
+      })),
+      self: { userId, lastReadAt: cp.lastReadAt?.toISOString() ?? null },
+      unreadCount,
+    } as ConversationListItem;
+  });
 }
 
 export async function findReusableConversation(params: {
@@ -133,7 +146,10 @@ export async function findReusableConversation(params: {
       contextStudentId: contextStudentId ?? null,
       AND: participantIds.map((uid) => ({ participants: { some: { userId: uid } } })),
     },
-    include: { participants: true },
+    select: {
+      id: true,
+      participants: { select: { userId: true } },
+    },
     take: 10,
   });
 
@@ -311,20 +327,22 @@ export async function markRead(conversationId: string, userId: string) {
 
 
 export async function searchMessages(userId: string, query: string) {
-  const conversations = await prisma.conversationParticipant.findMany({
-    where: { userId },
-    select: { conversationId: true },
-  });
-  const conversationIds = conversations.map((c) => c.conversationId);
-
   const messages = await prisma.message.findMany({
     where: {
-      conversationId: { in: conversationIds },
+      conversation: { participants: { some: { userId } } },
       content: { contains: query, mode: 'insensitive' },
     },
-    include: {
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      conversationId: true,
       sender: { select: { fullname: true } },
-      conversation: { select: { participants: { include: { user: { select: { fullname: true } } } } } },
+      conversation: {
+        select: {
+          participants: { select: { user: { select: { fullname: true } } } },
+        },
+      },
     },
     orderBy: { createdAt: 'desc' },
     take: 20,

@@ -55,17 +55,18 @@ export async function POST(req: NextRequest) {
           .map((p) => p.userId);
 
         if (parentIds.length > 0) {
-          await Promise.allSettled(
-            parentIds.map((pid) =>
-              notificationRepo.add(pid, {
+          await notificationRepo.addMany(
+            parentIds.map((pid) => ({
+              userId: pid,
+              input: {
                 type: "PARENT_MESSAGE_NEW",
                 title: `Tin nhắn mới từ ${teacherName}`,
                 description: (content || "").trim().slice(0, 200),
                 actionUrl: "/dashboard/parent/messages",
                 dedupeKey: `chat:${msg.id}:${pid}`,
                 meta: { messageId: msg.id, conversationId, senderId: user.id },
-              })
-            )
+              },
+            }))
           );
         }
       }

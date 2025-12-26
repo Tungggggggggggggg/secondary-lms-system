@@ -205,18 +205,21 @@ export async function POST(
       const actionUrl = `/dashboard/student/classes/${classroomId}/announcements/${created.id}`;
       const snippet = created.content.length > 140 ? `${created.content.slice(0, 140)}...` : created.content;
 
-      await Promise.all(
-        classroomStudents.map((cs) =>
-          notificationRepo.add(cs.studentId, {
-            type: "STUDENT_ANNOUNCEMENT_NEW",
-            title: "Bảng tin mới",
-            description: snippet,
-            actionUrl,
-            dedupeKey: `announcement:new:${created.id}:${cs.studentId}`,
-            meta: { classroomId, announcementId: created.id },
-          })
-        )
-      );
+      if (classroomStudents.length > 0) {
+        await notificationRepo.addMany(
+          classroomStudents.map((cs) => ({
+            userId: cs.studentId,
+            input: {
+              type: "STUDENT_ANNOUNCEMENT_NEW",
+              title: "Bảng tin mới",
+              description: snippet,
+              actionUrl,
+              dedupeKey: `announcement:new:${created.id}:${cs.studentId}`,
+              meta: { classroomId, announcementId: created.id },
+            },
+          }))
+        );
+      }
     } catch (err) {
       console.error(
         `[WARN] Failed to create announcement notifications {requestId:${requestId}}`,

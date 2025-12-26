@@ -60,11 +60,12 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
 
     let order = parsed.data.order;
     if (!order) {
-      const max = await prisma.lesson.aggregate({
+      const last = await prisma.lesson.findFirst({
         where: { courseId },
-        _max: { order: true },
+        orderBy: { order: "desc" },
+        select: { order: true },
       });
-      order = (max._max.order ?? 0) + 1;
+      order = (last?.order ?? 0) + 1;
     }
 
     const created = await prisma.lesson.create({

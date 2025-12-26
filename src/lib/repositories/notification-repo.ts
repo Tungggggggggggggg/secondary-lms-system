@@ -1,4 +1,33 @@
+import { prisma } from "@/lib/prisma";
+import { coercePrismaJson } from "@/lib/prisma-json";
+import { Prisma } from "@prisma/client";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
+
+type NotificationRow = {
+  id: string;
+  type: string | null;
+  title: string;
+  description: string | null;
+  createdAt: Date;
+  read: boolean;
+  actionUrl: string | null;
+  severity: "INFO" | "WARNING" | "CRITICAL";
+  dedupeKey: string | null;
+  meta: unknown;
+};
+
+type NotificationDelegate = {
+  upsert: (args: unknown) => Promise<unknown>;
+  create: (args: unknown) => Promise<unknown>;
+  createMany: (args: unknown) => Promise<unknown>;
+  count: (args: unknown) => Promise<unknown>;
+  findMany: (args: unknown) => Promise<unknown>;
+  findFirst: (args: unknown) => Promise<unknown>;
+  update: (args: unknown) => Promise<unknown>;
+  updateMany: (args: unknown) => Promise<{ count: number }>;
+};
+
+const prismaNotification = (prisma as unknown as { notification?: NotificationDelegate }).notification;
 
 export type NotificationItem = {
   id: string;
@@ -27,20 +56,15 @@ type ListOptions = {
   limit?: number;
 };
 
-function nowIso(): string {
-  return new Date().toISOString();
-}
+type AddManyInput = {
+  userId: string;
+  input: CreateNotificationInput;
+};
 
-function generateId(): string {
-  try {
-    const maybeCrypto = globalThis.crypto as unknown as { randomUUID?: () => string } | undefined;
-    if (maybeCrypto?.randomUUID) {
-      return maybeCrypto.randomUUID();
-    }
-    throw new Error("randomUUID not available");
-  } catch {
-    return `n_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  }
+function normalizeMeta(
+  value: unknown
+): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+  return coercePrismaJson(value);
 }
 
 function normalizeText(value: string, max: number): string {
@@ -49,12 +73,44 @@ function normalizeText(value: string, max: number): string {
   return trimmed.slice(0, max);
 }
 
-function getKey(userId: string): string {
+function generateId(): string {
+  try {
+    const maybeCrypto = globalThis.crypto as unknown as { randomUUID?: () => string } | undefined;
+    if (maybeCrypto?.randomUUID) return maybeCrypto.randomUUID();
+  } catch {}
+  return `n_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function getLegacyKey(userId: string): string {
   return `notifications:${userId}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function logLegacyFallback(action: string, err: unknown): void {
+  try {
+    const isProd = process.env.NODE_ENV === "production";
+    const record = isRecord(err) ? err : null;
+    const code = record && typeof record.code === "string" ? record.code : null;
+    const message = err instanceof Error ? err.message : String(err);
+    const payload = { at: new Date().toISOString(), action, code, message };
+    if (isProd) {
+      console.warn("[notificationRepo] legacy_fallback", payload);
+    } else {
+      console.warn("[notificationRepo] legacy_fallback", payload);
+    }
+  } catch {}
+}
+
+function shouldFallbackToLegacyOnError(err: unknown): boolean {
+  if (!err) return true;
+  if (isRecord(err) && typeof err.code === "string") {
+    if (err.code === "P2021") return true;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.toLowerCase().includes("notifications") && msg.toLowerCase().includes("does not exist");
 }
 
 function isNotificationItem(value: unknown): value is NotificationItem {
@@ -72,13 +128,14 @@ function isNotificationItem(value: unknown): value is NotificationItem {
     value.severity !== "INFO" &&
     value.severity !== "WARNING" &&
     value.severity !== "CRITICAL"
-  )
+  ) {
     return false;
+  }
   return true;
 }
 
-async function readList(userId: string): Promise<NotificationItem[]> {
-  const raw = await settingsRepo.get(getKey(userId));
+async function readLegacyList(userId: string): Promise<NotificationItem[]> {
+  const raw = await settingsRepo.get(getLegacyKey(userId));
   if (!Array.isArray(raw)) return [];
   const items: NotificationItem[] = [];
   for (const it of raw) {
@@ -92,8 +149,105 @@ async function readList(userId: string): Promise<NotificationItem[]> {
   return items;
 }
 
-async function writeList(userId: string, items: NotificationItem[]): Promise<void> {
-  await settingsRepo.set(getKey(userId), items);
+async function writeLegacyList(userId: string, items: NotificationItem[]): Promise<void> {
+  await settingsRepo.set(getLegacyKey(userId), items);
+}
+
+function rowToItem(row: NotificationRow): NotificationItem {
+  return {
+    id: row.id,
+    type: row.type ?? undefined,
+    title: row.title,
+    description: row.description ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+    read: row.read,
+    actionUrl: row.actionUrl ?? undefined,
+    severity: row.severity,
+    dedupeKey: row.dedupeKey ?? undefined,
+    meta: row.meta as unknown,
+  };
+}
+
+async function addLegacySingle(userId: string, next: NotificationItem): Promise<NotificationItem> {
+  const current = await readLegacyList(userId);
+  let merged: NotificationItem[];
+  const dedupeKey = next.dedupeKey;
+  if (dedupeKey) {
+    const idx = current.findIndex((i) => i.dedupeKey === dedupeKey);
+    if (idx >= 0) {
+      const existed = current[idx];
+      const updated: NotificationItem = {
+        ...existed,
+        ...next,
+        id: existed.id,
+        createdAt: new Date().toISOString(),
+        read: existed.read,
+      };
+      merged = [updated, ...current.slice(0, idx), ...current.slice(idx + 1)];
+    } else {
+      merged = [next, ...current];
+    }
+  } else {
+    merged = [next, ...current];
+  }
+  merged = merged.slice(0, 200);
+  await writeLegacyList(userId, merged);
+  return next;
+}
+
+async function addManyLegacy(items: AddManyInput[]): Promise<void> {
+  const grouped = new Map<string, AddManyInput[]>();
+  for (const it of items) {
+    const arr = grouped.get(it.userId) ?? [];
+    arr.push(it);
+    grouped.set(it.userId, arr);
+  }
+
+  for (const [userId, list] of grouped) {
+    let merged = await readLegacyList(userId);
+    for (const it of list) {
+      const title = normalizeText(it.input.title, 120);
+      const description = it.input.description ? normalizeText(it.input.description, 500) : undefined;
+      const type = it.input.type ? normalizeText(it.input.type, 80) : undefined;
+      const actionUrl = it.input.actionUrl ? normalizeText(it.input.actionUrl, 1000) : undefined;
+      const severity = it.input.severity ?? "INFO";
+      const dedupeKey = it.input.dedupeKey ? normalizeText(it.input.dedupeKey, 200) : undefined;
+
+      const next: NotificationItem = {
+        id: generateId(),
+        type,
+        title,
+        description,
+        createdAt: new Date().toISOString(),
+        read: false,
+        actionUrl,
+        severity,
+        dedupeKey,
+        meta: it.input.meta,
+      };
+
+      if (dedupeKey) {
+        const idx = merged.findIndex((n) => n.dedupeKey === dedupeKey);
+        if (idx >= 0) {
+          const existed = merged[idx];
+          const updated: NotificationItem = {
+            ...existed,
+            ...next,
+            id: existed.id,
+            createdAt: new Date().toISOString(),
+            read: existed.read,
+          };
+          merged = [updated, ...merged.slice(0, idx), ...merged.slice(idx + 1)];
+        } else {
+          merged = [next, ...merged];
+        }
+      } else {
+        merged = [next, ...merged];
+      }
+      merged = merged.slice(0, 200);
+    }
+    await writeLegacyList(userId, merged);
+  }
 }
 
 export const notificationRepo = {
@@ -107,45 +261,205 @@ export const notificationRepo = {
     const actionUrl = input.actionUrl ? normalizeText(input.actionUrl, 1000) : undefined;
     const severity = input.severity ?? "INFO";
     const dedupeKey = input.dedupeKey ? normalizeText(input.dedupeKey, 200) : undefined;
-    const meta = input.meta;
+    const meta = normalizeMeta(input.meta);
 
-    const next: NotificationItem = {
-      id: generateId(),
-      type,
-      title,
-      description,
-      createdAt: nowIso(),
-      read: false,
-      actionUrl,
-      severity,
-      dedupeKey,
-      meta,
-    };
-
-    const current = await readList(userId);
-
-    let merged: NotificationItem[];
-    if (dedupeKey) {
-      const idx = current.findIndex((i) => i.dedupeKey === dedupeKey);
-      if (idx >= 0) {
-        const existed = current[idx];
-        const updated: NotificationItem = {
-          ...existed,
-          ...next,
-          id: existed.id,
-          createdAt: nowIso(),
-          read: existed.read,
-        };
-        merged = [updated, ...current.slice(0, idx), ...current.slice(idx + 1)];
-      } else {
-        merged = [next, ...current];
-      }
-    } else {
-      merged = [next, ...current];
+    if (!prismaNotification) {
+      const next: NotificationItem = {
+        id: generateId(),
+        type,
+        title,
+        description,
+        createdAt: new Date().toISOString(),
+        read: false,
+        actionUrl,
+        severity,
+        dedupeKey,
+        meta: input.meta,
+      };
+      return addLegacySingle(userId, next);
     }
-    merged = merged.slice(0, 200);
-    await writeList(userId, merged);
-    return next;
+
+    if (dedupeKey) {
+      try {
+        const saved = (await prismaNotification.upsert({
+          where: {
+            userId_dedupeKey: {
+              userId,
+              dedupeKey,
+            },
+          },
+          update: {
+            type,
+            title,
+            description,
+            actionUrl,
+            severity,
+            meta: meta ?? undefined,
+            createdAt: new Date(),
+          },
+          create: {
+            userId,
+            type,
+            title,
+            description,
+            actionUrl,
+            severity,
+            dedupeKey,
+            meta: meta ?? undefined,
+          },
+          select: {
+            id: true,
+            type: true,
+            title: true,
+            description: true,
+            createdAt: true,
+            read: true,
+            actionUrl: true,
+            severity: true,
+            dedupeKey: true,
+            meta: true,
+          },
+        })) as NotificationRow;
+
+        return rowToItem(saved);
+      } catch (err: unknown) {
+        if (!shouldFallbackToLegacyOnError(err)) throw err;
+        logLegacyFallback("add(upsert)", err);
+        const next: NotificationItem = {
+          id: generateId(),
+          type,
+          title,
+          description,
+          createdAt: new Date().toISOString(),
+          read: false,
+          actionUrl,
+          severity,
+          dedupeKey,
+          meta: input.meta,
+        };
+        return addLegacySingle(userId, next);
+      }
+    }
+
+    try {
+      const saved = (await prismaNotification.create({
+        data: {
+          userId,
+          type,
+          title,
+          description,
+          actionUrl,
+          severity,
+          meta: meta ?? undefined,
+        },
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          description: true,
+          createdAt: true,
+          read: true,
+          actionUrl: true,
+          severity: true,
+          dedupeKey: true,
+          meta: true,
+        },
+      })) as NotificationRow;
+
+      return rowToItem(saved);
+    } catch (err: unknown) {
+      if (!shouldFallbackToLegacyOnError(err)) throw err;
+      logLegacyFallback("add(create)", err);
+      const next: NotificationItem = {
+        id: generateId(),
+        type,
+        title,
+        description,
+        createdAt: new Date().toISOString(),
+        read: false,
+        actionUrl,
+        severity,
+        dedupeKey,
+        meta: input.meta,
+      };
+      return addLegacySingle(userId, next);
+    }
+  },
+
+  /**
+   * Thêm nhiều notifications theo batch.
+   * Side effects: ghi DB (hoặc fallback vào system_settings legacy khi thiếu bảng/Prisma lỗi).
+   */
+  async addMany(items: AddManyInput[]): Promise<void> {
+    if (items.length === 0) return;
+
+    if (!prismaNotification) {
+      await addManyLegacy(items);
+      return;
+    }
+
+    const chunkSize = 1000;
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const now = new Date();
+      const chunk = items.slice(i, i + chunkSize);
+      const rows = chunk.map((it) => {
+        const title = normalizeText(it.input.title, 120);
+        const description = it.input.description ? normalizeText(it.input.description, 500) : undefined;
+        const type = it.input.type ? normalizeText(it.input.type, 80) : undefined;
+        const actionUrl = it.input.actionUrl ? normalizeText(it.input.actionUrl, 1000) : undefined;
+        const severity = it.input.severity ?? "INFO";
+        const dedupeKey = it.input.dedupeKey ? normalizeText(it.input.dedupeKey, 200) : undefined;
+        const meta = normalizeMeta(it.input.meta);
+
+        return {
+          id: generateId(),
+          userId: it.userId,
+          type,
+          title,
+          description,
+          actionUrl,
+          severity,
+          dedupeKey,
+          meta: meta ?? undefined,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+
+      try {
+        await prismaNotification.createMany({
+          data: rows,
+          skipDuplicates: true,
+        } as unknown);
+      } catch (err: unknown) {
+        if (!shouldFallbackToLegacyOnError(err)) throw err;
+        logLegacyFallback("addMany(createMany)", err);
+        await addManyLegacy(chunk);
+      }
+    }
+  },
+
+  /**
+   * Đếm số notifications chưa đọc.
+   * Side effects: query DB (hoặc fallback legacy).
+   */
+  async countUnread(userId: string): Promise<number> {
+    if (!prismaNotification) {
+      const items = await readLegacyList(userId);
+      return items.filter((i) => !i.read).length;
+    }
+
+    try {
+      const n = (await prismaNotification.count({
+        where: { userId, read: false },
+      } as unknown)) as number;
+      return Number(n) || 0;
+    } catch (err: unknown) {
+      if (!shouldFallbackToLegacyOnError(err)) throw err;
+      logLegacyFallback("countUnread(count)", err);
+      const items = await readLegacyList(userId);
+      return items.filter((i) => !i.read).length;
+    }
   },
 
   /**
@@ -153,41 +467,193 @@ export const notificationRepo = {
    */
   async list(userId: string, opts?: ListOptions): Promise<NotificationItem[]> {
     const limit = Math.min(Math.max(opts?.limit ?? 50, 1), 200);
-    const items = await readList(userId);
-    return items.slice(0, limit);
+    if (!prismaNotification) {
+      const items = await readLegacyList(userId);
+      return items.slice(0, limit);
+    }
+    let rows: NotificationRow[];
+    try {
+      rows = (await prismaNotification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        description: true,
+        createdAt: true,
+        read: true,
+        actionUrl: true,
+        severity: true,
+        dedupeKey: true,
+        meta: true,
+      },
+      })) as NotificationRow[];
+    } catch (err: unknown) {
+      if (!shouldFallbackToLegacyOnError(err)) throw err;
+      logLegacyFallback("list(findMany)", err);
+      const items = await readLegacyList(userId);
+      return items.slice(0, limit);
+    }
+
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.type ?? undefined,
+      title: row.title,
+      description: row.description ?? undefined,
+      createdAt: row.createdAt.toISOString(),
+      read: row.read,
+      actionUrl: row.actionUrl ?? undefined,
+      severity: row.severity,
+      dedupeKey: row.dedupeKey ?? undefined,
+      meta: row.meta as unknown,
+    }));
   },
 
   /**
    * Lấy chi tiết 1 notification theo id.
    */
   async get(userId: string, id: string): Promise<NotificationItem | null> {
-    const items = await readList(userId);
-    return items.find((i) => i.id === id) ?? null;
+    if (!prismaNotification) {
+      const items = await readLegacyList(userId);
+      return items.find((i) => i.id === id) ?? null;
+    }
+    let row: NotificationRow | null;
+    try {
+      row = (await prismaNotification.findFirst({
+      where: { id, userId },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        description: true,
+        createdAt: true,
+        read: true,
+        actionUrl: true,
+        severity: true,
+        dedupeKey: true,
+        meta: true,
+      },
+      })) as NotificationRow | null;
+    } catch (err: unknown) {
+      if (!shouldFallbackToLegacyOnError(err)) throw err;
+      logLegacyFallback("get(findFirst)", err);
+      const items = await readLegacyList(userId);
+      return items.find((i) => i.id === id) ?? null;
+    }
+
+    if (!row) return null;
+    return {
+      id: row.id,
+      type: row.type ?? undefined,
+      title: row.title,
+      description: row.description ?? undefined,
+      createdAt: row.createdAt.toISOString(),
+      read: row.read,
+      actionUrl: row.actionUrl ?? undefined,
+      severity: row.severity,
+      dedupeKey: row.dedupeKey ?? undefined,
+      meta: row.meta as unknown,
+    };
   },
 
   /**
    * Đánh dấu đã đọc cho 1 notification.
    */
   async markRead(userId: string, id: string): Promise<NotificationItem | null> {
-    const items = await readList(userId);
-    let found: NotificationItem | null = null;
-    const next = items.map((i) => {
-      if (i.id !== id) return i;
-      found = { ...i, read: true };
+    if (!prismaNotification) {
+      const items = await readLegacyList(userId);
+      let found: NotificationItem | null = null;
+      const next = items.map((i) => {
+        if (i.id !== id) return i;
+        found = { ...i, read: true };
+        return found;
+      });
+      if (!found) return null;
+      await writeLegacyList(userId, next);
       return found;
-    });
-    if (!found) return null;
-    await writeList(userId, next);
-    return found;
+    }
+    let existed: { id: string } | null;
+    try {
+      existed = (await prismaNotification.findFirst({
+        where: { id, userId },
+        select: { id: true },
+      })) as { id: string } | null;
+    } catch (err: unknown) {
+      if (!shouldFallbackToLegacyOnError(err)) throw err;
+      logLegacyFallback("markRead(findFirst)", err);
+      const items = await readLegacyList(userId);
+      let found: NotificationItem | null = null;
+      const next = items.map((i) => {
+        if (i.id !== id) return i;
+        found = { ...i, read: true };
+        return found;
+      });
+      if (!found) return null;
+      await writeLegacyList(userId, next);
+      return found;
+    }
+    if (!existed) return null;
+
+    try {
+      const updated = (await prismaNotification.update({
+        where: { id },
+        data: { read: true, readAt: new Date() },
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          description: true,
+          createdAt: true,
+          read: true,
+          actionUrl: true,
+          severity: true,
+          dedupeKey: true,
+          meta: true,
+        },
+      })) as NotificationRow;
+
+      return rowToItem(updated);
+    } catch (err: unknown) {
+      if (!shouldFallbackToLegacyOnError(err)) throw err;
+      logLegacyFallback("markRead(update)", err);
+      const items = await readLegacyList(userId);
+      let found: NotificationItem | null = null;
+      const next = items.map((i) => {
+        if (i.id !== id) return i;
+        found = { ...i, read: true };
+        return found;
+      });
+      if (!found) return null;
+      await writeLegacyList(userId, next);
+      return found;
+    }
   },
 
   /**
    * Đánh dấu tất cả notifications là đã đọc.
    */
   async markAllRead(userId: string): Promise<number> {
-    const items = await readList(userId);
-    const next = items.map((i) => ({ ...i, read: true }));
-    await writeList(userId, next);
-    return items.length;
+    if (!prismaNotification) {
+      const items = await readLegacyList(userId);
+      const next = items.map((i) => ({ ...i, read: true }));
+      await writeLegacyList(userId, next);
+      return items.length;
+    }
+    try {
+      const res = await prismaNotification.updateMany({
+        where: { userId, read: false },
+        data: { read: true, readAt: new Date() },
+      } as unknown);
+      return res.count;
+    } catch (err: unknown) {
+      if (!shouldFallbackToLegacyOnError(err)) throw err;
+      logLegacyFallback("markAllRead(updateMany)", err);
+      const items = await readLegacyList(userId);
+      const next = items.map((i) => ({ ...i, read: true }));
+      await writeLegacyList(userId, next);
+      return items.length;
+    }
   },
 };

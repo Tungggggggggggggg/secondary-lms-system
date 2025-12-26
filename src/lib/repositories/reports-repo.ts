@@ -91,20 +91,26 @@ export const reportsRepo = {
   async growth(orgId?: string | null) {
     // Tăng trưởng user theo ngày (30 ngày gần nhất)
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const users = await prisma.user.findMany({
-      where: orgId ? { organizationMemberships: { some: { organizationId: orgId } }, createdAt: { gte: since } } : { createdAt: { gte: since } },
-      select: { createdAt: true },
-    });
-    // Kết gộp theo yyyy-mm-dd
-    const map: Record<string, number> = {};
-    for (const u of users) {
-      const d = new Date(u.createdAt);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      map[key] = (map[key] || 0) + 1;
-    }
-    const result = Object.entries(map).map(([date, count]) => ({ date, count }));
-    result.sort((a, b) => a.date.localeCompare(b.date));
-    return result;
+    type GrowthRow = { date: string; count: bigint };
+
+    const rows = orgId
+      ? await prisma.$queryRaw<GrowthRow[]>`
+          SELECT to_char(date_trunc('day', u."createdAt"), 'YYYY-MM-DD') AS date, COUNT(*)::bigint AS count
+          FROM "users" u
+          JOIN "organization_members" om ON om."userId" = u.id
+          WHERE u."createdAt" >= ${since} AND om."organizationId" = ${orgId}
+          GROUP BY 1
+          ORDER BY 1 ASC
+        `
+      : await prisma.$queryRaw<GrowthRow[]>`
+          SELECT to_char(date_trunc('day', u."createdAt"), 'YYYY-MM-DD') AS date, COUNT(*)::bigint AS count
+          FROM "users" u
+          WHERE u."createdAt" >= ${since}
+          GROUP BY 1
+          ORDER BY 1 ASC
+        `;
+
+    return rows.map((r) => ({ date: r.date, count: Number(r.count) }));
   },
 };
 

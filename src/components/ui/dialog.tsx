@@ -110,19 +110,20 @@ const titleVariants = {
   student: "text-green-900",
 };
 
-const DialogTitle = React.forwardRef<HTMLHeadingElement, DialogTitleProps>(
-  ({ className, variant = "default", ...props }, ref) => (
-    <h2
-      ref={ref}
-      className={cn(
-        "text-2xl font-bold leading-none tracking-tight",
-        titleVariants[variant],
-        className
-      )}
-      {...props}
-    />
-  )
-);
+const DialogTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title> & DialogTitleProps
+>(({ className, variant = "default", ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn(
+      "text-2xl font-bold leading-none tracking-tight",
+      titleVariants[variant],
+      className
+    )}
+    {...props}
+  />
+));
 DialogTitle.displayName = "DialogTitle";
 
 interface DialogDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement> {
@@ -136,15 +137,20 @@ const descriptionVariants = {
   student: "text-green-700",
 };
 
-const DialogDescription = React.forwardRef<HTMLParagraphElement, DialogDescriptionProps>(
-  ({ className, variant = "default", ...props }, ref) => (
-    <p
-      ref={ref}
-      className={cn("text-base mt-2 font-medium", descriptionVariants[variant], className)}
-      {...props}
-    />
-  )
-);
+const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description> & DialogDescriptionProps
+>(({ className, variant = "default", ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn(
+      "text-base mt-2 font-medium",
+      descriptionVariants[variant],
+      className
+    )}
+    {...props}
+  />
+));
 DialogDescription.displayName = "DialogDescription";
 
 const DialogFooter = ({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
 import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
+import { Prisma } from "@prisma/client";
 
 interface TeacherStudentSubmissionRow {
   id: string;
@@ -17,6 +18,18 @@ interface TeacherStudentSubmissionRow {
     lockAt: Date | null;
   };
 }
+
+type LatestSubmissionRow = {
+  id: string;
+  assignmentId: string;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+  title: string;
+  type: string;
+  dueDate: Date | null;
+  lockAt: Date | null;
+};
 
 type AssignmentSummaryRow = {
   id: string;
@@ -63,25 +76,38 @@ export async function GET(
       );
     }
 
-    const submissionsRaw = await prisma.assignmentSubmission.findMany({
-      where: { studentId, assignmentId: { in: assignmentIds } },
-      include: {
-        assignment: { select: { id: true, title: true, type: true, dueDate: true, lockAt: true } },
+    const latestRows = await prisma.$queryRaw<LatestSubmissionRow[]>(Prisma.sql`
+      SELECT DISTINCT ON (s."assignmentId")
+        s.id,
+        s."assignmentId" as "assignmentId",
+        s.grade,
+        s.feedback,
+        s."submittedAt" as "submittedAt",
+        a.title,
+        a.type,
+        a."dueDate" as "dueDate",
+        a."lockAt" as "lockAt"
+      FROM "assignment_submissions" s
+      JOIN "assignments" a ON a.id = s."assignmentId"
+      WHERE s."studentId" = ${studentId}
+        AND s."assignmentId" IN (${Prisma.join(assignmentIds)})
+      ORDER BY s."assignmentId", s.attempt DESC
+    `);
+
+    const latestSubmissions = latestRows.map((r): TeacherStudentSubmissionRow => ({
+      id: r.id,
+      assignmentId: r.assignmentId,
+      grade: r.grade,
+      feedback: r.feedback,
+      submittedAt: r.submittedAt,
+      assignment: {
+        id: r.assignmentId,
+        title: r.title,
+        type: r.type,
+        dueDate: r.dueDate,
+        lockAt: r.lockAt,
       },
-      orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
-    });
-
-    const submissions = submissionsRaw as TeacherStudentSubmissionRow[];
-
-    // Giữ lại submission mới nhất cho mỗi assignment
-    const latestByAssignmentId = new Map<string, TeacherStudentSubmissionRow>();
-    for (const s of submissions) {
-      if (!latestByAssignmentId.has(s.assignmentId)) {
-        latestByAssignmentId.set(s.assignmentId, s);
-      }
-    }
-
-    const latestSubmissions = Array.from(latestByAssignmentId.values());
+    }));
 
     const grades = latestSubmissions.map((sub: TeacherStudentSubmissionRow) => ({
       id: sub.id,

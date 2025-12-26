@@ -167,6 +167,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: performanceData,
+    }, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'private, max-age=10, stale-while-revalidate=50',
+      },
     });
 
   } catch (error) {

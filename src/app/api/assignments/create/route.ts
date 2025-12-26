@@ -297,17 +297,18 @@ export async function POST(request: NextRequest) {
 
         const title = `Bài tập mới: ${assignment.title}`;
         const actionUrl = `/dashboard/student/assignments/${assignment.id}`;
-        await Promise.allSettled(
-          memberships.map((m: { classroomId: string; studentId: string }) =>
-            notificationRepo.add(m.studentId, {
+        await notificationRepo.addMany(
+          memberships.map((m: { classroomId: string; studentId: string }) => ({
+            userId: m.studentId,
+            input: {
               type: "STUDENT_ASSIGNMENT_ASSIGNED",
               title,
               description: "Giáo viên đã giao một bài tập mới cho lớp của bạn.",
               actionUrl,
               dedupeKey: `assign:${m.classroomId}:${assignment.id}:${m.studentId}`,
               meta: { classroomId: m.classroomId, assignmentId: assignment.id },
-            })
-          )
+            },
+          }))
         );
       } catch {}
     }

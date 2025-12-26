@@ -7,5 +7,13 @@ export async function GET(req: NextRequest) {
   if (!user) return errorResponse(401, "Unauthorized");
 
   const total = await totalUnreadCount(user.id);
-  return NextResponse.json({ success: true, total });
+  return NextResponse.json(
+    { success: true, total },
+    {
+      status: 200,
+      headers: {
+        "Cache-Control": "private, max-age=5, stale-while-revalidate=55",
+      },
+    }
+  );
 }

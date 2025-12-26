@@ -5,6 +5,17 @@ import { PrismaClient } from '@prisma/client'
 const prismaClientSingleton = () => {
   const isDevelopment = process.env.NODE_ENV === 'development'
 
+  if (isDevelopment) {
+    const g = globalThis as unknown as { __db_connection_limit_warned?: boolean }
+    if (!g.__db_connection_limit_warned) {
+      const url = process.env.DATABASE_URL || ''
+      if (url.includes('connection_limit=1')) {
+        console.warn('[DB CONFIG] DATABASE_URL đang có connection_limit=1, có thể gây nghẽn và làm chậm toàn hệ thống.')
+      }
+      g.__db_connection_limit_warned = true
+    }
+  }
+
   const client = new PrismaClient({
     // Optimize logging: Chỉ log queries trong development, log errors trong production
     log: isDevelopment

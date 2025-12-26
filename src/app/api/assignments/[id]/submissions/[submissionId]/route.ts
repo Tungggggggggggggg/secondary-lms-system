@@ -122,34 +122,40 @@ export async function PUT(
     });
 
     try {
-      const actionUrlStudent = `/dashboard/student/assignments/${assignmentId}`;
-      await notificationRepo.add(submission.studentId, {
-        type: "STUDENT_GRADED",
-        title: `Đã có điểm: ${submission.assignment.title}`,
-        description: "Giáo viên đã chấm bài và gửi phản hồi.",
-        actionUrl: actionUrlStudent,
-        dedupeKey: `graded:${assignmentId}:${submission.studentId}:${submissionId}`,
-        meta: { assignmentId, submissionId },
-      });
-
       const parentLinks = await prisma.parentStudent.findMany({
         where: { studentId: submission.studentId, status: "ACTIVE" },
         select: { parentId: true },
       });
 
+      const actionUrlStudent = `/dashboard/student/assignments/${assignmentId}`;
       const actionUrlParent = `/dashboard/parent/progress`;
-      await Promise.allSettled(
-        parentLinks.map((p: { parentId: string }) =>
-          notificationRepo.add(p.parentId, {
+
+      const batch = [
+        {
+          userId: submission.studentId,
+          input: {
+            type: "STUDENT_GRADED",
+            title: `Đã có điểm: ${submission.assignment.title}`,
+            description: "Giáo viên đã chấm bài và gửi phản hồi.",
+            actionUrl: actionUrlStudent,
+            dedupeKey: `graded:${assignmentId}:${submission.studentId}:${submissionId}`,
+            meta: { assignmentId, submissionId },
+          },
+        },
+        ...parentLinks.map((p: { parentId: string }) => ({
+          userId: p.parentId,
+          input: {
             type: "PARENT_CHILD_GRADED",
             title: `Con bạn đã có điểm: ${submission.assignment.title}`,
             description: `${submission.student.fullname || "Học sinh"} đã được chấm bài.`,
             actionUrl: actionUrlParent,
             dedupeKey: `pgraded:${assignmentId}:${submission.studentId}:${submissionId}:${p.parentId}`,
             meta: { assignmentId, studentId: submission.studentId, submissionId },
-          })
-        )
-      );
+          },
+        })),
+      ];
+
+      await notificationRepo.addMany(batch);
     } catch {}
 
     return NextResponse.json(

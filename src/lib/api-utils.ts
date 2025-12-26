@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { getToken } from "next-auth/jwt";
 import prisma from "@/lib/prisma";
 import { settingsRepo } from "@/lib/repositories/settings-repo";
 import { NextRequest } from "next/server";
@@ -16,12 +15,9 @@ export type UserRole = (typeof USER_ROLES)[number];
 
 type AuthUser = {
   id: string;
-  email: string;
+  email: string | null;
   fullname: string | null;
   role: UserRole | string;
-  password: string | null;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
 /**
@@ -55,26 +51,19 @@ export async function getAuthenticatedUser(
   }
 
   try {
-    // Lấy session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const tokenId = typeof token?.id === "string" ? token.id : null;
+    if (!tokenId) {
       userCache.set(req, null);
       return null;
     }
 
-    // Query user từ database
-    const user = (await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-        email: true,
-        fullname: true,
-        role: true,
-        password: true, // Cần thiết cho một số checks
-        createdAt: true,
-        updatedAt: true,
-      },
-    })) as AuthUser | null;
+    const user: AuthUser = {
+      id: tokenId,
+      email: typeof token?.email === "string" ? token.email : null,
+      fullname: typeof token?.fullname === "string" ? token.fullname : null,
+      role: typeof token?.role === "string" ? token.role : "",
+    };
 
     // Chặn người dùng bị khoá theo system settings (disabled_users)
     if (user) {
@@ -174,7 +163,12 @@ export function withApiLogging<Args extends unknown[]>(
     const requestId = getRequestId(req);
     const start = Date.now();
     try {
-      return await handler(...args);
+      const res = await handler(...args);
+      const ms = Date.now() - start;
+      if (ms > 1000) {
+        console.warn(`[SLOW API] ${action} {requestId:${requestId}, ms:${ms}}`);
+      }
+      return res;
     } catch (err: unknown) {
       const ms = Date.now() - start;
       console.error(`[ERROR] ${action} FAIL {requestId:${requestId}, ms:${ms}}`, err);

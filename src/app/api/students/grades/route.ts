@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
+import { Prisma } from "@prisma/client";
 
 interface StudentGradesSubmissionRow {
   id: string;
@@ -11,6 +12,15 @@ interface StudentGradesSubmissionRow {
   submittedAt: Date;
   attempt: number;
 }
+
+type LatestSubmissionRow = {
+  id: string;
+  assignmentId: string;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+  attempt: number;
+};
 
 interface StudentGradesAssignmentRow {
   id: string;
@@ -103,22 +113,20 @@ export async function GET(_req: NextRequest) {
       );
     }
 
-    const [submissions, assignments, assignmentClassrooms] = await Promise.all([
-      prisma.assignmentSubmission.findMany({
-        where: {
-          studentId: authUser.id,
-          assignmentId: { in: assignmentIdList },
-        },
-        select: {
-          id: true,
-          assignmentId: true,
-          grade: true,
-          feedback: true,
-          submittedAt: true,
-          attempt: true,
-        },
-        orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
-      }) as unknown as StudentGradesSubmissionRow[],
+    const [submissionsRows, assignments, assignmentClassrooms] = await Promise.all([
+      prisma.$queryRaw<LatestSubmissionRow[]>(Prisma.sql`
+        SELECT DISTINCT ON (s."assignmentId")
+          s.id,
+          s."assignmentId" as "assignmentId",
+          s.grade,
+          s.feedback,
+          s."submittedAt" as "submittedAt",
+          s.attempt
+        FROM "assignment_submissions" s
+        WHERE s."studentId" = ${authUser.id}
+          AND s."assignmentId" IN (${Prisma.join(assignmentIdList)})
+        ORDER BY s."assignmentId", s.attempt DESC
+      `),
 
       prisma.assignment.findMany({
         where: { id: { in: assignmentIdList } },
@@ -142,6 +150,8 @@ export async function GET(_req: NextRequest) {
       }) as unknown as StudentGradesAssignmentClassroomRow[],
     ]);
 
+    const submissions = submissionsRows as StudentGradesSubmissionRow[];
+
     const assignmentById = new Map<string, StudentGradesAssignmentRow>(
       assignments.map((a: StudentGradesAssignmentRow) => [a.id, a])
     );
@@ -153,14 +163,7 @@ export async function GET(_req: NextRequest) {
       }
     }
 
-    // Giữ lại submission mới nhất cho mỗi assignment (tránh đếm sai theo attempt)
-    const latestSubmissionByAssignmentId = new Map<string, StudentGradesSubmissionRow>();
-    for (const s of submissions) {
-      if (!latestSubmissionByAssignmentId.has(s.assignmentId)) {
-        latestSubmissionByAssignmentId.set(s.assignmentId, s);
-      }
-    }
-    const latestSubmissions = Array.from(latestSubmissionByAssignmentId.values());
+    const latestSubmissions = submissions;
 
     // Transform data cho các bài đã nộp
     const submissionGrades = latestSubmissions

@@ -51,44 +51,50 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         });
 
     try {
-      const assignment = await prisma.assignment.findUnique({
-        where: { id: assignmentId },
-        select: { id: true, title: true },
-      });
+      const [assignment, parentLinks, studentRow] = await Promise.all([
+        prisma.assignment.findUnique({
+          where: { id: assignmentId },
+          select: { id: true, title: true },
+        }),
+        prisma.parentStudent.findMany({
+          where: { studentId, status: "ACTIVE" },
+          select: { parentId: true },
+        }),
+        prisma.user.findUnique({
+          where: { id: studentId },
+          select: { fullname: true },
+        }),
+      ]);
 
       const actionUrlStudent = `/dashboard/student/assignments/${assignmentId}`;
-      await notificationRepo.add(studentId, {
-        type: "STUDENT_GRADED",
-        title: `Đã có điểm: ${assignment?.title || "Bài tập"}`,
-        description: "Giáo viên đã chấm bài và gửi phản hồi.",
-        actionUrl: actionUrlStudent,
-        dedupeKey: `filegraded:${assignmentId}:${studentId}:${updated.id}`,
-        meta: { assignmentId, submissionId: updated.id },
-      });
-
-      const parentLinks = await prisma.parentStudent.findMany({
-        where: { studentId, status: "ACTIVE" },
-        select: { parentId: true },
-      });
-
-      const studentRow = await prisma.user.findUnique({
-        where: { id: studentId },
-        select: { fullname: true },
-      });
-
       const actionUrlParent = `/dashboard/parent/progress`;
-      await Promise.allSettled(
-        parentLinks.map((p: { parentId: string }) =>
-          notificationRepo.add(p.parentId, {
+
+      const batch = [
+        {
+          userId: studentId,
+          input: {
+            type: "STUDENT_GRADED",
+            title: `Đã có điểm: ${assignment?.title || "Bài tập"}`,
+            description: "Giáo viên đã chấm bài và gửi phản hồi.",
+            actionUrl: actionUrlStudent,
+            dedupeKey: `filegraded:${assignmentId}:${studentId}:${updated.id}`,
+            meta: { assignmentId, submissionId: updated.id },
+          },
+        },
+        ...parentLinks.map((p: { parentId: string }) => ({
+          userId: p.parentId,
+          input: {
             type: "PARENT_CHILD_GRADED",
             title: `Con bạn đã có điểm: ${assignment?.title || "Bài tập"}`,
             description: `${studentRow?.fullname || "Học sinh"} đã được chấm bài.`,
             actionUrl: actionUrlParent,
             dedupeKey: `pfilegraded:${assignmentId}:${studentId}:${updated.id}:${p.parentId}`,
             meta: { assignmentId, studentId, submissionId: updated.id },
-          })
-        )
-      );
+          },
+        })),
+      ];
+
+      await notificationRepo.addMany(batch);
     } catch {}
 
     return NextResponse.json({ success: true, data: { id: updated.id, grade: updated.grade, feedback: updated.feedback } }, { status: 200 });

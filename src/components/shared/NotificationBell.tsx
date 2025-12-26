@@ -21,6 +21,19 @@ interface NotificationBellProps {
   panelClassName?: string;
 }
 
+function getUnreadCountFromResponse(data: unknown): number | null {
+  if (!isRecord(data)) return null;
+  const unread = data.unread;
+  if (typeof unread === "number" && Number.isFinite(unread)) {
+    return Math.max(0, Math.floor(unread));
+  }
+  if (typeof unread === "string") {
+    const n = Number(unread);
+    if (Number.isFinite(n)) return Math.max(0, Math.floor(n));
+  }
+  return null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -74,10 +87,10 @@ export default function NotificationBell(props?: NotificationBellProps) {
     fetcher,
     {
       shouldRetryOnError: false,
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      refreshInterval: open ? 15000 : 0,
-      dedupingInterval: 10000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      refreshInterval: open ? 60000 : 0,
+      dedupingInterval: 30000,
     }
   );
 
@@ -86,7 +99,14 @@ export default function NotificationBell(props?: NotificationBellProps) {
     return getNotificationItemsFromResponse(data);
   }, [data, localItems]);
 
-  const unreadCount = useMemo(() => items.filter((i) => !i.read).length, [items]);
+  const unreadCount = useMemo(() => {
+    if (localItems) {
+      return localItems.filter((i) => !i.read).length;
+    }
+    const serverUnread = getUnreadCountFromResponse(data);
+    if (serverUnread !== null) return serverUnread;
+    return items.filter((i) => !i.read).length;
+  }, [data, items, localItems]);
 
   useEffect(() => {
     setPortalReady(typeof window !== "undefined" && typeof document !== "undefined");

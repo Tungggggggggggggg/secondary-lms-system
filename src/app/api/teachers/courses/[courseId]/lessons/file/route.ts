@@ -96,8 +96,12 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
 
     let order = parsed.data.order;
     if (!order) {
-      const max = await prisma.lesson.aggregate({ where: { courseId }, _max: { order: true } });
-      order = (max._max.order ?? 0) + 1;
+      const last = await prisma.lesson.findFirst({
+        where: { courseId },
+        orderBy: { order: "desc" },
+        select: { order: true },
+      });
+      order = (last?.order ?? 0) + 1;
     }
 
     const defaultTitle = file.name ? file.name.replace(/\.[^.]+$/, "").trim() : "Bài học";
@@ -144,12 +148,12 @@ export async function POST(req: NextRequest, ctx: { params: { courseId: string }
 
     // Tự động index embeddings cho bài học vừa tạo (không dry run, luôn embed)
     try {
-      await indexLessonEmbeddingsForLesson({
+      void indexLessonEmbeddingsForLesson({
         lessonId: created.id,
         courseId,
         title: created.title,
         content: extracted.text,
-      });
+      }).catch(() => {});
     } catch {}
 
     return NextResponse.json(
