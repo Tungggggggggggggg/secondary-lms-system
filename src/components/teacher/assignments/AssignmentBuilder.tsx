@@ -268,390 +268,399 @@
   );
 }
 
- export default function AssignmentBuilder({ mode, assignmentId }: AssignmentBuilderProps) {
-   const router = useRouter();
-   const { toast } = useToast();
+export default function AssignmentBuilder({ mode, assignmentId }: AssignmentBuilderProps) {
+  const router = useRouter();
+  const { toast } = useToast();
 
-   const steps = mode === "create" ? createSteps : editSteps;
-   const [currentStep, setCurrentStep] = useState<Step>(steps[0].key);
-   const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
-   const isFirstStep = currentStepIndex === 0;
-   const isLastStep = currentStepIndex === steps.length - 1;
+  const steps = mode === "create" ? createSteps : editSteps;
+  const [currentStep, setCurrentStep] = useState<Step>(steps[0].key);
+  const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === steps.length - 1;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-   const [data, setData] = useState<AssignmentData>({
-     type: "ESSAY",
-     title: "",
-     description: "",
-     subject: "",
-     classrooms: [],
-   });
+  const [data, setData] = useState<AssignmentData>({
+    type: "ESSAY",
+    title: "",
+    description: "",
+    subject: "",
+    classrooms: [],
+  });
 
-   const draftKey = useMemo(
-     () => (mode === "create" ? generateDraftKey() : `edit_assignment_${assignmentId}`),
-     [mode, assignmentId]
-   );
+  const draftKey = useMemo(
+    () => (mode === "create" ? generateDraftKey() : `edit_assignment_${assignmentId}`),
+    [mode, assignmentId]
+  );
 
-   const autoSave = useAutoSave(data, { key: draftKey, interval: 30000, enabled: true });
+  const autoSave = useAutoSave(data, { key: draftKey, interval: 30000, enabled: true });
 
-   useEffect(() => {
-     if (mode !== "edit" || !assignmentId) return;
-     let mounted = true;
+  useEffect(() => {
+    if (mode !== "edit" || !assignmentId) return;
+    let mounted = true;
 
-     (async () => {
-       try {
-         const res = await fetch(`/api/assignments/${assignmentId}`, { cache: "no-store" });
-         const j = await res.json();
-         if (!j?.success) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/assignments/${assignmentId}`, { cache: "no-store" });
+        const j = await res.json();
+        if (!j?.success) return;
 
-         const a: ApiAssignment = j.data as ApiAssignment;
-         const selectedClassrooms: string[] = Array.isArray(a.classrooms)
-           ? a.classrooms.map((c) => c.classroomId)
-           : [];
-         const questions: ApiQuestion[] = Array.isArray(a.questions) ? a.questions : [];
-         if (!mounted) return;
+        const a: ApiAssignment = j.data as ApiAssignment;
+        const selectedClassrooms: string[] = Array.isArray(a.classrooms)
+          ? a.classrooms.map((c) => c.classroomId)
+          : [];
+        const questions: ApiQuestion[] = Array.isArray(a.questions) ? a.questions : [];
+        if (!mounted) return;
 
-         const next: AssignmentData = {
-           type: a.type,
-           title: a.title || "",
-           description: a.description || "",
-           subject: a.subject || "",
-           classrooms: selectedClassrooms,
-           ...(a.type === "ESSAY"
-             ? {
-                 essayContent: {
-                   question: (questions[0]?.content as string) || "",
-                   attachments: [],
-                   submissionFormat: (a.submission_format ?? "BOTH") as SubmissionFormat,
-                   openAt: a.openAt ? new Date(a.openAt) : undefined,
-                   dueDate: a.dueDate ? new Date(a.dueDate) : undefined,
-                 },
-               }
-             : {}),
-           ...(a.type === "QUIZ"
-             ? {
-                 quizContent: {
-                   questions: questions.map((q) => ({
-                     id: q.id,
-                     content: q.content,
-                     type: q.type,
-                     options: (q.options || []).map((o) => ({
-                       label: o.label,
-                       content: o.content,
-                       isCorrect: !!o.isCorrect,
-                     })),
-                     order: q.order,
-                   })) as QuizQuestion[],
-                   timeLimitMinutes: a.timeLimitMinutes || 30,
-                   openAt: a.openAt ? new Date(a.openAt) : undefined,
-                   lockAt: a.lockAt ? new Date(a.lockAt) : undefined,
-                   maxAttempts: a.max_attempts || 1,
-                   antiCheatConfig: (a.anti_cheat_config as AntiCheatConfig) || {
-                     preset: "BASIC",
-                     shuffleQuestions: false,
-                     shuffleOptions: false,
-                     singleQuestionMode: false,
-                     timePerQuestion: undefined,
-                     requireFullscreen: false,
-                     detectTabSwitch: false,
-                     disableCopyPaste: false,
-                   },
-                 },
-               }
-             : {}),
-         };
+        const next: AssignmentData = {
+          type: a.type,
+          title: a.title || "",
+          description: a.description || "",
+          subject: a.subject || "",
+          classrooms: selectedClassrooms,
+          ...(a.type === "ESSAY"
+            ? {
+                essayContent: {
+                  question: (questions[0]?.content as string) || "",
+                  attachments: [],
+                  submissionFormat: (a.submission_format ?? "BOTH") as SubmissionFormat,
+                  openAt: a.openAt ? new Date(a.openAt) : undefined,
+                  dueDate: a.dueDate ? new Date(a.dueDate) : undefined,
+                },
+              }
+            : {}),
+          ...(a.type === "QUIZ"
+            ? {
+                quizContent: {
+                  questions: questions.map((q) => ({
+                    id: q.id,
+                    content: q.content,
+                    type: q.type,
+                    options: (q.options || []).map((o) => ({
+                      label: o.label,
+                      content: o.content,
+                      isCorrect: !!o.isCorrect,
+                    })),
+                    order: q.order,
+                  })) as QuizQuestion[],
+                  timeLimitMinutes: a.timeLimitMinutes || 30,
+                  openAt: a.openAt ? new Date(a.openAt) : undefined,
+                  lockAt: a.lockAt ? new Date(a.lockAt) : undefined,
+                  maxAttempts: a.max_attempts || 1,
+                  antiCheatConfig: (a.anti_cheat_config as AntiCheatConfig) || {
+                    preset: "BASIC",
+                    shuffleQuestions: false,
+                    shuffleOptions: false,
+                    singleQuestionMode: false,
+                    timePerQuestion: undefined,
+                    requireFullscreen: false,
+                    detectTabSwitch: false,
+                    disableCopyPaste: false,
+                  },
+                },
+              }
+            : {}),
+        };
 
-         setData(next);
-       } catch {
-         // ignore
-       }
-     })();
+        setData(next);
+      } catch {
+        // ignore
+      }
+    })();
 
-     return () => {
-       mounted = false;
-     };
-   }, [mode, assignmentId]);
+    return () => {
+      mounted = false;
+    };
+  }, [mode, assignmentId]);
 
-   const goNext = useCallback(() => {
-     if (!isLastStep) setCurrentStep(steps[currentStepIndex + 1].key);
-   }, [isLastStep, steps, currentStepIndex]);
+  const goNext = useCallback(() => {
+    if (!isLastStep) setCurrentStep(steps[currentStepIndex + 1].key);
+  }, [isLastStep, steps, currentStepIndex]);
 
-   const goBack = useCallback(() => {
-     if (!isFirstStep) setCurrentStep(steps[currentStepIndex - 1].key);
-   }, [isFirstStep, steps, currentStepIndex]);
+  const goBack = useCallback(() => {
+    if (!isFirstStep) setCurrentStep(steps[currentStepIndex - 1].key);
+  }, [isFirstStep, steps, currentStepIndex]);
 
-   const canProceed = useCallback(
-     () => buildStepValidation(currentStep, data).ok,
-     [currentStep, data]
-   );
+  const canProceed = useCallback(
+    () => buildStepValidation(currentStep, data).ok,
+    [currentStep, data]
+  );
 
-   const updateType = useCallback((t: AssignmentType) => {
-     setData((p) => ({ ...p, type: t, essayContent: undefined, quizContent: undefined }));
-   }, []);
+  const updateType = useCallback((t: AssignmentType) => {
+    setData((p) => ({ ...p, type: t, essayContent: undefined, quizContent: undefined }));
+  }, []);
 
-   const updateBasic = useCallback((field: string, value: string) => {
-     setData((p) => ({ ...p, [field]: value }));
-   }, []);
+  const updateBasic = useCallback((field: string, value: string) => {
+    setData((p) => ({ ...p, [field]: value }));
+  }, []);
 
-   const updateEssay = useCallback((v: NonNullable<AssignmentData["essayContent"]>) => {
-     setData((p) => ({ ...p, essayContent: v }));
-   }, []);
+  const updateEssay = useCallback((v: NonNullable<AssignmentData["essayContent"]>) => {
+    setData((p) => ({ ...p, essayContent: v }));
+  }, []);
 
-   const updateQuiz = useCallback((v: NonNullable<AssignmentData["quizContent"]>) => {
-     setData((p) => ({ ...p, quizContent: v }));
-   }, []);
+  const updateQuiz = useCallback((v: NonNullable<AssignmentData["quizContent"]>) => {
+    setData((p) => ({ ...p, quizContent: v }));
+  }, []);
 
-   const updateClassrooms = useCallback((ids: string[]) => {
-     setData((p) => ({ ...p, classrooms: ids }));
-   }, []);
+  const updateClassrooms = useCallback((ids: string[]) => {
+    setData((p) => ({ ...p, classrooms: ids }));
+  }, []);
 
-   const handleCreate = useCallback(async () => {
-     try {
-       const payload = {
-         ...data,
-         title: data.title.trim(),
-         description: data.description?.trim() || null,
-         subject: data.subject?.trim() || null,
-       };
+  const handleCreate = useCallback(async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        ...data,
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        subject: data.subject?.trim() || null,
+      };
 
-       const res = await fetch("/api/assignments/create", {
-         method: "POST",
-         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify(payload),
-       });
+      const res = await fetch("/api/assignments/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-       const j = await res.json().catch(() => null);
-       if (!res.ok || !j?.success) {
-         const details = j?.details ? ` - ${typeof j.details === "string" ? j.details : JSON.stringify(j.details)}` : "";
-         throw new Error(`${j?.message || "Tạo bài tập thất bại"}${details}`);
-       }
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j?.success) {
+        const details =
+          j?.details ? ` - ${typeof j.details === "string" ? j.details : JSON.stringify(j.details)}` : "";
+        throw new Error(`${j?.message || "Tạo bài tập thất bại"}${details}`);
+      }
 
-       autoSave.clearDraft();
-       const id = j?.data?.id as string | undefined;
-       router.push(id ? `/dashboard/teacher/assignments/${id}` : "/dashboard/teacher/assignments");
-     } catch (err: unknown) {
-       const msg = err instanceof Error ? err.message : "Tạo bài tập thất bại";
-       toast({ title: "Lỗi tạo bài tập", description: msg, variant: "destructive" });
-     }
-   }, [data, autoSave, router, toast]);
+      autoSave.clearDraft();
+      const id = j?.data?.id as string | undefined;
+      router.push(id ? `/dashboard/teacher/assignments/${id}` : "/dashboard/teacher/assignments");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Tạo bài tập thất bại";
+      toast({ title: "Lỗi tạo bài tập", description: msg, variant: "destructive" });
+      setIsSubmitting(false);
+    }
+  }, [data, autoSave, router, toast, isSubmitting]);
 
-   const handleUpdate = useCallback(async () => {
-     if (mode !== "edit" || !assignmentId) return;
-     try {
-       const base: Record<string, unknown> = {
-         title: data.title,
-         description: data.description ?? null,
-         type: data.type,
-         subject: data.subject ?? null,
-         classrooms: data.classrooms || [],
-       };
+  const handleUpdate = useCallback(async () => {
+    if (mode !== "edit" || !assignmentId) return;
+    try {
+      const base: Record<string, unknown> = {
+        title: data.title,
+        description: data.description ?? null,
+        type: data.type,
+        subject: data.subject ?? null,
+        classrooms: data.classrooms || [],
+      };
 
-       if (data.type === "ESSAY" && data.essayContent) {
-         base.submissionFormat = data.essayContent.submissionFormat;
-         base.openAt = data.essayContent.openAt?.toISOString() || null;
-         base.dueDate = data.essayContent.dueDate?.toISOString() || null;
-         // Không gửi các field quiz-only để tránh zod reject (vd maxAttempts=null)
-         delete (base as Record<string, unknown>).timeLimitMinutes;
-         delete (base as Record<string, unknown>).lockAt;
-         delete (base as Record<string, unknown>).maxAttempts;
-         delete (base as Record<string, unknown>).antiCheatConfig;
-         base.questions = [
-           {
-             id: "",
-             content: data.essayContent.question,
-             type: "ESSAY",
-             order: 1,
-             options: [],
-           },
-         ];
-       }
+      if (data.type === "ESSAY" && data.essayContent) {
+        base.submissionFormat = data.essayContent.submissionFormat;
+        base.openAt = data.essayContent.openAt?.toISOString() || null;
+        base.dueDate = data.essayContent.dueDate?.toISOString() || null;
+        // Không gửi các field quiz-only để tránh zod reject (vd maxAttempts=null)
+        delete (base as Record<string, unknown>).timeLimitMinutes;
+        delete (base as Record<string, unknown>).lockAt;
+        delete (base as Record<string, unknown>).maxAttempts;
+        delete (base as Record<string, unknown>).antiCheatConfig;
+        base.questions = [
+          {
+            id: "",
+            content: data.essayContent.question,
+            type: "ESSAY",
+            order: 1,
+            options: [],
+          },
+        ];
+      }
 
-       if (data.type === "QUIZ" && data.quizContent) {
-         base.openAt = data.quizContent.openAt?.toISOString() || null;
-         base.lockAt = data.quizContent.lockAt?.toISOString() || null;
-         base.timeLimitMinutes = data.quizContent.timeLimitMinutes || null;
-         base.maxAttempts = data.quizContent.maxAttempts || 1;
-         base.antiCheatConfig = data.quizContent.antiCheatConfig || null;
-         base.questions = (data.quizContent.questions || []).map((q, idx) => ({
-           id: q.id || "",
-           content: q.content,
-           type: q.type,
-           order: q.order ?? idx + 1,
-           options: (q.options || []).map((o, j) => ({
-             label: o.label || String.fromCharCode(65 + j),
-             content: o.content,
-             isCorrect: !!o.isCorrect,
-             order: j + 1,
-           })),
-         }));
-       }
+      if (data.type === "QUIZ" && data.quizContent) {
+        base.openAt = data.quizContent.openAt?.toISOString() || null;
+        base.lockAt = data.quizContent.lockAt?.toISOString() || null;
+        base.timeLimitMinutes = data.quizContent.timeLimitMinutes || null;
+        base.maxAttempts = data.quizContent.maxAttempts || 1;
+        base.antiCheatConfig = data.quizContent.antiCheatConfig || null;
+        base.questions = (data.quizContent.questions || []).map((q, idx) => ({
+          id: q.id || "",
+          content: q.content,
+          type: q.type,
+          order: q.order ?? idx + 1,
+          options: (q.options || []).map((o, j) => ({
+            label: o.label || String.fromCharCode(65 + j),
+            content: o.content,
+            isCorrect: !!o.isCorrect,
+            order: j + 1,
+          })),
+        }));
+      }
 
-       const res = await fetch(`/api/assignments/${assignmentId}`, {
-         method: "PUT",
-         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify(base),
-       });
+      const res = await fetch(`/api/assignments/${assignmentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(base),
+      });
 
-       const j = await res.json().catch(() => null);
-       if (!res.ok || !j?.success) {
-         const details = j?.details ? ` - ${typeof j.details === "string" ? j.details : JSON.stringify(j.details)}` : "";
-         throw new Error(`${j?.message || "Cập nhật thất bại"}${details}`);
-       }
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j?.success) {
+        const details =
+          j?.details ? ` - ${typeof j.details === "string" ? j.details : JSON.stringify(j.details)}` : "";
+        throw new Error(`${j?.message || "Cập nhật thất bại"}${details}`);
+      }
 
-       router.push(`/dashboard/teacher/assignments/${assignmentId}`);
-     } catch (err: unknown) {
-       const msg = err instanceof Error ? err.message : "Cập nhật thất bại";
-       toast({ title: "Lỗi khi lưu", description: msg, variant: "destructive" });
-     }
-   }, [mode, assignmentId, data, router, toast]);
+      router.push(`/dashboard/teacher/assignments/${assignmentId}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Cập nhật thất bại";
+      toast({ title: "Lỗi khi lưu", description: msg, variant: "destructive" });
+    }
+  }, [mode, assignmentId, data, router, toast]);
 
-   const wizardSteps = steps.map((s, i) => ({ id: i + 1, label: s.label }));
+  const wizardSteps = steps.map((s, i) => ({ id: i + 1, label: s.label }));
 
-   return (
-     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex justify-start items-stretch px-4 py-10">
-       <div className="w-full max-w-4xl mx-auto">
-         <Card className="shadow-xl">
-           <CardHeader className="px-6 py-3 space-y-2">
-             <div className="flex items-center gap-3">
-               <Button
-                 variant="ghost"
-                 onClick={() => router.push("/dashboard/teacher/assignments")}
-                 className="flex items-center gap-2 hover:bg-gray-100"
-               >
-                 <ArrowLeft className="h-4 w-4" /> Quay lại
-               </Button>
-               <ChevronRight className="h-4 w-4 text-gray-400" />
-               <Home className="h-4 w-4 text-gray-500" />
-               <span className="text-sm text-gray-500">Dashboard</span>
-               <ChevronRight className="h-4 w-4 text-gray-400" />
-               <span className="text-sm text-gray-500">Bài tập</span>
-               <ChevronRight className="h-4 w-4 text-gray-400" />
-               <span className="text-sm font-medium text-blue-600">
-                 {mode === "create" ? "Tạo mới" : "Chỉnh sửa"}
-               </span>
-             </div>
-             <div className="text-center">
-               <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-                 {mode === "create" ? "Tạo Bài Tập Mới" : "Chỉnh Sửa Bài Tập"}
-               </h1>
-             </div>
-             <WizardStepper
-               steps={wizardSteps}
-               current={currentStepIndex + 1}
-               size="sm"
-               className="px-0"
-               allowFutureNavigation={false}
-             />
-           </CardHeader>
-           <CardContent className="p-5">
-             {mode === "create" && currentStep === "type" && (
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mx-auto p-8">
-                 <OptionTile
-                   title="Tự Luận"
-                   selected={data.type === "ESSAY"}
-                   onSelect={() => updateType("ESSAY")}
-                   color="green"
-                   size="sm"
-                 />
-                 <OptionTile
-                   title="Trắc Nghiệm"
-                   selected={data.type === "QUIZ"}
-                   onSelect={() => updateType("QUIZ")}
-                   color="blue"
-                   size="sm"
-                 />
-               </div>
-             )}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex justify-start items-stretch px-4 py-10">
+      <div className="w-full max-w-4xl mx-auto">
+        <Card className="shadow-xl">
+          <CardHeader className="px-6 py-3 space-y-2">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => router.push("/dashboard/teacher/assignments")}
+                className="flex items-center gap-2 hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-4 w-4" /> Quay lại
+              </Button>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <Home className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-500">Dashboard</span>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <span className="text-sm text-gray-500">Bài tập</span>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <span className="text-sm font-medium text-blue-600">
+                {mode === "create" ? "Tạo mới" : "Chỉnh sửa"}
+              </span>
+            </div>
+            <div className="text-center">
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+                {mode === "create" ? "Tạo Bài Tập Mới" : "Chỉnh Sửa Bài Tập"}
+              </h1>
+            </div>
+            <WizardStepper
+              steps={wizardSteps}
+              current={currentStepIndex + 1}
+              size="sm"
+              className="px-0"
+              allowFutureNavigation={false}
+            />
+          </CardHeader>
+          <CardContent className="p-5">
+            {mode === "create" && currentStep === "type" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mx-auto p-8">
+                <OptionTile
+                  title="Tự Luận"
+                  selected={data.type === "ESSAY"}
+                  onSelect={() => updateType("ESSAY")}
+                  color="green"
+                  size="sm"
+                />
+                <OptionTile
+                  title="Trắc Nghiệm"
+                  selected={data.type === "QUIZ"}
+                  onSelect={() => updateType("QUIZ")}
+                  color="blue"
+                  size="sm"
+                />
+              </div>
+            )}
 
-             {currentStep === "basic" && (
-               <div className="space-y-6 p-8">
-                 <div>
-                   <Label htmlFor="title" className="text-sm font-medium">
-                     Tên bài tập *
-                   </Label>
-                   <Input
-                     id="title"
-                     value={data.title}
-                     onChange={(e) => updateBasic("title", e.target.value)}
-                     placeholder="Nhập tên bài tập..."
-                     className="mt-2 text-sm h-9"
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor="description" className="text-sm font-medium">
-                     Mô tả (tùy chọn)
-                   </Label>
-                   <Textarea
-                     id="description"
-                     value={data.description || ""}
-                     onChange={(e) => updateBasic("description", e.target.value)}
-                     placeholder="Mô tả ngắn..."
-                     className="mt-2 text-sm"
-                     rows={3}
-                   />
-                 </div>
-                 <div>
-                   <Label htmlFor="subject" className="text-sm font-medium">
-                     Môn học (tùy chọn)
-                   </Label>
-                   <Input
-                     id="subject"
-                     value={data.subject || ""}
-                     onChange={(e) => updateBasic("subject", e.target.value)}
-                     placeholder="VD: Toán, Văn..."
-                     className="mt-2 text-sm h-9"
-                   />
-                 </div>
-               </div>
-             )}
+            {currentStep === "basic" && (
+              <div className="space-y-6 p-8">
+                <div>
+                  <Label htmlFor="title" className="text-sm font-medium">
+                    Tên bài tập *
+                  </Label>
+                  <Input
+                    id="title"
+                    value={data.title}
+                    onChange={(e) => updateBasic("title", e.target.value)}
+                    placeholder="Nhập tên bài tập..."
+                    className="mt-2 text-sm h-9"
+                  />
+                  {!data.title.trim() && (
+                    <p className="mt-1 text-xs text-red-500">
+                      Tên bài tập là bắt buộc
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="description" className="text-sm font-medium">
+                    Mô tả (tùy chọn)
+                  </Label>
+                  <Textarea
+                    id="description"
+                    value={data.description || ""}
+                    onChange={(e) => updateBasic("description", e.target.value)}
+                    placeholder="Mô tả ngắn..."
+                    className="mt-2 text-sm"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="subject" className="text-sm font-medium">
+                    Môn học (tùy chọn)
+                  </Label>
+                  <Input
+                    id="subject"
+                    value={data.subject || ""}
+                    onChange={(e) => updateBasic("subject", e.target.value)}
+                    placeholder="VD: Toán, Văn..."
+                    className="mt-2 text-sm h-9"
+                  />
+                </div>
+              </div>
+            )}
 
-             {currentStep === "content" && (
-               <div>
-                 {data.type === "ESSAY" ? (
-                   <EssayContentBuilder
-                     content={data.essayContent}
-                     onContentChange={updateEssay}
-                     assignmentId={mode === "edit" ? assignmentId : undefined}
-                   />
-                 ) : (
-                   <QuizContentBuilder
-                     content={data.quizContent}
-                     onContentChange={updateQuiz}
-                   />
-                 )}
-               </div>
-             )}
+            {currentStep === "content" && (
+              <div>
+                {data.type === "ESSAY" ? (
+                  <EssayContentBuilder
+                    content={data.essayContent}
+                    onContentChange={updateEssay}
+                    assignmentId={mode === "edit" ? assignmentId : undefined}
+                  />
+                ) : (
+                  <QuizContentBuilder
+                    content={data.quizContent}
+                    onContentChange={updateQuiz}
+                  />
+                )}
+              </div>
+            )}
 
-             {currentStep === "classrooms" && (
-               <ClassroomSelector
-                 selectedClassrooms={data.classrooms || []}
-                 onClassroomsChange={updateClassrooms}
-               />
-             )}
+            {currentStep === "classrooms" && (
+              <ClassroomSelector
+                selectedClassrooms={data.classrooms || []}
+                onClassroomsChange={updateClassrooms}
+              />
+            )}
 
-             {currentStep === "preview" && (
-               <div className="max-w-4xl mx-auto">
-                 <AssignmentPreviewCard data={data} />
-               </div>
-             )}
-           </CardContent>
-         </Card>
-         <StepFooter
-           canProceed={canProceed()}
-           isFirst={isFirstStep}
-           isLast={isLastStep}
-           onBack={goBack}
-           onNext={isLastStep ? (mode === "create" ? handleCreate : handleUpdate) : goNext}
-           current={currentStepIndex + 1}
-           total={steps.length}
-           dense
-           transparent
-           className="mt-6 w-full max-w-4xl mx-auto"
-           position="static"
-           lastLabel={mode === "edit" ? "Lưu thay đổi" : "Tạo bài tập"}
-         />
-       </div>
-     </div>
-   );
- }
-
-
+            {currentStep === "preview" && (
+              <div className="max-w-4xl mx-auto">
+                <AssignmentPreviewCard data={data} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <StepFooter
+          canProceed={canProceed() && !isSubmitting}
+          isFirst={isFirstStep}
+          isLast={isLastStep}
+          onBack={goBack}
+          onNext={isLastStep ? (mode === "create" ? handleCreate : handleUpdate) : goNext}
+          current={currentStepIndex + 1}
+          total={steps.length}
+          dense
+          transparent
+          className="mt-6 w-full max-w-4xl mx-auto"
+          position="static"
+          lastLabel={mode === "edit" ? "Lưu thay đổi" : "Tạo bài tập"}
+        />
+      </div>
+    </div>
+  );
+}

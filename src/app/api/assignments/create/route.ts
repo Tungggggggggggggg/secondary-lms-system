@@ -32,8 +32,10 @@ const baseSchema = z
   .object({
     type: z.enum(['ESSAY', 'QUIZ']),
     title: z.string().min(1).max(200),
-    description: z.string().max(5000).optional(),
-    subject: z.string().max(200).optional(),
+    // Các field mô tả/môn học là "tùy chọn" nên cho phép null để khớp với client
+    // (client đang gửi null khi để trống)
+    description: z.string().max(5000).optional().nullable(),
+    subject: z.string().max(200).optional().nullable(),
     classrooms: z.array(z.string().min(1).max(100)).optional(),
   })
   .strict();

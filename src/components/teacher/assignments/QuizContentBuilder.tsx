@@ -579,6 +579,7 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
             <div className="text-center py-10 text-gray-500">
               <Brain className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p>Chưa có câu hỏi nào. Nhấn &quot;Thêm câu hỏi&quot; để bắt đầu.</p>
+              <p className="mt-3 text-sm text-red-500">Bài trắc nghiệm phải có ít nhất 1 câu hỏi.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -781,20 +782,11 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
               });
             }}
           />
-          <div className="max-w-xs">
-            <Label htmlFor="maxAttempts" className="text-sm font-medium">
-              Số lần làm bài tối đa
-            </Label>
-            <Input
-              id="maxAttempts"
-              type="number"
-              min="1"
-              max="10"
-              value={currentContent.maxAttempts}
-              onChange={(e) => updateMaxAttempts(parseInt(e.target.value) || 1)}
-              className="mt-2 h-9 text-sm text-center"
-            />
-          </div>
+          {(!currentContent.openAt || !currentContent.lockAt) && (
+            <p className="text-xs text-red-500">
+              Vui lòng chọn đầy đủ thời gian mở và thời gian đóng bài.
+            </p>
+          )}
         </div>
       </AccordionItem>
 
