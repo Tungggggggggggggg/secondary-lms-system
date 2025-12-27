@@ -21,7 +21,11 @@ export default function MaintenancePage() {
   const role = (session?.user?.role || "").toString().toUpperCase();
   const isAdmin = role === "ADMIN";
 
-  const { data, mutate } = useSWR<SettingsResponse>("/api/system/settings");
+  const { data, mutate } = useSWR<SettingsResponse>("/api/system/settings", {
+    keepPreviousData: true,
+    revalidateOnMount: true,
+    dedupingInterval: 60_000,
+  });
 
   const maintenanceEnabled = !!data?.data?.maintenance?.enabled;
   const message = (data?.data?.maintenance?.message || "Vui lòng quay lại sau.").trim();

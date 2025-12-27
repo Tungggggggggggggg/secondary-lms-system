@@ -95,6 +95,11 @@ const handler = withApiLogging(async (req: NextRequest) => {
   let notified = 0;
   const errors: Array<{ parentId: string; childId: string; message: string }> = [];
 
+  const notificationBatch: Array<{
+    userId: string;
+    input: { title: string; description?: string };
+  }> = [];
+
   for (const link of links) {
     const parentId = link.parentId;
     const childId = link.studentId;
@@ -137,11 +142,13 @@ const handler = withApiLogging(async (req: NextRequest) => {
       processed++;
 
       try {
-        await notificationRepo.add(parentId, {
-          title: `Tóm tắt tuần của ${studentName}`,
-          description: `${trendLabel(summary.trend)}. ${summary.summary}`.slice(0, 500),
+        notificationBatch.push({
+          userId: parentId,
+          input: {
+            title: `Tóm tắt tuần của ${studentName}`,
+            description: `${trendLabel(summary.trend)}. ${summary.summary}`.slice(0, 500),
+          },
         });
-        notified++;
       } catch {}
 
       try {
@@ -160,6 +167,13 @@ const handler = withApiLogging(async (req: NextRequest) => {
       continue;
     }
   }
+
+  try {
+    if (!dryRun && notificationBatch.length > 0) {
+      await notificationRepo.addMany(notificationBatch);
+      notified += notificationBatch.length;
+    }
+  } catch {}
 
   return NextResponse.json(
     {

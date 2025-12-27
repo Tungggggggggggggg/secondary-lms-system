@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return errorResponse(403, "Forbidden");
     }
 
-    const created = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const createdAssignment = await tx.assignment.create({
         data: {
           title: newTitle && newTitle.trim() ? newTitle.trim() : `${original.title} (Copy)`,
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         });
         if (q.options && q.options.length > 0) {
           await tx.option.createMany({
-            data: q.options.map((o) => ({
+            data: q.options.map((o: any) => ({
               label: o.label,
               content: o.content,
               isCorrect: o.isCorrect,
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       if (copyClassrooms && original.classrooms && original.classrooms.length > 0) {
         await tx.assignmentClassroom.createMany({
-          data: original.classrooms.map((ac) => ({ classroomId: ac.classroomId, assignmentId: createdAssignment.id })),
+          data: original.classrooms.map((ac: any) => ({ classroomId: ac.classroomId, assignmentId: createdAssignment.id })),
           skipDuplicates: true,
         });
       }

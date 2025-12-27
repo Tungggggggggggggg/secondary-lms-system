@@ -19,14 +19,7 @@ import SubmissionReview from "@/components/student/assignments/SubmissionReview"
 import FileSubmissionPanel from "@/components/student/assignments/FileSubmissionPanel";
 import AssignmentComments from "@/components/student/assignments/AssignmentComments";
 import RichTextPreview from "@/components/shared/RichTextPreview";
-// Helpers for image preview signed URLs
-const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const publicUrlForStored = (path: string) => {
-  const clean = path.replace(/^\//, "");
-  if (SUPABASE_URL) return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${clean}`;
-  return `/storage/v1/object/public/${BUCKET}/${clean}`;
-};
+
 const isImageByName = (name?: string) => {
   if (!name) return false;
   const lower = name.toLowerCase();
@@ -111,7 +104,12 @@ export default function StudentAssignmentDetailPage({
           url = j.data.url;
           setSignedUrlByPath((prev) => ({ ...prev, [path]: url! }));
         } else {
-          url = publicUrlForStored(path);
+          toast({
+            title: "Không thể tải tệp",
+            description: "Không tạo được liên kết tải xuống. Vui lòng thử lại.",
+            variant: "destructive",
+          });
+          return;
         }
       }
       const a = document.createElement("a");
@@ -123,6 +121,7 @@ export default function StudentAssignmentDetailPage({
       a.remove();
     } catch {}
   };
+
   const [activeTab, setActiveTab] = useState<"work" | "review">("work");
 
   // Load assignment detail và submission
@@ -372,8 +371,6 @@ export default function StudentAssignmentDetailPage({
   const locked = lockAt ? now > lockAt : false;
   const workDisabled = (notOpened || locked) && !canEdit;
 
-  
-
   const headerSubmission = submission
     ? submission
     : fileSubmission
@@ -572,8 +569,12 @@ export default function StudentAssignmentDetailPage({
                     <div key={idx} className="border border-border rounded-lg p-2 bg-muted/40">
                       <div className="aspect-video bg-background flex items-center justify-center overflow-hidden rounded">
                         {f.mimeType?.startsWith("image/") ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={signedUrlByPath[f.storagePath] || publicUrlForStored(f.storagePath)} alt={f.fileName} className="object-cover w-full h-full" />
+                          signedUrlByPath[f.storagePath] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={signedUrlByPath[f.storagePath]} alt={f.fileName} className="object-cover w-full h-full" />
+                          ) : (
+                            <div className="text-xs text-muted-foreground">Không có bản xem trước</div>
+                          )
                         ) : (
                           <div className="text-xs text-muted-foreground">{f.fileName}</div>
                         )}

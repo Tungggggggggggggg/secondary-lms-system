@@ -125,12 +125,12 @@ export async function indexLessonEmbeddings(params: {
     return { totalChunks: 0, embeddedChunks: 0, skippedChunks: 0, deletedChunks: 0 };
   }
 
-  const existingRows = await prisma.$queryRaw<Array<{ chunkIndex: number; contentHash: string }>>`
+  const existingRows = (await prisma.$queryRaw`
     SELECT "chunkIndex", "contentHash"
     FROM "lesson_embedding_chunks"
     WHERE "lessonId" = ${lessonId}
     ORDER BY "chunkIndex" ASC;
-  `;
+  `) as Array<{ chunkIndex: number; contentHash: string }>;
 
   const existingByIndex = new Map<number, string>(existingRows.map((r) => [r.chunkIndex, r.contentHash]));
 

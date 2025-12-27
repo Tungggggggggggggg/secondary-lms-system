@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import fetcher from "@/lib/fetcher";
 
 type SystemSettings = {
   maintenance: { enabled: boolean; message: string | null };
@@ -46,12 +47,8 @@ export default function AdminSettingsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/admin/settings", { cache: "no-store" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải system settings");
-      }
 
+      const json = await fetcher<{ success: true; data: SystemSettings }>("/api/admin/settings");
       const data = json.data as SystemSettings;
       setMaintenanceEnabled(!!data?.maintenance?.enabled);
       setMaintenanceMessage(data?.maintenance?.message || "");
@@ -74,7 +71,7 @@ export default function AdminSettingsPage() {
       setSaving(true);
       setError(null);
 
-      const res = await fetch("/api/admin/settings", {
+      await fetcher("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -82,10 +79,6 @@ export default function AdminSettingsPage() {
           announcement: { enabled: announcementEnabled, message: announcementMessage || null },
         }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể lưu system settings");
-      }
 
       await fetchSettings();
       notifySystemSettingsUpdated();

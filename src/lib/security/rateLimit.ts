@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export type RateLimitResult = {
   allowed: boolean;
@@ -48,7 +49,7 @@ export async function checkRateLimit(params: {
 
   const storageKey = keyFor({ scope: params.scope, key: params.key });
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const row = await tx.systemSetting.findUnique({
       where: { key: storageKey },
       select: { value: true },

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Input from "@/components/ui/input";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -117,6 +117,10 @@ export default function CommandPaletteProvider({ children }: { children: React.R
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xl" onClose={() => setOpen(false)}>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Bảng điều khiển nhanh</DialogTitle>
+            <DialogDescription>Tìm kiếm và điều hướng nhanh trong hệ thống.</DialogDescription>
+          </DialogHeader>
           <div className="p-4 border-b">
             <Input
               placeholder="Tìm kiếm... (Ctrl+K)"

@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -187,6 +188,9 @@ export default function AddAssignmentDialog({
         {/* Header */}
         <DialogHeader>
           <DialogTitle>Thêm bài tập vào lớp</DialogTitle>
+          <DialogDescription className="sr-only">
+            Chọn bài tập có sẵn hoặc tạo bài tập mới để thêm vào lớp học.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Tabs */}

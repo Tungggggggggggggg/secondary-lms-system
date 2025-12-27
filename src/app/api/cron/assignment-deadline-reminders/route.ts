@@ -153,14 +153,14 @@ const handler = withApiLogging(async (req: NextRequest) => {
 
   async function processAssignment(kind: "DUE_24H" | "DUE_3H" | "OVERDUE", a: { id: string; title: string; lockAt: Date | null; dueDate: Date | null }) {
     // Find all students who have this assignment via assignment_classrooms -> classroom_students
-    const classroomStudents = await prisma.classroomStudent.findMany({
+    const classroomStudents = (await prisma.classroomStudent.findMany({
       where: {
         classroom: {
           assignments: { some: { assignmentId: a.id } },
         },
       },
       select: { studentId: true, classroomId: true },
-    });
+    })) as Array<{ studentId: string; classroomId: string }>;
 
     const studentIds = Array.from(new Set(classroomStudents.map((x) => x.studentId)));
     if (studentIds.length === 0) {
@@ -191,6 +191,18 @@ const handler = withApiLogging(async (req: NextRequest) => {
     let notifiedStudents = 0;
     let notifiedParents = 0;
 
+    const batch: Array<{
+      userId: string;
+      input: {
+        type?: string;
+        title: string;
+        description?: string;
+        actionUrl?: string;
+        dedupeKey?: string;
+        meta?: unknown;
+      };
+    }> = [];
+
     for (const sid of pendingStudentIds) {
       const parents = parentsByStudentId.get(sid) ?? [];
 
@@ -213,8 +225,9 @@ const handler = withApiLogging(async (req: NextRequest) => {
           ? `Bài đã quá hạn${deadlineStr ? ` (${deadlineStr})` : ""}.` 
           : `Hạn nộp${deadlineStr ? `: ${deadlineStr}` : ""}.`;
 
-      if (!dryRun) {
-        await notificationRepo.add(sid, {
+      batch.push({
+        userId: sid,
+        input: {
           type:
             kind === "DUE_24H"
               ? "STUDENT_ASSIGNMENT_DUE_24H"
@@ -226,13 +239,14 @@ const handler = withApiLogging(async (req: NextRequest) => {
           actionUrl: actionUrlStudent,
           dedupeKey: dedupeBase,
           meta: { assignmentId: a.id, deadline: deadline ? deadline.toISOString() : null, kind },
-        });
-      }
+        },
+      });
       notifiedStudents += 1;
 
       for (const pid of parents) {
-        if (!dryRun) {
-          await notificationRepo.add(pid, {
+        batch.push({
+          userId: pid,
+          input: {
             type:
               kind === "DUE_24H"
                 ? "PARENT_CHILD_DUE_24H"
@@ -244,10 +258,16 @@ const handler = withApiLogging(async (req: NextRequest) => {
             actionUrl: "/dashboard/parent/progress",
             dedupeKey: `${dedupeBase}:${pid}`,
             meta: { assignmentId: a.id, studentId: sid, deadline: deadline ? deadline.toISOString() : null, kind },
-          });
-        }
+          },
+        });
         notifiedParents += 1;
       }
+    }
+
+    if (!dryRun) {
+      try {
+        await notificationRepo.addMany(batch);
+      } catch {}
     }
 
     results.push({

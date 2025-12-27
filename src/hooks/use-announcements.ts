@@ -1,5 +1,29 @@
 import { useCallback, useState } from "react";
 import { useToast } from "./use-toast";
+import fetcher from "@/lib/fetcher";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
+
+function normalizePagination(value: unknown): Pagination | null {
+  if (!isRecord(value)) return null;
+  const page = value.page;
+  const pageSize = value.pageSize;
+  const total = value.total;
+  const totalPages = value.totalPages;
+  if (
+    typeof page === "number" &&
+    typeof pageSize === "number" &&
+    typeof total === "number" &&
+    typeof totalPages === "number"
+  ) {
+    return { page, pageSize, total, totalPages };
+  }
+  return null;
+}
 
 export interface AnnouncementItem {
   id: string;
@@ -82,9 +106,7 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
         if (filters?.sort) params.set("sort", filters.sort);
         if (typeof filters?.hasAttachment !== "undefined") params.set("hasAttachment", String(!!filters.hasAttachment));
         const url = `/api/classrooms/${classroomId}/announcements?${params.toString()}`;
-        const res = await fetch(url, enableCreate ? { cache: "no-store" } : undefined);
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Không thể tải thông báo");
+        const json = await fetcher<{ success: true; data: AnnouncementItem[]; pagination?: unknown }>(url);
         const nextItems = (json.data || []) as AnnouncementItem[];
 
         setAnnouncements((prev) => {
@@ -98,7 +120,7 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
             return true;
           });
         });
-        setPagination(json.pagination || null);
+        setPagination(normalizePagination((json as { pagination?: unknown }).pagination));
       } catch (e: any) {
         const msg = e?.message || "Có lỗi xảy ra";
         setError(msg);
@@ -117,12 +139,11 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
     async (announcementId: string, commentId: string): Promise<boolean> => {
       if (!enableCreate) return false;
       try {
-        const res = await fetch(`/api/announcements/${announcementId}/comments/${commentId}`, {
+        await fetcher(`/api/announcements/${announcementId}/comments/${commentId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "hide" }),
         });
-        if (!res.ok) throw new Error("Ẩn bình luận thất bại");
         // Optimistic: cập nhật status trong state
         setComments((prev) => {
           const list = prev[announcementId] || [];
@@ -146,12 +167,11 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
     async (announcementId: string, commentId: string): Promise<boolean> => {
       if (!enableCreate) return false;
       try {
-        const res = await fetch(`/api/announcements/${announcementId}/comments/${commentId}`, {
+        await fetcher(`/api/announcements/${announcementId}/comments/${commentId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "unhide" }),
         });
-        if (!res.ok) throw new Error("Hiện bình luận thất bại");
         setComments((prev) => {
           const list = prev[announcementId] || [];
           const mapStatus = (arr: AnnouncementComment[]): AnnouncementComment[] => arr.map((c) => ({
@@ -174,8 +194,7 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
     async (announcementId: string, commentId: string): Promise<boolean> => {
       if (!enableCreate) return false;
       try {
-        const res = await fetch(`/api/announcements/${announcementId}/comments/${commentId}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Xóa bình luận thất bại");
+        await fetcher(`/api/announcements/${announcementId}/comments/${commentId}`, { method: "DELETE" });
         // Lựa chọn: xoá khỏi UI (nếu là top-level) hoặc đánh dấu REJECTED như hide
         setComments((prev) => {
           const list = prev[announcementId] || [];
@@ -205,13 +224,14 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await fetch(`/api/classrooms/${classroomId}/announcements`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Không thể đăng thông báo");
+        const json = await fetcher<{ success: true; data: AnnouncementItem }>(
+          `/api/classrooms/${classroomId}/announcements`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content }),
+          }
+        );
         toast({ title: "Đã đăng thông báo" });
         // Refresh trang đầu tiên
         await fetchAnnouncements(classroomId, 1, pagination?.pageSize || 10);
@@ -234,10 +254,8 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
       return null;
     }
     try {
-      const res = await fetch(`/api/announcements/attachments/${fileId}/download`, { method: "GET" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message || "Không thể lấy link tải");
-      return json.url as string;
+      const json = await fetcher<{ url?: unknown }>(`/api/announcements/attachments/${fileId}/download`, { method: "GET" });
+      return typeof json?.url === "string" ? (json.url as string) : null;
     } catch {
       return null;
     }
@@ -253,15 +271,12 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
       try {
         if (!options?.force && recentFetched[announcementId]) return;
         setRecentCommentsLoading((prev) => ({ ...prev, [announcementId]: true }));
-        const res = await fetch(
-          `/api/announcements/${announcementId}/comments?recent=true`,
-          { cache: "no-store" }
+        const json = await fetcher<{ data?: unknown; total?: unknown }>(
+          `/api/announcements/${announcementId}/comments?recent=true`
         );
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Không thể tải bình luận gần đây");
         
         const recentData = (json.data || []) as AnnouncementComment[];
-        const total = json.total as number | undefined;
+        const total = typeof json.total === "number" ? json.total : undefined;
         
         setRecentComments((prev) => ({
           ...prev,
@@ -314,16 +329,13 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
 
         setCommentsLoading((prev) => ({ ...prev, [announcementId]: true }));
         const includeHidden = enableCreate ? "&includeHidden=true" : "";
-        const res = await fetch(
-          `/api/announcements/${announcementId}/comments?page=${page}&pageSize=${pageSize}${includeHidden}`,
-          { cache: "no-store" }
+        const json = await fetcher<{ data?: unknown; pagination?: unknown }>(
+          `/api/announcements/${announcementId}/comments?page=${page}&pageSize=${pageSize}${includeHidden}`
         );
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Không thể tải bình luận");
         
         // API trả về nested structure với replies (top-level comments có replies array)
         const commentsData = (json.data || []) as AnnouncementComment[];
-        const paginationData = json.pagination || null;
+        const paginationData = normalizePagination(json.pagination);
         
         // Giữ nguyên nested structure (không flatten)
         setComments((prev) => {
@@ -346,15 +358,11 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
             ...prev,
             [announcementId]: paginationData,
           }));
-          
-          // Cập nhật commentsTotal từ pagination.total (tổng số top-level comments)
-          // Fix bug: cập nhật cho cả teacher và student
-          if (paginationData.total !== undefined) {
-            setCommentsTotal((prev) => ({
-              ...prev,
-              [announcementId]: paginationData.total,
-            }));
-          }
+
+          setCommentsTotal((prev) => ({
+            ...prev,
+            [announcementId]: paginationData.total,
+          }));
         }
 
         // Đánh dấu đã fetched trang đầu tiên
@@ -404,13 +412,11 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
     async (announcementId: string, content: string, parentId?: string | null): Promise<boolean> => {
       try {
         setError(null);
-        const res = await fetch(`/api/announcements/${announcementId}/comments`, {
+        const json = await fetcher<{ data?: unknown }>(`/api/announcements/${announcementId}/comments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ content, parentId: parentId || null }),
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Không thể bình luận");
         
         // Thêm comment mới vào state
         const newComment = json.data as AnnouncementComment;
@@ -493,9 +499,7 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
       try {
         const form = new FormData();
         form.append("file", file);
-        const res = await fetch(`/api/announcements/${announcementId}/attachments`, { method: "POST", body: form });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Upload thất bại");
+        await fetcher(`/api/announcements/${announcementId}/attachments`, { method: "POST", body: form });
         return true;
       } catch (e: any) {
         const msg = e?.message || "Có lỗi xảy ra";

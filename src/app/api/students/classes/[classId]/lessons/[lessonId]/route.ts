@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, isStudentInClassroom } from "@/lib/api-utils";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
+
+const LESSON_FILES_BUCKET =
+  process.env.SUPABASE_ASSIGNMENTS_BUCKET ||
+  process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ||
+  "lms-submissions";
 
 /**
  * GET /api/students/classes/[classId]/lessons/[lessonId]
@@ -29,11 +35,11 @@ export async function GET(
     const ok = await isStudentInClassroom(user.id, classId);
     if (!ok) return errorResponse(403, "Forbidden - Not a member of this classroom");
 
-    const classroomCourses = await prisma.classroomCourse.findMany({
+    const classroomCourses = (await prisma.classroomCourse.findMany({
       where: { classroomId: classId },
       select: { courseId: true },
       take: 200,
-    });
+    })) as Array<{ courseId: string }>;
 
     const courseIds = classroomCourses.map((x) => x.courseId);
     if (courseIds.length === 0) {
@@ -81,6 +87,45 @@ export async function GET(
       }),
     ]);
 
+    type LessonAttachmentRow = {
+      id: string;
+      name: string;
+      storagePath: string;
+      mimeType: string;
+    };
+
+    const admin = supabaseAdmin;
+    const attachmentsRaw = (lesson.attachments ?? []) as LessonAttachmentRow[];
+    const attachments = await Promise.all(
+      attachmentsRaw.map(async (a) => {
+        let url: string | null = null;
+        if (admin) {
+          try {
+            const { data, error } = await admin.storage
+              .from(LESSON_FILES_BUCKET)
+              .createSignedUrl(a.storagePath, 900);
+            if (!error) {
+              url = data?.signedUrl || null;
+            }
+          } catch (e) {
+            console.error("[LessonDetail] createSignedUrl error", {
+              lessonId,
+              attachmentId: a.id,
+              path: a.storagePath,
+              error: String(e),
+            });
+          }
+        }
+        return {
+          id: a.id,
+          name: a.name,
+          storagePath: a.storagePath,
+          mimeType: a.mimeType,
+          url,
+        };
+      })
+    );
+
     return NextResponse.json(
       {
         success: true,
@@ -94,13 +139,7 @@ export async function GET(
           publishedAt: lesson.createdAt.toISOString(),
           prevLessonId: prev?.id ?? null,
           nextLessonId: next?.id ?? null,
-          attachments:
-            lesson.attachments?.map((a) => ({
-              id: a.id,
-              name: a.name,
-              storagePath: a.storagePath,
-              mimeType: a.mimeType,
-            })) ?? [],
+          attachments,
           links: [],
         },
       },

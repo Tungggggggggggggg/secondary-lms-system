@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import fetcher from "@/lib/fetcher";
 
 type OrgStatus = "ACTIVE" | "INACTIVE";
 
@@ -111,25 +112,8 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
       setLoading(true);
       setError(null);
 
-      const res = await fetch(`/api/admin/organizations/${orgId}`, { cache: "no-store" });
-      const json = (await res.json().catch(() => ({}))) as unknown;
-
-      const ok =
-        typeof json === "object" &&
-        json !== null &&
-        (json as { success?: unknown }).success === true;
-
-      if (!res.ok || !ok) {
-        const msg =
-          typeof json === "object" &&
-          json !== null &&
-          typeof (json as { message?: unknown }).message === "string"
-            ? (json as { message: string }).message
-            : "Không thể tải organization";
-        throw new Error(msg);
-      }
-
-      const data = (json as { data?: unknown }).data as OrgDetail;
+      const json = await fetcher<{ success: true; data: OrgDetail }>(`/api/admin/organizations/${orgId}`);
+      const data = json.data as OrgDetail;
       setOrg(data);
       setEditName(data.name);
       setEditSlug(data.slug || "");
@@ -154,25 +138,10 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
       if (membersSearch.trim()) params.set("search", membersSearch.trim());
       if (cursorParam) params.set("cursor", cursorParam);
 
-      const res = await fetch(`/api/admin/organizations/${orgId}/members?${params.toString()}`, { cache: "no-store" });
-      const json = (await res.json().catch(() => ({}))) as unknown;
-
-      const ok =
-        typeof json === "object" &&
-        json !== null &&
-        (json as { success?: unknown }).success === true;
-
-      if (!res.ok || !ok) {
-        const msg =
-          typeof json === "object" &&
-          json !== null &&
-          typeof (json as { message?: unknown }).message === "string"
-            ? (json as { message: string }).message
-            : "Không thể tải members";
-        throw new Error(msg);
-      }
-
-      const data = (json as { data?: unknown }).data as MembersResponse;
+      const json = await fetcher<{ success: true; data: MembersResponse }>(
+        `/api/admin/organizations/${orgId}/members?${params.toString()}`
+      );
+      const data = json.data as MembersResponse;
       const list = Array.isArray(data?.items) ? data.items : [];
       setMembers((prev) => (reset ? list : [...prev, ...list]));
       setMembersNextCursor(typeof data?.nextCursor === "string" ? data.nextCursor : null);
@@ -215,7 +184,7 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
     try {
       setEditLoading(true);
 
-      const res = await fetch(`/api/admin/organizations/${org.id}`, {
+      await fetcher(`/api/admin/organizations/${org.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -224,23 +193,6 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
           status: editStatus,
         }),
       });
-
-      const json = (await res.json().catch(() => ({}))) as unknown;
-
-      const ok =
-        typeof json === "object" &&
-        json !== null &&
-        (json as { success?: unknown }).success === true;
-
-      if (!res.ok || !ok) {
-        const msg =
-          typeof json === "object" &&
-          json !== null &&
-          typeof (json as { message?: unknown }).message === "string"
-            ? (json as { message: string }).message
-            : "Không thể cập nhật organization";
-        throw new Error(msg);
-      }
 
       toast({
         title: "Đã cập nhật",
@@ -277,28 +229,11 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
     try {
       setAddMemberLoading(true);
 
-      const res = await fetch(`/api/admin/organizations/${orgId}/members`, {
+      await fetcher(`/api/admin/organizations/${orgId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, roleInOrg }),
       });
-
-      const json = (await res.json().catch(() => ({}))) as unknown;
-
-      const ok =
-        typeof json === "object" &&
-        json !== null &&
-        (json as { success?: unknown }).success === true;
-
-      if (!res.ok || !ok) {
-        const msg =
-          typeof json === "object" &&
-          json !== null &&
-          typeof (json as { message?: unknown }).message === "string"
-            ? (json as { message: string }).message
-            : "Không thể thêm member";
-        throw new Error(msg);
-      }
 
       toast({
         title: "Đã thêm member",
@@ -325,28 +260,11 @@ export default function AdminOrganizationDetailPage({ params }: { params: { id: 
 
   const removeMember = async (userId: string) => {
     try {
-      const res = await fetch(`/api/admin/organizations/${orgId}/members`, {
+      await fetcher(`/api/admin/organizations/${orgId}/members`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
       });
-
-      const json = (await res.json().catch(() => ({}))) as unknown;
-
-      const ok =
-        typeof json === "object" &&
-        json !== null &&
-        (json as { success?: unknown }).success === true;
-
-      if (!res.ok || !ok) {
-        const msg =
-          typeof json === "object" &&
-          json !== null &&
-          typeof (json as { message?: unknown }).message === "string"
-            ? (json as { message: string }).message
-            : "Không thể xóa member";
-        throw new Error(msg);
-      }
 
       toast({
         title: "Đã xóa member",

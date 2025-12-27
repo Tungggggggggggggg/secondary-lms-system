@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
 import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
+import { join, sqltag as sql } from "@prisma/client/runtime/library";
 
 interface TeacherClassroomAssignmentSummary {
   id: string;
@@ -11,6 +12,15 @@ interface TeacherClassroomAssignmentSummary {
   dueDate: Date | null;
   lockAt: Date | null;
 }
+
+type LatestSubmissionRow = {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  grade: number | null;
+  feedback: string | null;
+  submittedAt: Date;
+};
 
 const querySchema = z.object({
   status: z.enum(["all", "graded", "ungraded"]).default("all"),
@@ -79,7 +89,8 @@ export async function GET(
     // Lấy danh sách học sinh trong lớp
     const classroomStudents = await prisma.classroomStudent.findMany({
       where: { classroomId },
-      include: {
+      select: {
+        studentId: true,
         student: { select: { id: true, fullname: true, email: true } },
       },
     });
@@ -103,41 +114,42 @@ export async function GET(
       assignments.map((a: TeacherClassroomAssignmentSummary) => [a.id, a]),
     );
 
-    // Lấy tất cả submissions (để lấy attempt mới nhất của mỗi cặp student-assignment)
-    const submissions = await prisma.assignmentSubmission.findMany({
-      where: {
-        assignmentId: { in: assignmentIds },
-        studentId: { in: studentIds },
-      },
-      include: {
-        assignment: { select: { id: true } },
-        student: { select: { id: true, fullname: true, email: true } },
-      },
-      orderBy: [{ attempt: "desc" }, { submittedAt: "desc" }],
-    });
+    const studentById = new Map<string, { id: string; fullname: string | null; email: string }>(
+      classroomStudents.map((cs: { studentId: string; student: { id: string; fullname: string | null; email: string } }) => [
+        cs.studentId,
+        cs.student,
+      ])
+    );
 
-    // Giữ lại submission mới nhất cho mỗi (student, assignment)
-    const latestMap = new Map<string, (typeof submissions)[number]>();
-    for (const s of submissions) {
-      const key = `${s.student.id}-${s.assignment.id}`;
-      if (!latestMap.has(key)) {
-        latestMap.set(key, s);
-      }
-    }
-    const latestSubmissions = Array.from(latestMap.values());
+    const latestSubmissions = ((await prisma.$queryRaw(
+      sql`
+      SELECT DISTINCT ON (s."studentId", s."assignmentId")
+        s.id,
+        s."studentId" as "studentId",
+        s."assignmentId" as "assignmentId",
+        s.grade,
+        s.feedback,
+        s."submittedAt" as "submittedAt"
+      FROM "assignment_submissions" s
+      WHERE s."assignmentId" IN (${join(assignmentIds)})
+        AND s."studentId" IN (${join(studentIds)})
+      ORDER BY s."studentId", s."assignmentId", s.attempt DESC
+    `
+    )) as unknown) as LatestSubmissionRow[];
 
     const submissionRows = latestSubmissions.map((s) => {
-      const assignment = assignmentMap.get(s.assignment.id);
+      const student = studentById.get(s.studentId);
+      const assignment = assignmentMap.get(s.assignmentId);
       const effectiveDeadline = assignment ? getEffectiveDeadline(assignment) : null;
       return {
         id: s.id,
         student: {
-          id: s.student.id,
-          fullname: s.student.fullname,
-          email: s.student.email,
+          id: student?.id ?? s.studentId,
+          fullname: student?.fullname ?? null,
+          email: student?.email ?? "",
         },
         assignment: {
-          id: assignment?.id ?? s.assignment.id,
+          id: assignment?.id ?? s.assignmentId,
           title: assignment?.title ?? "",
           type: assignment?.type ?? "ESSAY",
           dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
@@ -151,7 +163,7 @@ export async function GET(
 
     // Tạo các bản ghi ảo điểm 0 cho (student, assignment) chưa có submission
     const existingKeys = new Set(
-      latestSubmissions.map((s) => `${s.student.id}-${s.assignment.id}`)
+      latestSubmissions.map((s) => `${s.studentId}-${s.assignmentId}`)
     );
 
     const now = new Date();

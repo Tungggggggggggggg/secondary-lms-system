@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       return errorResponse(404, "Student not found");
     }
 
-    const events = await prisma.examEvent.findMany({
+    const events = (await prisma.examEvent.findMany({
       where: {
         assignmentId,
         studentId,
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
         createdAt: true,
         metadata: true,
       },
-    });
+    })) as Array<{ eventType: string; createdAt: Date; metadata: unknown }>;
 
     const scoring = computeQuizAntiCheatScore(events);
 

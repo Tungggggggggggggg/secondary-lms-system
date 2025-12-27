@@ -102,10 +102,10 @@ export const GET = withApiLogging(async (req: NextRequest) => {
 
     const now = new Date();
 
-    const classroomLinks = await prisma.classroomStudent.findMany({
+    const classroomLinks = (await prisma.classroomStudent.findMany({
       where: { studentId: { in: studentIds } },
       select: { studentId: true, classroomId: true },
-    });
+    })) as Array<{ studentId: string; classroomId: string }>;
 
     const classroomIds = Array.from(new Set(classroomLinks.map((x) => x.classroomId)));
     if (classroomIds.length === 0) {

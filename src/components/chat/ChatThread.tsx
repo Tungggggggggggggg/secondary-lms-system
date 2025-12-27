@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import type { MessageDTO } from "@/hooks/use-chat";
 import { useSession } from "next-auth/react";
 import { CornerUpLeft, Image as ImageIcon, Paperclip } from "lucide-react";
-import { getChatFileUrl } from "@/lib/supabase-upload";
 import { cn } from "@/lib/utils";
 import { formatDateLabel, formatTimeLabel } from "@/lib/date";
 
@@ -147,40 +146,56 @@ export default function ChatThread({ color = "amber", messages, participants, on
                     {m.attachments && m.attachments.length > 0 && (
                       <div className="mt-2 space-y-1">
                         {m.attachments.map((att) => {
-                          const url = getChatFileUrl(att.storagePath);
+                          const url = att.url ?? "";
                           const isImage = att.mimeType.startsWith("image/");
                           return (
                             <div key={att.id} className="text-xs">
                               {isImage ? (
-                                <a href={url} target="_blank" rel="noreferrer" className="block group">
-                                  <img
-                                    src={url}
-                                    alt={att.name}
-                                    className="max-h-40 rounded-md border border-gray-200 mb-1 object-contain bg-white"
-                                  />
-                                  <div
-                                    className={cn(
-                                      "flex items-center gap-1 text-[11px] group-hover:underline",
-                                      mine ? palette.attachTextMine : palette.attachTextOther
-                                    )}
-                                  >
+                                url ? (
+                                  <a href={url} target="_blank" rel="noreferrer" className="block group">
+                                    <img
+                                      src={url}
+                                      alt={att.name}
+                                      className="max-h-40 rounded-md border border-gray-200 mb-1 object-contain bg-white"
+                                    />
+                                    <div
+                                      className={cn(
+                                        "flex items-center gap-1 text-[11px] group-hover:underline",
+                                        mine ? palette.attachTextMine : palette.attachTextOther
+                                      )}
+                                    >
+                                      <ImageIcon className="h-3 w-3" />
+                                      <span className="truncate max-w-[160px]">{att.name}</span>
+                                    </div>
+                                  </a>
+                                ) : (
+                                  <div className={cn("flex items-center gap-1 text-[11px]", mine ? palette.attachTextMine : palette.attachTextOther)}>
                                     <ImageIcon className="h-3 w-3" />
                                     <span className="truncate max-w-[160px]">{att.name}</span>
+                                    <span className="opacity-80">(không có link)</span>
                                   </div>
-                                </a>
+                                )
                               ) : (
-                                <a
-                                  href={url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className={cn(
-                                    "inline-flex items-center gap-1 text-[11px] underline-offset-2 hover:underline",
-                                    mine ? palette.attachTextMine : palette.linkOther
-                                  )}
-                                >
-                                  <Paperclip className="h-3 w-3" />
-                                  <span className="truncate max-w-[160px]">{att.name}</span>
-                                </a>
+                                url ? (
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className={cn(
+                                      "inline-flex items-center gap-1 text-[11px] underline-offset-2 hover:underline",
+                                      mine ? palette.attachTextMine : palette.linkOther
+                                    )}
+                                  >
+                                    <Paperclip className="h-3 w-3" />
+                                    <span className="truncate max-w-[160px]">{att.name}</span>
+                                  </a>
+                                ) : (
+                                  <span className={cn("inline-flex items-center gap-1 text-[11px]", mine ? palette.attachTextMine : palette.linkOther)}>
+                                    <Paperclip className="h-3 w-3" />
+                                    <span className="truncate max-w-[160px]">{att.name}</span>
+                                    <span className="opacity-80">(không có link)</span>
+                                  </span>
+                                )
                               )}
                             </div>
                           );

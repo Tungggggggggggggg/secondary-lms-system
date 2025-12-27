@@ -173,49 +173,63 @@ export async function POST(
       return errorResponse(403, "Forbidden - Assignment does not belong to you");
     }
 
-    // Kiểm tra assignment đã được thêm vào classroom chưa
-    const existing = await prisma.assignmentClassroom.findUnique({
-      where: {
-        classroomId_assignmentId: {
+    // Thêm assignment vào classroom (dựa vào unique constraint để tránh thêm query check trước)
+    let assignmentClassroom: {
+      addedAt: Date;
+      assignment: {
+        id: string;
+        title: string;
+        description: string | null;
+        dueDate: Date | null;
+        openAt: Date | null;
+        lockAt: Date | null;
+        type: string;
+        createdAt: Date;
+        updatedAt: Date;
+        _count: { submissions: number; questions: number };
+      };
+    };
+
+    try {
+      assignmentClassroom = await prisma.assignmentClassroom.create({
+        data: {
           classroomId,
           assignmentId,
         },
-      },
-    });
-
-    if (existing) {
-      return errorResponse(409, "Assignment already added to this classroom");
-    }
-
-    // Thêm assignment vào classroom
-    const assignmentClassroom = await prisma.assignmentClassroom.create({
-      data: {
-        classroomId,
-        assignmentId,
-      },
-      select: {
-        addedAt: true,
-        assignment: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            dueDate: true,
-            openAt: true,
-            lockAt: true,
-            type: true,
-            createdAt: true,
-            updatedAt: true,
-            _count: {
-              select: {
-                submissions: true,
-                questions: true,
+        select: {
+          addedAt: true,
+          assignment: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              dueDate: true,
+              openAt: true,
+              lockAt: true,
+              type: true,
+              createdAt: true,
+              updatedAt: true,
+              _count: {
+                select: {
+                  submissions: true,
+                  questions: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: unknown }).code === "P2002"
+      ) {
+        return errorResponse(409, "Assignment already added to this classroom");
+      }
+      throw error;
+    }
 
     try {
       const students = await prisma.classroomStudent.findMany({
@@ -225,18 +239,21 @@ export async function POST(
 
       const title = `Bài tập mới: ${assignmentClassroom.assignment.title}`;
       const actionUrl = `/dashboard/student/assignments/${assignmentId}`;
-      await Promise.allSettled(
-        students.map((s: { studentId: string }) =>
-          notificationRepo.add(s.studentId, {
-            type: "STUDENT_ASSIGNMENT_ASSIGNED",
-            title,
-            description: "Giáo viên đã giao một bài tập mới cho lớp của bạn.",
-            actionUrl,
-            dedupeKey: `assign:${classroomId}:${assignmentId}:${s.studentId}`,
-            meta: { classroomId, assignmentId },
-          })
-        )
-      );
+      if (students.length > 0) {
+        await notificationRepo.addMany(
+          students.map((s: { studentId: string }) => ({
+            userId: s.studentId,
+            input: {
+              type: "STUDENT_ASSIGNMENT_ASSIGNED",
+              title,
+              description: "Giáo viên đã giao một bài tập mới cho lớp của bạn.",
+              actionUrl,
+              dedupeKey: `assign:${classroomId}:${assignmentId}:${s.studentId}`,
+              meta: { classroomId, assignmentId },
+            },
+          }))
+        );
+      }
     } catch {}
 
     return NextResponse.json(

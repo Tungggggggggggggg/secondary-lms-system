@@ -45,16 +45,16 @@ export async function GET(
     const ok = await isStudentInClassroom(user.id, classId);
     if (!ok) return errorResponse(403, "Forbidden - Not a member of this classroom");
 
-    const classroomCourses = await prisma.classroomCourse.findMany({
+    const classroomCourses = (await prisma.classroomCourse.findMany({
       where: {
         classroomId: classId,
         ...(courseId ? { courseId } : {}),
       },
       select: { courseId: true, course: { select: { title: true } } },
       take: 200,
-    });
+    })) as Array<{ courseId: string; course: { title: string } | null }>;
 
-    const courseIds = classroomCourses.map((x) => x.courseId);
+    const courseIds = classroomCourses.map((x: { courseId: string }) => x.courseId);
     if (courseIds.length === 0) {
       return NextResponse.json(
         {
@@ -66,10 +66,10 @@ export async function GET(
     }
 
     const courseTitleById = new Map<string, string>(
-      classroomCourses.map((c) => [c.courseId, c.course?.title ?? "Khóa học"])
+      classroomCourses.map((c: { courseId: string; course: { title: string } | null }) => [c.courseId, c.course?.title ?? "Khóa học"])
     );
 
-    const lessons = await prisma.lesson.findMany({
+    const lessons = (await prisma.lesson.findMany({
       where: { courseId: { in: courseIds } },
       orderBy: [{ courseId: "asc" }, { order: "asc" }],
       take: limit,
@@ -80,7 +80,7 @@ export async function GET(
         createdAt: true,
         courseId: true,
       },
-    });
+    })) as Array<{ id: string; title: string; order: number; createdAt: Date; courseId: string }>;
 
     return NextResponse.json(
       {

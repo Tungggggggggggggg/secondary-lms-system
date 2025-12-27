@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 
 import { prisma } from '@/lib/prisma'
@@ -41,7 +40,7 @@ export async function GET(req: NextRequest) {
     const sortKey = parsed.data.sortKey
     const sortDir = parsed.data.sortDir
 
-    const whereBase: Prisma.ClassroomWhereInput = { teacherId: authUser.id }
+    const whereBase: any = { teacherId: authUser.id }
     if (q) {
       whereBase.OR = [
         { name: { contains: q, mode: 'insensitive' } },
@@ -50,15 +49,15 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    const where: Prisma.ClassroomWhereInput =
+    const where: any =
       status !== 'all' ? { ...whereBase, isActive: status === 'active' } : { ...whereBase }
 
-    const orderBy: Prisma.ClassroomOrderByWithRelationInput =
+    const orderBy: any =
       sortKey === 'students'
-        ? { students: { _count: sortDir as Prisma.SortOrder } }
+        ? { students: { _count: sortDir } }
         : sortKey === 'name'
-          ? { name: sortDir as Prisma.SortOrder }
-          : { createdAt: sortDir as Prisma.SortOrder }
+          ? { name: sortDir }
+          : { createdAt: sortDir }
 
     const [items, total, countAll, countActive, countArchived] = await Promise.all([
       prisma.classroom.findMany({

@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       return errorResponse(404, "Classroom not found");
     }
 
-    const links = await prisma.classroomStudent.findMany({
+    const links = (await prisma.classroomStudent.findMany({
       where: { classroomId },
       orderBy: { joinedAt: "desc" },
       select: {
@@ -34,7 +34,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
         student: { select: { id: true, email: true, fullname: true } },
       },
       take: 10000,
-    });
+    })) as Array<{ joinedAt: Date; student: { id: string; email: string; fullname: string | null } }>;
 
     const headers = ["studentId", "fullname", "email", "joinedAt"];
     const rows = links.map((l) => [

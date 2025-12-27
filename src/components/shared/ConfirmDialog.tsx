@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react";
 
@@ -58,7 +58,11 @@ export default function ConfirmDialog({
             </div>
             <div className="flex-1">
               <DialogTitle className="text-lg font-semibold text-gray-900">{title}</DialogTitle>
-              {description && <p className="mt-2 text-sm text-gray-600">{description}</p>}
+              {description ? (
+                <DialogDescription className="mt-2 text-sm font-normal text-gray-600">{description}</DialogDescription>
+              ) : (
+                <DialogDescription className="sr-only">Xác nhận thao tác.</DialogDescription>
+              )}
             </div>
           </div>
         </DialogHeader>

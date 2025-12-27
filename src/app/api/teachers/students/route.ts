@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
     const teacherId = authUser.id;
 
-    const rows = await prisma.$queryRaw<TeacherStudentRow[]>`
+    const rows = (await prisma.$queryRaw`
       WITH class_students AS (
         SELECT cs."studentId", cs."classroomId"
         FROM "classroom_students" cs
@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
         ON ls."assignmentId" = p."assignmentId" AND ls."studentId" = cs."studentId"
       GROUP BY cs."studentId", u."fullname", u."email", c."id", c."name", c."code"
       ORDER BY c."createdAt" DESC, u."fullname" ASC;
-    `;
+    `) as TeacherStudentRow[];
 
     const items: TeacherStudentListItem[] = rows.map((r) => {
       const totalAssignments = Number(r.totalAssignments ?? BigInt(0));

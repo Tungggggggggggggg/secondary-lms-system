@@ -80,7 +80,11 @@ export async function POST(req: NextRequest) {
 
         if (error) {
             console.error(`[ERROR] [POST] /api/submissions/upload - Upload failed {requestId:${requestId}}`, error);
-            return errorResponse(500, "Upload failed", { requestId });
+            // Trả thêm chi tiết lỗi để tiện debug (ví dụ: bucket không tồn tại, quyền không đủ, v.v.)
+            return errorResponse(500, "Upload failed", {
+                requestId,
+                details: error.message,
+            });
         }
 
         return NextResponse.json({

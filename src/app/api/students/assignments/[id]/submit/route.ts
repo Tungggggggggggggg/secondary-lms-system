@@ -4,7 +4,6 @@ import { z } from "zod";
 import { errorResponse, getAuthenticatedUser, getStudentClassroomForAssignment } from "@/lib/api-utils";
 import { autoGradeQuiz, validateQuizSubmission } from "@/lib/auto-grade";
 import crypto from "crypto";
-import type { Prisma } from "@prisma/client";
 import { notificationRepo } from "@/lib/repositories/notification-repo";
 
 const paramsSchema = z
@@ -184,7 +183,7 @@ export async function POST(
     let calculatedGrade: number | null = null;
     let autoFeedback: string | null = null;
     let submissionContent = "";
-    let contentSnapshot: Prisma.InputJsonValue | null = null;
+    let contentSnapshot: unknown | null = null;
 
     if (assignment.type === "QUIZ" && answers) {
       try {
@@ -265,15 +264,17 @@ export async function POST(
 
       // Tạo contentSnapshot để freeze nội dung đề tại thời điểm nộp
       try {
-        const snapshotQuestions = assignment.questions.map((q) => ({
+        const snapshotQuestions = assignment.questions.map((q: any) => ({
           id: q.id,
           content: q.content,
           type: q.type,
-          options: (q.options || []).map((o) => ({
-            id: o.id,
-            label: o.label,
-            content: o.content,
-            isCorrect: o.isCorrect,
+          order: q.order,
+          options: q.options.map((opt: any) => ({
+            id: opt.id,
+            label: opt.label,
+            content: opt.content,
+            isCorrect: opt.isCorrect,
+            order: opt.order,
           })),
         }));
         const versionHash = crypto
@@ -281,7 +282,7 @@ export async function POST(
           .update(JSON.stringify({ assignmentId: assignment.id, questions: snapshotQuestions }))
           .digest("hex")
           .slice(0, 12);
-        contentSnapshot = { versionHash, questions: snapshotQuestions } as Prisma.InputJsonValue;
+        contentSnapshot = { versionHash, questions: snapshotQuestions } as any;
       } catch (e) {
         console.error("[SUBMIT] Không thể tạo contentSnapshot:", e);
         contentSnapshot = null;
@@ -291,14 +292,14 @@ export async function POST(
     }
 
     // Tạo submission (multi-attempts: nếu đã có -> tăng attempt)
-    const dataToCreate: Prisma.AssignmentSubmissionUncheckedCreateInput = {
+    const dataToCreate: any = {
       assignmentId,
       studentId: user.id,
       content: submissionContent,
       grade: calculatedGrade, // Auto-grade cho quiz
       feedback: autoFeedback, // Auto-feedback cho quiz
       attempt: nextAttempt,
-      ...(presentation ? { presentation: presentation as Prisma.InputJsonValue } : {}),
+      ...(presentation ? { presentation: presentation as any } : {}),
       ...(assignment.type === "QUIZ" && contentSnapshot ? { contentSnapshot } : {}),
     };
     const submission = await prisma.assignmentSubmission.create({
@@ -512,7 +513,7 @@ export async function PUT(
     }
 
     // Update submission (và grade/feedback nếu là quiz)
-    const updateData: Prisma.AssignmentSubmissionUncheckedUpdateInput = {
+    const updateData: any = {
       content: submissionContent,
     };
     if (submission.assignment.type === "QUIZ") {

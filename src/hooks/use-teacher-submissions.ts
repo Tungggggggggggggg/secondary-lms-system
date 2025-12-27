@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import fetcher from "@/lib/fetcher";
 
 /**
  * Interface cho Submission từ teacher view
@@ -145,28 +146,7 @@ export function useTeacherSubmissions() {
         console.log(`[fetchSubmissions] URL: ${url}`);
         console.log(`[fetchSubmissions] Options:`, options);
 
-        const response = await fetch(url, { cache: "no-store" });
-        const result = await response.json();
-
-        console.log(`[fetchSubmissions] Response status: ${response.status}`);
-        console.log(`[fetchSubmissions] Response data:`, result);
-
-        if (!response.ok) {
-          console.error(
-            "[fetchSubmissions] Lỗi response:",
-            {
-              status: response.status,
-              statusText: response.statusText,
-              message: result?.message,
-              assignmentId,
-              url
-            }
-          );
-          throw new Error(
-            result?.message || `Lỗi ${response.status}: ${response.statusText}`
-          );
-        }
-
+        const result = await fetcher<{ success: true; data: SubmissionsResponse }>(url);
         const data = result.data as SubmissionsResponse;
         setSubmissions(data.submissions ?? []);
         setPagination({
@@ -206,21 +186,9 @@ export function useTeacherSubmissions() {
           `[fetchSubmissionDetail] Lấy chi tiết submission: ${submissionId}`
         );
 
-        const response = await fetch(
-          `/api/assignments/${assignmentId}/submissions/${submissionId}`,
-          { cache: "no-store" }
+        const result = await fetcher<{ success: true; data: SubmissionDetail }>(
+          `/api/assignments/${assignmentId}/submissions/${submissionId}`
         );
-        const result = await response.json();
-
-        if (!response.ok) {
-          console.error(
-            "[fetchSubmissionDetail] Lỗi response:",
-            result?.message || response.statusText
-          );
-          throw new Error(
-            result?.message || "Có lỗi xảy ra khi lấy chi tiết bài nộp"
-          );
-        }
 
         console.log(
           "[fetchSubmissionDetail] Lấy chi tiết bài nộp thành công:",
@@ -258,7 +226,7 @@ export function useTeacherSubmissions() {
           throw new Error("Điểm phải từ 0 đến 10");
         }
 
-        const response = await fetch(
+        const result = await fetcher<{ success: true; data: unknown }>(
           `/api/assignments/${assignmentId}/submissions/${submissionId}`,
           {
             method: "PUT",
@@ -271,18 +239,6 @@ export function useTeacherSubmissions() {
             }),
           }
         );
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          console.error(
-            "[gradeSubmission] Lỗi response:",
-            result?.message || response.statusText
-          );
-          throw new Error(
-            result?.message || "Có lỗi xảy ra khi chấm bài"
-          );
-        }
 
         // Cập nhật submission trong state
         setSubmissions((prev) =>

@@ -20,7 +20,7 @@ function getErrorMessage(payload: unknown, fallback: string): string {
 }
 
 async function fetchDashboardData<T>(url: string, fallbackMessage: string): Promise<T> {
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url);
   const payload = (await res.json()) as unknown;
 
   if (!res.ok) {

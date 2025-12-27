@@ -4,12 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 
 const MIME_WHITELIST = new Set([
     "application/pdf",
@@ -71,11 +69,6 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
         const lower = name.toLowerCase();
         return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].some((ext) => lower.endsWith(ext));
     };
-    const publicUrlForStored = (storagePath: string) => {
-        const clean = storagePath.replace(/^\//, "");
-        if (SUPABASE_URL) return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${clean}`;
-        return `/storage/v1/object/public/${BUCKET}/${clean}`;
-    };
 
     const fetchSignedUrl = useCallback(async (path: string) => {
         try {
@@ -101,8 +94,7 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
         const f = uploaded[editIndex];
         if (!f) return "";
         if (f.mimeType?.startsWith("image/") || isImageByName(f.fileName) || isImageByName(f.storagePath)) {
-            // Prefer signed URL (private buckets). Fallback to public URL if env allows.
-            return signedUrlByPath[f.storagePath] || publicUrlForStored(f.storagePath);
+            return signedUrlByPath[f.storagePath] || "";
         }
         return "";
     }, [editOpen, editIndex, editType, files, uploaded, signedUrlByPath]);
@@ -120,7 +112,15 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                 const f = uploaded[editIndex];
                 if (!f) return;
                 filename = f.fileName || "download";
-                url = signedUrlByPath[f.storagePath] || (await fetchSignedUrl(f.storagePath)) || publicUrlForStored(f.storagePath);
+                url = signedUrlByPath[f.storagePath] || (await fetchSignedUrl(f.storagePath)) || "";
+                if (!url) {
+                    toast({
+                        title: "Không thể tải tệp",
+                        description: "Không tạo được liên kết tải xuống. Vui lòng thử lại.",
+                        variant: "destructive",
+                    });
+                    return;
+                }
             }
             const a = document.createElement("a");
             a.href = url;
@@ -130,7 +130,7 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
             a.click();
             a.remove();
         } catch {}
-    }, [editIndex, editType, files, uploaded, signedUrlByPath, fetchSignedUrl]);
+    }, [editIndex, editType, files, uploaded, signedUrlByPath, fetchSignedUrl, toast]);
 
     const openEditForNew = (idx: number) => {
         const f = files[idx];
@@ -283,8 +283,12 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                             >
                                 <div className="aspect-video bg-muted/40 flex items-center justify-center overflow-hidden rounded">
                                     {(f.mimeType?.startsWith("image/") || isImageByName(f.fileName) || isImageByName(f.storagePath)) ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={signedUrlByPath[f.storagePath] || publicUrlForStored(f.storagePath)} alt={f.fileName} className="object-cover w-full h-full" />
+                                        signedUrlByPath[f.storagePath] ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={signedUrlByPath[f.storagePath]} alt={f.fileName} className="object-cover w-full h-full" />
+                                        ) : (
+                                            <div className="text-xs text-muted-foreground">Không có bản xem trước</div>
+                                        )
                                     ) : (
                                         <div className="text-xs text-muted-foreground">{f.mimeType || "file"}</div>
                                     )}
@@ -353,6 +357,9 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                         <div className="p-6 space-y-4">
                             <DialogHeader className="p-0">
                                 <DialogTitle className="text-lg">Chỉnh sửa tệp</DialogTitle>
+                                <DialogDescription className="sr-only">
+                                    Đổi tên, tải xuống hoặc xóa tệp trước khi lưu nháp hoặc nộp bài.
+                                </DialogDescription>
                             </DialogHeader>
                             <p className="text-xs text-muted-foreground">Đặt lại tên hiển thị trước khi lưu nháp hoặc nộp.</p>
 

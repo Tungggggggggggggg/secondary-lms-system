@@ -56,6 +56,9 @@ class PerformanceMonitor {
         averageResponseTime: 0,
         slowRequests: 0,
         errorRate: 0,
+        p50: 0,
+        p95: 0,
+        p99: 0,
         topSlowEndpoints: []
       }
     }
@@ -65,6 +68,18 @@ class PerformanceMonitor {
     const slowRequests = recentMetrics.filter(m => m.duration > 500).length
     const errors = recentMetrics.filter(m => !m.success).length
     const errorRate = (errors / totalRequests) * 100
+
+    const sortedDurations = [...recentMetrics.map(m => m.duration)].sort((a, b) => a - b)
+
+    const percentile = (values: number[], p: number): number => {
+      if (values.length === 0) return 0
+      const idx = Math.min(values.length - 1, Math.max(0, Math.floor(p * (values.length - 1))))
+      return values[idx]
+    }
+
+    const p50 = percentile(sortedDurations, 0.5)
+    const p95 = percentile(sortedDurations, 0.95)
+    const p99 = percentile(sortedDurations, 0.99)
 
     // Top slow endpoints
     const endpointStats = new Map<string, { count: number; totalDuration: number; maxDuration: number }>()
@@ -95,6 +110,9 @@ class PerformanceMonitor {
       averageResponseTime: Math.round(averageResponseTime),
       slowRequests,
       errorRate: Math.round(errorRate * 100) / 100,
+      p50: Math.round(p50),
+      p95: Math.round(p95),
+      p99: Math.round(p99),
       topSlowEndpoints
     }
   }

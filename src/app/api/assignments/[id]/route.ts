@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { Prisma, type AssignmentType, type QuestionType } from '@prisma/client'
+import type { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
 import { coercePrismaJson } from '@/lib/prisma-json'
+
+type AssignmentType = 'ESSAY' | 'QUIZ';
+type QuestionType = 'SINGLE' | 'MULTIPLE' | 'TRUE_FALSE' | 'FILL_BLANK' | 'ESSAY';
 
 const ALLOWED_QUESTION_TYPES = [
   'SINGLE',
@@ -234,7 +237,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return errorResponse(400, 'Loại bài tập không hợp lệ')
     }
     const normalizedType: AssignmentType = normalizedTypeStr;
-    const updateData: Prisma.AssignmentUncheckedUpdateInput = {
+    const updateData: any = {
       title,
       description: description ?? null,
       dueDate: dueDate ? new Date(dueDate) : null,

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
@@ -71,7 +70,7 @@ export async function GET(
 
     const { page, pageSize, q, sort, hasAttachment } = parsedQuery.data;
 
-    const where: Prisma.AnnouncementWhereInput = { classroomId };
+    const where: any = { classroomId };
     if (q) {
       where.OR = [
         { content: { contains: q, mode: "insensitive" } },
@@ -83,13 +82,13 @@ export async function GET(
       if (flag) where.attachments = { some: {} };
     }
 
-    const secondaryOrder: Prisma.AnnouncementOrderByWithRelationInput =
+    const secondaryOrder: any =
       sort === "comments"
         ? { comments: { _count: "desc" } }
         : sort === "attachments"
         ? { attachments: { _count: "desc" } }
         : { createdAt: "desc" };
-    const orderBy: Prisma.AnnouncementOrderByWithRelationInput[] = [{ pinnedAt: "desc" }, secondaryOrder];
+    const orderBy: any[] = [{ pinnedAt: "desc" }, secondaryOrder];
 
     const [items, total] = await Promise.all([
       prisma.announcement.findMany({
@@ -197,26 +196,29 @@ export async function POST(
     });
 
     try {
-      const classroomStudents = await prisma.classroomStudent.findMany({
+      const classroomStudents = (await prisma.classroomStudent.findMany({
         where: { classroomId },
         select: { studentId: true },
-      });
+      })) as Array<{ studentId: string }>;
 
       const actionUrl = `/dashboard/student/classes/${classroomId}/announcements/${created.id}`;
       const snippet = created.content.length > 140 ? `${created.content.slice(0, 140)}...` : created.content;
 
-      await Promise.all(
-        classroomStudents.map((cs) =>
-          notificationRepo.add(cs.studentId, {
-            type: "STUDENT_ANNOUNCEMENT_NEW",
-            title: "Bảng tin mới",
-            description: snippet,
-            actionUrl,
-            dedupeKey: `announcement:new:${created.id}:${cs.studentId}`,
-            meta: { classroomId, announcementId: created.id },
-          })
-        )
-      );
+      if (classroomStudents.length > 0) {
+        await notificationRepo.addMany(
+          classroomStudents.map((cs) => ({
+            userId: cs.studentId,
+            input: {
+              type: "STUDENT_ANNOUNCEMENT_NEW",
+              title: "Bảng tin mới",
+              description: snippet,
+              actionUrl,
+              dedupeKey: `announcement:new:${created.id}:${cs.studentId}`,
+              meta: { classroomId, announcementId: created.id },
+            },
+          }))
+        );
+      }
     } catch (err) {
       console.error(
         `[WARN] Failed to create announcement notifications {requestId:${requestId}}`,

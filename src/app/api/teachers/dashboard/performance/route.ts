@@ -68,15 +68,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Tính average theo rule P2 (latest graded + overdue missing 0) và deadline hiệu lực = lockAt ?? dueDate
-    const metricsRows = await prisma.$queryRaw<
-      Array<{
-        classroom_id: string;
-        grade_sum: number;
-        grade_count: bigint;
-        missing_overdue: bigint;
-        submitted_students: bigint;
-      }>
-    >`
+    const metricsRows = (await prisma.$queryRaw`
       WITH target_classrooms AS (
         SELECT UNNEST(${classroomIds}::text[]) as classroom_id
       ),
@@ -135,7 +127,13 @@ export async function GET(req: NextRequest) {
       LEFT JOIN graded_by_classroom g ON g.classroom_id = tc.classroom_id
       LEFT JOIN missing_overdue m ON m.classroom_id = tc.classroom_id
       LEFT JOIN submitted_students ss ON ss.classroom_id = tc.classroom_id;
-    `;
+    `) as Array<{
+      classroom_id: string;
+      grade_sum: number;
+      grade_count: bigint;
+      missing_overdue: bigint;
+      submitted_students: bigint;
+    }>;
 
     const metricsByClassroomId = new Map(
       metricsRows.map((r) => [
@@ -167,6 +165,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: performanceData,
+    }, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'private, max-age=10, stale-while-revalidate=50',
+      },
     });
 
   } catch (error) {

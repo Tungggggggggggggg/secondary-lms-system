@@ -48,7 +48,7 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
         : {}),
     };
 
-    const [total, rows] = await prisma.$transaction([
+    const [total, rows] = (await prisma.$transaction([
       prisma.classroomStudent.count({ where }),
       prisma.classroomStudent.findMany({
         where,
@@ -61,7 +61,14 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
           student: { select: { id: true, email: true, fullname: true, role: true } },
         },
       }),
-    ]);
+    ])) as [
+      number,
+      Array<{
+        id: string;
+        joinedAt: Date;
+        student: { id: string; email: string; fullname: string | null; role: string };
+      }>,
+    ];
 
     const items = rows.map((r) => ({
       id: r.student.id,

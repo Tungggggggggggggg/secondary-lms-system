@@ -3,12 +3,6 @@
  * Xử lý upload file cho Assignment attachments
  */
 
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface UploadResult {
   success: boolean;
@@ -22,6 +16,15 @@ export interface FileUploadOptions {
   folder?: string;
   maxSize?: number; // bytes
   allowedTypes?: string[];
+}
+
+function publicUrlForStored(params: { bucket: string; path: string }): string {
+  const { bucket, path } = params;
+  console.warn(
+    "[SupabaseUpload] publicUrlForStored is disabled. Use signed URLs from server APIs instead.",
+    { bucket, path }
+  );
+  return "#";
 }
 
 /**
@@ -75,32 +78,8 @@ export async function uploadAssignmentFile(
 
     console.log(`[SupabaseUpload] Uploading file: ${file.name} -> ${filePath}`);
 
-    // Upload to Supabase Storage
-    const { error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (error) {
-      console.error('[SupabaseUpload] Upload error:', error);
-      return {
-        success: false,
-        error: `Lỗi upload: ${error.message}`
-      };
-    }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(filePath);
-
-    console.log(`[SupabaseUpload] Upload successful: ${urlData.publicUrl}`);
-
     return {
       success: true,
-      url: urlData.publicUrl,
       path: filePath
     };
 
@@ -119,12 +98,34 @@ export async function uploadChatFile(
   conversationId: string,
   options: FileUploadOptions = {}
 ): Promise<UploadResult> {
-  return uploadAssignmentFile(file, conversationId, {
-    bucket: options.bucket ?? "chat-files",
-    folder: options.folder ?? "chat",
-    maxSize: options.maxSize,
-    allowedTypes: options.allowedTypes,
-  });
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/chat/conversations/${conversationId}/attachments`, {
+      method: "POST",
+      body: fd,
+    });
+    const json: unknown = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg =
+        typeof (json as { message?: unknown } | null)?.message === "string"
+          ? (json as { message: string }).message
+          : "Upload failed";
+      return { success: false, error: msg };
+    }
+    const data = (json as { data?: unknown } | null)?.data;
+    if (!data || typeof data !== "object") {
+      return { success: false, error: "Upload failed" };
+    }
+    const path = (data as { path?: unknown }).path;
+    if (typeof path !== "string" || !path) {
+      return { success: false, error: "Upload failed" };
+    }
+    return { success: true, path };
+  } catch (error) {
+    console.error("[SupabaseUpload] Unexpected error:", error);
+    return { success: false, error: "Lỗi không xác định khi upload file" };
+  }
 }
 
 // Upload file phục vụ lesson attachments, tái sử dụng bucket "assignments" với folder "lessons"
@@ -174,17 +175,12 @@ export async function deleteAssignmentFile(
   try {
     console.log(`[SupabaseUpload] Deleting file: ${filePath}`);
 
-    const { error } = await supabase.storage
-      .from(bucket)
-      .remove([filePath]);
-
-    if (error) {
-      console.error('[SupabaseUpload] Delete error:', error);
-      return false;
-    }
-
-    console.log(`[SupabaseUpload] File deleted successfully: ${filePath}`);
-    return true;
+    const res = await fetch(`/api/storage/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bucket, path: filePath }),
+    });
+    return res.ok;
 
   } catch (error) {
     console.error('[SupabaseUpload] Unexpected delete error:', error);
@@ -198,8 +194,7 @@ export function getChatFileUrl(
   bucket: string = 'chat-files'
 ): string {
   if (!storagePath) return '#';
-  const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-  return data.publicUrl;
+  return publicUrlForStored({ bucket, path: storagePath });
 }
 
 /**
@@ -210,18 +205,11 @@ export async function getFileInfo(
   bucket: string = 'assignments'
 ) {
   try {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .list(filePath.split('/').slice(0, -1).join('/'), {
-        search: filePath.split('/').pop()
-      });
-
-    if (error) {
-      console.error('[SupabaseUpload] Get file info error:', error);
-      return null;
-    }
-
-    return data?.[0] || null;
+    console.warn(
+      '[SupabaseUpload] getFileInfo is not supported client-side anymore. Use a server API to query storage metadata.',
+      { bucket, filePath }
+    );
+    return null;
 
   } catch (error) {
     console.error('[SupabaseUpload] Unexpected error getting file info:', error);
@@ -234,35 +222,11 @@ export async function getFileInfo(
  */
 export async function ensureBucketExists(bucketName: string = 'assignments') {
   try {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-
-    if (!bucketExists) {
-      console.log(`[SupabaseUpload] Creating bucket: ${bucketName}`);
-      
-      const { error } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-        allowedMimeTypes: [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'image/jpeg',
-          'image/png',
-          'image/gif',
-          'video/mp4'
-        ],
-        fileSizeLimit: 10 * 1024 * 1024 // 10MB
-      });
-
-      if (error) {
-        console.error('[SupabaseUpload] Create bucket error:', error);
-        return false;
-      }
-
-      console.log(`[SupabaseUpload] Bucket created successfully: ${bucketName}`);
-    }
-
-    return true;
+    console.warn(
+      '[SupabaseUpload] ensureBucketExists is not supported client-side anymore. Bucket provisioning must be done server-side.',
+      { bucketName }
+    );
+    return false;
 
   } catch (error) {
     console.error('[SupabaseUpload] Unexpected error ensuring bucket:', error);

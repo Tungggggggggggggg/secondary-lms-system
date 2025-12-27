@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
@@ -58,7 +57,7 @@ export async function GET(req: NextRequest) {
     const sortDir = parsed.data.sortDir;
 
     // Compute base where (search + author)
-    const whereBase: Prisma.AssignmentWhereInput = { authorId: teacherId };
+    const whereBase: any = { authorId: teacherId };
     if (q) {
       whereBase.title = { contains: q, mode: 'insensitive' };
     }
@@ -69,13 +68,13 @@ export async function GET(req: NextRequest) {
         where: { classroomId: classId, classroom: { teacherId } },
         select: { assignmentId: true },
       });
-      const ids = rows.map((r) => r.assignmentId);
+      const ids = rows.map((r: { assignmentId: string }) => r.assignmentId);
       whereBase.id = { in: ids.length > 0 ? ids : ['__none__'] }; // no results when empty
     }
 
     // Build where for items based on status (effective date: lockAt for QUIZ else dueDate)
     const now = new Date();
-    let where: Prisma.AssignmentWhereInput = { ...whereBase };
+    let where: any = { ...whereBase };
     if (status !== 'all') {
       if (status === 'active') {
         where = {
@@ -103,7 +102,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Sorting
-    const orderBy: Prisma.AssignmentOrderByWithRelationInput =
+    const orderBy: any =
       sortKey === 'createdAt'
         ? { createdAt: sortDir }
         : sortKey === 'dueDate'
@@ -113,7 +112,7 @@ export async function GET(req: NextRequest) {
         : { title: sortDir };
 
     // Compute counts for quick chips under current search/class filters
-    const whereActive: Prisma.AssignmentWhereInput = {
+    const whereActive: any = {
       ...whereBase,
       OR: [
         { lockAt: { gte: now } },
@@ -121,14 +120,14 @@ export async function GET(req: NextRequest) {
         { AND: [{ lockAt: null }, { dueDate: null }] },
       ],
     };
-    const whereCompleted: Prisma.AssignmentWhereInput = {
+    const whereCompleted: any = {
       ...whereBase,
       OR: [
         { lockAt: { lt: now } },
         { AND: [{ lockAt: null }, { dueDate: { lt: now } }] },
       ],
     };
-    const whereNeedGrading: Prisma.AssignmentWhereInput = {
+    const whereNeedGrading: any = {
       ...whereBase,
       submissions: { some: { grade: null } },
     };

@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { usePrompt } from "@/components/providers/PromptProvider";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import fetcher from "@/lib/fetcher";
 
 type AdminUserItem = {
   id: string;
@@ -99,14 +100,7 @@ export default function AdminUsersPage() {
       if (nextRole) params.set("role", nextRole);
       if (nextSearch.trim()) params.set("q", nextSearch.trim());
 
-      const res = await fetch(`/api/admin/users?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const json = await res.json();
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.message || "Không thể tải danh sách người dùng");
-      }
-
+      const json = await fetcher<{ success: true; data: UsersResponse }>(`/api/admin/users?${params.toString()}`);
       const data = json.data as UsersResponse;
       setItems(data.items || []);
       setPage(data.page);

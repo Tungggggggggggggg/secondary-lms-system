@@ -123,10 +123,10 @@ export const POST = withApiLogging(async (req: NextRequest) => {
 
     const fromDate = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
-    const classroomLinks = await prisma.classroomStudent.findMany({
+    const classroomLinks = (await prisma.classroomStudent.findMany({
       where: { studentId: childId },
       select: { classroomId: true },
-    });
+    })) as Array<{ classroomId: string }>;
 
     const classroomIds = classroomLinks.map((cs) => cs.classroomId);
     if (classroomIds.length === 0) {
@@ -166,10 +166,10 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       return NextResponse.json({ success: true, data: empty }, { status: 200 });
     }
 
-    const assignmentLinks = await prisma.assignmentClassroom.findMany({
+    const assignmentLinks = (await prisma.assignmentClassroom.findMany({
       where: { classroomId: { in: classroomIds } },
       select: { assignmentId: true },
-    });
+    })) as Array<{ assignmentId: string }>;
 
     const assignmentIds = Array.from(new Set(assignmentLinks.map((a) => a.assignmentId)));
     if (assignmentIds.length === 0) {
@@ -209,15 +209,11 @@ export const POST = withApiLogging(async (req: NextRequest) => {
       return NextResponse.json({ success: true, data: empty }, { status: 200 });
     }
 
-    const [assignments, assignmentClassrooms, submissions] = await Promise.all([
+    const [assignments, assignmentClassrooms, submissions] = (await Promise.all([
       prisma.assignment.findMany({
         where: {
           id: { in: assignmentIds },
-          OR: [
-            { dueDate: { gte: fromDate } },
-            { lockAt: { gte: fromDate } },
-            { dueDate: null },
-          ],
+          OR: [{ dueDate: { gte: fromDate } }, { lockAt: { gte: fromDate } }, { dueDate: null }],
         },
         select: {
           id: true,
@@ -251,7 +247,11 @@ export const POST = withApiLogging(async (req: NextRequest) => {
         orderBy: { submittedAt: "desc" },
         take: 120,
       }),
-    ]);
+    ])) as [
+      Array<{ id: string; title: string; type: string; dueDate: Date | null; lockAt: Date | null }>,
+      Array<{ assignmentId: string; classroom: { name: string } }>,
+      Array<{ id: string; assignmentId: string; submittedAt: Date; grade: number | null; feedback: string | null }>,
+    ];
 
     const assignmentById = new Map(assignments.map((a) => [a.id, a]));
 

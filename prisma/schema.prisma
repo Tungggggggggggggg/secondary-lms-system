@@ -42,6 +42,7 @@ model User {
   examEvents                      ExamEvent[]
   assignmentAttempts              AssignmentAttempt[]
   messagesSent                    Message[]
+  notifications                   Notification[]
 
   @@index([email])
   @@index([role, createdAt])
@@ -129,6 +130,7 @@ model Lesson {
   embeddingChunks LessonEmbeddingChunk[]
   attachments     LessonAttachment[]
 
+  @@index([courseId, order])
   @@map("lessons")
 }
 
@@ -140,6 +142,7 @@ model LessonAttachment {
   mimeType    String
   sizeBytes   Int
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([lessonId, createdAt])
@@ -575,6 +578,29 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+model Notification {
+  id          String               @id @default(cuid())
+  userId      String
+  type        String?              @db.VarChar(80)
+  title       String               @db.VarChar(120)
+  description String?              @db.VarChar(500)
+  actionUrl   String?              @db.VarChar(1000)
+  severity    NotificationSeverity @default(INFO)
+  dedupeKey   String?              @db.VarChar(200)
+  meta        Json?
+  read        Boolean              @default(false)
+  readAt      DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, read, createdAt])
+  @@unique([userId, dedupeKey])
+  @@map("notifications")
+}
+
 // ==========================
 // Messaging models
 // ==========================
@@ -610,6 +636,7 @@ model ConversationParticipant {
 
   @@unique([conversationId, userId])
   @@index([userId])
+  @@index([userId, conversationId, lastReadAt])
   @@map("conversation_participants")
 }
 
@@ -706,4 +733,10 @@ enum LinkRequestStatus {
   APPROVED
   REJECTED
   EXPIRED
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  CRITICAL
 }

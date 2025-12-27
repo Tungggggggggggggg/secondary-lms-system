@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
     const code = (parsedBody.data.code ?? "").trim().toUpperCase();
     const classroomId = (parsedBody.data.classroomId ?? "").trim();
 
-    const selectClassroom: Prisma.ClassroomSelect = {
+    const selectClassroom: any = {
       id: true,
       name: true,
       description: true,
@@ -49,7 +48,7 @@ export async function POST(req: NextRequest) {
       _count: { select: { students: true } },
     };
 
-    const classroom = classroomId
+    const classroom: any = classroomId
       ? await prisma.classroom.findUnique({ where: { id: classroomId }, select: selectClassroom })
       : await prisma.classroom.findUnique({ where: { code }, select: selectClassroom });
 
@@ -79,7 +78,7 @@ export async function POST(req: NextRequest) {
       return errorResponse(400, "Lớp học đã đạt số lượng học sinh tối đa");
     }
 
-    const classroomStudent = await prisma.classroomStudent.create({
+    const classroomStudent: any = await prisma.classroomStudent.create({
       data: {
         classroomId: classroom.id,
         studentId: authUser.id,

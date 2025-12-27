@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
 import { auditRepo } from "@/lib/repositories/audit-repo";
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
       return errorResponse(400, "Mã xác nhận không khớp. Vui lòng nhập đúng mã lớp.");
     }
 
-    const deleted = await prisma.$transaction(async (tx) => {
+    const deleted = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const conversationsDeleted = await tx.conversation.deleteMany({
         where: { classId: classroomId },
       });

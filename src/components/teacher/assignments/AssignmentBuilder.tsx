@@ -409,11 +409,19 @@ export default function AssignmentBuilder({ mode, assignmentId }: AssignmentBuil
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload: AssignmentData = {
         ...data,
         title: data.title.trim(),
-        description: data.description?.trim() || null,
-        subject: data.subject?.trim() || null,
+        description: data.description?.trim() || undefined,
+        subject: data.subject?.trim() || undefined,
+        ...(data.type === "ESSAY" && data.essayContent
+          ? {
+              essayContent: {
+                ...data.essayContent,
+                attachments: undefined,
+              },
+            }
+          : {}),
       };
 
       const res = await fetch("/api/assignments/create", {
@@ -431,6 +439,34 @@ export default function AssignmentBuilder({ mode, assignmentId }: AssignmentBuil
 
       autoSave.clearDraft();
       const id = j?.data?.id as string | undefined;
+
+      if (id && data.type === "ESSAY") {
+        const files = data.essayContent?.attachments ?? [];
+        if (files.length > 0) {
+          try {
+            for (const file of files) {
+              const fd = new FormData();
+              fd.append("file", file);
+              const uploadRes = await fetch(`/api/assignments/${id}/upload`, {
+                method: "POST",
+                body: fd,
+              });
+              const uploadJson = await uploadRes.json().catch(() => null);
+              if (!uploadRes.ok || !uploadJson?.success) {
+                const msg =
+                  typeof uploadJson?.message === "string" && uploadJson.message
+                    ? uploadJson.message
+                    : "Tải file đính kèm thất bại";
+                throw new Error(msg);
+              }
+            }
+          } catch (uploadErr: unknown) {
+            const msg = uploadErr instanceof Error ? uploadErr.message : "Tải file đính kèm thất bại";
+            toast({ title: "Cảnh báo", description: msg, variant: "destructive" });
+          }
+        }
+      }
+
       router.push(id ? `/dashboard/teacher/assignments/${id}` : "/dashboard/teacher/assignments");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Tạo bài tập thất bại";

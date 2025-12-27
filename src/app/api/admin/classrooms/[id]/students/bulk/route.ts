@@ -7,7 +7,7 @@ import { auditRepo } from "@/lib/repositories/audit-repo";
 import { errorResponse } from "@/lib/api-utils";
 import bcrypt from "bcryptjs";
 import { userRepo } from "@/lib/repositories/user-repo";
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/api-utils";
 import { passwordSchema } from "@/lib/validation/password.schema";
 
 const requestSchema = z
@@ -126,10 +126,10 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
       return errorResponse(409, "Lớp đã được lưu trữ. Vui lòng khôi phục để thao tác.");
     }
 
-    const users = await prisma.user.findMany({
+    const users = (await prisma.user.findMany({
       where: { email: { in: emailList } },
       select: { id: true, email: true, role: true, fullname: true },
-    });
+    })) as Array<{ id: string; email: string; role: UserRole; fullname: string | null }>;
 
     const byEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
 
@@ -140,11 +140,11 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     const existingStudentIds = users
       .filter((u) => String(u.role) === "STUDENT")
       .map((u) => u.id);
-    const existingLinks = existingStudentIds.length
-      ? await prisma.classroomStudent.findMany({
+    const existingLinks: Array<{ studentId: string }> = existingStudentIds.length
+      ? ((await prisma.classroomStudent.findMany({
           where: { classroomId, studentId: { in: existingStudentIds } },
           select: { studentId: true },
-        })
+        })) as Array<{ studentId: string }>)
       : [];
     const alreadyInClassroomSet = new Set(existingLinks.map((r) => r.studentId));
     let alreadyInClassroom = 0;

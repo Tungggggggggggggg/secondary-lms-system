@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { errorResponse } from '@/lib/api-utils';
 import { passwordSchema } from '@/lib/validation/password.schema';
 
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
     // 6. Tạo người dùng mới trong cơ sở dữ liệu
     // KHÔNG truyền role = null để Prisma áp dụng default từ schema (STUDENT)
-    const data: Prisma.UserCreateInput = {
+    const data: any = {
       fullname,
       email,
       password: hashedPassword,
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     };
     return NextResponse.json({ message: 'Đăng ký thành công!', user: safeUser }, { status: 201 });
   } catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
       console.error('[API Register] Unique constraint failed:', error.meta);
       return errorResponse(409, 'Email đã tồn tại.');
     }

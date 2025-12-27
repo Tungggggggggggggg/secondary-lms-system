@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Input from "@/components/ui/input";
 import { BookOpenCheck, LineChart, Users } from "lucide-react";
+import fetcher from "@/lib/fetcher";
 
 type UserStats = {
   teacherClassrooms: number;
@@ -101,25 +102,8 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
       setLoading(true);
       setError(null);
 
-      const res = await fetch(`/api/admin/users/${userId}`, { cache: "no-store" });
-      const json = (await res.json().catch(() => ({}))) as unknown;
-
-      const ok =
-        typeof json === "object" &&
-        json !== null &&
-        (json as { success?: unknown }).success === true;
-
-      if (!res.ok || !ok) {
-        const msg =
-          typeof json === "object" &&
-          json !== null &&
-          typeof (json as { message?: unknown }).message === "string"
-            ? (json as { message: string }).message
-            : "Không thể tải chi tiết người dùng";
-        throw new Error(msg);
-      }
-
-      const data = (json as ApiSuccess).data;
+      const json = await fetcher<ApiSuccess>(`/api/admin/users/${userId}`);
+      const data = json.data;
       setUser(data.user);
       setRelated(data.related ?? null);
     } catch (e) {

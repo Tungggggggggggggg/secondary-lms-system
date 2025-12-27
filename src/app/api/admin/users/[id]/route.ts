@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
@@ -371,7 +372,7 @@ export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) 
         })
       : [];
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await settingsRepo.set("disabled_users", nextDisabled);
       await tx.user.delete({ where: { id: userId } });
     });

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import type { AssignmentType, Prisma, QuestionType } from '@prisma/client'
 import { createAssignmentSchema, paginationSchema, type CreateAssignmentInput } from '@/types/api'
 import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
 import { withPerformanceTracking } from '@/lib/performance-monitor'
+
+type AssignmentType = 'ESSAY' | 'QUIZ';
+type QuestionType = 'SINGLE' | 'MULTIPLE' | 'TRUE_FALSE' | 'FILL_BLANK' | 'ESSAY';
 
 const ALLOWED_QUESTION_TYPES = [
   'SINGLE',
@@ -133,7 +135,7 @@ export async function POST(req: NextRequest) {
     }
     const normalizedType: AssignmentType = normalizedTypeStr
 
-    const data: Prisma.AssignmentCreateInput = {
+    const data: any = {
       title,
       description: description ?? null,
       dueDate: dueDate ? new Date(dueDate) : null,

@@ -128,42 +128,68 @@ export async function POST(req: NextRequest) {
       if (!validPattern.test(code)) {
         return errorResponse(400, "Mã lớp không hợp lệ");
       }
-      const exists = await prisma.classroom.findUnique({ where: { code } });
-      if (exists) {
-        return errorResponse(409, "Mã lớp đã tồn tại, vui lòng chọn mã khác");
+    }
+
+    type ClassroomCreateResult = Awaited<ReturnType<typeof prisma.classroom.create>>;
+    let classroom: ClassroomCreateResult | null = null;
+
+    const createOne = async (finalCode: string) => {
+      return prisma.classroom.create({
+        data: {
+          name,
+          description,
+          code: finalCode,
+          icon,
+          maxStudents,
+          teacherId: user.id,
+        },
+        include: {
+          _count: {
+            select: {
+              students: true,
+            },
+          },
+        },
+      });
+    };
+
+    if (code) {
+      try {
+        classroom = await createOne(code);
+      } catch (error: unknown) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          (error as { code?: unknown }).code === "P2002"
+        ) {
+          return errorResponse(409, "Mã lớp đã tồn tại, vui lòng chọn mã khác");
+        }
+        throw error;
       }
     } else {
-      // Tự động sinh mã không trùng
-      // Thử tối đa 5 lần để tránh vòng lặp hiếm gặp
       for (let i = 0; i < 5; i++) {
         const candidate = generateClassroomCode();
-        const exists = await prisma.classroom.findUnique({ where: { code: candidate } });
-        if (!exists) { code = candidate; break; }
+        try {
+          classroom = await createOne(candidate);
+          break;
+        } catch (error: unknown) {
+          if (
+            typeof error === "object" &&
+            error !== null &&
+            "code" in error &&
+            (error as { code?: unknown }).code === "P2002"
+          ) {
+            continue;
+          }
+          throw error;
+        }
       }
-      if (!code) {
+      if (!classroom) {
         console.error("[ERROR] Không thể sinh mã lớp học duy nhất sau nhiều lần thử");
         return errorResponse(500, "Không thể tạo mã lớp học, vui lòng thử lại");
       }
     }
-
-    // Tạo lớp học mới
-    const classroom = await prisma.classroom.create({
-      data: {
-        name,
-        description,
-        code,
-        icon,
-        maxStudents,
-        teacherId: user.id,
-      },
-      include: {
-        _count: {
-          select: {
-            students: true,
-          },
-        },
-      },
-    });
 
     return NextResponse.json(
       {

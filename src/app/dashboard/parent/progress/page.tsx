@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import HeaderParent from "@/components/parent/ParentHeader";
 import { EmptyState } from "@/components/shared";
+import CardGridSkeleton from "@/components/shared/loading/CardGridSkeleton";
+import CardListSkeleton from "@/components/shared/loading/CardListSkeleton";
 import {
   ChevronDown,
   ChevronUp,
@@ -134,16 +135,12 @@ export default function ParentProgressPage() {
           title="Tiến độ học tập"
           subtitle="Tổng quan kết quả học tập của tất cả con"
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32 rounded-2xl" />
-          ))}
-        </div>
-        <div className="space-y-4">
-          {[1, 2].map((i) => (
-            <Skeleton key={i} className="h-24 rounded-2xl" />
-          ))}
-        </div>
+        <CardGridSkeleton
+          items={4}
+          gridClassName="grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+          itemClassName="h-32 rounded-2xl"
+        />
+        <CardListSkeleton items={2} simple simpleItemClassName="h-24" />
       </>
     );
   }

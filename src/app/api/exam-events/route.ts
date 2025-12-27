@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
         studentId: me.id,
         attempt: typeof attempt === "number" ? attempt : undefined,
         eventType,
-        metadata: prismaMetadata,
+        metadata: prismaMetadata as any,
       },
     });
 

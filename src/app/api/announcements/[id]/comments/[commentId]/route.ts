@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
-import { ModerationStatus } from "@prisma/client";
 import { z } from "zod";
 
 const paramsSchema = z
@@ -53,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = await prisma.announcementComment.update({
       where: { id: commentId },
       data: {
-        status: action === "hide" ? ModerationStatus.REJECTED : ModerationStatus.APPROVED,
+        status: action === "hide" ? "REJECTED" : "APPROVED",
         moderatedAt: new Date(),
         moderatedById: user.id,
       },
@@ -115,7 +114,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const updated = await prisma.announcementComment.update({
       where: { id: commentId },
       data: {
-        status: ModerationStatus.REJECTED,
+        status: "REJECTED",
         moderatedAt: new Date(),
         moderatedById: user.id,
       },

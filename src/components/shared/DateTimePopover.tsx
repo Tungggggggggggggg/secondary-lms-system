@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CalendarGrid from "./CalendarGrid";
@@ -262,6 +262,12 @@ export default function DateTimePopover({ label, value, onChange, required, clas
               className="w-full sm:max-w-[560px] md:max-w-[760px] lg:max-w-[980px] max-h-[85vh] p-0"
               onClose={() => setIsOpen(false)}
             >
+              <DialogHeader className="sr-only">
+                <DialogTitle>Chọn ngày và giờ</DialogTitle>
+                <DialogDescription>
+                  Chọn ngày và giờ cho trường {label}
+                </DialogDescription>
+              </DialogHeader>
               {PickerBody}
             </DialogContent>
           </Dialog>
