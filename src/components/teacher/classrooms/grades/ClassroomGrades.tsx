@@ -80,6 +80,7 @@ export default function ClassroomGrades() {
         if (search.trim()) usp.set("search", search.trim());
         if (assignmentFilter !== "all") usp.set("assignmentId", assignmentFilter);
         usp.set("sort", sortKey);
+        usp.set("pageSize", "20000");
         const res = await fetch(`/api/teachers/classrooms/${classroomId}/grades?${usp.toString()}`, { cache: "no-store" });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.message || "Không thể tải bảng điểm");
@@ -210,6 +211,107 @@ export default function ClassroomGrades() {
     return Array.from(map.entries());
   }, [rows]);
 
+  const students = useMemo(() => {
+    const map = new Map<string, { id: string; fullname: string; email: string }>();
+    rows.forEach((r) => {
+      if (!map.has(r.student.id)) {
+        map.set(r.student.id, r.student);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => (a.fullname || "").localeCompare(b.fullname || "", "vi", { sensitivity: "base" }));
+  }, [rows]);
+
+  const assignments = useMemo(() => {
+    const map = new Map<string, { id: string; title: string; type: string; dueDate: string | null }>();
+    rows.forEach((r) => {
+      if (!map.has(r.assignment.id)) {
+        map.set(r.assignment.id, r.assignment);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => {
+      const at = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const bt = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return at - bt;
+    });
+  }, [rows]);
+
+  const studentAssignmentMap = useMemo(() => {
+    const map = new Map<string, Map<string, Row>>();
+    rows.forEach((r) => {
+      let perStudent = map.get(r.student.id);
+      if (!perStudent) {
+        perStudent = new Map<string, Row>();
+        map.set(r.student.id, perStudent);
+      }
+      perStudent.set(r.assignment.id, r);
+    });
+    return map;
+  }, [rows]);
+
+  const studentStats = useMemo(() => {
+    const acc = new Map<string, { sum: number; gradedCount: number; pendingCount: number; latest: number }>();
+    rows.forEach((r) => {
+      const id = r.student.id;
+      let s = acc.get(id);
+      if (!s) {
+        s = { sum: 0, gradedCount: 0, pendingCount: 0, latest: 0 };
+        acc.set(id, s);
+      }
+      if (typeof r.grade === "number") {
+        s.sum += r.grade;
+        s.gradedCount += 1;
+      } else {
+        s.pendingCount += 1;
+      }
+      const t = r.submittedAt
+        ? new Date(r.submittedAt).getTime()
+        : r.assignment.dueDate
+        ? new Date(r.assignment.dueDate).getTime()
+        : 0;
+      if (t > s.latest) s.latest = t;
+    });
+
+    const result = new Map<
+      string,
+      { average: number | null; gradedCount: number; pendingCount: number; latest: number }
+    >();
+    acc.forEach((s, id) => {
+      result.set(id, {
+        average: s.gradedCount > 0 ? s.sum / s.gradedCount : null,
+        gradedCount: s.gradedCount,
+        pendingCount: s.pendingCount,
+        latest: s.latest,
+      });
+    });
+    return result;
+  }, [rows]);
+
+  const filteredAssignments = useMemo(
+    () =>
+      assignments.filter(
+        (a) => assignmentFilter === "all" || a.id === assignmentFilter,
+      ),
+    [assignments, assignmentFilter],
+  );
+
+  const sortedStudents = useMemo(() => {
+    const list = [...students];
+    if (sortKey === "grade") {
+      list.sort((a, b) => {
+        const sa = studentStats.get(a.id)?.average ?? -1;
+        const sb = studentStats.get(b.id)?.average ?? -1;
+        return sb - sa;
+      });
+    } else if (sortKey === "recent") {
+      list.sort((a, b) => {
+        const ta = studentStats.get(a.id)?.latest ?? 0;
+        const tb = studentStats.get(b.id)?.latest ?? 0;
+        return tb - ta;
+      });
+    }
+    return list;
+  }, [students, studentStats, sortKey]);
+
   const exportExcel = () => {
     const header = ["student", "email", "assignment", "type", "due", "submitted", "grade"];
     const rows = visibleRows.map((r) => [
@@ -278,102 +380,120 @@ export default function ClassroomGrades() {
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </div>
-      ) : visibleRows.length === 0 ? (
+      ) : rows.length === 0 ? (
         <EmptyState title="Không có dữ liệu" description="Không có bản ghi nào phù hợp với bộ lọc hiện tại." variant="teacher" />
       ) : (
         <>
-          <div className="bg-white/90 rounded-3xl border border-slate-100 overflow-hidden shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-            <Table className="table-fixed">
+          <div className="bg-white/90 rounded-3xl border border-slate-100 overflow-auto shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+            <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow className="bg-blue-50/60">
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[180px]">Học sinh</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[260px]">Bài tập</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[100px]">Loại</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[120px]">Hạn nộp</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[100px]">Đã nộp</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[72px]">Điểm</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[110px]">Nhận xét</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[110px]">Trạng thái</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[220px]">Học sinh</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[90px] text-center">Điểm TB</TableHead>
+                  {filteredAssignments.map((a) => (
+                    <TableHead
+                      key={a.id}
+                      className="text-xs font-semibold tracking-wide text-slate-600 uppercase min-w-[120px]"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="truncate" title={a.title}>{a.title || "Bài tập"}</span>
+                        {a.dueDate && (
+                          <span className="text-[11px] font-normal text-slate-500">
+                            Hạn: {formatDate(a.dueDate)}
+                          </span>
+                        )}
+                      </div>
+                    </TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibleRows.map((r) => {
-                  const statusBadge = getStatusBadge(r);
+                {sortedStudents.map((student) => {
+                  const stats = studentStats.get(student.id);
                   return (
                     <TableRow
-                      key={r.id}
+                      key={student.id}
                       className="hover:bg-blue-50/40 transition-colors"
                     >
-                      <TableCell className="font-medium text-slate-900 truncate whitespace-nowrap">
-                        {r.student.fullname}
+                      <TableCell className="whitespace-nowrap align-top">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-slate-900 truncate">
+                            {student.fullname || "Không tên"}
+                          </span>
+                          <span className="text-xs text-slate-500 truncate">
+                            {student.email}
+                          </span>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-800 overflow-hidden text-ellipsis whitespace-nowrap">
-                        {r.assignment.title}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${
-                            r.assignment.type === "ESSAY"
-                              ? "bg-blue-50 text-blue-700 border border-blue-100"
-                              : "bg-pink-50 text-pink-700 border border-pink-100"
-                          }`}
-                        >
-                          {r.assignment.type === "ESSAY" ? (
-                            <FileText className="h-3.5 w-3.5" />
-                          ) : (
-                            <HelpCircle className="h-3.5 w-3.5" />
-                          )}
-                          <span className="leading-none">{r.assignment.type === "ESSAY" ? "Tự luận" : "Trắc nghiệm"}</span>
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600 whitespace-nowrap">
-                        {r.assignment.dueDate
-                          ? formatDate(r.assignment.dueDate)
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600 whitespace-nowrap">
-                        {r.submittedAt ? formatDate(r.submittedAt) : "Chưa nộp"}
-                      </TableCell>
-                      <TableCell>
-                        {r.grade !== null ? (
+                      <TableCell className="text-center align-top">
+                        {stats && stats.average !== null ? (
                           <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${getGradeBadgeClass(
-                              r.grade,
+                            className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${getGradeBadgeClass(
+                              stats.average,
                             )}`}
                           >
-                            {r.grade.toFixed(1)}
+                            {stats.average.toFixed(1)}
                           </span>
                         ) : (
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${getGradeBadgeClass(
-                              null,
-                            )}`}
-                          >
-                            Chưa chấm
-                          </span>
+                          <span className="text-xs text-slate-400">N/A</span>
                         )}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {r.feedback ? (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenFeedback(r)}
-                            className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-200 transition-colors shadow-sm"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                            <span>Xem</span>
-                          </button>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">Không có</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${statusBadge.className}`}
-                        >
-                          {statusBadge.label}
-                        </span>
-                      </TableCell>
+                      {filteredAssignments.map((assignment) => {
+                        const cellRow = studentAssignmentMap.get(student.id)?.get(assignment.id) || null;
+                        if (!cellRow) {
+                          return (
+                            <TableCell key={assignment.id} className="text-center align-top">
+                              <span
+                                className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${getGradeBadgeClass(
+                                  null,
+                                )}`}
+                              >
+                                —
+                              </span>
+                            </TableCell>
+                          );
+                        }
+
+                        const gradeValue = cellRow.grade;
+                        const statusBadge = getStatusBadge(cellRow);
+                        const label =
+                          gradeValue !== null
+                            ? gradeValue.toFixed(1)
+                            : cellRow.submittedAt
+                            ? "Chờ chấm"
+                            : "Chưa nộp";
+
+                        const tooltipParts = [
+                          `Bài: ${assignment.title}`,
+                          `Trạng thái: ${statusBadge.label}`,
+                          `Hạn nộp: ${assignment.dueDate ? formatDate(assignment.dueDate) : "—"}`,
+                          `Đã nộp: ${cellRow.submittedAt ? formatDate(cellRow.submittedAt) : "—"}`,
+                          `Điểm: ${gradeValue !== null ? gradeValue.toFixed(1) : "—"}`,
+                        ];
+                        if (cellRow.feedback) {
+                          tooltipParts.push(`Nhận xét: ${cellRow.feedback}`);
+                        }
+
+                        return (
+                          <TableCell key={assignment.id} className="text-center align-top">
+                            <button
+                              type="button"
+                              onClick={cellRow.feedback ? () => handleOpenFeedback(cellRow) : undefined}
+                              className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${getGradeBadgeClass(
+                                gradeValue,
+                              )} ${
+                                cellRow.feedback
+                                  ? "hover:shadow-md hover:bg-opacity-90 transition-colors"
+                                  : "cursor-default"
+                              }`}
+                              title={tooltipParts.join("\n")}
+                            >
+                              <span>{label}</span>
+                              {cellRow.feedback && <MessageCircle className="h-3.5 w-3.5" />}
+                            </button>
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   );
                 })}

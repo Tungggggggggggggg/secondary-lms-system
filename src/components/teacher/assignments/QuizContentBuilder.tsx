@@ -54,6 +54,58 @@ function getAiQuestionsFromEnvelope(envelope: ApiEnvelope | null): QuizQuestion[
   return questions as QuizQuestion[];
 }
 
+function normalizeQuizOptionsForChoice(question: QuizQuestion): QuizQuestion {
+  // Chỉ chuẩn hoá cho câu hỏi chọn đáp án
+  if (question.type !== "SINGLE" && question.type !== "MULTIPLE") {
+    return question;
+  }
+
+  const letters = ["A", "B", "C", "D"];
+  let options = Array.isArray(question.options) ? [...question.options] : [];
+
+  // Lọc bỏ option rỗng (không có nội dung)
+  options = options.filter((opt) => {
+    if (!opt || typeof opt.content !== "string") return false;
+    return opt.content.trim().length > 0;
+  });
+
+  // Nếu không có option nào, tạo 4 option trống
+  if (options.length === 0) {
+    options = letters.map((label) => ({ label, content: `Đáp án ${label}`, isCorrect: false }));
+  }
+
+  // Cắt bớt nếu nhiều hơn 4
+  if (options.length > 4) {
+    options = options.slice(0, 4);
+  }
+
+  // Bổ sung cho đủ 4
+  if (options.length < 4) {
+    const start = options.length;
+    for (let i = start; i < 4; i++) {
+      options.push({ label: letters[i], content: `Đáp án ${letters[i]}`, isCorrect: false });
+    }
+  }
+
+  // Gán lại nhãn A–D
+  options = options.map((opt, idx) => ({ ...opt, label: letters[idx] }));
+
+  // Với SINGLE: đảm bảo đúng 1 đáp án đúng (nếu AI không set)
+  if (question.type === "SINGLE") {
+    let correctIndex = options.findIndex((o) => o.isCorrect);
+    if (correctIndex < 0) {
+      // Nếu không có đáp án đúng được đánh dấu, mặc định chọn A
+      correctIndex = 0;
+    }
+    options = options.map((opt, idx) => ({ ...opt, isCorrect: idx === correctIndex }));
+  }
+
+  return {
+    ...question,
+    options,
+  };
+}
+
 function parseShowCorrectMode(value: string): AntiCheatConfig["showCorrectMode"] {
   if (value === "never" || value === "afterSubmit" || value === "afterLock") return value;
   return "never";
@@ -336,9 +388,10 @@ export default function QuizContentBuilder({ content, onContentChange }: QuizCon
         setAiError("AI không tạo được câu hỏi phù hợp. Hãy thử rút gọn hoặc làm rõ nội dung.");
         return;
       }
+      const normalized = aiQuestions.map((q) => normalizeQuizOptionsForChoice(q));
       onContentChange({
         ...currentContent,
-        questions: [...currentContent.questions, ...aiQuestions],
+        questions: [...currentContent.questions, ...normalized],
       });
     },
     [currentContent, onContentChange]

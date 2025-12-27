@@ -217,14 +217,6 @@ export default function SubmitAssignmentFilesPage() {
 
                 <div className="mt-6 flex flex-wrap items-center gap-2 justify-end">
                     <Button
-                        onClick={saveDraft}
-                        disabled={(files.length === 0 && uploaded.length === 0) || isSaving || isUploading}
-                        size="sm"
-                        className="rounded-full px-4"
-                    >
-                        {isSaving || isUploading ? "Đang lưu..." : "Lưu những thay đổi"}
-                    </Button>
-                    <Button
                         variant="outline"
                         onClick={() => setFiles([])}
                         disabled={isSaving || isUploading}
@@ -239,7 +231,7 @@ export default function SubmitAssignmentFilesPage() {
                         size="sm"
                         className="ml-auto inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:shadow-md hover:from-indigo-600 hover:to-sky-600 disabled:opacity-60"
                     >
-                        {isSubmitting ? "Đang xác nhận..." : "Xác nhận nộp bài"}
+                        {isSubmitting ? "Đang nộp..." : "Nộp bài"}
                     </Button>
                 </div>
             </Card>

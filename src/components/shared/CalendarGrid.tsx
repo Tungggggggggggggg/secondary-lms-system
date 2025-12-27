@@ -113,7 +113,7 @@ export default function CalendarGrid({ value, onChange, minDate, maxDate, classN
         <label className="text-sm font-semibold text-gray-800">Chọn ngày</label>
       </div>
 
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-6">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4 md:p-5">
         {/* Header */}
         <div className="mb-4">
           <MonthYearSwitcher value={displayDate} onChange={setDisplayDate} minDate={minDate} maxDate={maxDate} />
@@ -122,7 +122,7 @@ export default function CalendarGrid({ value, onChange, minDate, maxDate, classN
         {/* Weekdays */}
         <div className="grid grid-cols-7 gap-2 mb-2">
           {WEEKDAYS.map((day) => (
-            <div key={day} className="text-center text-xs font-semibold text-gray-600 py-2">
+            <div key={day} className="text-center text-xs font-semibold text-gray-600 py-1.5">
               {day}
             </div>
           ))}
@@ -142,7 +142,7 @@ export default function CalendarGrid({ value, onChange, minDate, maxDate, classN
                 onClick={() => day && handleDayClick(day)}
                 disabled={isDisabled}
                 className={cn(
-                  "h-12 rounded-lg font-medium text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  "h-10 md:h-11 rounded-lg font-medium text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   day === null ? "invisible" : "",
                   day !== null && !isDisabled ? "cursor-pointer" : "",
                   day !== null && isDisabled ? "text-gray-300 cursor-not-allowed" : "",
@@ -158,7 +158,7 @@ export default function CalendarGrid({ value, onChange, minDate, maxDate, classN
         </div>
 
         {/* Quick action */}
-        <div className="mt-4 pt-4 border-t border-blue-200">
+        <div className="mt-3 pt-3 border-t border-blue-200">
           <Button
             type="button"
             variant="outline"

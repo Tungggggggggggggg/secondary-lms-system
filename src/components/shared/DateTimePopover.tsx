@@ -133,9 +133,9 @@ export default function DateTimePopover({ label, value, onChange, required, clas
   );
 
   const PickerBody = (
-    <div className="grid grid-rows-[auto,1fr,auto] max-h-[85vh] bg-white rounded-xl overflow-hidden">
+    <div className="flex flex-col bg-white rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-10 p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="sticky top-0 z-10 px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
             <Calendar className="h-6 w-6 text-blue-600" />
@@ -174,8 +174,8 @@ export default function DateTimePopover({ label, value, onChange, required, clas
       </div>
 
       {/* Content */}
-      <div className="overflow-y-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="p-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Calendar */}
           <div>
             <CalendarGrid value={tempDate} onChange={updateTemp} minDate={min} maxDate={max} />
@@ -211,7 +211,7 @@ export default function DateTimePopover({ label, value, onChange, required, clas
       </div>
 
       {/* Footer */}
-      <div className="sticky bottom-0 z-10 p-5 border-t border-gray-200 bg-gray-50">
+      <div className="sticky bottom-0 z-10 px-5 py-4 border-t border-gray-200 bg-gray-50">
         <div className="flex gap-3">
           <Button 
             type="button" 
@@ -259,7 +259,7 @@ export default function DateTimePopover({ label, value, onChange, required, clas
           {TriggerButton}
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent
-              className="w-full sm:max-w-[560px] md:max-w-[760px] lg:max-w-[980px] max-h-[85vh] p-0"
+              className="w-full sm:max-w-[560px] md:max-w-[760px] lg:max-w-[980px] max-h-[90vh] overflow-y-auto p-0"
               onClose={() => setIsOpen(false)}
             >
               <DialogHeader className="sr-only">

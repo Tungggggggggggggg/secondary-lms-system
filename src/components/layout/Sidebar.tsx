@@ -263,7 +263,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                       {active && (
                         <span className="sr-only" aria-current="page">Trang hiện tại</span>
                       )}
-                      {messageHref === item.href && unreadBadge && (
+                      {messageHref === item.href && unreadBadge && !active && (
                         <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
                           {unreadBadge}
                         </span>
@@ -295,7 +295,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                     <Tooltip content={item.label}>
                       <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
                     </Tooltip>
-                    {isMessages && unreadBadge && (
+                    {isMessages && unreadBadge && !active && (
                       <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
                         {unreadBadge}
                       </span>

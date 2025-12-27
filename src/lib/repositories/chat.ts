@@ -328,7 +328,26 @@ export async function searchMessages(userId: string, query: string) {
   const messages = await prisma.message.findMany({
     where: {
       conversation: { participants: { some: { userId } } },
-      content: { contains: query, mode: 'insensitive' },
+      AND: [
+        {
+          OR: [
+            // Tên người gửi khớp từ khoá
+            { sender: { fullname: { contains: query, mode: 'insensitive' } } },
+            // Hoặc tên bất kỳ người tham gia cuộc hội thoại khớp từ khoá
+            {
+              conversation: {
+                participants: {
+                  some: {
+                    user: {
+                      fullname: { contains: query, mode: 'insensitive' },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
     },
     select: {
       id: true,

@@ -33,8 +33,8 @@ export type MessageDTO = {
 
 export function useConversations() {
   const { data, error, isLoading, mutate } = useSWR<{ success?: boolean; data?: unknown }>("/api/chat/conversations", {
-    refreshInterval: 30000,
-    dedupingInterval: 45000,
+    refreshInterval: 5000,
+    dedupingInterval: 8000,
     revalidateOnFocus: true,
     refreshWhenHidden: false,
     refreshWhenOffline: false,
@@ -48,10 +48,12 @@ export function useConversations() {
 }
 
 export function useMessages(conversationId?: string) {
-  const key = conversationId ? `/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}` : null;
+  const key = conversationId
+    ? `/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}&limit=80`
+    : null;
   const { data, error, isLoading, mutate } = useSWR<{ success?: boolean; data?: unknown }>(key, {
-    refreshInterval: 10000,
-    dedupingInterval: 15000,
+    refreshInterval: 2000,
+    dedupingInterval: 4000,
     revalidateOnFocus: true,
     refreshWhenHidden: false,
     refreshWhenOffline: false,
@@ -89,8 +91,8 @@ export async function markRead(conversationId: string) {
 
 export function useUnreadTotal() {
   const { data } = useSWR<{ total?: unknown }>("/api/chat/unread-total", {
-    refreshInterval: 60000,
-    dedupingInterval: 45000,
+    refreshInterval: 1000,
+    dedupingInterval: 1500,
     revalidateOnFocus: true,
     refreshWhenHidden: false,
     refreshWhenOffline: false,

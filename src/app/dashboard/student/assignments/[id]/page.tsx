@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+
 import Breadcrumb, { BreadcrumbItem } from "@/components/ui/breadcrumb";
 import BackButton from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import AssignmentDetailHeader from "@/components/student/assignments/AssignmentD
 import EssayAssignmentForm from "@/components/student/assignments/EssayAssignmentForm";
 import QuizAssignmentForm from "@/components/student/assignments/QuizAssignmentForm";
 import SubmissionReview from "@/components/student/assignments/SubmissionReview";
-import FileSubmissionPanel from "@/components/student/assignments/FileSubmissionPanel";
+import FileSubmissionPanel, { FileSubmissionPanelHandle } from "@/components/student/assignments/FileSubmissionPanel";
 import AssignmentComments from "@/components/student/assignments/AssignmentComments";
 import RichTextPreview from "@/components/shared/RichTextPreview";
 
@@ -93,6 +94,7 @@ export default function StudentAssignmentDetailPage({
   const [fileSubmission, setFileSubmission] = useState<{ id: string; status: string; files: Array<{ id?: string; fileName: string; mimeType: string; sizeBytes: number; storagePath: string }> } | null>(null);
   const [signedUrlByPath, setSignedUrlByPath] = useState<Record<string, string>>({});
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string; url: string | null; mimeType: string }>>([]);
+  const filePanelRef = useRef<FileSubmissionPanelHandle | null>(null);
 
   const handleDownload = async (path: string, filename: string) => {
     try {
@@ -206,6 +208,58 @@ export default function StudentAssignmentDetailPage({
 
     loadData();
   }, [assignmentId, fetchAssignmentDetail, fetchSubmission]);
+
+  // Nộp kết hợp nội dung + file cho bài ESSAY dạng BOTH
+  const handleEssaySubmitCombined = async (content: string) => {
+    if (!assignmentId) return;
+
+    const trimmed = content.trim();
+    const hasText = !!trimmed;
+    const hasFiles = filePanelRef.current?.hasFiles() ?? false;
+
+    if (!hasText && !hasFiles) {
+      toast({
+        title: "Lỗi",
+        description: "Bạn cần nhập nội dung hoặc chọn ít nhất một tệp trước khi nộp.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      let result: SubmissionResponse | null = null;
+
+      if (hasText) {
+        result = await submitAssignment(assignmentId, { content: trimmed });
+      }
+
+      if (hasFiles) {
+        await filePanelRef.current?.submitFiles();
+      }
+
+      toast({
+        title: "Nộp bài thành công",
+        description: hasText && hasFiles
+          ? "Đã nộp cả nội dung và tệp đính kèm."
+          : hasText
+          ? "Đã nộp nội dung bài làm."
+          : "Đã nộp tệp bài làm.",
+        variant: "success",
+      });
+
+      const submissionData = await fetchSubmission(assignmentId);
+      if (submissionData) {
+        setSubmission(submissionData);
+        setActiveTab("review");
+      }
+    } catch (e) {
+      toast({
+        title: "Nộp bài thất bại",
+        description: "Không thể nộp bài tập. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Xử lý submit essay
   const handleEssaySubmit = async (content: string) => {
@@ -387,7 +441,7 @@ export default function StudentAssignmentDetailPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <Breadcrumb items={breadcrumbItems} color="green" />
-        <BackButton href="/dashboard/student/assignments" />
+        <BackButton />
       </div>
 
       <AssignmentDetailHeader
@@ -456,7 +510,9 @@ export default function StudentAssignmentDetailPage({
               const hasPrompt = Array.isArray(assignment.questions) && assignment.questions.length > 0;
               const promptPanel = hasPrompt ? (
                 <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
-                  <h3 className="text-base font-semibold text-foreground mb-4">Đề bài</h3>
+                  <h3 className="text-base font-semibold text-foreground mb-4">
+                    Đề bài
+                  </h3>
                   <div className="space-y-3">
                     {assignment.questions.map((q, idx) => (
                       <div key={q.id} className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4">
@@ -512,7 +568,13 @@ export default function StudentAssignmentDetailPage({
                         <h4 className="font-semibold">Nộp văn bản</h4>
                         <EssayAssignmentForm
                           assignmentId={assignmentId}
-                          onSubmit={canEdit ? (c) => handleUpdateSubmission(c) : handleEssaySubmit}
+                          onSubmit={
+                            !submission
+                              ? handleEssaySubmitCombined
+                              : canEdit
+                              ? (c) => handleUpdateSubmission(c)
+                              : handleEssaySubmit
+                          }
                           initialContent={submission?.content || ""}
                           isLoading={isLoading}
                           dueDate={assignment.dueDate}
@@ -520,11 +582,12 @@ export default function StudentAssignmentDetailPage({
                           openAt={assignment.openAt ?? null}
                           lockAt={assignment.lockAt ?? null}
                           timeLimitMinutes={assignment.timeLimitMinutes ?? null}
+                          allowEmptyContent
                         />
                       </div>
                       <div className="space-y-3">
                         <h4 className="font-semibold">Nộp tệp</h4>
-                        <FileSubmissionPanel assignmentId={assignmentId} />
+                        <FileSubmissionPanel ref={filePanelRef} assignmentId={assignmentId} showSubmitButton={false} />
                       </div>
                     </div>
                   </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Avatar from "@/components/ui/avatar";
 import AttachmentLink, { AttachmentItem } from "./AttachmentLink";
+import { Pin } from "lucide-react";
 
 export interface PostItem {
     id: string;
@@ -72,14 +73,25 @@ export default function PostCard({
                     <div className="text-sm font-semibold text-slate-900 truncate">
                         {post.author?.fullname || "Giáo viên"}
                     </div>
-                    <div className="text-xs text-slate-500">
-                        {new Date(post.createdAt).toLocaleString("vi-VN", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                        })}
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                        <span>
+                            {new Date(post.createdAt).toLocaleString("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                            })}
+                        </span>
+                        {post.pinnedAt && (
+                            <span
+                                className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                                aria-label="Bài viết đã ghim"
+                            >
+                                <Pin className="h-3 w-3" />
+                                <span>Đã ghim</span>
+                            </span>
+                        )}
                     </div>
                 </div>
                 {actions}

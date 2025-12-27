@@ -17,6 +17,7 @@ interface EssayAssignmentFormProps {
   openAt?: string | null;
   lockAt?: string | null;
   timeLimitMinutes?: number | null;
+  allowEmptyContent?: boolean;
 }
 
 /**
@@ -32,6 +33,7 @@ export default function EssayAssignmentForm({
   openAt = null,
   lockAt = null,
   timeLimitMinutes = null,
+  allowEmptyContent = false,
 }: EssayAssignmentFormProps) {
   const [content, setContent] = useState(initialContent);
   const { toast } = useToast();
@@ -108,7 +110,9 @@ export default function EssayAssignmentForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!content.trim()) {
+    const trimmed = content.trim();
+
+    if (!trimmed && !allowEmptyContent) {
       toast({
         title: "Lỗi",
         description: "Vui lòng nhập nội dung bài làm",
@@ -127,7 +131,7 @@ export default function EssayAssignmentForm({
       return;
     }
 
-    await onSubmit(content.trim());
+    await onSubmit(trimmed);
     try { window.localStorage.removeItem(draftKey); } catch {}
   };
 
@@ -201,7 +205,11 @@ export default function EssayAssignmentForm({
           )}
           <Button
             type="submit"
-            disabled={isLoading || isOverdue || !content.trim()}
+            disabled={
+              isLoading ||
+              isOverdue ||
+              (!allowEmptyContent && !content.trim())
+            }
           >
             {isLoading
               ? "Đang xử lý..."

@@ -26,7 +26,7 @@ const querySchema = z.object({
   status: z.enum(["all", "graded", "ungraded"]).default("all"),
   search: z.string().max(200).default(""),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(20000).default(20),
 });
 
 // GET: Danh sách submissions/grades của lớp cho giáo viên (newest-first, filter, search)

@@ -54,7 +54,7 @@ export default function AdminUsersToolbar({
                 onClick={() => onRoleChange(opt.value)}
                 aria-pressed={active}
                 className={cn(
-                  "h-9 px-3 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
+                  "h-9 px-3 rounded-lg text-sm font-semibold whitespace-nowrap transition-all active:scale-95 active:translate-y-[1px]",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400",
                   active ? `${opt.badgeClass} border border-transparent` : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 )}

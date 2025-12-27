@@ -114,6 +114,7 @@ export default function AdminClassroomOverview({
             color="blue"
             onClick={onBulkAddStudents}
             disabled={archived}
+            className="transition-all active:scale-95 active:translate-y-[1px]"
           >
             Thêm HS
           </Button>
@@ -126,6 +127,7 @@ export default function AdminClassroomOverview({
             color="slate"
             onClick={onEdit}
             disabled={archived}
+            className="transition-all active:scale-95 active:translate-y-[1px]"
           >
             Sửa lớp
           </Button>
@@ -138,6 +140,7 @@ export default function AdminClassroomOverview({
             color="slate"
             onClick={onChangeTeacher}
             disabled={archived}
+            className="transition-all active:scale-95 active:translate-y-[1px]"
           >
             Đổi GV
           </Button>
@@ -149,6 +152,7 @@ export default function AdminClassroomOverview({
             size="sm"
             color="slate"
             onClick={onExportStudents}
+            className="transition-all active:scale-95 active:translate-y-[1px]"
           >
             Xuất Excel
           </Button>
@@ -161,7 +165,7 @@ export default function AdminClassroomOverview({
             color="slate"
             onClick={onToggleArchive}
             className={cn(
-              "border-amber-200 text-amber-700 hover:bg-amber-50",
+              "border-amber-200 text-amber-700 hover:bg-amber-50 transition-all active:scale-95 active:translate-y-[1px]",
               isActive ? "" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
             )}
           >
@@ -176,7 +180,7 @@ export default function AdminClassroomOverview({
             color="slate"
             onClick={onForceDelete}
             disabled={!archived || forceDeleting}
-            className="border-destructive/20 text-destructive/90 hover:bg-destructive/5"
+            className="border-destructive/20 text-destructive/90 hover:bg-destructive/5 transition-all active:scale-95 active:translate-y-[1px]"
           >
             {forceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
           </Button>

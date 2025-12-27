@@ -46,7 +46,7 @@ export default function PromptDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[min(640px,calc(100vw-2rem))] max-w-none max-h-[75vh]"
+        className="w-[min(92vw,32rem)] max-w-md max-h-[70vh]"
         onClose={() => onOpenChange(false)}
       >
         <DialogHeader>

@@ -207,7 +207,7 @@ export default function StudentsPage() {
         onItemClick={(_, idx) => {
           if (idx === 0) setStatusFilter("all");
           if (idx === 1) setSortKey("attendance");
-          if (idx === 2) setStatusFilter("warning");
+          if (idx === 2) setStatusFilter("all");
           if (idx === 3) setSortKey("grade");
         }}
       />
@@ -227,12 +227,6 @@ export default function StudentsPage() {
         onSortChange={(key) => setSortKey(key)}
         search={search}
         onSearchChange={(value) => setSearch(value)}
-        onReset={() => {
-          setSelectedClassId("all");
-          setStatusFilter("all");
-          setSortKey("name");
-          setSearch("");
-        }}
       />
 
       {/* Hành động chung */}

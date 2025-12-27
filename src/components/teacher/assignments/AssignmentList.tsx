@@ -12,20 +12,18 @@ import { AssignmentTypeBadge } from "@/components/shared";
 import AssignmentStatusBadge from "./AssignmentStatusBadge";
 import AssignmentListSkeleton from "./AssignmentListSkeleton";
 import ClassroomBadges from "./ClassroomBadges";
-import { CalendarDays, FileText, Inbox, Eye, Pencil, Trash2, Copy } from "lucide-react";
+import { CalendarDays, FileText, Inbox, Eye, Pencil, Trash2 } from "lucide-react";
 
 export default function AssignmentList({
     items,
     loading: loadingProp,
     error: errorProp,
     onRefresh,
-    onDuplicate,
 }: {
     items?: AssignmentT[];
     loading?: boolean;
     error?: string | null;
     onRefresh?: () => void;
-    onDuplicate?: (id: string) => void;
 }) {
     const router = useRouter();
     const {
@@ -213,20 +211,6 @@ export default function AssignmentList({
                                     Giám sát thi
                                 </Button>
                             )}
-                            {onDuplicate && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className="text-blue-700 hover:bg-blue-50"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDuplicate(assignment.id);
-                                    }}
-                                >
-                                    <Copy className="h-4 w-4 mr-1.5" />
-                                    Nhân bản
-                                </Button>
-                            )}
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -267,23 +251,6 @@ export default function AssignmentList({
                                 <Trash2 className="h-4 w-4 mr-1.5" />
                                 Xoá
                             </Button>
-                        </div>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="mt-4">
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full"
-                                style={{
-                                    width: `${
-                                        assignment._count?.submissions &&
-                                        assignment._count?.submissions > 0
-                                            ? 100
-                                            : 0
-                                    }%`,
-                                }}
-                            />
                         </div>
                     </div>
                 </div>

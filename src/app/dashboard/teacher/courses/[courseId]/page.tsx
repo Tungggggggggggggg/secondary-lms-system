@@ -99,6 +99,11 @@ export default function Page() {
   const [content, setContent] = useState("");
   const [orderModeAuto, setOrderModeAuto] = useState(true);
   const [order, setOrder] = useState<number>(1);
+  const [attachments, setAttachments] = useState<
+    { id: string; name: string; mimeType: string; url?: string | null }[]
+  >([]);
+  const [showContentEditor, setShowContentEditor] = useState(true);
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | null>(null);
 
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
@@ -110,6 +115,8 @@ export default function Page() {
     setContent("");
     setOrderModeAuto(true);
     setOrder(nextOrder);
+    setAttachments([]);
+    setShowContentEditor(true);
   };
 
   const resetUploadForm = () => {
@@ -117,6 +124,32 @@ export default function Page() {
     setUploadTitle("");
     setUploadOrderModeAuto(true);
     setUploadOrder(nextOrder);
+  };
+
+  const handleDownloadAttachment = async (file: { id: string; name: string; url?: string | null }) => {
+    if (!file.url || downloadingAttachmentId) return;
+    try {
+      setDownloadingAttachmentId(file.id);
+      const response = await fetch(file.url);
+      if (!response.ok) {
+        throw new Error("Download failed");
+      }
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = file.name || "lesson-file";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error("[TeacherCourseLesson] Download attachment error", e);
+    } finally {
+      setDownloadingAttachmentId(null);
+    }
   };
 
   const openCreateDialog = () => {
@@ -132,13 +165,25 @@ export default function Page() {
   const openEditDialog = async (lesson: LessonItem) => {
     try {
       setSaving(true);
-      const detail = (await fetcher(`/api/teachers/courses/${courseId}/lessons/${lesson.id}`)) as ApiResponse<LessonItem>;
-      const full = detail?.data ?? lesson;
+      const detail = (await fetcher<LessonItem & {
+        attachments?: { id: string; name: string; mimeType: string; url?: string | null }[];
+      }>(`/api/teachers/courses/${courseId}/lessons/${lesson.id}`)) as ApiResponse<
+        LessonItem & {
+          attachments?: { id: string; name: string; mimeType: string; url?: string | null }[];
+        }
+      >;
+
+      const full = detail?.data ?? (lesson as LessonItem);
       setEditing(full);
       setTitle(full.title);
       setContent(full.content ?? "");
       setOrderModeAuto(false);
       setOrder(full.order);
+      const nextAttachments = (full as any).attachments as
+        | { id: string; name: string; mimeType: string; url?: string | null }[]
+        | undefined;
+      setAttachments(nextAttachments ?? []);
+      setShowContentEditor(!(nextAttachments && nextAttachments.length > 0));
       setOpenEdit(true);
     } catch (e) {
       toast({
@@ -533,9 +578,89 @@ export default function Page() {
               <NumberInput value={order} onChange={setOrder} min={1} max={10000} color="blue" ariaLabel="Thứ tự bài học" />
             </div>
 
+            {attachments && attachments.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-slate-800">Tệp nguồn của bài học</div>
+                <p className="text-xs text-slate-500">
+                  Những tệp này là bản gốc khi tạo bài học. Bạn có thể tải về để xem đầy đủ định dạng.
+                </p>
+                <div className="space-y-2">
+                  {attachments.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center text-[11px] font-extrabold flex-shrink-0">
+                          {(() => {
+                            const mt = (file.mimeType || "").toLowerCase();
+                            if (mt.includes("pdf")) return "PDF";
+                            if (mt.includes("word") || mt.includes("doc")) return "DOC";
+                            if (mt.includes("text")) return "TXT";
+                            return "TỆP";
+                          })()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-900 truncate">
+                            {file.name}
+                          </div>
+                          <div className="text-xs text-slate-500 truncate">
+                            {file.mimeType || "application/octet-stream"}
+                          </div>
+                        </div>
+                      </div>
+                      {file.url ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadAttachment(file)}
+                          disabled={downloadingAttachmentId === file.id}
+                          className="shrink-0 inline-flex items-center justify-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {downloadingAttachmentId === file.id ? "Đang tải..." : "Tải về"}
+                        </button>
+                      ) : (
+                        <span className="shrink-0 text-xs text-slate-400">
+                          Không tạo được link tải
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <div className="text-sm font-semibold text-slate-800">Nội dung</div>
-              <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={10} disabled={saving} />
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold text-slate-800">Nội dung văn bản</div>
+                {attachments && attachments.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowContentEditor((v) => !v)}
+                    className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    {showContentEditor ? "Ẩn nội dung" : "Hiện nội dung"}
+                  </button>
+                )}
+              </div>
+              {(!attachments || attachments.length === 0 || showContentEditor) ? (
+                <>
+                  {attachments && attachments.length > 0 && (
+                    <div className="text-xs text-slate-500">
+                      Đây là văn bản đã được trích từ file nguồn và dùng cho Tutor. Bạn có thể chỉnh sửa nếu cần.
+                    </div>
+                  )}
+                  <Textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    rows={10}
+                    disabled={saving}
+                  />
+                </>
+              ) : (
+                <div className="text-xs text-slate-500">
+                  Văn bản đã được trích từ file và đang được ẩn. Nhấn "Hiện nội dung" nếu bạn muốn xem hoặc chỉnh sửa.
+                </div>
+              )}
             </div>
           </div>
 

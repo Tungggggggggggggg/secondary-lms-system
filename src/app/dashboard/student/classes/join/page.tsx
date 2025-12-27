@@ -61,7 +61,7 @@ export default function JoinClassPage() {
               role="student"
               title="Tham gia lớp học"
               subtitle="Nhập mã lớp do giáo viên cung cấp để tham gia lớp."
-              badge={<BackButton href="/dashboard/student/classes" />}
+              badge={<BackButton />}
             />
 
             <div className="max-w-md mx-auto">

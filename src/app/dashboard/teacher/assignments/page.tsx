@@ -17,19 +17,13 @@ import { useAssignmentsQuery } from "@/hooks/use-assignments-query";
 import { useClassroom } from "@/hooks/use-classroom";
 import type { AssignmentT } from "@/hooks/use-assignments";
 import { AdvancedFiltersPopover } from "@/components/shared";
-import { QuickFilterChips } from "@/components/shared";
 import { ViewToggle } from "@/components/shared";
-import DuplicateAssignmentDialog from "@/components/teacher/assignments/DuplicateAssignmentDialog";
-import { useToast } from "@/hooks/use-toast";
 
 export default function AssignmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { classrooms } = useClassroom();
   const [preview, setPreview] = useState<AssignmentT | null>(null);
-  const { toast } = useToast();
-  const [dupTarget, setDupTarget] = useState<AssignmentT | null>(null);
-  const [dupLoading, setDupLoading] = useState(false);
 
   const [status, setStatus] = useState<"all" | "active" | "completed" | "draft" | "needGrading">(
     (searchParams.get("status") as any) || "all"
@@ -140,23 +134,6 @@ export default function AssignmentsPage() {
             <ViewToggle value={view} onChange={setView} />
           </>
         }
-        bottom={
-          <div className="flex flex-wrap items-center gap-2">
-            <QuickFilterChips value={quickValue} onChange={handleQuickChange} counts={counts ?? undefined} />
-            {status === "draft" && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-semibold">
-                Trạng thái: Bản nháp
-                <button aria-label="Clear status" onClick={() => setStatus("all")} className="hover:underline">x</button>
-              </span>
-            )}
-            {clazz !== "all" && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-semibold">
-                Lớp: {(classrooms || []).find((c) => c.id === clazz)?.name || clazz}
-                <button aria-label="Clear class" onClick={() => setClazz("all")} className="hover:underline">x</button>
-              </span>
-            )}
-          </div>
-        }
       />
 
       {/* Sort + Pagination */}
@@ -188,10 +165,6 @@ export default function AssignmentsPage() {
           loading={loading}
           error={error}
           onRefresh={refresh}
-          onDuplicate={(id) => {
-            const found = items.find((x) => x.id === id) || null;
-            setDupTarget(found);
-          }}
         />
       ) : (
         <AssignmentTable
@@ -200,10 +173,6 @@ export default function AssignmentsPage() {
           onEdit={(id) => router.push(`/dashboard/teacher/assignments/${id}/edit`)}
           onSubmissions={(id) => router.push(`/dashboard/teacher/assignments/${id}/submissions`)}
           onDelete={(id) => router.push(`/dashboard/teacher/assignments/${id}`)}
-          onDuplicate={(id) => {
-            const found = items.find((x) => x.id === id) || null;
-            setDupTarget(found);
-          }}
         />
       )}
 
@@ -214,40 +183,6 @@ export default function AssignmentsPage() {
         onViewDetail={(id) => router.push(`/dashboard/teacher/assignments/${id}`)}
         onEdit={(id) => router.push(`/dashboard/teacher/assignments/${id}/edit`)}
         onSubmissions={(id) => router.push(`/dashboard/teacher/assignments/${id}/submissions`)}
-      />
-
-      <DuplicateAssignmentDialog
-        open={!!dupTarget}
-        onOpenChange={(v) => !v && !dupLoading && setDupTarget(null)}
-        defaultTitle={dupTarget?.title || ""}
-        loading={dupLoading}
-        onConfirm={async (title, copyClassrooms) => {
-          if (!dupTarget) return;
-          try {
-            setDupLoading(true);
-            const res = await fetch(`/api/teachers/assignments/${dupTarget.id}/duplicate`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title, copyClassrooms }),
-            });
-            const json = await res.json().catch(() => ({} as any));
-            if (!res.ok || json?.success === false) {
-              throw new Error(json?.message || "Nhân bản thất bại");
-            }
-            const newId: string | undefined = json?.data?.id;
-            toast({ title: "Đã nhân bản bài tập", variant: "success" });
-            setDupTarget(null);
-            if (newId) {
-              router.push(`/dashboard/teacher/assignments/${newId}/edit`);
-            } else {
-              refresh();
-            }
-          } catch (e: any) {
-            toast({ title: e?.message || "Có lỗi xảy ra", variant: "destructive" });
-          } finally {
-            setDupLoading(false);
-          }
-        }}
       />
     </div>
   );

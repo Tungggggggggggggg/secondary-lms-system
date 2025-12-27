@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type StudentStatus = "active" | "warning" | "inactive";
@@ -19,14 +19,10 @@ export default function StudentStatusBadge({ status, className }: StudentStatusB
     label = "Hoạt động tốt";
     colorClass = "bg-green-50 text-green-700 border-green-200";
     Icon = CheckCircle2;
-  } else if (status === "warning") {
-    label = "Cần chú ý";
-    colorClass = "bg-yellow-50 text-yellow-700 border-yellow-200";
-    Icon = AlertTriangle;
-  } else if (status === "inactive") {
-    label = "Không hoạt động";
-    colorClass = "bg-red-50 text-red-700 border-red-200";
-    Icon = XCircle;
+
+  // Các trạng thái khác (warning, inactive) không hiển thị badge nữa
+  } else {
+    return null;
   }
 
   return (

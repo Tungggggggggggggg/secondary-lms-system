@@ -27,7 +27,6 @@ interface StudentFiltersToolbarProps {
   search: string;
   onSearchChange: (query: string) => void;
   className?: string;
-  onReset?: () => void;
 }
 
 export default function StudentFiltersToolbar({
@@ -41,7 +40,6 @@ export default function StudentFiltersToolbar({
   search,
   onSearchChange,
   className,
-  onReset,
 }: StudentFiltersToolbarProps) {
   const [localSearch, setLocalSearch] = useState(search);
 
@@ -97,16 +95,6 @@ export default function StudentFiltersToolbar({
             <option value="grade">Sắp xếp theo điểm</option>
             <option value="attendance">Sắp xếp theo chuyên cần</option>
           </Select>
-          {onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="inline-flex items-center gap-2 h-11 rounded-xl border border-blue-200 px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-              aria-label="Đặt lại bộ lọc"
-            >
-              <RotateCcw className="h-4 w-4" /> Reset
-            </button>
-          )}
         </div>
       </div>
 
@@ -114,7 +102,7 @@ export default function StudentFiltersToolbar({
         value={status}
         onValueChange={(value) => onStatusChange(value as StudentStatusFilter)}
       >
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 rounded-xl bg-blue-100/60 text-blue-700">
+        <TabsList className="grid w-full grid-cols-2 rounded-xl bg-blue-100/60 text-blue-700">
           <TabsTrigger
             value="all"
             className="data-[state=active]:bg-background data-[state=active]:text-foreground"
@@ -126,18 +114,6 @@ export default function StudentFiltersToolbar({
             className="data-[state=active]:bg-background data-[state=active]:text-foreground"
           >
             Tốt
-          </TabsTrigger>
-          <TabsTrigger
-            value="warning"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
-          >
-            Cần chú ý
-          </TabsTrigger>
-          <TabsTrigger
-            value="inactive"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
-          >
-            Không hoạt động
           </TabsTrigger>
         </TabsList>
       </Tabs>

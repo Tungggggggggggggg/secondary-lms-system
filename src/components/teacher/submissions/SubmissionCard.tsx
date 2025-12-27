@@ -75,11 +75,18 @@ export default function SubmissionCard({
       {/* Nội dung bài nộp (preview) */}
       <div className="mb-4">
         <p className="text-sm font-medium text-foreground mb-2">Nội dung:</p>
-        <div className="bg-muted/40 rounded-lg p-3 max-h-32 overflow-y-auto">
+        <div className="bg-muted/40 rounded-lg p-3 max-h-32 overflow-y-auto space-y-1">
           {assignmentType === "ESSAY" ? (
-            <p className="text-sm text-foreground line-clamp-3 whitespace-pre-wrap">
-              {submission.content}
-            </p>
+            <>
+              <p className="text-sm text-foreground line-clamp-3 whitespace-pre-wrap">
+                {submission.content || "(Chưa có nội dung văn bản)"}
+              </p>
+              {submission.filesCount && submission.filesCount > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Có kèm tệp: {submission.filesCount} tệp
+                </p>
+              )}
+            </>
           ) : (
             <p className="text-sm text-muted-foreground italic">
               Bài trắc nghiệm (xem chi tiết để chấm điểm)
@@ -100,13 +107,14 @@ export default function SubmissionCard({
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-        {submission.isFileSubmission ? (
+        {submission.isFileSubmission || submission.fileSubmissionId ? (
           <div className="flex gap-2">
             <Button
               onClick={async (event) => {
                 event.stopPropagation();
                 try {
-                  const resp = await fetch(`/api/submissions/${submission.id}/files`);
+                  const targetId = submission.fileSubmissionId || submission.id;
+                  const resp = await fetch(`/api/submissions/${targetId}/files`);
                   const raw: unknown = await resp.json().catch(() => null);
                   if (
                     isRecord(raw) &&
