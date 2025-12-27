@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import fetcher from "@/lib/fetcher";
+import AdminTableSkeleton from "@/components/admin/AdminTableSkeleton";
 
 type OrgStatus = "ACTIVE" | "INACTIVE";
 
@@ -225,11 +226,7 @@ export default function AdminOrganizationsPage() {
             </TableHeader>
             <TableBody>
               {loading && items.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="py-6 text-center text-[11px] text-muted-foreground">
-                    Đang tải organizations...
-                  </TableCell>
-                </TableRow>
+                <AdminTableSkeleton rows={6} cols={4} />
               ) : items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="py-6 text-center text-[11px] text-muted-foreground">

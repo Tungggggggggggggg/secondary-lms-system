@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { EmptyState, SectionHeader } from "@/components/shared";
+import CardListSkeleton from "@/components/shared/loading/CardListSkeleton";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -199,17 +200,7 @@ export default function StudentClassroomLessonsPage() {
       />
 
       {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="bg-card/90 rounded-2xl border border-border p-4 sm:p-5 motion-safe:animate-pulse"
-            >
-              <div className="h-4 bg-muted rounded w-1/2 mb-2" />
-              <div className="h-3 bg-muted rounded w-1/3" />
-            </div>
-          ))}
-        </div>
+        <CardListSkeleton items={3} showChips={false} />
       ) : error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-700">
           Không tải được danh sách bài học. Vui lòng thử lại sau.

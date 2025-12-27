@@ -11,6 +11,7 @@ import { FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import StudentAssignmentCard from "@/components/student/StudentAssignmentCard";
 import AssignmentFilters from "@/components/student/AssignmentFilters";
 import { Button } from "@/components/ui/button";
+import CardListSkeleton from "@/components/shared/loading/CardListSkeleton";
 
 /**
  * Trang bài tập của tôi (student view)
@@ -182,21 +183,7 @@ export default function AssignmentsPage() {
 
       {/* Assignment List */}
       {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="bg-card/90 rounded-2xl border border-border p-4 sm:p-5 animate-pulse"
-            >
-              <div className="h-4 bg-muted rounded w-1/3 mb-3" />
-              <div className="h-3 bg-muted rounded w-2/3 mb-4" />
-              <div className="flex gap-2">
-                <div className="h-6 bg-muted rounded-full w-20" />
-                <div className="h-6 bg-muted rounded-full w-20" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <CardListSkeleton items={3} />
       ) : filteredAssignments.length === 0 ? (
         <EmptyState
           icon={<FileText className="h-12 w-12 text-green-600" />}

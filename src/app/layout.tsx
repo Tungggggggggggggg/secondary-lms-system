@@ -8,6 +8,7 @@ import { ConfirmProvider } from "@/components/providers/ConfirmProvider";
 import { PromptProvider } from "@/components/providers/PromptProvider";
 import CommandPaletteProvider from "@/components/providers/CommandPaletteProvider";
 import SWRProvider from "@/components/providers/SWRProvider";
+import TopLoaderProvider from "@/components/providers/TopLoaderProvider";
 
 // Configure Roboto font for the entire application
 const roboto = Roboto({
@@ -58,6 +59,7 @@ export default function RootLayout({
                 data-new-gr-c-s-check-loaded=""
                 data-gr-ext-installed=""
             >
+                <TopLoaderProvider />
                 <NextAuthProvider>
                     <ConfirmProvider>
                         <PromptProvider>

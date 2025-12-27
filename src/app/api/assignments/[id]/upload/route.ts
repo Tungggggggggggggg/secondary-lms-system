@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment } from "@/lib/api-utils";
+import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfAssignment } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+
+export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const BUCKET =
@@ -10,74 +12,74 @@ const BUCKET =
   "lms-submissions";
 
 const MIME_WHITELIST = new Set([
-	"application/pdf",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-	"application/msword",
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-	"application/vnd.ms-excel",
-	"application/vnd.openxmlformats-officedocument.presentationml.presentation",
-	"application/vnd.ms-powerpoint",
-	"text/plain",
-	"application/zip",
-	"application/x-zip-compressed",
-	"image/png",
-	"image/jpeg",
-	"image/webp",
-	"text/x-python",
-	"text/x-shellscript",
-	"application/x-javascript",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.ms-powerpoint",
+  "text/plain",
+  "application/zip",
+  "application/x-zip-compressed",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "text/x-python",
+  "text/x-shellscript",
+  "application/x-javascript",
 ]);
 
 function slugifyFileName(name: string): string {
-	return name
-		.toLowerCase()
-		.replace(/[^a-z0-9.]+/g, "-")
-		.replace(/-+/g, "-")
-		.replace(/^-|-$|\s+/g, "");
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$|\s+/g, "");
 }
 
 export async function POST(
-	req: NextRequest,
-	{ params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
-	const requestId = crypto.randomUUID();
-	try {
-		const admin = supabaseAdmin;
-		if (!admin) {
-			return errorResponse(500, "Storage client not initialized", { requestId });
-		}
-		const user = await getAuthenticatedUser(req);
-		if (!user) return errorResponse(401, "Unauthorized", { requestId });
-		if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
+  const requestId = getRequestId(req);
+  try {
+    const admin = supabaseAdmin;
+    if (!admin) {
+      return errorResponse(500, "Storage client not initialized", { requestId });
+    }
+    const user = await getAuthenticatedUser(req);
+    if (!user) return errorResponse(401, "Unauthorized", { requestId });
+    if (user.role !== "TEACHER") return errorResponse(403, "Forbidden", { requestId });
 
-		const assignmentId = params.id;
-		if (!assignmentId) {
-			return errorResponse(400, "assignmentId is required", { requestId });
-		}
+    const assignmentId = params.id;
+    if (!assignmentId) {
+      return errorResponse(400, "assignmentId is required", { requestId });
+    }
 
-		const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
-		if (!isOwner) {
-			return errorResponse(403, "Forbidden - Not your assignment", { requestId });
-		}
+    const isOwner = await isTeacherOfAssignment(user.id, assignmentId);
+    if (!isOwner) {
+      return errorResponse(403, "Forbidden - Not your assignment", { requestId });
+    }
 
-		const form = await req.formData();
-		const file = form.get("file");
-		if (!file || !(file instanceof File)) {
-			return errorResponse(400, "file is required", { requestId });
-		}
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!file || !(file instanceof File)) {
+      return errorResponse(400, "file is required", { requestId });
+    }
 
-		if (file.size > MAX_FILE_SIZE) {
-			return errorResponse(413, "File exceeds 20MB limit", { requestId });
-		}
+    if (file.size > MAX_FILE_SIZE) {
+      return errorResponse(413, "File exceeds 20MB limit", { requestId });
+    }
 
-		const contentType = file.type || "application/octet-stream";
-		if (contentType && !MIME_WHITELIST.has(contentType)) {
-			return errorResponse(415, "Unsupported file type", { requestId });
-		}
+    const contentType = file.type || "application/octet-stream";
+    if (contentType && !MIME_WHITELIST.has(contentType)) {
+      return errorResponse(415, "Unsupported file type", { requestId });
+    }
 
-		const originalName = file.name?.trim() ? file.name : "file";
-		const safeName = slugifyFileName(originalName);
-		const key = `assignment/${assignmentId}/${crypto.randomUUID()}-${safeName}`;
+    const originalName = file.name?.trim() ? file.name : "file";
+    const safeName = slugifyFileName(originalName);
+    const key = `assignment/${assignmentId}/${crypto.randomUUID()}-${safeName}`;
 
 		const arrayBuffer = await file.arrayBuffer();
 		const { data, error } = await admin.storage
@@ -87,12 +89,15 @@ export async function POST(
 				upsert: false,
 			});
 
-		if (error) {
+		if (error || !data?.path) {
 			console.error(
 				`[ERROR] [POST] /api/assignments/${assignmentId}/upload - Upload failed {requestId:${requestId}}`,
-				error
+				error ?? "Missing storage path"
 			);
-			return errorResponse(500, "Upload failed", { requestId });
+			return errorResponse(500, "Upload failed", {
+				requestId,
+				details: error?.message ?? null,
+			});
 		}
 
 		let savedMeta: { id: string } | null = null;
@@ -100,7 +105,7 @@ export async function POST(
 			savedMeta = await prisma.assignmentFile.create({
 				data: {
 					assignmentId,
-					path: data!.path,
+					path: data.path,
 					name: originalName,
 					size: file.size,
 					mimeType: contentType,
@@ -109,11 +114,32 @@ export async function POST(
 				},
 				select: { id: true },
 			});
-		} catch (dbErr) {
+		} catch (dbErr: unknown) {
 			console.error(
 				`[ERROR] [POST] /api/assignments/${assignmentId}/upload - DB save failed {requestId:${requestId}}`,
 				dbErr
 			);
+			try {
+				const { error: rollbackErr } = await admin.storage
+					.from(BUCKET)
+					.remove([data.path]);
+				if (rollbackErr) {
+					console.error(
+						`[ERROR] [POST] /api/assignments/${assignmentId}/upload - Rollback remove failed {requestId:${requestId}}`,
+						rollbackErr
+					);
+				}
+			} catch (rollbackEx: unknown) {
+				console.error(
+					`[ERROR] [POST] /api/assignments/${assignmentId}/upload - Rollback exception {requestId:${requestId}}`,
+					rollbackEx
+				);
+			}
+
+			return errorResponse(500, "Không thể lưu thông tin file", {
+				requestId,
+				details: dbErr instanceof Error ? dbErr.message : null,
+			});
 		}
 
 		return NextResponse.json(
@@ -132,6 +158,7 @@ export async function POST(
 		);
 		return errorResponse(500, "Internal server error", { requestId });
 	}
-}
+
+ }
 
 

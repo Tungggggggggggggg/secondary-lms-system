@@ -6,12 +6,11 @@ import { PageHeader } from "@/components/shared";
 import { EmptyState } from "@/components/shared";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LessonTutorChat from "@/components/student/lesson/LessonTutorChat";
-import { getChatFileUrl } from "@/lib/supabase-upload";
 import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-type Attachment = { id: string; name: string; storagePath: string; mimeType: string };
+type Attachment = { id: string; name: string; storagePath: string; mimeType: string; url?: string | null };
 type LessonDetail = {
   id: string;
   title: string;
@@ -40,7 +39,7 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
   const lesson: LessonDetail | null = data?.data ?? null;
 
   const pdfAttachment = lesson?.attachments?.find((a) => (a.mimeType || "").toLowerCase().includes("pdf")) ?? null;
-  const pdfUrl = pdfAttachment ? getChatFileUrl(pdfAttachment.storagePath, "assignments") : null;
+  const pdfUrl = pdfAttachment?.url ?? null;
 
   const [contentView, setContentView] = useState<"original" | "text">("text");
   useEffect(() => {
@@ -224,29 +223,46 @@ export default function LessonDetailView({ classId, lessonId }: Props) {
             </div>
           ) : lesson?.attachments && lesson.attachments.length > 0 ? (
             <div className="space-y-2" role="list">
-              {lesson.attachments.map((file) => (
-                <a
-                  key={file.id}
-                  href={getChatFileUrl(file.storagePath, "assignments")}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-2xl transition-colors border border-border bg-background hover:bg-green-50/40 hover:border-green-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  <div className="h-10 w-10 rounded-xl bg-green-100 text-green-800 flex items-center justify-center text-[11px] font-extrabold shrink-0">
-                    {(() => {
-                      const mt = (file.mimeType || "").toLowerCase();
-                      if (mt.includes("pdf")) return "PDF";
-                      if (mt.includes("word") || mt.includes("doc")) return "DOC";
-                      if (mt.includes("text")) return "TXT";
-                      return "TỆP";
-                    })()}
+              {lesson.attachments.map((file) => {
+                const href = typeof file.url === "string" ? file.url : null;
+                const Row = (
+                  <>
+                    <div className="h-10 w-10 rounded-xl bg-green-100 text-green-800 flex items-center justify-center text-[11px] font-extrabold shrink-0">
+                      {(() => {
+                        const mt = (file.mimeType || "").toLowerCase();
+                        if (mt.includes("pdf")) return "PDF";
+                        if (mt.includes("word") || mt.includes("doc")) return "DOC";
+                        if (mt.includes("text")) return "TXT";
+                        return "TỆP";
+                      })()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate text-foreground">{file.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{file.mimeType}</p>
+                    </div>
+                  </>
+                );
+
+                return href ? (
+                  <a
+                    key={file.id}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-2xl transition-colors border border-border bg-background hover:bg-green-50/40 hover:border-green-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    {Row}
+                  </a>
+                ) : (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-3 p-3 rounded-2xl border border-border bg-background opacity-70"
+                  >
+                    {Row}
+                    <div className="text-xs text-muted-foreground">Không tạo được link tải</div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate text-foreground">{file.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{file.mimeType}</p>
-                  </div>
-                </a>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <EmptyState title="Không có tệp đính kèm" description="Giáo viên chưa thêm tệp nào cho bài học này." />

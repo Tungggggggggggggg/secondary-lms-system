@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +49,9 @@ type TeacherAssignmentsApiResponse = {
   };
   message?: string;
 };
+
+const TEACHER_ASSIGNMENTS_KEY =
+  "/api/teachers/assignments?take=100&skip=0&status=all&sortKey=createdAt&sortDir=desc";
 
 const teacherAssignmentsFetcher = async (url: string): Promise<TeacherAssignmentsApiResponse> => {
   const res = await fetch(url, { cache: "no-store" });
@@ -119,9 +122,10 @@ const mockStudentSessions: Array<{
  */
 export default function ExamMonitorPage() {
   const { toast } = useToast();
+  const { mutate } = useSWRConfig();
 
   const { data: teacherAssignmentsData } = useSWR<TeacherAssignmentsApiResponse>(
-    "/api/teachers/assignments?take=100&skip=0&status=all&sortKey=createdAt&sortDir=desc",
+    TEACHER_ASSIGNMENTS_KEY,
     teacherAssignmentsFetcher,
     {
       revalidateOnFocus: false,
@@ -169,6 +173,7 @@ export default function ExamMonitorPage() {
     typeof value === "object" && value !== null;
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
+  const [manualRefreshKey, setManualRefreshKey] = useState(0);
   const [assignmentIdInput, setAssignmentIdInput] = useState("");
   const [studentIdInput, setStudentIdInput] = useState("");
   const [attemptInput, setAttemptInput] = useState<string>("");
@@ -347,7 +352,7 @@ export default function ExamMonitorPage() {
     return () => {
       cancelled = true;
     };
-  }, [effectiveAssignmentId]);
+  }, [effectiveAssignmentId, manualRefreshKey]);
 
   const severityOf = (type: string): 'low' | 'medium' | 'high' | 'info' => {
     if (type === 'SESSION_STARTED' || type === 'AUTO_SAVED' || type === 'SESSION_RESUMED') return 'info';
@@ -849,6 +854,22 @@ export default function ExamMonitorPage() {
     void callTeacherOverride(sessionKey, "TERMINATE");
   };
 
+  const handleManualRefresh = () => {
+    const effectiveIdForLogs = assignmentIdFromQuery || assignmentIdInput.trim();
+    if (!effectiveIdForLogs) {
+      toast({
+        title: "Chưa chọn bài thi",
+        description: "Vui lòng nhập mã bài thi trước khi làm mới dữ liệu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    void fetchEvents(effectiveIdForLogs);
+    void mutate(TEACHER_ASSIGNMENTS_KEY);
+    setManualRefreshKey((v) => v + 1);
+  };
+
   return (
     <div className="min-h-screen bg-muted">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -869,7 +890,7 @@ export default function ExamMonitorPage() {
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
-                onClick={() => window.location.reload()}
+                onClick={handleManualRefresh}
                 className="inline-flex items-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { supabaseAdmin } from "@/lib/supabase";
 import { errorResponse, getAuthenticatedUser, isTeacherOfAssignment, getRequestId } from "@/lib/api-utils";
 
+export const runtime = "nodejs";
+
 const BUCKET =
   process.env.SUPABASE_ASSIGNMENTS_BUCKET ||
   process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ||
@@ -63,9 +65,25 @@ export async function GET(
     // Tạo signed URLs TTL 15 phút
     const entries = await Promise.all(
       files.map(async (f: AssignmentFileRow) => {
-        const { data } = await admin.storage
-          .from(BUCKET)
-          .createSignedUrl(f.path, 900, { download: true, transform: undefined });
+        let signedUrl: string | null = null;
+        try {
+          const { data, error } = await admin.storage
+            .from(BUCKET)
+            .createSignedUrl(f.path, 900, { download: true, transform: undefined });
+          if (error) {
+            console.error(
+              `[ERROR] [GET] /api/assignments/${assignmentId}/files - createSignedUrl failed {requestId:${requestId}}`,
+              { fileId: f.id, path: f.path, bucket: BUCKET, message: error.message }
+            );
+          } else {
+            signedUrl = data?.signedUrl || null;
+          }
+        } catch (e: unknown) {
+          console.error(
+            `[ERROR] [GET] /api/assignments/${assignmentId}/files - createSignedUrl exception {requestId:${requestId}}`,
+            { fileId: f.id, path: f.path, bucket: BUCKET, error: String(e) }
+          );
+        }
         return {
           id: f.id,
           name: f.name,
@@ -73,7 +91,7 @@ export async function GET(
           size: f.size,
           mimeType: f.mimeType,
           createdAt: f.createdAt,
-          url: data?.signedUrl || null,
+          url: signedUrl,
         };
       })
     );

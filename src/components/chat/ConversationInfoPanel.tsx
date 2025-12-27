@@ -4,7 +4,6 @@ import React from "react";
 import type { ConversationItem } from "@/hooks/use-chat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useSWR from 'swr';
-import { getChatFileUrl } from '@/lib/supabase-upload';
 import { File, Link as LinkIcon, Info, User } from 'lucide-react';
 
 
@@ -13,11 +12,35 @@ type Props = {
   conversation?: ConversationItem | null;
 };
 
-export default function ConversationInfoPanel({ color = "amber", conversation }: Props) {
-  const { data, isLoading } = useSWR(conversation ? `/api/chat/conversations/${conversation.id}/attachments` : null);
+type ChatConversationFile = {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  storagePath: string;
+  url?: string | null;
+};
 
-  const files = data?.data?.files || [];
-  const links = data?.data?.links || [];
+type ChatConversationLink = {
+  url: string;
+  createdAt: string;
+};
+
+type ConversationAttachmentsResponse = {
+  success?: boolean;
+  data?: {
+    files?: ChatConversationFile[];
+    links?: ChatConversationLink[];
+  };
+};
+
+export default function ConversationInfoPanel({ color = "amber", conversation }: Props) {
+  const { data, isLoading } = useSWR<ConversationAttachmentsResponse>(
+    conversation ? `/api/chat/conversations/${conversation.id}/attachments` : null
+  );
+
+  const files = data?.data?.files ?? [];
+  const links = data?.data?.links ?? [];
   if (!conversation) {
     return (
       <div className="h-full p-4 text-sm text-gray-500">Chọn một hội thoại để xem thông tin</div>
@@ -70,14 +93,26 @@ export default function ConversationInfoPanel({ color = "amber", conversation }:
         <TabsContent value="media" className="mt-4 min-w-0 scrollbar-hover overscroll-contain">
           {isLoading ? <p className={`${palette.textSoft} font-medium`}>Đang tải...</p> : files.length > 0 ? (
             <div className="space-y-2">
-              {files.map((file: any) => (
-                <a key={file.id} href={getChatFileUrl(file.storagePath)} target="_blank" rel="noreferrer" className={`flex items-center gap-3 p-2 rounded-lg transition-colors border border-transparent min-w-0 ${palette.hoverRow}`}>
+              {files.map((file) => (
+                <div key={file.id} className={`flex items-center gap-3 p-2 rounded-lg transition-colors border border-transparent min-w-0 ${palette.hoverRow}`}>
                   <File className={`h-5 w-5 flex-shrink-0 ${palette.icon}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate text-gray-900">{file.name}</p>
                     <p className={`text-xs font-medium truncate ${palette.textSoft}`}>{(file.sizeBytes / 1024).toFixed(2)} KB</p>
                   </div>
-                </a>
+                  {typeof file.url === "string" && file.url ? (
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold underline underline-offset-2 text-gray-900"
+                    >
+                      Tải
+                    </a>
+                  ) : (
+                    <span className={`text-xs font-medium ${palette.textSoft}`}>N/A</span>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
@@ -87,7 +122,7 @@ export default function ConversationInfoPanel({ color = "amber", conversation }:
         <TabsContent value="links" className="mt-4 min-w-0 scrollbar-hover overscroll-contain">
           {isLoading ? <p className={`${palette.textSoft} font-medium`}>Đang tải...</p> : links.length > 0 ? (
             <div className="space-y-2">
-              {links.map((link: any, index: number) => (
+              {links.map((link, index) => (
                 <a key={index} href={link.url} target="_blank" rel="noreferrer" className={`flex items-center gap-3 p-2 rounded-lg transition-colors border border-transparent min-w-0 ${palette.hoverRow}`}>
                   <LinkIcon className={`h-5 w-5 flex-shrink-0 ${palette.icon}`} />
                   <div className="flex-1 min-w-0">

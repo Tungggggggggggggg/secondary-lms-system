@@ -41,17 +41,9 @@ export default function AssignmentDetailPage() {
     const [detail, setDetail] = useState<AssignmentDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [retryKey, setRetryKey] = useState(0);
     const [attachments, setAttachments] = useState<Array<{ id: string; name: string; path: string; size: number; mimeType: string; createdAt: string; url?: string | null }>>([]);
     const [loadingFiles, setLoadingFiles] = useState(false);
-
-    const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "lms-submissions";
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const publicUrlForStored = (path: string) => {
-        const clean = path.replace(/^\//, "");
-        return SUPABASE_URL
-            ? `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${clean}`
-            : `/storage/v1/object/public/${BUCKET}/${clean}`;
-    };
 
     useEffect(() => {
         async function fetchDetail() {
@@ -136,7 +128,7 @@ export default function AssignmentDetailPage() {
             }
         }
         if (assignmentId) fetchDetail();
-    }, [assignmentId, toast]);
+    }, [assignmentId, toast, retryKey]);
 
     // Fetch attachments
     useEffect(() => {
@@ -161,7 +153,7 @@ export default function AssignmentDetailPage() {
             }
         })();
         return () => { cancelled = true; };
-    }, [assignmentId]);
+    }, [assignmentId, retryKey]);
 
     if (loading)
         return (
@@ -184,7 +176,7 @@ export default function AssignmentDetailPage() {
                 description={error}
                 action={
                     <div className="flex justify-center gap-3">
-                        <Button variant="outline" onClick={() => window.location.reload()}>
+                        <Button variant="outline" onClick={() => setRetryKey((v) => v + 1)}>
                             Thử lại
                         </Button>
                         <Button
@@ -292,126 +284,104 @@ export default function AssignmentDetailPage() {
 
             {/* Tabs: Questions và Discussions */}
             <Tabs defaultValue="questions" className="mt-2">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="questions">Câu hỏi</TabsTrigger>
-                        <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
-                    </TabsList>
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="questions">Câu hỏi</TabsTrigger>
+                    <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
+                </TabsList>
 
-                    <TabsContent value="questions" className="mt-6">
-                        {/* Danh sách câu hỏi */}
-                        <div className="bg-card rounded-2xl p-6 shadow border border-border">
-                            <h2 className="text-lg font-bold mb-4 text-indigo-700 flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
-                                Danh sách câu hỏi
-                            </h2>
+                <TabsContent value="questions" className="mt-6">
+                    {/* Danh sách câu hỏi */}
+                    <div className="bg-card rounded-2xl p-6 shadow border border-border">
+                        <h2 className="text-lg font-bold mb-4 text-indigo-700 flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Danh sách câu hỏi
+                        </h2>
 
-                            {/* File đính kèm */}
-                            {loadingFiles ? (
-                                <div className="text-sm text-muted-foreground mb-4">Đang tải file đính kèm...</div>
-                            ) : attachments.length > 0 ? (
-                                <div className="mb-6">
-                                    <h3 className="text-md font-semibold mb-3 text-foreground flex items-center gap-2">
-                                        <Paperclip className="h-4 w-4" />
-                                        File đính kèm
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {attachments.map((file) => {
-                                            const href = file.url || publicUrlForStored(file.path);
-                                            const isImg = file.mimeType?.startsWith('image/');
-                                            const isVid = file.mimeType?.startsWith('video/');
-                                            return (
-                                                <div key={file.id} className="flex items-center justify-between gap-3 p-3 bg-muted/40 rounded-lg border border-border">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background shadow-sm">
-                                                            {isImg ? (
-                                                                <ImageIcon className="h-5 w-5 text-sky-500" />
-                                                            ) : isVid ? (
-                                                                <VideoIcon className="h-5 w-5 text-violet-500" />
-                                                            ) : (
-                                                                <FileText className="h-5 w-5 text-muted-foreground" />
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium text-sm text-foreground">{file.name}</p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {(file.size / 1024 / 1024).toFixed(2)} MB • {file.mimeType}
-                                                            </p>
-                                                        </div>
+                        {/* File đính kèm */}
+                        {loadingFiles ? (
+                            <div className="text-sm text-muted-foreground mb-4">Đang tải file đính kèm...</div>
+                        ) : attachments.length > 0 ? (
+                            <div className="mb-6">
+                                <h3 className="text-md font-semibold mb-3 text-foreground flex items-center gap-2">
+                                    <Paperclip className="h-4 w-4" />
+                                    File đính kèm
+                                </h3>
+                                <div className="space-y-2">
+                                    {attachments.map((file) => {
+                                        const href = typeof file.url === "string" ? file.url : null;
+                                        const isImg = file.mimeType?.startsWith("image/");
+                                        const isVid = file.mimeType?.startsWith("video/");
+                                        return (
+                                            <div key={file.id} className="flex items-center justify-between gap-3 p-3 bg-muted/40 rounded-lg border border-border">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background shadow-sm">
+                                                        {isImg ? (
+                                                            <ImageIcon className="h-5 w-5 text-sky-500" />
+                                                        ) : isVid ? (
+                                                            <VideoIcon className="h-5 w-5 text-violet-500" />
+                                                        ) : (
+                                                            <FileText className="h-5 w-5 text-muted-foreground" />
+                                                        )}
                                                     </div>
-                                                    <a
-                                                        href={href}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="text-sm text-blue-600 hover:underline"
-                                                    >
+                                                    <div>
+                                                        <p className="font-medium text-sm text-foreground">{file.name}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {(file.size / 1024 / 1024).toFixed(2)} MB • {file.mimeType}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {href ? (
+                                                    <a href={href} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
                                                         Tải xuống
                                                     </a>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <hr className="my-6 border-border" />
-                                </div>
-                            ) : null}
-                            {(!detail.questions || detail.questions.length === 0) && (
-                                <div className="text-muted-foreground italic py-4">
-                                    Bài tập này chưa có câu hỏi nào.
-                                </div>
-                            )}
-                            {/* Render đẹp từng câu hỏi */}
-                            <ol className="space-y-7">
-                                {detail.questions
-                                    ?.sort((a, b) => a.order - b.order)
-                                    .map((q, idx) => (
-                                        <li
-                                            key={q.id}
-                                            className={cn(
-                                                "bg-gradient-to-br from-purple-50 to-white border-l-4 pl-5 pr-3 py-4 rounded-2xl shadow flex flex-col gap-2",
-                                                q.type === "ESSAY"
-                                                    ? "border-indigo-400"
-                                                    : "border-pink-400"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-semibold text-indigo-800">
-                                                    Câu {idx + 1}:
-                                                </span>
-                                                {q.type === "ESSAY" ? (
-                                                    <span className="ml-2 inline-block text-xs px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full">
-                                                        Tự luận
-                                                    </span>
                                                 ) : (
-                                                    <span className="ml-2 inline-block text-xs px-3 py-1 bg-pink-100 text-pink-700 rounded-full">
-                                                        Trắc nghiệm
-                                                    </span>
+                                                    <span className="text-sm text-muted-foreground">Không tạo được link tải</span>
                                                 )}
                                             </div>
-                                            {q.type === "ESSAY" ? (
-                                                <RichTextPreview
-                                                    html={q.content || ""}
-                                                    className="text-foreground text-base mb-1"
-                                                />
-                                            ) : (
-                                                <div className="text-foreground text-base mb-1 whitespace-pre-line">
-                                                    {stripHtml(q.content)}
+                                        );
+                                    })}
+                                </div>
+                                <hr className="my-6 border-border" />
+                            </div>
+                        ) : null}
+
+                        {(!detail.questions || detail.questions.length === 0) ? (
+                            <div className="text-muted-foreground italic py-4">Bài tập này chưa có câu hỏi nào.</div>
+                        ) : (
+                            <>
+                                {/* Render đẹp từng câu hỏi */}
+                                <ol className="space-y-7">
+                                    {[...detail.questions]
+                                        .sort((a, b) => a.order - b.order)
+                                        .map((q, idx) => (
+                                            <li
+                                                key={q.id}
+                                                className={cn(
+                                                    "bg-gradient-to-br from-purple-50 to-white border-l-4 pl-5 pr-3 py-4 rounded-2xl shadow flex flex-col gap-2",
+                                                    q.type === "ESSAY" ? "border-indigo-400" : "border-pink-400"
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="font-semibold text-indigo-800">Câu {idx + 1}:</span>
+                                                    {q.type === "ESSAY" ? (
+                                                        <span className="ml-2 inline-block text-xs px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full">Tự luận</span>
+                                                    ) : (
+                                                        <span className="ml-2 inline-block text-xs px-3 py-1 bg-pink-100 text-pink-700 rounded-full">Trắc nghiệm</span>
+                                                    )}
                                                 </div>
-                                            )}
-                                            {/* Hiển thị options nếu là trắc nghiệm */}
-                                            {q.type !== "ESSAY" &&
-                                                q.options &&
-                                                q.options.length > 0 && (
+
+                                                {q.type === "ESSAY" ? (
+                                                    <RichTextPreview html={q.content || ""} className="text-foreground text-base mb-1" />
+                                                ) : (
+                                                    <div className="text-foreground text-base mb-1 whitespace-pre-line">{stripHtml(q.content)}</div>
+                                                )}
+
+                                                {q.type !== "ESSAY" && q.options && q.options.length > 0 && (
                                                     <ul className="ml-2 flex flex-col gap-1 mt-2">
-                                                        {q.options
-                                                            .sort(
-                                                                (a, b) =>
-                                                                    (a.order ?? 0) -
-                                                                    (b.order ?? 0)
-                                                            )
+                                                        {[...q.options]
+                                                            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                                                             .map((opt) => (
-                                                                <li
-                                                                    key={opt.id}
-                                                                    className="flex items-center gap-2 group"
-                                                                >
+                                                                <li key={opt.id} className="flex items-center gap-2 group">
                                                                     <span
                                                                         className={cn(
                                                                             "w-10 h-10 rounded-xl flex items-center justify-center font-bold border border-border text-lg",
@@ -422,36 +392,30 @@ export default function AssignmentDetailPage() {
                                                                     >
                                                                         {opt.label}
                                                                     </span>
-                                                                    <span
-                                                                        className={cn(
-                                                                            opt.isCorrect
-                                                                                ? "font-medium text-green-700"
-                                                                                : "text-foreground"
-                                                                        )}
-                                                                    >
+                                                                    <span className={cn(opt.isCorrect ? "font-medium text-green-700" : "text-foreground")}>
                                                                         {stripHtml(opt.content)}
                                                                     </span>
                                                                     {opt.isCorrect && (
-                                                                        <span className="ml-2 text-xs text-green-700 bg-green-100 rounded-full px-2">
-                                                                            Đáp án đúng
-                                                                        </span>
+                                                                        <span className="ml-2 text-xs text-green-700 bg-green-100 rounded-full px-2">Đáp án đúng</span>
                                                                     )}
                                                                 </li>
                                                             ))}
                                                     </ul>
                                                 )}
-                                            {/* Nếu là tự luận, note rõ cho UI sinh động */}
-                                            {q.type === "ESSAY" && (
-                                                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl px-6 py-3 text-indigo-700 text-sm italic flex items-center gap-2 mt-2">
-                                                    <FileText className="h-4 w-4" />
-                                                    <span>(Câu hỏi tự luận)</span>
-                                                </div>
-                                            )}
-                                        </li>
-                                    ))}
-                            </ol>
-                        </div>
-                    </TabsContent>
+
+                                                {q.type === "ESSAY" && (
+                                                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl px-6 py-3 text-indigo-700 text-sm italic flex items-center gap-2 mt-2">
+                                                        <FileText className="h-4 w-4" />
+                                                        <span>(Câu hỏi tự luận)</span>
+                                                    </div>
+                                                )}
+                                            </li>
+                                        ))}
+                                </ol>
+                            </>
+                        )}
+                    </div>
+                </TabsContent>
 
                     <TabsContent value="discussions" className="mt-6">
                         <AssignmentCommentsView assignmentId={assignmentId} />

@@ -18,6 +18,7 @@ export type ChatAttachmentDTO = {
   mimeType: string;
   sizeBytes: number;
   storagePath: string;
+  url?: string | null;
 };
 
 export type MessageDTO = {
