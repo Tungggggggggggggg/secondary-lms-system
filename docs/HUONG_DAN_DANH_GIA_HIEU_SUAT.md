@@ -263,7 +263,7 @@ Ví dụ cấu trúc:
 - **[R2: Dính 429 rate-limit AI]**
   - Xử lý: giảm request/phút, thêm nghỉ 30–60s; báo cáo %429 như hành vi đúng thiết kế.
 - **[R3: Độ trễ dao động lớn do mạng]**
-  - Xử lý: báo cáo P95, ghi rõ thời điểm đo, và thảo luận “phụ thuộc dịch vụ ngoài”.
+  - Xử lý: báo cáo P95, ghi rõ thởi điểm đo, và thảo luận “phụ thuộc dịch vụ ngoài”.
 - **[R4: Metrics bị mất do restart server]**
   - Xử lý: xuất metrics ngay sau khi chạy xong mỗi kịch bản; hoặc bổ sung endpoint export.
 - **[R5: Chi phí Gemini tăng]**
@@ -281,5 +281,41 @@ Ví dụ cấu trúc:
 - [x] Export/clear metrics đã có qua `/api/performance`.
 - [x] Đã chạy đủ 3 kịch bản S1/S2/S3 và lưu JSON metrics.
 - [x] Đã cập nhật số liệu thật vào bảng Chương 5 trong `docs/luanvan/luanvan.tex`.
- - [x] Đã ước lượng reliability cho S2: 300/300 request POST `/api/exam-events` trả về 200 trong lần đo (successRate ≈ 100\%).
+ - [x] Đã ước lượng reliability cho S2: 200/200 request POST `/api/exam-events` trả về 200 trong lần đo (successRate ≈ 100\%).
 
+
+
+## 12) Quy trình chạy lại đánh giá (khi cần đo lại từ đầu)
+
+1. **Chuẩn bị môi trường**
+   - Đảm bảo server đang chạy (`npm run dev`), kết nối Supabase và `GEMINI_API_KEY` hoạt động.
+   - Chuẩn bị sẵn dữ liệu test cho 3 kịch bản S1/S2/S3 như mô tả tại mục 5.2.
+2. **Xử lý số liệu cũ (tuỳ chọn)**
+   - Backup hoặc xoá các file metrics cũ trong `docs/metrics/`:
+     - `S1_metrics.json`, `S2_metrics.json`, `S3_metrics.json`.
+3. **Reset metrics trước mỗi kịch bản**
+   - Trước khi bắt đầu S1, S2 hoặc S3, gọi:
+     - `DELETE /api/performance` để xoá toàn bộ metrics đang lưu trong bộ nhớ.
+4. **Chạy lại các kịch bản đo**
+   - S1 – Tutor Chat: chạy lại số request và tempo như mục **(S1)**.
+   - S2 – Exam Events: gửi lại N≈300 event như mục **(S2)** và ghi nhận `sentEvents`.
+   - S3 – Anti‑cheat Summary: chạy lại 8–10 request như mục **(S3)**.
+5. **Export metrics sau mỗi kịch bản**
+   - Sau khi hoàn thành S1/S2/S3, lần lượt gọi:
+     - `GET /api/performance?timeRangeMinutes=60` để lấy JSON metrics tương ứng.
+   - Lưu nội dung response vào các file:
+     - `docs/metrics/S1_metrics.json`
+     - `docs/metrics/S2_metrics.json`
+     - `docs/metrics/S3_metrics.json`
+6. **Tính toán lại và cập nhật báo cáo**
+   - Đưa `duration` và `success` từ các file JSON vào Excel.
+   - Tính `Average`, `Max`, `P95`, `Error rate` theo công thức ở mục 7.
+   - Cập nhật lại bảng kết quả trong Chương 5 của `docs/luanvan/luanvan.tex` theo số liệu mới.
+
+
+   # Trạng thái triển khai (cập nhật theo tiến độ hiện tại)
+- [x] Tracking E1/E2/E3 đã có.
+- [x] Export/clear metrics đã có qua `/api/performance`.
+- [x] Đã chạy đủ 3 kịch bản S1/S2/S3 và lưu JSON metrics.
+- [x] Đã cập nhật số liệu thật vào bảng Chương 5 trong `docs/luanvan/luanvan.tex`.
+ - [x] Đã ước lượng reliability cho S2: 200/200 request POST `/api/exam-events` trả về 200 trong lần đo (successRate ≈ 100\%).

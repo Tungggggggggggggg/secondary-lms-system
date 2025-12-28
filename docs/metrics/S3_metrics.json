@@ -4,14 +4,17 @@
     "timeRangeMinutes": 60,
     "stats": {
       "totalRequests": 8,
-      "averageResponseTime": 10504,
+      "averageResponseTime": 5633,
       "slowRequests": 8,
       "errorRate": 0,
+      "p50": 5412,
+      "p95": 6306,
+      "p99": 6306,
       "topSlowEndpoints": [
         {
           "endpoint": "POST /api/ai/anti-cheat/summary",
-          "averageDuration": 10504,
-          "maxDuration": 12128,
+          "averageDuration": 5633,
+          "maxDuration": 6852,
           "requestCount": 8
         }
       ]
@@ -20,64 +23,64 @@
       {
         "endpoint": "/api/ai/anti-cheat/summary",
         "method": "POST",
-        "duration": 10243,
-        "timestamp": "2025-12-24T19:38:15.638Z",
+        "duration": 5122,
+        "timestamp": "2025-12-28T19:37:51.911Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/anti-cheat/summary",
         "method": "POST",
-        "duration": 10198,
-        "timestamp": "2025-12-24T19:39:35.872Z",
+        "duration": 5466,
+        "timestamp": "2025-12-28T19:38:57.461Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/anti-cheat/summary",
         "method": "POST",
-        "duration": 10375,
-        "timestamp": "2025-12-24T19:40:56.278Z",
+        "duration": 5412,
+        "timestamp": "2025-12-28T19:40:02.956Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/anti-cheat/summary",
         "method": "POST",
-        "duration": 10304,
-        "timestamp": "2025-12-24T19:42:16.606Z",
+        "duration": 5361,
+        "timestamp": "2025-12-28T19:41:08.400Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/anti-cheat/summary",
         "method": "POST",
-        "duration": 9936,
-        "timestamp": "2025-12-24T19:43:36.570Z",
+        "duration": 6852,
+        "timestamp": "2025-12-28T19:42:15.333Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/anti-cheat/summary",
         "method": "POST",
-        "duration": 10704,
-        "timestamp": "2025-12-24T19:44:57.302Z",
+        "duration": 5422,
+        "timestamp": "2025-12-28T19:43:20.838Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/anti-cheat/summary",
         "method": "POST",
-        "duration": 12128,
-        "timestamp": "2025-12-24T19:46:19.456Z",
+        "duration": 5123,
+        "timestamp": "2025-12-28T19:44:26.039Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/anti-cheat/summary",
         "method": "POST",
-        "duration": 10147,
-        "timestamp": "2025-12-24T19:47:39.633Z",
+        "duration": 6306,
+        "timestamp": "2025-12-28T19:45:32.424Z",
         "success": true,
         "statusCode": 200
       }

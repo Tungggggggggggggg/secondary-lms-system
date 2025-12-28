@@ -931,20 +931,20 @@ Bảng \ref{tab:experiment-results} tổng hợp các chỉ số đại diện t
 \begin{tabularx}{\textwidth}{|p{4.2cm}|X|p{3.2cm}|}
 \hline
 \textbf{Hạng mục} & \textbf{Mô tả đo lường} & \textbf{Kết quả (đo thực nghiệm)} \\ \hline
-API RAG Tutor  & Thời gian phản hồi end-to-end từ lúc gửi câu hỏi đến lúc nhận câu trả lời; bao gồm tạo embedding truy vấn, truy vấn pgvector Top-$k$ và sinh nội dung. & n=15; Avg 11.8s; P95 13.1s; Max 13.1s; Error 0\% \\ \hline
-Thu thập \texttt{ExamEvent}  & Độ trễ ghi nhận sự kiện làm bài (server-side) và tỷ lệ request ghi log thành công. & n=300; Avg 5.9s; P95 7.6s; Max 10.7s; Error 0\% \\ \hline
-AI Anti-cheat Summary  & Thời gian sinh tóm tắt chống gian lận dựa trên \texttt{suspicionScore}/\texttt{riskLevel} và tối đa 250 sự kiện theo attempt. & n=8; Avg 10.5s; P95 12.1s; Max 12.1s; Error 0\% \\ \hline
+API RAG Tutor  & Thời gian phản hồi end-to-end từ lúc gửi câu hỏi đến lúc nhận câu trả lời; bao gồm tạo embedding truy vấn, truy vấn pgvector Top-$k$ và sinh nội dung. & n=10; Avg 5.2s; P95 5.5s; Max 7.4s; Error 0\% \\ \hline
+Thu thập \texttt{ExamEvent}  & Độ trễ ghi nhận sự kiện làm bài (server-side) và tỷ lệ request ghi log thành công. & n=200; Avg 0.8s; P95 1.4s; Max 1.5s; Error 0\% \\ \hline
+AI Anti-cheat Summary  & Thời gian sinh tóm tắt chống gian lận dựa trên \texttt{suspicionScore}/\texttt{riskLevel} và tối đa 250 sự kiện theo attempt. & n=8; Avg 5.6s; P95 6.3s; Max 6.9s; Error 0\% \\ \hline
 \end{tabularx}
 \endgroup
 \caption{Tóm tắt kết quả đo thực nghiệm (end-to-end) của hệ thống EduVerse}
 \label{tab:experiment-results}
 \end{table}
-\noindent Trong kịch bản S2 (thu thập \texttt{ExamEvent}), hệ thống ghi nhận 300/300 yêu cầu ghi log thành công, tương ứng successRate xấp xỉ 100\% trong lần đo.
+\noindent Trong kịch bản S2 (thu thập \texttt{ExamEvent}), hệ thống ghi nhận 200/200 yêu cầu ghi log thành công, tương ứng successRate xấp xỉ 100\% trong lần đo.
 
 \section{Hạn chế}
 Mặc dù hệ thống đã đáp ứng các luồng nghiệp vụ cốt lõi, EduVerse vẫn tồn tại một số hạn chế cần được xem xét khi triển khai thực tế.
 
-\textbf{(1) Độ trễ phụ thuộc dịch vụ AI bên ngoài.} Các tác vụ tạo embedding, sinh câu trả lời RAG, tạo tóm tắt anti-cheat và gợi ý chấm bài đều phụ thuộc Gemini API, do đó độ trễ end-to-end có thể dao động theo chất lượng mạng, tải hệ thống phía nhà cung cấp và hạn mức (rate limit). Điều này ảnh hưởng trực tiếp đến trải nghiệm tương tác thời gian thực của học sinh và tốc độ xử lý nghiệp vụ của giáo viên.
+\textbf{(1) Độ trễ phụ thuộc dịch vụ AI bên ngoài.} Các tác vụ tạo embedding, sinh câu trả lời RAG, tạo tóm tắt anti-cheat và gợi ý chấm bài đều phụ thuộc Gemini API, do đó độ trễ end-to-end có thể dao động theo chất lượng mạng, tải hệ thống phía nhà cung cấp và hạn mức (rate limit). Điều này ảnh hưởng trực tiếp đến trải nghiệm tương tác thầm gian thực của học sinh và tốc độ xử lý nghiệp vụ của giáo viên.
 
 \textbf{(2) Chi phí token và chi phí vận hành.} Kiến trúc RAG phát sinh chi phí ở cả hai pha: indexing (tạo embedding cho học liệu) và inference (sinh nội dung theo ngữ cảnh). Mặc dù pipeline đã tối ưu bằng cơ chế \texttt{contentHash} để tránh index lại nội dung không đổi, chi phí tổng vẫn có thể tăng đáng kể khi số lượng lớp học, bài giảng và truy vấn tăng.
 

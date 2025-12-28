@@ -167,10 +167,16 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
 
   const flatItems = groups.flatMap((g) => g.items);
 
+  const asideBaseBg = role === "admin" ? "hsl(var(--card))" : "#ffffff";
+
   const containerStyle: CSSProperties = {
     ...containerVars,
-    backgroundColor: rolePalette.bg,
+    backgroundColor: asideBaseBg,
     borderColor: rolePalette.border,
+  };
+
+  const contentBgStyle: CSSProperties = {
+    backgroundColor: rolePalette.bg,
   };
 
   const isAdmin = role === "admin";
@@ -189,7 +195,10 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
         expanded ? "w-[var(--sb-w-expanded)]" : "w-[var(--sb-w-collapsed)]"
       } text-slate-700 border-r shadow-sm z-50 transition-[width,transform] duration-300 ease-in-out flex flex-col overflow-hidden transform ${expanded ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
     >
-      <div className={`${expanded ? "p-5" : "px-2 py-4"} flex h-full flex-col overflow-hidden`}>
+      <div
+        style={contentBgStyle}
+        className={`${expanded ? "p-5" : "px-2 py-4"} flex h-full flex-col overflow-hidden`}
+      >
         <div
           className={`sticky top-0 z-20 flex items-center ${
             expanded ? "justify-between" : "justify-center"
