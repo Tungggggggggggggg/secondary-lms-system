@@ -182,13 +182,6 @@ export default function AdminAuditLogsPage() {
           onToChange={setToFilter}
           loading={loading}
           onSubmit={() => fetchLogs({ reset: true, cursor: null })}
-          onReset={() => {
-            setActorFilter("");
-            setActionFilter("");
-            setFromFilter("");
-            setToFilter("");
-            fetchLogs({ reset: true, cursor: null });
-          }}
         />
 
         {error ? (

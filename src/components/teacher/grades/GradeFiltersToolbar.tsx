@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, RotateCcw } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,6 @@ interface GradeFiltersToolbarProps {
   search: string;
   onSearchChange: (q: string) => void;
   className?: string;
-  onReset?: () => void;
 }
 
 export default function GradeFiltersToolbar({
@@ -44,7 +43,6 @@ export default function GradeFiltersToolbar({
   search,
   onSearchChange,
   className,
-  onReset,
 }: GradeFiltersToolbarProps) {
   const [localQ, setLocalQ] = useState(search);
 
@@ -108,17 +106,6 @@ export default function GradeFiltersToolbar({
           <option value="due">Hạn nộp</option>
           <option value="grade">Điểm cao</option>
         </Select>
-
-        {onReset && (
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex items-center gap-2 h-11 rounded-xl border border-blue-200 px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-            aria-label="Đặt lại bộ lọc"
-          >
-            <RotateCcw className="h-4 w-4" /> Reset
-          </button>
-        )}
       </div>
     </div>
   );

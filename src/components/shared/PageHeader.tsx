@@ -64,6 +64,17 @@ export default function PageHeader({ title, subtitle, role = "teacher", badge, s
                 {subtitle}
               </p>
             )}
+
+            {(badge || actions) ? (
+              <div className="sm:hidden flex flex-wrap items-center gap-3 pt-4">
+                {badge && (
+                  <div className="flex items-center justify-center">
+                    {badge}
+                  </div>
+                )}
+                {actions}
+              </div>
+            ) : null}
           </div>
 
           <div className="hidden sm:flex items-center justify-center gap-4">

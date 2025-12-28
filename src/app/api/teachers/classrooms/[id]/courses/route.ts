@@ -6,6 +6,12 @@ import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
 
 export const runtime = "nodejs";
 
+const listSchema = z.object({
+  q: z.string().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(12),
+});
+
 const addSchema = z.object({
   courseId: z.string().min(1),
 });
@@ -25,20 +31,50 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
     });
     if (!classroom) return errorResponse(404, "Classroom not found");
 
-    const items = (await prisma.classroomCourse.findMany({
-      where: { classroomId },
-      orderBy: { addedAt: "desc" },
-      take: 200,
-      select: {
-        id: true,
-        addedAt: true,
-        course: { select: { id: true, title: true, description: true, coverImage: true, updatedAt: true } },
-      },
-    })) as Array<{
-      id: string;
-      addedAt: Date;
-      course: { id: string; title: string; description: string | null; coverImage: string | null; updatedAt: Date };
-    }>;
+    const parsed = listSchema.safeParse({
+      q: req.nextUrl.searchParams.get("q") || undefined,
+      page: req.nextUrl.searchParams.get("page") || undefined,
+      pageSize: req.nextUrl.searchParams.get("pageSize") || undefined,
+    });
+    if (!parsed.success) {
+      return errorResponse(400, "Dữ liệu không hợp lệ", {
+        details: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      });
+    }
+
+    const q = (parsed.data.q || "").trim();
+    const page = parsed.data.page;
+    const pageSize = parsed.data.pageSize;
+    const skip = (page - 1) * pageSize;
+
+    const where = {
+      classroomId,
+      ...(q
+        ? {
+            course: {
+              OR: [
+                { title: { contains: q, mode: "insensitive" as const } },
+                { description: { contains: q, mode: "insensitive" as const } },
+              ],
+            },
+          }
+        : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.classroomCourse.findMany({
+        where,
+        orderBy: { addedAt: "desc" },
+        take: pageSize,
+        skip,
+        select: {
+          id: true,
+          addedAt: true,
+          course: { select: { id: true, title: true, description: true, coverImage: true, updatedAt: true } },
+        },
+      }),
+      prisma.classroomCourse.count({ where }),
+    ]);
 
     return NextResponse.json(
       {
@@ -52,6 +88,14 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
             addedAt: x.addedAt,
             updatedAt: x.course.updatedAt,
           })),
+          total,
+        },
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / pageSize)),
+          hasMore: page * pageSize < total,
         },
       },
       { status: 200 }

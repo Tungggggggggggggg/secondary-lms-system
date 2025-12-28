@@ -47,20 +47,17 @@ export default function ExamLogsTables({
     <div className="space-y-4">
       <div>
         <h4 className="font-medium mb-2">Tổng hợp theo loại sự kiện</h4>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="py-2 pr-4">Loại</th>
-                <th className="py-2 pr-4">Mức độ</th>
-                <th className="py-2 pr-4">Số sự kiện</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summaryByType.map((row) => (
-                <tr key={row.type} className="border-b">
-                  <td className="py-2 pr-4">{row.type}</td>
-                  <td className="py-2 pr-4">
+        <div className="space-y-2">
+          {summaryByType.map((row) => (
+            <div key={row.type} className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium truncate" title={row.type}>
+                    {row.type}
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center gap-3">
+                  <div>
                     {row.severity === "high" ? (
                       <Badge variant="destructive" className="gap-1">
                         <AlertTriangle className="w-3 h-3" /> Cao
@@ -72,42 +69,36 @@ export default function ExamLogsTables({
                     ) : (
                       <Badge variant="outline">Thấp</Badge>
                     )}
-                  </td>
-                  <td className="py-2 pr-4">{row.count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <div className="text-sm font-semibold">{row.count}</div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       <div>
         <h4 className="font-medium mb-2">Tổng hợp theo học sinh/attempt</h4>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="py-2 pr-4">Học sinh</th>
-                <th className="py-2 pr-4">Attempt</th>
-                <th className="py-2 pr-4">Số sự kiện</th>
-                <th className="py-2 pr-4">Cảnh báo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summaryByStudentAttempt.map((row) => {
-                const flagged = row.high >= 1 || row.high + row.medium >= 3;
-                return (
-                  <tr
-                    key={`${row.studentId}|${row.attempt}`}
-                    className={`border-b ${flagged ? "bg-red-50" : ""}`}
-                  >
-                    <td className="py-2 pr-4">
-                      {row.fullname} {" "}
+        <div className="space-y-2">
+          {summaryByStudentAttempt.map((row) => {
+            const flagged = row.high >= 1 || row.high + row.medium >= 3;
+            return (
+              <div
+                key={`${row.studentId}|${row.attempt}`}
+                className={`rounded-lg border border-border p-3 ${flagged ? "bg-red-50" : "bg-card"}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate" title={row.fullname}>
+                      {row.fullname}{" "}
                       <span className="text-gray-500 text-xs">({row.studentId})</span>
-                    </td>
-                    <td className="py-2 pr-4">{row.attempt ?? "-"}</td>
-                    <td className="py-2 pr-4">{row.count}</td>
-                    <td className="py-2 pr-4">
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">Attempt: {row.attempt ?? "-"}</div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-sm font-semibold">{row.count} sự kiện</div>
+                    <div className="mt-1">
                       {flagged ? (
                         <Badge variant="destructive" className="gap-1">
                           <AlertTriangle className="w-3 h-3" /> Nghi ngờ cao
@@ -115,47 +106,39 @@ export default function ExamLogsTables({
                       ) : (
                         <Badge variant="outline">-</Badge>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div>
         <h4 className="font-medium mb-2">Chi tiết sự kiện</h4>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="py-2 pr-4">Thời gian</th>
-                <th className="py-2 pr-4">Học sinh</th>
-                <th className="py-2 pr-4">Attempt</th>
-                <th className="py-2 pr-4">Sự kiện</th>
-                <th className="py-2 pr-4">Metadata</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((ev) => (
-                <tr key={ev.id} className="border-b align-top">
-                  <td className="py-2 pr-4 whitespace-nowrap">
-                    {new Date(ev.createdAt).toLocaleString()}
-                  </td>
-                  <td className="py-2 pr-4">
+        <div className="space-y-2">
+          {events.map((ev) => (
+            <div key={ev.id} className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">
+                    {ev.eventType}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {new Date(ev.createdAt).toLocaleString()} • Attempt: {ev.attempt ?? "-"}
+                  </div>
+                  <div className="mt-2 text-sm text-muted-foreground">
                     {ev.student?.fullname || ev.studentId}{" "}
                     <span className="text-gray-500 text-xs">({ev.studentId})</span>
-                  </td>
-                  <td className="py-2 pr-4">{ev.attempt ?? "-"}</td>
-                  <td className="py-2 pr-4">{ev.eventType}</td>
-                  <td className="py-2 pr-4 max-w-[360px] whitespace-pre-wrap break-words text-xs">
-                    {ev.metadata ? JSON.stringify(ev.metadata) : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap break-words">
+                {ev.metadata ? JSON.stringify(ev.metadata) : "-"}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

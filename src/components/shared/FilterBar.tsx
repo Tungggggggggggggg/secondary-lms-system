@@ -15,7 +15,6 @@ interface FilterBarProps {
   className?: string;
   right?: ReactNode;
   bottom?: ReactNode;
-  onReset?: () => void;
 }
 
 export default function FilterBar({
@@ -26,7 +25,6 @@ export default function FilterBar({
   className,
   right,
   bottom,
-  onReset,
 }: FilterBarProps) {
   const colorRing: Record<FilterBarColor, string> = {
     default: "focus-visible:ring-gray-300",
@@ -53,16 +51,6 @@ export default function FilterBar({
 
         <div className="flex flex-wrap items-center gap-3 justify-start md:justify-end">
           {right}
-          {onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="inline-flex items-center gap-2 h-11 rounded-xl border border-gray-200 px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-              aria-label="Đặt lại bộ lọc"
-            >
-              Reset
-            </button>
-          )}
         </div>
       </div>
 

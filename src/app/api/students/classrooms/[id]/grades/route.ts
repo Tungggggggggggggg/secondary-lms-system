@@ -40,6 +40,14 @@ export async function GET(
     if (!user) return errorResponse(401, "Unauthorized");
     if (user.role !== "STUDENT") return errorResponse(403, "Forbidden - Student role required");
 
+    const sp = req.nextUrl.searchParams;
+    const pageRaw = Number(sp.get("page") ?? "1");
+    const pageSizeRaw = Number(sp.get("pageSize") ?? "20");
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+    const pageSize = Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? Math.min(100, Math.floor(pageSizeRaw)) : 20;
+    const status = (sp.get("status") ?? "all").toString();
+    const sort = (sp.get("sort") ?? "newest").toString();
+
     const parsedParams = paramsSchema.safeParse(params);
     if (!parsedParams.success) {
       return errorResponse(400, "Dữ liệu không hợp lệ", {
@@ -192,9 +200,44 @@ export async function GET(
         submittedAt: null as string | null,
         status: isPastDue ? "graded" : "pending",
       };
-    }) as Array<{ grade: number | null }>;
+    });
 
     const grades = [...submissionGrades, ...missingGrades];
+
+    let filteredGrades = grades;
+    if (status !== "all") {
+      filteredGrades = filteredGrades.filter((g) => g.status === status);
+    }
+
+    switch (sort) {
+      case "grade_desc":
+        filteredGrades.sort((a, b) => (b.grade ?? 0) - (a.grade ?? 0));
+        break;
+      case "grade_asc":
+        filteredGrades.sort((a, b) => (a.grade ?? 0) - (b.grade ?? 0));
+        break;
+      case "due_date":
+        filteredGrades.sort((a, b) => {
+          const timeA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+          const timeB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+          return timeA - timeB;
+        });
+        break;
+      case "newest":
+      default:
+        filteredGrades.sort((a, b) => {
+          const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+          const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+          return timeB - timeA;
+        });
+        break;
+    }
+
+    const total = filteredGrades.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const currentPage = Math.min(page, totalPages);
+    const start = (currentPage - 1) * pageSize;
+    const pageItems = filteredGrades.slice(start, start + pageSize);
 
     // Tính điểm trung bình: chỉ tính bài đã chấm + bài quá hạn chưa nộp (0). Không tính bài chưa đến hạn hoặc dueDate=null.
     const gradedLatestSubmissions = latestSubmissions.filter(
@@ -215,12 +258,19 @@ export async function GET(
     return NextResponse.json(
       {
         success: true,
-        data: grades,
+        data: pageItems,
         statistics: {
           totalSubmissions: totalAssignments,
           totalGraded,
           totalPending,
           averageGrade: Math.round(averageGrade * 10) / 10,
+        },
+        pagination: {
+          page: currentPage,
+          pageSize,
+          total,
+          totalPages,
+          hasMore: currentPage < totalPages,
         },
       },
       { status: 200 }

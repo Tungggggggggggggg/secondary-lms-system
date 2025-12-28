@@ -141,10 +141,6 @@ export default function CoursesPage() {
             <option value="classrooms">Số lớp sử dụng</option>
           </Select>
         }
-        onReset={() => {
-          setSearch("");
-          setSortKey("recent");
-        }}
       />
 
       {/* Course List */}
@@ -170,19 +166,6 @@ export default function CoursesPage() {
           icon={<Search className="h-12 w-12 text-blue-600" />}
           title="Không tìm thấy khóa học nào phù hợp với bộ lọc"
           description="Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại sắp xếp."
-          action={
-            <Button
-              type="button"
-              variant="outline"
-              color="blue"
-              onClick={() => {
-                setSearch("");
-                setSortKey("recent");
-              }}
-            >
-              Đặt lại bộ lọc
-            </Button>
-          }
         />
       ) : (
         <CourseList items={visibleCourses} isLoading={isLoading} error={errorMessage} onRetry={() => mutate()} />

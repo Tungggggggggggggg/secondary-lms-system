@@ -16,7 +16,6 @@ interface AdminAuditFilterBarProps {
   onFromChange?: (value: string) => void;
   onToChange?: (value: string) => void;
   onSubmit: () => void;
-  onReset: () => void;
   loading?: boolean;
   className?: string;
 }
@@ -33,7 +32,6 @@ export default function AdminAuditFilterBar({
   onFromChange,
   onToChange,
   onSubmit,
-  onReset,
   loading,
   className,
 }: AdminAuditFilterBarProps) {
@@ -174,16 +172,6 @@ export default function AdminAuditFilterBar({
         </div>
 
         <div className="flex gap-2 justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            color="slate"
-            onClick={onReset}
-            disabled={loading}
-          >
-            Đặt lại bộ lọc
-          </Button>
           <Button type="submit" size="sm" disabled={loading}>
             {loading ? "Đang lọc..." : "Lọc"}
           </Button>

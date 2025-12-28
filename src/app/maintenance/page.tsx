@@ -82,13 +82,6 @@ export default function MaintenancePage() {
                 <Link href="/dashboard/admin/settings">Mở System Settings</Link>
               </Button>
             ) : null}
-            <Button
-              onClick={() => {
-                router.refresh();
-              }}
-            >
-              Tải lại
-            </Button>
           </div>
         </div>
 

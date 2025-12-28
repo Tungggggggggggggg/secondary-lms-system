@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import useSWR from "swr";
-import { Button } from "@/components/ui/button";
 
 type DashboardRole = "teacher" | "student" | "parent" | "admin";
 
@@ -77,15 +76,6 @@ export default function SystemStatusGate({
               <div className="text-lg font-semibold text-amber-900">Hệ thống đang bảo trì</div>
               <div className="mt-2 text-sm text-amber-800 whitespace-pre-wrap">
                 {maintenanceMessage || "Vui lòng quay lại sau."}
-              </div>
-              <div className="mt-5 flex items-center justify-end">
-                <Button
-                  onClick={() => {
-                    void mutate();
-                  }}
-                >
-                  Tải lại
-                </Button>
               </div>
             </div>
           </div>

@@ -13,9 +13,6 @@ import { createConversationFromTeacher } from "@/hooks/use-chat";
 import { StatsGrid } from "@/components/shared";
 import { EmptyState } from "@/components/shared";
 import { Users, NotebookText, BarChart3, GraduationCap } from "lucide-react";
-import StudentsTable from "@/components/teacher/students/StudentsTable";
-import type { StudentListItem } from "@/components/teacher/students/StudentList";
-import { exportToXlsx } from "@/lib/excel";
 
 export default function ClassroomPeople() {
     const params = useParams();
@@ -26,14 +23,6 @@ export default function ClassroomPeople() {
     const [searchInput, setSearchInput] = useState("");
     const [sortKey, setSortKey] = useState<"name" | "submitted" | "grade">("name");
     const rootRef = useRef<HTMLDivElement>(null);
-    const [view, setView] = useState<"list" | "table">(() => {
-        if (typeof window === "undefined") return "list";
-        return (window.localStorage.getItem("teacher:people:view") as "list" | "table") || "list";
-    });
-    useEffect(() => {
-        try { window.localStorage.setItem("teacher:people:view", view); } catch {}
-    }, [view]);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     useEffect(() => {
         if (!rootRef.current) return;
@@ -63,50 +52,6 @@ export default function ClassroomPeople() {
         }
         return data;
     }, [filteredStudents, sortKey]);
-
-    const tableStudents: StudentListItem[] = useMemo(() => {
-        return displayedStudents.map((s: ClassroomStudent) => {
-            const total = s.stats.totalAssignments || 0;
-            const rate = total ? (s.stats.submittedCount / total) * 100 : 0;
-            return {
-                id: s.id,
-                fullname: s.fullname,
-                avatarInitial: (s.fullname || "").charAt(0).toUpperCase(),
-                classroomId,
-                classroomName: "",
-                classroomCode: "",
-                averageGrade: s.stats.averageGrade,
-                submissionRate: rate,
-                submittedCount: s.stats.submittedCount,
-                totalAssignments: total,
-                status: "active",
-            } as StudentListItem;
-        });
-    }, [displayedStudents, classroomId]);
-
-    const toggleOne = (id: string) => {
-        setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-    };
-    const toggleAll = (checked: boolean) => {
-        setSelectedIds(checked ? tableStudents.map((s) => s.id) : []);
-    };
-
-    const exportExcel = () => {
-        const header = [
-            "id","fullname","averageGrade","submissionRate","submitted","totalAssignments"
-        ];
-        const rows = tableStudents
-            .filter((s) => selectedIds.length === 0 || selectedIds.includes(s.id))
-            .map((s) => [
-                s.id,
-                s.fullname,
-                s.averageGrade ?? "",
-                Math.round(s.submissionRate),
-                s.submittedCount,
-                s.totalAssignments,
-            ]);
-        exportToXlsx("students", header, rows, { sheetName: "Students" });
-    };
 
     useEffect(() => {
         const t = setTimeout(() => setSearchQuery(searchInput.trim()), 300);
@@ -148,29 +93,6 @@ export default function ClassroomPeople() {
                     }}
                     className="h-11 sm:max-w-sm"
                 />
-                <div className="flex items-center gap-2">
-                    <div className="inline-flex rounded-xl border border-blue-200 overflow-hidden">
-                        <button
-                            type="button"
-                            onClick={() => setView("list")}
-                            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm ${view === "list" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}
-                            aria-pressed={view === "list"}
-                        >
-                            Danh sách
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setView("table")}
-                            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm border-l border-blue-200 ${view === "table" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}
-                            aria-pressed={view === "table"}
-                        >
-                            Bảng
-                        </button>
-                    </div>
-                    {view === "table" && (
-                        <Button variant="outline" onClick={exportExcel}>Xuất Excel</Button>
-                    )}
-                </div>
             </div>
 
             {/* Students List */}
@@ -207,19 +129,6 @@ export default function ClassroomPeople() {
                         variant="teacher"
                         icon={<Users className="h-10 w-10 text-blue-600" />}
                     />
-                ) : view === "table" ? (
-                    <>
-                        {selectedIds.length > 0 && (
-                            <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
-                                <div>{selectedIds.length} mục đã chọn</div>
-                                <div className="flex items-center gap-2">
-                                    <Button size="sm" onClick={exportExcel}>Xuất Excel</Button>
-                                    <Button size="sm" variant="outline" onClick={() => setSelectedIds([])}>Bỏ chọn</Button>
-                                </div>
-                            </div>
-                        )}
-                        <StudentsTable students={tableStudents} selectedIds={selectedIds} onToggleOne={toggleOne} onToggleAll={toggleAll} />
-                    </>
                 ) : (
                     <div className="space-y-3">
                         {displayedStudents.map((student: ClassroomStudent) => (

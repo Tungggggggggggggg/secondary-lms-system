@@ -2,31 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom } from "@/lib/api-utils";
-import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
-import { join, sqltag as sql } from "@prisma/client/runtime/library";
-
-interface TeacherClassroomAssignmentSummary {
-  id: string;
-  title: string | null;
-  type: string;
-  dueDate: Date | null;
-  lockAt: Date | null;
-}
-
-type LatestSubmissionRow = {
-  id: string;
-  assignmentId: string;
-  studentId: string;
-  grade: number | null;
-  feedback: string | null;
-  submittedAt: Date;
-};
+import { getEffectiveDeadline } from "@/lib/grades/assignmentDeadline";
+import { sqltag as sql } from "@prisma/client/runtime/library";
 
 const querySchema = z.object({
   status: z.enum(["all", "graded", "ungraded"]).default("all"),
   search: z.string().max(200).default(""),
+  assignmentId: z.string().max(64).optional(),
+  sort: z.enum(["recent", "due", "grade"]).default("recent"),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(20000).default(20),
+  pageSize: z.coerce.number().int().min(1).max(200).default(20),
 });
 
 // GET: Danh sách submissions/grades của lớp cho giáo viên (newest-first, filter, search)
@@ -54,6 +39,8 @@ export async function GET(
     const parsedQuery = querySchema.safeParse({
       status: searchParams.get("status") || undefined,
       search: searchParams.get("search") || undefined,
+      assignmentId: searchParams.get("assignmentId") || undefined,
+      sort: searchParams.get("sort") || undefined,
       page: searchParams.get("page") || undefined,
       pageSize: searchParams.get("pageSize") || undefined,
     });
@@ -65,199 +52,187 @@ export async function GET(
     }
 
     const status = parsedQuery.data.status;
-    const search = parsedQuery.data.search.trim().toLowerCase();
+    const search = parsedQuery.data.search.trim();
+    const assignmentId = parsedQuery.data.assignmentId;
+    const sort = parsedQuery.data.sort;
     const page = parsedQuery.data.page;
     const pageSize = parsedQuery.data.pageSize;
+    const offset = (page - 1) * pageSize;
 
-    // Lấy assignmentIds của lớp
-    const ac = await prisma.assignmentClassroom.findMany({
-      where: { classroomId },
-      select: { assignmentId: true },
-    });
-    const assignmentIds: string[] = Array.from(
-      new Set(
-        ac.map((x: { assignmentId: string }) => x.assignmentId),
+    const like = search ? `%${search.toLowerCase()}%` : null;
+
+    const statusSql =
+      status === "graded"
+        ? sql` AND f.grade IS NOT NULL`
+        : status === "ungraded"
+        ? sql` AND f.grade IS NULL`
+        : sql``;
+
+    const assignmentSql = assignmentId ? sql` AND f."assignmentId" = ${assignmentId}` : sql``;
+
+    const searchSql = like
+      ? sql` AND (
+          LOWER(f.fullname) LIKE ${like}
+          OR LOWER(f.email) LIKE ${like}
+          OR LOWER(f.title) LIKE ${like}
+        )`
+      : sql``;
+
+    const base = sql`
+      WITH latest AS (
+        SELECT DISTINCT ON (s."studentId", s."assignmentId")
+          s.id,
+          s."studentId",
+          s."assignmentId",
+          s.grade,
+          s.feedback,
+          s."submittedAt"
+        FROM "assignment_submissions" s
+        JOIN "classroom_students" cs
+          ON cs."studentId" = s."studentId" AND cs."classroomId" = ${classroomId}
+        JOIN "assignment_classrooms" ac
+          ON ac."assignmentId" = s."assignmentId" AND ac."classroomId" = ${classroomId}
+        ORDER BY s."studentId", s."assignmentId", s.attempt DESC
       ),
-    );
-    if (assignmentIds.length === 0) {
-      return NextResponse.json(
-        { success: true, data: [], statistics: { total: 0, graded: 0 }, requestId },
-        { status: 200 }
-      );
-    }
+      filtered AS (
+        SELECT
+          l.id,
+          l."studentId",
+          l."assignmentId",
+          l.grade,
+          l.feedback,
+          l."submittedAt",
+          u.fullname,
+          u.email,
+          a.title,
+          a.type,
+          a."dueDate",
+          a."lockAt"
+        FROM latest l
+        JOIN "users" u ON u.id = l."studentId"
+        JOIN "assignments" a ON a.id = l."assignmentId"
+        WHERE 1=1
+      )
+    `;
 
-    // Lấy danh sách học sinh trong lớp
-    const classroomStudents = await prisma.classroomStudent.findMany({
-      where: { classroomId },
-      select: {
-        studentId: true,
-        student: { select: { id: true, fullname: true, email: true } },
-      },
-    });
+    const statsRows = (await prisma.$queryRaw(
+      sql`${base}
+        SELECT
+          COUNT(*)::int as total,
+          COUNT(*) FILTER (WHERE grade IS NOT NULL)::int as graded,
+          COUNT(*) FILTER (WHERE grade IS NULL)::int as pending,
+          AVG(grade) FILTER (WHERE grade IS NOT NULL) as average,
+          MAX(grade) FILTER (WHERE grade IS NOT NULL) as highest,
+          MIN(grade) FILTER (WHERE grade IS NOT NULL) as lowest
+        FROM filtered f
+        WHERE 1=1
+        ${statusSql}
+        ${assignmentSql}
+        ${searchSql}
+      `
+    )) as Array<{
+      total: number;
+      graded: number;
+      pending: number;
+      average: number | null;
+      highest: number | null;
+      lowest: number | null;
+    }>;
 
-    const studentIds = classroomStudents.map(
-      (cs: { studentId: string }) => cs.studentId,
-    );
-    if (studentIds.length === 0) {
-      return NextResponse.json(
-        { success: true, data: [], statistics: { total: 0, graded: 0 }, requestId },
-        { status: 200 }
-      );
-    }
+    const stats = statsRows[0] ?? {
+      total: 0,
+      graded: 0,
+      pending: 0,
+      average: null,
+      highest: null,
+      lowest: null,
+    };
 
-    // Lấy thông tin assignments
-    const assignments = (await prisma.assignment.findMany({
-      where: { id: { in: assignmentIds } },
-      select: { id: true, title: true, type: true, dueDate: true, lockAt: true },
-    })) as TeacherClassroomAssignmentSummary[];
-    const assignmentMap = new Map<string, TeacherClassroomAssignmentSummary>(
-      assignments.map((a: TeacherClassroomAssignmentSummary) => [a.id, a]),
-    );
+    const orderBySql =
+      sort === "grade"
+        ? sql` ORDER BY f.grade DESC NULLS LAST, f."submittedAt" DESC`
+        : sort === "due"
+        ? sql` ORDER BY COALESCE(f."lockAt", f."dueDate") ASC NULLS LAST, f."submittedAt" DESC`
+        : sql` ORDER BY f."submittedAt" DESC`;
 
-    const studentById = new Map<string, { id: string; fullname: string | null; email: string }>(
-      classroomStudents.map((cs: { studentId: string; student: { id: string; fullname: string | null; email: string } }) => [
-        cs.studentId,
-        cs.student,
-      ])
-    );
+    const pageRows = (await prisma.$queryRaw(
+      sql`${base}
+        SELECT
+          f.id,
+          f."studentId",
+          f."assignmentId",
+          f.grade,
+          f.feedback,
+          f."submittedAt",
+          f.fullname,
+          f.email,
+          f.title,
+          f.type,
+          f."dueDate",
+          f."lockAt"
+        FROM filtered f
+        WHERE 1=1
+        ${statusSql}
+        ${assignmentSql}
+        ${searchSql}
+        ${orderBySql}
+        LIMIT ${pageSize} OFFSET ${offset}
+      `
+    )) as Array<{
+      id: string;
+      studentId: string;
+      assignmentId: string;
+      grade: number | null;
+      feedback: string | null;
+      submittedAt: Date;
+      fullname: string | null;
+      email: string;
+      title: string | null;
+      type: string;
+      dueDate: Date | null;
+      lockAt: Date | null;
+    }>;
 
-    const latestSubmissions = ((await prisma.$queryRaw(
-      sql`
-      SELECT DISTINCT ON (s."studentId", s."assignmentId")
-        s.id,
-        s."studentId" as "studentId",
-        s."assignmentId" as "assignmentId",
-        s.grade,
-        s.feedback,
-        s."submittedAt" as "submittedAt"
-      FROM "assignment_submissions" s
-      WHERE s."assignmentId" IN (${join(assignmentIds)})
-        AND s."studentId" IN (${join(studentIds)})
-      ORDER BY s."studentId", s."assignmentId", s.attempt DESC
-    `
-    )) as unknown) as LatestSubmissionRow[];
-
-    const submissionRows = latestSubmissions.map((s) => {
-      const student = studentById.get(s.studentId);
-      const assignment = assignmentMap.get(s.assignmentId);
-      const effectiveDeadline = assignment ? getEffectiveDeadline(assignment) : null;
+    const data = pageRows.map((r) => {
+      const effectiveDeadline = getEffectiveDeadline({ dueDate: r.dueDate, lockAt: r.lockAt });
       return {
-        id: s.id,
+        id: r.id,
         student: {
-          id: student?.id ?? s.studentId,
-          fullname: student?.fullname ?? null,
-          email: student?.email ?? "",
+          id: r.studentId,
+          fullname: r.fullname,
+          email: r.email,
         },
         assignment: {
-          id: assignment?.id ?? s.assignmentId,
-          title: assignment?.title ?? "",
-          type: assignment?.type ?? "ESSAY",
+          id: r.assignmentId,
+          title: r.title ?? "",
+          type: r.type,
           dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
         },
-        grade: s.grade,
-        feedback: s.feedback,
-        submittedAt: s.submittedAt.toISOString() as string | null,
-        status: s.grade !== null ? "graded" : "submitted",
+        grade: r.grade,
+        feedback: r.feedback,
+        submittedAt: r.submittedAt ? r.submittedAt.toISOString() : null,
+        status: r.grade !== null ? "graded" : "ungraded",
       };
     });
-
-    // Tạo các bản ghi ảo điểm 0 cho (student, assignment) chưa có submission
-    const existingKeys = new Set(
-      latestSubmissions.map((s) => `${s.studentId}-${s.assignmentId}`)
-    );
-
-    const now = new Date();
-    const virtualRows = classroomStudents.flatMap((cs: {
-      studentId: string;
-      student: { id: string; fullname: string | null; email: string };
-    }) =>
-      assignmentIds
-        .filter((assignmentId) => !existingKeys.has(`${cs.studentId}-${assignmentId}`))
-        .map((assignmentId) => {
-          const assignment = assignmentMap.get(assignmentId);
-          const isPastDue = assignment ? isAssignmentOverdue(assignment, now) : false;
-          const effectiveDeadline = assignment ? getEffectiveDeadline(assignment) : null;
-
-          return {
-            id: `virtual-${cs.studentId}-${assignmentId}`,
-            student: {
-              id: cs.student.id,
-              fullname: cs.student.fullname,
-              email: cs.student.email,
-            },
-            assignment: {
-              id: assignmentId,
-              title: assignment?.title ?? "",
-              type: assignment?.type ?? "ESSAY",
-              dueDate: effectiveDeadline ? effectiveDeadline.toISOString() : null,
-            },
-            grade: isPastDue ? 0 : null,
-            feedback: null as string | null,
-            submittedAt: null as string | null,
-            status: isPastDue ? "graded" : "submitted",
-          };
-        })
-    );
-
-    // Gộp rows thật + ảo
-    let allRows = [...submissionRows, ...virtualRows];
-
-    // Lọc theo status
-    if (status === "graded") {
-      allRows = allRows.filter((r) => r.grade !== null);
-    } else if (status === "ungraded") {
-      allRows = allRows.filter((r) => r.grade === null);
-    }
-
-    // Lọc theo search
-    if (search) {
-      const q = search.toLowerCase();
-      allRows = allRows.filter((d) => {
-        const fullname = (d.student.fullname ?? "").toLowerCase();
-        const email = d.student.email.toLowerCase();
-        const title = d.assignment.title.toLowerCase();
-        return (
-          fullname.includes(q) ||
-          email.includes(q) ||
-          title.includes(q)
-        );
-      });
-    }
-
-    // Tổng và số đã chấm
-    const total = allRows.length;
-    const graded = allRows.filter((d) => d.grade !== null).length;
-
-    // Sort newest-first theo submittedAt (null sẽ xuống cuối, dùng dueDate fallback)
-    allRows.sort((a, b) => {
-      const aTime = a.submittedAt
-        ? new Date(a.submittedAt).getTime()
-        : a.assignment.dueDate
-        ? new Date(a.assignment.dueDate).getTime()
-        : 0;
-      const bTime = b.submittedAt
-        ? new Date(b.submittedAt).getTime()
-        : b.assignment.dueDate
-        ? new Date(b.assignment.dueDate).getTime()
-        : 0;
-      return bTime - aTime;
-    });
-
-    // Pagination in-memory
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize;
-    const pageRows = allRows.slice(start, end);
 
     const res = NextResponse.json(
       {
         success: true,
-        data: pageRows,
-        statistics: { total, graded },
+        data,
+        statistics: {
+          total: stats.total,
+          graded: stats.graded,
+          pending: stats.pending,
+          average: stats.average !== null ? Math.round(stats.average * 10) / 10 : null,
+          highest: stats.highest !== null ? Math.round(stats.highest * 10) / 10 : null,
+          lowest: stats.lowest !== null ? Math.round(stats.lowest * 10) / 10 : null,
+        },
         pagination: {
           page,
           pageSize,
-          total,
-          totalPages: Math.ceil(total / pageSize),
+          total: stats.total,
+          totalPages: Math.ceil(stats.total / pageSize),
+          hasMore: offset + data.length < stats.total,
         },
         requestId,
       },

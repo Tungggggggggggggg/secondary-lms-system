@@ -94,6 +94,12 @@ export default function Page() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState<LessonItem | null>(null);
 
+  const [openPreview, setOpenPreview] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewLesson, setPreviewLesson] = useState<
+    (LessonItem & { attachments?: { id: string; name: string; mimeType: string; url?: string | null }[] }) | null
+  >(null);
+
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -104,6 +110,7 @@ export default function Page() {
   >([]);
   const [showContentEditor, setShowContentEditor] = useState(true);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | null>(null);
+  const [openingAttachmentId, setOpeningAttachmentId] = useState<string | null>(null);
 
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
@@ -149,6 +156,76 @@ export default function Page() {
       console.error("[TeacherCourseLesson] Download attachment error", e);
     } finally {
       setDownloadingAttachmentId(null);
+    }
+  };
+
+  const handleOpenAttachment = async (file: { id: string; url?: string | null }) => {
+    if (!file.url || openingAttachmentId) return;
+    try {
+      setOpeningAttachmentId(file.id);
+      window.open(file.url, "_blank", "noopener,noreferrer");
+    } finally {
+      setOpeningAttachmentId(null);
+    }
+  };
+
+  const openLessonAttachment = async (lesson: LessonItem) => {
+    try {
+      setOpeningAttachmentId(lesson.id);
+      const detail = (await fetcher<
+        LessonItem & {
+          attachments?: { id: string; name: string; mimeType: string; url?: string | null }[];
+        }
+      >(`/api/teachers/courses/${courseId}/lessons/${lesson.id}`)) as ApiResponse<
+        LessonItem & {
+          attachments?: { id: string; name: string; mimeType: string; url?: string | null }[];
+        }
+      >;
+
+      const attachments = (detail?.data as any)?.attachments as
+        | { id: string; name: string; mimeType: string; url?: string | null }[]
+        | undefined;
+      const url = attachments?.find((a) => !!a.url)?.url ?? null;
+
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      await openPreviewDialog(lesson);
+    } catch (e) {
+      toast({
+        title: "Không thể xem tệp",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra",
+        variant: "destructive",
+      });
+    } finally {
+      setOpeningAttachmentId(null);
+    }
+  };
+
+  const openPreviewDialog = async (lesson: LessonItem) => {
+    try {
+      setOpenPreview(true);
+      setPreviewLesson(null);
+      setPreviewLoading(true);
+      const detail = (await fetcher<LessonItem & {
+        attachments?: { id: string; name: string; mimeType: string; url?: string | null }[];
+      }>(`/api/teachers/courses/${courseId}/lessons/${lesson.id}`)) as ApiResponse<
+        LessonItem & {
+          attachments?: { id: string; name: string; mimeType: string; url?: string | null }[];
+        }
+      >;
+      setPreviewLesson((detail?.data as any) ?? (lesson as any));
+    } catch (e) {
+      toast({
+        title: "Không tải được nội dung bài học",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra",
+        variant: "destructive",
+      });
+      setOpenPreview(false);
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -382,9 +459,6 @@ export default function Page() {
       <div className="bg-card rounded-2xl border border-border p-5">
         <div className="flex items-center justify-between gap-4 mb-4">
           <div className="text-sm font-semibold text-foreground">Bài học</div>
-          <Button variant="outline" onClick={() => mutateLessons()} disabled={lessonsLoading}>
-            {lessonsLoading ? "Đang tải..." : "Tải lại"}
-          </Button>
         </div>
 
         {lessonsLoading ? (
@@ -404,7 +478,19 @@ export default function Page() {
         ) : (
           <div className="space-y-3">
             {lessons.map((l) => (
-              <div key={l.id} className="flex items-start justify-between gap-3 rounded-2xl border border-border p-4">
+              <div
+                key={l.id}
+                onClick={() => openPreviewDialog(l)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openPreviewDialog(l);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                className="w-full text-left flex items-start justify-between gap-3 rounded-2xl border border-border p-4 hover:bg-muted/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center text-[11px] font-extrabold">
                     BÀI
@@ -416,7 +502,10 @@ export default function Page() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <Button onClick={() => openLessonAttachment(l)} disabled={saving || openingAttachmentId === l.id}>
+                    Xem
+                  </Button>
                   <Button variant="outline" onClick={() => openEditDialog(l)} disabled={saving}>
                     Sửa
                   </Button>
@@ -429,6 +518,83 @@ export default function Page() {
           </div>
         )}
       </div>
+
+      <Dialog open={openPreview} onOpenChange={(v) => setOpenPreview(v)}>
+        <DialogContent onClose={() => setOpenPreview(false)}>
+          <DialogHeader variant="teacher">
+            <DialogTitle variant="teacher">Xem bài học</DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6 space-y-4">
+            {previewLoading ? (
+              <div className="space-y-3">
+                <div className="h-6 w-2/3 rounded bg-slate-100 animate-pulse" />
+                <div className="h-4 w-1/2 rounded bg-slate-100 animate-pulse" />
+                <div className="h-40 w-full rounded bg-slate-100 animate-pulse" />
+              </div>
+            ) : previewLesson ? (
+              <>
+                <div className="space-y-1">
+                  <div className="text-lg font-extrabold text-slate-900">{previewLesson.title}</div>
+                  <div className="text-xs text-slate-500">
+                    Thứ tự: {previewLesson.order} • Cập nhật: {new Date(previewLesson.updatedAt).toLocaleString("vi-VN")}
+                  </div>
+                </div>
+
+                {(previewLesson as any).attachments && (previewLesson as any).attachments.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-slate-900">Tệp đính kèm</div>
+                    <div className="space-y-2">
+                      {(previewLesson as any).attachments.map((file: any) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-slate-900 truncate">{file.name}</div>
+                            <div className="text-xs text-slate-500 truncate">{file.mimeType || "application/octet-stream"}</div>
+                          </div>
+                          {file.url ? (
+                            <div className="shrink-0 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAttachment(file)}
+                                disabled={openingAttachmentId === file.id}
+                                className="inline-flex items-center justify-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {openingAttachmentId === file.id ? "Đang mở..." : "Xem"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadAttachment(file)}
+                                disabled={downloadingAttachmentId === file.id}
+                                className="inline-flex items-center justify-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {downloadingAttachmentId === file.id ? "Đang tải..." : "Tải về"}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="shrink-0 text-xs text-slate-400">Không có link</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold text-slate-900">Nội dung</div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800 whitespace-pre-line max-h-[52vh] overflow-auto">
+                    {previewLesson.content ? previewLesson.content : "(Bài học chưa có nội dung)"}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-slate-600">Không có dữ liệu để hiển thị.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={openCreate} onOpenChange={(v) => setOpenCreate(v)}>
         <DialogContent onClose={() => setOpenCreate(false)}>
@@ -610,14 +776,24 @@ export default function Page() {
                         </div>
                       </div>
                       {file.url ? (
-                        <button
-                          type="button"
-                          onClick={() => handleDownloadAttachment(file)}
-                          disabled={downloadingAttachmentId === file.id}
-                          className="shrink-0 inline-flex items-center justify-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {downloadingAttachmentId === file.id ? "Đang tải..." : "Tải về"}
-                        </button>
+                        <div className="shrink-0 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAttachment(file)}
+                            disabled={openingAttachmentId === file.id}
+                            className="inline-flex items-center justify-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {openingAttachmentId === file.id ? "Đang mở..." : "Xem"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadAttachment(file)}
+                            disabled={downloadingAttachmentId === file.id}
+                            className="inline-flex items-center justify-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {downloadingAttachmentId === file.id ? "Đang tải..." : "Tải về"}
+                          </button>
+                        </div>
                       ) : (
                         <span className="shrink-0 text-xs text-slate-400">
                           Không tạo được link tải

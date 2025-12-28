@@ -10,33 +10,20 @@ import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { PageHeader } from "@/components/shared";
 import { FilterBar } from "@/components/shared";
 import { Plus } from "lucide-react";
-import { exportToXlsx } from "@/lib/excel";
-import AssignmentTable from "@/components/teacher/assignments/AssignmentTable";
-import AssignmentQuickPreview from "@/components/teacher/assignments/AssignmentQuickPreview";
 import { useAssignmentsQuery } from "@/hooks/use-assignments-query";
 import { useClassroom } from "@/hooks/use-classroom";
-import type { AssignmentT } from "@/hooks/use-assignments";
 import { AdvancedFiltersPopover } from "@/components/shared";
-import { ViewToggle } from "@/components/shared";
 
 export default function AssignmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { classrooms } = useClassroom();
-  const [preview, setPreview] = useState<AssignmentT | null>(null);
 
   const [status, setStatus] = useState<"all" | "active" | "completed" | "draft" | "needGrading">(
     (searchParams.get("status") as any) || "all"
   );
   const [search, setSearch] = useState<string>(searchParams.get("q") || "");
   const [clazz, setClazz] = useState<string>(searchParams.get("classId") || "all");
-  const [view, setView] = useState<"list" | "table">(() => {
-    if (typeof window === "undefined") return "list";
-    return (window.localStorage.getItem("teacher:assignments:view") as any) || "list";
-  });
-  useEffect(() => {
-    try { window.localStorage.setItem("teacher:assignments:view", view); } catch {}
-  }, [view]);
 
   const [sortKey, setSortKey] = useState<"createdAt" | "dueDate" | "lockAt" | "title">(
     (searchParams.get("sortKey") as any) || "createdAt"
@@ -45,7 +32,7 @@ export default function AssignmentsPage() {
   const [page, setPage] = useState<number>(Number(searchParams.get("page") || 1));
   const pageSize = 10;
 
-  const { items, total, loading, error, refresh, counts } = useAssignmentsQuery({
+  const { items, total, loading, error, refresh } = useAssignmentsQuery({
     search,
     status,
     classId: clazz,
@@ -71,18 +58,6 @@ export default function AssignmentsPage() {
     { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
     { label: "Bài tập", href: "/dashboard/teacher/assignments" },
   ];
-
-  const quickValue = ((["all", "active", "completed", "needGrading"].includes(status) ? status : "all") as
-    | "all"
-    | "active"
-    | "completed"
-    | "needGrading");
-  type QuickKeyT = "all" | "active" | "completed" | "needGrading" | "archived";
-  const handleQuickChange = (key: QuickKeyT) => {
-    const mapped = key === "archived" ? "all" : key;
-    setStatus(mapped as any);
-    setPage(1);
-  };
 
   return (
     <div className="px-6 py-4 max-w-6xl mx-auto space-y-6">
@@ -111,27 +86,6 @@ export default function AssignmentsPage() {
               onClassChange={(id) => { setClazz(id); setPage(1); }}
               classrooms={classrooms || []}
             />
-            <button
-              type="button"
-              onClick={() => {
-                const headers = ["id","title","type","openAt","dueOrLock","submissions","createdAt"];
-                const rows = items.map((a) => [
-                  a.id,
-                  a.title,
-                  a.type,
-                  a.openAt ?? "",
-                  a.lockAt || a.dueDate || "",
-                  a._count?.submissions ?? 0,
-                  a.createdAt,
-                ]);
-                exportToXlsx("assignments", headers, rows, { sheetName: "Assignments" });
-              }}
-              className="inline-flex items-center gap-2 h-11 rounded-xl border border-blue-200 px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-              aria-label="Xuất Excel theo bộ lọc"
-            >
-              Xuất Excel
-            </button>
-            <ViewToggle value={view} onChange={setView} />
           </>
         }
       />
@@ -159,30 +113,11 @@ export default function AssignmentsPage() {
       </div>
 
       {/* Content */}
-      {view === "list" ? (
-        <AssignmentList
-          items={items}
-          loading={loading}
-          error={error}
-          onRefresh={refresh}
-        />
-      ) : (
-        <AssignmentTable
-          items={items}
-          onView={(id) => setPreview(items.find((x) => x.id === id) || null)}
-          onEdit={(id) => router.push(`/dashboard/teacher/assignments/${id}/edit`)}
-          onSubmissions={(id) => router.push(`/dashboard/teacher/assignments/${id}/submissions`)}
-          onDelete={(id) => router.push(`/dashboard/teacher/assignments/${id}`)}
-        />
-      )}
-
-      <AssignmentQuickPreview
-        assignment={preview}
-        open={!!preview}
-        onOpenChange={(v) => !v && setPreview(null)}
-        onViewDetail={(id) => router.push(`/dashboard/teacher/assignments/${id}`)}
-        onEdit={(id) => router.push(`/dashboard/teacher/assignments/${id}/edit`)}
-        onSubmissions={(id) => router.push(`/dashboard/teacher/assignments/${id}/submissions`)}
+      <AssignmentList
+        items={items}
+        loading={loading}
+        error={error}
+        onRefresh={refresh}
       />
     </div>
   );

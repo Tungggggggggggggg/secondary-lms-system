@@ -171,12 +171,6 @@ export default function AdminUsersPage() {
     fetchUsers(1, roleFilter, search);
   };
 
-  const handleResetFilters = () => {
-    setRoleFilter("");
-    setSearch("");
-    fetchUsers(1, "", "");
-  };
-
   const handleRoleChange = (value: "" | AdminUserItem["role"]) => {
     setRoleFilter(value);
     fetchUsers(1, value, search);
@@ -492,7 +486,6 @@ export default function AdminUsersPage() {
             search={search}
             onSearchChange={setSearch}
             onSubmit={() => fetchUsers(1, roleFilter, search)}
-            onReset={handleResetFilters}
           />
 
           <div className="rounded-xl border border-border overflow-hidden">
@@ -518,9 +511,6 @@ export default function AdminUsersPage() {
                         description="Thử thay đổi bộ lọc hoặc đặt lại tìm kiếm để xem thêm kết quả."
                         action={
                           <div className="flex items-center justify-center gap-2">
-                            <Button type="button" variant="outline" onClick={handleResetFilters}>
-                              Reset bộ lọc
-                            </Button>
                             <Button
                               type="button"
                               onClick={() => {

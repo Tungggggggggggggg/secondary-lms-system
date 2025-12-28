@@ -130,12 +130,6 @@ export default function AdminClassroomsPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
-  const handleResetFilters = () => {
-    setStatus("");
-    setSearch("");
-    fetchClassrooms(1, "", "");
-  };
-
   const fetchClassrooms = async (nextPage = page, nextStatus = status, nextSearch = search) => {
     try {
       setLoading(true);
@@ -249,30 +243,6 @@ export default function AdminClassroomsPage() {
       toast({ title: "Không thể cập nhật lớp", description: msg, variant: "destructive" });
     } finally {
       setEditSubmitting(false);
-    }
-  };
-
-  const exportStudentsExcel = async () => {
-    if (!studentsTarget) return;
-    try {
-      const res = await fetch(`/api/admin/classrooms/${studentsTarget.id}/students/export`, { cache: "no-store" });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json?.message || "Không thể xuất Excel");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `classroom-${studentsTarget.code}-students.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      toast({
-        title: "Không thể xuất Excel",
-        description: e instanceof Error ? e.message : "Có lỗi xảy ra",
-        variant: "destructive",
-      });
     }
   };
 
@@ -840,15 +810,6 @@ export default function AdminClassroomsPage() {
               >
                 Tạo lớp học
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fetchClassrooms(page, status, search)}
-                disabled={loading}
-              >
-                Tải lại
-              </Button>
             </div>
           }
         />
@@ -887,9 +848,6 @@ export default function AdminClassroomsPage() {
                         description="Thử thay đổi bộ lọc hoặc đặt lại tìm kiếm để xem thêm kết quả."
                         action={
                           <div className="flex items-center justify-center gap-2">
-                            <Button type="button" variant="outline" onClick={handleResetFilters}>
-                              Reset bộ lọc
-                            </Button>
                             <Button
                               type="button"
                               onClick={() => {
@@ -1317,12 +1275,6 @@ export default function AdminClassroomsPage() {
           <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setStudentsOpen(false)} disabled={studentsLoading}>
               Đóng
-            </Button>
-            <Button variant="outline" onClick={exportStudentsExcel} disabled={studentsLoading || !studentsTarget}>
-              Xuất Excel
-            </Button>
-            <Button onClick={() => fetchClassroomStudents({ page: 1, q: studentsSearch })} disabled={studentsLoading || !studentsTarget}>
-              {studentsLoading ? "Đang tải..." : "Tải lại"}
             </Button>
           </DialogFooter>
         </DialogContent>

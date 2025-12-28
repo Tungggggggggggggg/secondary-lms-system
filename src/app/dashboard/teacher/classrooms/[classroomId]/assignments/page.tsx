@@ -10,10 +10,9 @@ import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { StatsGrid } from "@/components/shared";
 import { EmptyState } from "@/components/shared";
-import AssignmentTable from "@/components/teacher/assignments/AssignmentTable";
 import AssignmentFiltersToolbar, { AssignmentStatusFilter, AssignmentTypeFilter, AssignmentSortKey } from "@/components/teacher/assignments/AssignmentFiltersToolbar";
 import AssignmentCardSkeleton from "@/components/teacher/assignments/AssignmentCardSkeleton";
-import { AlertTriangle, NotebookText, BarChart3, Clock, LayoutList, LayoutGrid, HelpCircle, Inbox } from "lucide-react";
+import { AlertTriangle, NotebookText, BarChart3, Clock, HelpCircle, Inbox } from "lucide-react";
 
 /**
  * Component hiển thị assignment card
@@ -203,14 +202,6 @@ export default function ClassroomAssignmentsPage() {
   const [sortKey, setSortKey] = useState<AssignmentSortKey>("newest");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [view, setView] = useState<"list" | "table">(() => {
-    if (typeof window === "undefined") return "list";
-    return (window.localStorage.getItem("teacher:classroom-assignments:view") as "list" | "table") || "list";
-  });
-  useEffect(() => {
-    try { window.localStorage.setItem("teacher:classroom-assignments:view", view); } catch {}
-  }, [view]);
-
   // Load assignments khi component mount
   useEffect(() => {
     if (classroomId) {
@@ -386,38 +377,14 @@ export default function ClassroomAssignmentsPage() {
         onSortChange={setSortKey}
         search={searchQuery}
         onSearchChange={setSearchQuery}
-        onReset={() => { setStatusFilter("all"); setTypeFilter("all"); setSortKey("newest"); setSearchQuery(""); }}
       />
 
-      <div className="mb-2 flex items-center justify-end">
-        <div className="inline-flex rounded-xl border border-blue-200 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setView("list")}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm ${view === "list" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}
-            aria-pressed={view === "list"}
-          >
-            <LayoutList className="h-4 w-4" /> Danh sách
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("table")}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm border-l border-blue-200 ${view === "table" ? "bg-blue-600 text-white" : "bg-white text-blue-700 hover:bg-blue-50"}`}
-            aria-pressed={view === "table"}
-          >
-            <LayoutGrid className="h-4 w-4" /> Bảng
-          </button>
-        </div>
-      </div>
-
       {isLoading ? (
-        view === "table" ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">Đang tải...</div>
-        ) : (
-          <div className="space-y-4">
-            {[1,2,3].map((i) => (<AssignmentCardSkeleton key={i} />))}
-          </div>
-        )
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <AssignmentCardSkeleton key={i} />
+          ))}
+        </div>
       ) : filteredAssignments.length === 0 ? (
         <EmptyState
           icon={<NotebookText className="h-10 w-10 text-blue-500" />}
@@ -425,14 +392,6 @@ export default function ClassroomAssignmentsPage() {
           description="Thêm bài tập để bắt đầu cho lớp học này."
           variant="teacher"
           action={<Button onClick={() => setIsDialogOpen(true)}> Thêm bài tập đầu tiên</Button>}
-        />
-      ) : view === "table" ? (
-        <AssignmentTable
-          items={filteredAssignments}
-          onView={(id) => router.push(`/dashboard/teacher/assignments/${id}`)}
-          onEdit={(id) => router.push(`/dashboard/teacher/assignments/${id}`)}
-          onSubmissions={(id) => handleViewSubmissions(id)}
-          onDelete={(id) => handleRemoveAssignment(id)}
         />
       ) : (
         <div className="space-y-4">

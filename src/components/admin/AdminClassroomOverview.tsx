@@ -15,7 +15,6 @@ interface AdminClassroomOverviewProps {
   isActive: boolean;
   teacherName?: string | null;
   teacherEmail?: string | null;
-  onExportStudents?: () => void;
   onToggleArchive?: () => void;
   onEdit?: () => void;
   onChangeTeacher?: () => void;
@@ -33,7 +32,6 @@ export default function AdminClassroomOverview({
   isActive,
   teacherName,
   teacherEmail,
-  onExportStudents,
   onToggleArchive,
   onEdit,
   onChangeTeacher,
@@ -100,7 +98,7 @@ export default function AdminClassroomOverview({
       {archived ? (
         <Alert className="rounded-2xl border-amber-200 bg-amber-50/80">
           <AlertDescription className="text-[11px] text-amber-900">
-            Lớp đã lưu trữ: cho phép xem, export, khôi phục hoặc xóa vĩnh viễn.
+            Lớp đã lưu trữ: cho phép xem, khôi phục hoặc xóa vĩnh viễn.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -143,18 +141,6 @@ export default function AdminClassroomOverview({
             className="transition-all active:scale-95 active:translate-y-[1px]"
           >
             Đổi GV
-          </Button>
-        ) : null}
-        {onExportStudents ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            color="slate"
-            onClick={onExportStudents}
-            className="transition-all active:scale-95 active:translate-y-[1px]"
-          >
-            Xuất Excel
           </Button>
         ) : null}
         {onToggleArchive ? (

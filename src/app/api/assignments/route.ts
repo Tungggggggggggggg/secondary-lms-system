@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createAssignmentSchema, paginationSchema, type CreateAssignmentInput } from '@/types/api'
+import type { Prisma } from '@prisma/client'
 import { errorResponse, getAuthenticatedUser } from '@/lib/api-utils'
 import { withPerformanceTracking } from '@/lib/performance-monitor'
 
@@ -55,37 +56,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const whereClause: { authorId: string; id?: { in?: string[]; notIn?: string[] } } = { authorId: user.id };
-
-    interface AssignmentClassroomIdRow {
-      assignmentId: string;
-    }
-
-    if (classroomId && !availableForClassroom) {
-      const assignmentIds = await prisma.assignmentClassroom.findMany({
-        where: { classroomId },
-        select: { assignmentId: true },
-      });
-      whereClause.id = {
-        in: assignmentIds.map(
-          (ac: AssignmentClassroomIdRow) => ac.assignmentId,
-        ),
-      };
-    }
+    const whereClause: Prisma.AssignmentWhereInput = { authorId: user.id };
 
     if (classroomId && availableForClassroom === 'true') {
-      const assignmentIds = await prisma.assignmentClassroom.findMany({
-        where: { classroomId },
-        select: { assignmentId: true },
-      });
-      const addedAssignmentIds = assignmentIds.map(
-        (ac: AssignmentClassroomIdRow) => ac.assignmentId,
-      );
-      if (addedAssignmentIds.length > 0) {
-        whereClause.id = {
-          notIn: addedAssignmentIds,
-        };
-      }
+      whereClause.classrooms = { none: { classroomId } };
+    } else if (classroomId) {
+      whereClause.classrooms = { some: { classroomId } };
     }
 
     const assignments = await prisma.assignment.findMany({

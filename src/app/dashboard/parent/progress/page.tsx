@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import HeaderParent from "@/components/parent/ParentHeader";
 import { EmptyState } from "@/components/shared";
 import CardGridSkeleton from "@/components/shared/loading/CardGridSkeleton";
@@ -371,98 +370,108 @@ export default function ParentProgressPage() {
                           <p>Chưa có bài nộp nào</p>
                         </div>
                       ) : (
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Lớp học</TableHead>
-                                <TableHead>Bài tập</TableHead>
-                                <TableHead>Loại</TableHead>
-                                <TableHead>Điểm</TableHead>
-                                <TableHead>Nhận xét</TableHead>
-                                <TableHead>Ngày nộp</TableHead>
-                                <TableHead>Trạng thái</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {grades.map((grade) => (
-                                <TableRow key={grade.id}>
-                                  <TableCell>
-                                    {grade.classroom ? (
-                                      <div className="flex items-center gap-2">
-                                        <span>{grade.classroom.icon}</span>
-                                        <span className="font-medium">
-                                          {grade.classroom.name}
-                                        </span>
+                        <div className="space-y-3">
+                          {(() => {
+                            const sortedGrades = [...grades].sort((a, b) => {
+                              const ta = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+                              const tb = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+                              return tb - ta;
+                            });
+                            const preview = sortedGrades.slice(0, 8);
+                            return (
+                              <>
+                                {preview.map((grade) => {
+                                  const statusLabel =
+                                    grade.status === "graded"
+                                      ? "✓ Đã chấm"
+                                      : grade.status === "submitted"
+                                      ? "Đã nộp"
+                                      : "Chờ chấm";
+                                  const statusClass =
+                                    grade.status === "graded"
+                                      ? "bg-amber-100 text-amber-700"
+                                      : grade.status === "submitted"
+                                      ? "bg-orange-100 text-orange-700"
+                                      : "bg-muted/40 text-muted-foreground";
+
+                                  return (
+                                    <div
+                                      key={grade.id}
+                                      className="bg-white/90 rounded-2xl border border-amber-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-4 sm:p-5"
+                                    >
+                                      <div className="flex items-start justify-between gap-4">
+                                        <div className="min-w-0">
+                                          <div className="flex items-center gap-2 text-sm font-semibold text-foreground truncate">
+                                            {grade.classroom ? (
+                                              <>
+                                                <span>{grade.classroom.icon}</span>
+                                                <span className="truncate">{grade.classroom.name}</span>
+                                              </>
+                                            ) : (
+                                              <span className="text-muted-foreground">N/A</span>
+                                            )}
+                                          </div>
+
+                                          <div className="mt-1 text-base font-semibold text-foreground truncate">
+                                            {grade.assignmentTitle}
+                                          </div>
+
+                                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                                            <span
+                                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                                grade.assignmentType === "ESSAY"
+                                                  ? "bg-amber-100 text-amber-700"
+                                                  : "bg-orange-100 text-orange-700"
+                                              }`}
+                                            >
+                                              {grade.assignmentType === "ESSAY" ? "Tự luận" : "Trắc nghiệm"}
+                                            </span>
+
+                                            {grade.grade !== null ? (
+                                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-100">
+                                                {grade.grade.toFixed(1)}
+                                              </span>
+                                            ) : (
+                                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-muted/40 text-muted-foreground border border-border">
+                                                Chưa chấm
+                                              </span>
+                                            )}
+
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${statusClass}`}>
+                                              {statusLabel}
+                                            </span>
+                                          </div>
+
+                                          <div className="mt-2 text-xs text-muted-foreground">
+                                            Ngày nộp:{" "}
+                                            {grade.submittedAt
+                                              ? new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
+                                                  day: "2-digit",
+                                                  month: "2-digit",
+                                                  year: "numeric",
+                                                })
+                                              : "—"}
+                                          </div>
+
+                                          {grade.feedback ? (
+                                            <div className="mt-2 text-sm text-muted-foreground whitespace-pre-line">
+                                              {grade.feedback}
+                                            </div>
+                                          ) : null}
+                                        </div>
                                       </div>
-                                    ) : (
-                                      <span className="text-muted-foreground">N/A</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="font-medium">
-                                    {grade.assignmentTitle}
-                                  </TableCell>
-                                  <TableCell>
-                                    <span
-                                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
-                                        grade.assignmentType === "ESSAY"
-                                          ? "bg-amber-100 text-amber-700"
-                                          : "bg-orange-100 text-orange-700"
-                                      }`}
-                                    >
-                                      {grade.assignmentType === "ESSAY"
-                                        ? "Tự luận"
-                                        : "Trắc nghiệm"}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>
-                                    {grade.grade !== null ? (
-                                      <span className="font-bold text-amber-700">
-                                        {grade.grade.toFixed(1)}
-                                      </span>
-                                    ) : (
-                                      <span className="text-muted-foreground">Chưa chấm</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {grade.feedback ? (
-                                      <span className="text-sm text-foreground">
-                                        {grade.feedback}
-                                      </span>
-                                    ) : (
-                                      <span className="text-muted-foreground">—</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="text-sm text-muted-foreground">
-                                    {grade.submittedAt
-                                      ? new Date(grade.submittedAt).toLocaleDateString("vi-VN", {
-                                          day: "2-digit",
-                                          month: "2-digit",
-                                          year: "numeric",
-                                        })
-                                      : "—"}
-                                  </TableCell>
-                                  <TableCell>
-                                    <span
-                                      className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
-                                        grade.status === "graded"
-                                          ? "bg-amber-100 text-amber-700"
-                                          : grade.status === "submitted"
-                                          ? "bg-orange-100 text-orange-700"
-                                          : "bg-muted/40 text-muted-foreground"
-                                      }`}
-                                    >
-                                      {grade.status === "graded"
-                                        ? "✓ Đã chấm"
-                                        : grade.status === "submitted"
-                                        ? "Đã nộp"
-                                        : "Chờ chấm"}
-                                    </span>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                                    </div>
+                                  );
+                                })}
+
+                                {sortedGrades.length > preview.length ? (
+                                  <div className="text-xs text-muted-foreground">
+                                    Đang hiển thị {preview.length}/{sortedGrades.length} bài gần nhất. Xem đầy đủ ở trang “Xem chi tiết”.
+                                  </div>
+                                ) : null}
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>

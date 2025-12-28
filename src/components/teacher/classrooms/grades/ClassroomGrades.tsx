@@ -3,532 +3,918 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import gsap from "gsap";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import {
-  Award,
-  CheckCircle2,
-  Clock,
-  MessageCircle,
-  TrendingUp,
-  TrendingDown,
-  FileText,
-  HelpCircle,
-  Download,
+  Users,
+  NotebookText,
+  BarChart3,
+  GraduationCap,
 } from "lucide-react";
 import { StatsGrid } from "@/components/shared";
 import { EmptyState } from "@/components/shared";
-import GradeFiltersToolbar, { GradeSortKey, GradeStatus } from "@/components/teacher/grades/GradeFiltersToolbar";
-import { exportToXlsx } from "@/lib/excel";
+import { useToast } from "@/hooks/use-toast";
+import GradebookGrid, {
+  type GradebookAssignment,
+  type GradebookCell,
+  type GradebookStudent,
+} from "@/components/teacher/classrooms/grades/GradebookGrid";
 
-type Row = {
+type GradebookStatistics = {
+  graded: number;
+  submitted: number;
+  missing: number;
+  overdueMissing: number;
+  averageGrade: number | null;
+  highest: number | null;
+  lowest: number | null;
+};
+
+type GradebookPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+type ColumnPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+type OverviewStats = {
+  totalStudents: number;
+  totalAssignments: number;
+  submissionRate: number;
+  averageGrade: number | null;
+  highest: number | null;
+  lowest: number | null;
+  overdueMissing: number;
+};
+
+type StudentSummary = {
   id: string;
-  student: { id: string; fullname: string; email: string };
-  assignment: { id: string; title: string; type: string; dueDate: string | null };
+  fullname: string;
+  email: string;
+  stats: {
+    totalAssignments: number;
+    submittedCount: number;
+    gradedCount: number;
+    overdueMissingCount: number;
+    averageGrade: number | null;
+  };
+};
+
+type StudentsApiResponse = {
+  success?: boolean;
+  data?: {
+    students?: StudentSummary[];
+    overview?: OverviewStats;
+    pagination?: GradebookPagination;
+  };
+  message?: string;
+};
+
+type AssignmentSummary = {
+  id: string;
+  title: string;
+  type: string;
+  dueDate: string | null;
+  stats: {
+    totalStudents: number;
+    submittedCount: number;
+    gradedCount: number;
+    pendingCount: number;
+    overdueMissingCount: number;
+    averageGrade: number | null;
+    highest: number | null;
+    lowest: number | null;
+  };
+};
+
+type AssignmentsApiResponse = {
+  success?: boolean;
+  data?: {
+    assignments?: AssignmentSummary[];
+    pagination?: GradebookPagination;
+  };
+  message?: string;
+};
+
+type StudentGradeRow = {
+  id: string;
+  assignmentId: string;
+  assignmentTitle: string;
+  assignmentType: string;
+  dueDate: string | null;
   grade: number | null;
   feedback: string | null;
   submittedAt: string | null;
-  status: "submitted" | "graded" | "ungraded";
+  status: "graded" | "submitted" | "pending";
+};
+
+type StudentGradesResponse = {
+  success?: boolean;
+  student?: {
+    id: string;
+    fullname: string;
+    email: string;
+    joinedAt: string;
+  };
+  data?: StudentGradeRow[];
+  statistics?: {
+    totalSubmissions: number;
+    totalGraded: number;
+    totalPending: number;
+    averageGrade: number;
+  };
+  message?: string;
+};
+
+type MatrixApiResponse = {
+  success?: boolean;
+  data?: {
+    students?: GradebookStudent[];
+    assignments?: GradebookAssignment[];
+    cells?: GradebookCell[];
+    statistics?: GradebookStatistics;
+    pagination?: GradebookPagination;
+    columnPagination?: ColumnPagination;
+  };
+  message?: string;
 };
 
 export default function ClassroomGrades() {
+  const { toast } = useToast();
   const cardRef = useRef<HTMLDivElement>(null);
   const params = useParams();
   const classroomId = params.classroomId as string;
 
-  const [rows, setRows] = useState<Row[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<GradeStatus>("all");
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [assignmentFilter, setAssignmentFilter] = useState<"all" | string>("all");
-  const [sortKey, setSortKey] = useState<GradeSortKey>("recent");
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState<Row | null>(null);
+  const [tab, setTab] = useState<"students" | "assignments" | "matrix">("students");
+
+  const [overview, setOverview] = useState<OverviewStats | null>(null);
+
+  const [studentSummaries, setStudentSummaries] = useState<StudentSummary[]>([]);
+  const [studentLoading, setStudentLoading] = useState(false);
+  const [studentError, setStudentError] = useState<string | null>(null);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [studentPage, setStudentPage] = useState(1);
+  const [studentPageSize, setStudentPageSize] = useState(10);
+  const [studentPagination, setStudentPagination] = useState<GradebookPagination | null>(null);
+
+  const [assignmentSummaries, setAssignmentSummaries] = useState<AssignmentSummary[]>([]);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [assignmentSearch, setAssignmentSearch] = useState("");
+  const [assignmentPage, setAssignmentPage] = useState(1);
+  const [assignmentPageSize, setAssignmentPageSize] = useState(10);
+  const [assignmentPagination, setAssignmentPagination] = useState<GradebookPagination | null>(null);
+
+  const [matrixStudents, setMatrixStudents] = useState<GradebookStudent[]>([]);
+  const [matrixAssignments, setMatrixAssignments] = useState<GradebookAssignment[]>([]);
+  const [matrixCells, setMatrixCells] = useState<GradebookCell[]>([]);
+  const [matrixLoading, setMatrixLoading] = useState(false);
+  const [matrixError, setMatrixError] = useState<string | null>(null);
+  const [matrixSearch, setMatrixSearch] = useState("");
+  const [matrixPage, setMatrixPage] = useState(1);
+  const [matrixPageSize, setMatrixPageSize] = useState(10);
+  const [matrixColumns, setMatrixColumns] = useState(8);
+  const [matrixColPage, setMatrixColPage] = useState(1);
+  const [matrixPagination, setMatrixPagination] = useState<GradebookPagination | null>(null);
+  const [matrixColumnPagination, setMatrixColumnPagination] = useState<ColumnPagination | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailStudent, setDetailStudent] = useState<StudentSummary | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailRows, setDetailRows] = useState<StudentGradeRow[]>([]);
+  const [detailStats, setDetailStats] = useState<StudentGradesResponse["statistics"] | null>(null);
 
   useEffect(() => {
     if (!cardRef.current) return;
     gsap.fromTo(cardRef.current, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4 });
-  }, [rows]);
+  }, [tab]);
 
   useEffect(() => {
-    async function load() {
+    async function loadStudents() {
       if (!classroomId) return;
+      if (tab !== "students") return;
       try {
-        setIsLoading(true);
-        setError(null);
+        setStudentLoading(true);
+        setStudentError(null);
+
         const usp = new URLSearchParams();
-        if (status !== "all") usp.set("status", status);
-        if (search.trim()) usp.set("search", search.trim());
-        if (assignmentFilter !== "all") usp.set("assignmentId", assignmentFilter);
-        usp.set("sort", sortKey);
-        usp.set("pageSize", "20000");
-        const res = await fetch(`/api/teachers/classrooms/${classroomId}/grades?${usp.toString()}`, { cache: "no-store" });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.message || "Không thể tải bảng điểm");
-        setRows(json.data || []);
-      } catch (e: any) {
-        setError(e?.message || "Có lỗi xảy ra");
+        if (studentSearch.trim()) usp.set("search", studentSearch.trim());
+        usp.set("page", String(studentPage));
+        usp.set("pageSize", String(studentPageSize));
+
+        const res = await fetch(
+          `/api/teachers/classrooms/${classroomId}/gradebook/students?${usp.toString()}`,
+          { cache: "no-store" }
+        );
+        const json = (await res.json()) as StudentsApiResponse;
+        if (!res.ok || json?.success === false) {
+          throw new Error(json?.message || "Không thể tải danh sách học sinh");
+        }
+
+        setStudentSummaries(Array.isArray(json?.data?.students) ? json.data.students : []);
+        setStudentPagination(json?.data?.pagination ?? null);
+        setOverview(json?.data?.overview ?? null);
+      } catch (e) {
+        setStudentError(e instanceof Error ? e.message : "Có lỗi xảy ra");
       } finally {
-        setIsLoading(false);
+        setStudentLoading(false);
       }
     }
-    load();
-  }, [classroomId, status, search, assignmentFilter, sortKey]);
+    loadStudents();
+  }, [classroomId, tab, studentSearch, studentPage, studentPageSize]);
 
-  // Debounce 300ms for search input
   useEffect(() => {
-    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
+    async function loadAssignments() {
+      if (!classroomId) return;
+      if (tab !== "assignments") return;
+      try {
+        setAssignmentLoading(true);
+        setAssignmentError(null);
 
-  const sorted = useMemo(() => {
-    const copy = [...rows];
-    if (sortKey === "grade") {
-      copy.sort((a, b) => (b.grade ?? -1) - (a.grade ?? -1));
-    } else if (sortKey === "due") {
-      copy.sort((a, b) => {
-        const at = a.assignment.dueDate ? new Date(a.assignment.dueDate).getTime() : Infinity;
-        const bt = b.assignment.dueDate ? new Date(b.assignment.dueDate).getTime() : Infinity;
-        return at - bt;
-      });
-    } else {
-      copy.sort((a, b) => {
-        const aTime = a.submittedAt
-          ? new Date(a.submittedAt).getTime()
-          : a.assignment.dueDate
-          ? new Date(a.assignment.dueDate).getTime()
-          : 0;
-        const bTime = b.submittedAt
-          ? new Date(b.submittedAt).getTime()
-          : b.assignment.dueDate
-          ? new Date(b.assignment.dueDate).getTime()
-          : 0;
-        return bTime - aTime;
-      });
-    }
-    return copy;
-  }, [rows, sortKey]);
+        const usp = new URLSearchParams();
+        if (assignmentSearch.trim()) usp.set("search", assignmentSearch.trim());
+        usp.set("page", String(assignmentPage));
+        usp.set("pageSize", String(assignmentPageSize));
 
-  const metrics = useMemo(() => {
-    if (!rows.length) {
-      return {
-        average: 0,
-        totalGraded: 0,
-        totalPending: 0,
-        highest: null as number | null,
-        lowest: null as number | null,
-      };
-    }
-    let total = 0;
-    let gradedCount = 0;
-    let highest: number | null = null;
-    let lowest: number | null = null;
+        const res = await fetch(
+          `/api/teachers/classrooms/${classroomId}/gradebook/assignments?${usp.toString()}`,
+          { cache: "no-store" }
+        );
+        const json = (await res.json()) as AssignmentsApiResponse;
+        if (!res.ok || json?.success === false) {
+          throw new Error(json?.message || "Không thể tải danh sách bài tập");
+        }
 
-    rows.forEach((r) => {
-      if (typeof r.grade === "number") {
-        total += r.grade;
-        gradedCount += 1;
-        if (highest === null || r.grade > highest) highest = r.grade;
-        if (lowest === null || r.grade < lowest) lowest = r.grade;
+        setAssignmentSummaries(Array.isArray(json?.data?.assignments) ? json.data.assignments : []);
+        setAssignmentPagination(json?.data?.pagination ?? null);
+      } catch (e) {
+        setAssignmentError(e instanceof Error ? e.message : "Có lỗi xảy ra");
+      } finally {
+        setAssignmentLoading(false);
       }
-    });
+    }
+    loadAssignments();
+  }, [classroomId, tab, assignmentSearch, assignmentPage, assignmentPageSize]);
 
-    const average = gradedCount > 0 ? total / gradedCount : 0;
-    const totalPending = rows.length - gradedCount;
-    return { average, totalGraded: gradedCount, totalPending, highest, lowest };
-  }, [rows]);
+  useEffect(() => {
+    async function loadMatrix() {
+      if (!classroomId) return;
+      if (tab !== "matrix") return;
+      try {
+        setMatrixLoading(true);
+        setMatrixError(null);
 
-  const formatDate = (value: string | null) => {
-    if (!value) return "—";
-    return new Date(value).toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+        const usp = new URLSearchParams();
+        if (matrixSearch.trim()) usp.set("search", matrixSearch.trim());
+        usp.set("page", String(matrixPage));
+        usp.set("pageSize", String(matrixPageSize));
+        usp.set("columns", String(matrixColumns));
+        usp.set("colPage", String(matrixColPage));
+
+        const res = await fetch(`/api/teachers/classrooms/${classroomId}/gradebook?${usp.toString()}`, {
+          cache: "no-store",
+        });
+        const json = (await res.json()) as MatrixApiResponse;
+        if (!res.ok || json?.success === false) {
+          throw new Error(json?.message || "Không thể tải bảng điểm");
+        }
+
+        setMatrixStudents(Array.isArray(json?.data?.students) ? json.data.students : []);
+        setMatrixAssignments(Array.isArray(json?.data?.assignments) ? json.data.assignments : []);
+        setMatrixCells(Array.isArray(json?.data?.cells) ? json.data.cells : []);
+        setMatrixPagination(json?.data?.pagination ?? null);
+        setMatrixColumnPagination(json?.data?.columnPagination ?? null);
+      } catch (e) {
+        setMatrixError(e instanceof Error ? e.message : "Có lỗi xảy ra");
+      } finally {
+        setMatrixLoading(false);
+      }
+    }
+    loadMatrix();
+  }, [classroomId, tab, matrixSearch, matrixPage, matrixPageSize, matrixColumns, matrixColPage]);
+
+  const statsItems = useMemo(() => {
+    if (!overview) return [];
+
+    const rangeText = `${overview.lowest !== null ? overview.lowest.toFixed(1) : "—"}–${
+      overview.highest !== null ? overview.highest.toFixed(1) : "—"
+    }`;
+
+    return [
+      {
+        icon: <Users className="h-5 w-5" />,
+        color: "from-blue-200 to-indigo-200",
+        label: "Học sinh",
+        value: String(overview.totalStudents ?? 0),
+      },
+      {
+        icon: <NotebookText className="h-5 w-5" />,
+        color: "from-sky-200 to-indigo-200",
+        label: "Bài tập",
+        value: String(overview.totalAssignments ?? 0),
+      },
+      {
+        icon: <BarChart3 className="h-5 w-5" />,
+        color: "from-emerald-200 to-green-200",
+        label: "Tỷ lệ nộp",
+        value: `${Math.round(overview.submissionRate)}%`,
+      },
+      {
+        icon: <GraduationCap className="h-5 w-5" />,
+        color: "from-amber-200 to-orange-200",
+        label: "Điểm TB",
+        value: overview.averageGrade !== null ? overview.averageGrade.toFixed(1) : "—",
+        subtitle: `Thấp/Cao: ${rangeText} • Quá hạn: ${overview.overdueMissing ?? 0}`,
+      },
+    ];
+  }, [overview]);
+
+  const openStudentDetail = async (student: StudentSummary) => {
+    if (!classroomId) return;
+    setDetailOpen(true);
+    setDetailStudent(student);
+    setDetailRows([]);
+    setDetailStats(null);
+    setDetailError(null);
+    try {
+      setDetailLoading(true);
+      const res = await fetch(
+        `/api/teachers/classrooms/${classroomId}/students/${student.id}/grades`,
+        { cache: "no-store" }
+      );
+      const json = (await res.json()) as StudentGradesResponse;
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Không thể tải điểm của học sinh");
+      }
+      setDetailRows(Array.isArray(json?.data) ? json.data : []);
+      setDetailStats(json?.statistics ?? null);
+    } catch (e) {
+      setDetailError(e instanceof Error ? e.message : "Có lỗi xảy ra");
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
-  const getGradeBadgeClass = (grade: number | null) => {
-    if (grade === null) {
-      return "bg-amber-50 text-amber-700 border border-amber-100";
-    }
-    if (grade >= 5) {
-      return "bg-emerald-50 text-emerald-700 border border-emerald-100";
-    }
-    return "bg-rose-50 text-rose-700 border border-rose-100";
-  };
+  const downloadExport = async () => {
+    if (!classroomId) return;
+    try {
+      setExporting(true);
+      const usp = new URLSearchParams();
+      if (matrixSearch.trim()) usp.set("search", matrixSearch.trim());
+      usp.set("sort", "recent");
+      usp.set("limit", "5000");
 
-  const getStatusBadge = (row: Row) => {
-    if (row.status === "graded") {
-      return {
-        label: "Đã chấm",
-        className: "bg-emerald-50 text-emerald-700 border border-emerald-100",
-      };
-    }
-    if (row.submittedAt) {
-      return {
-        label: "Chờ chấm",
-        className: "bg-amber-50 text-amber-700 border border-amber-100",
-      };
-    }
-    return {
-      label: "Chưa nộp",
-      className: "bg-slate-50 text-slate-700 border border-slate-200",
-    };
-  };
-
-  const handleOpenFeedback = (row: Row) => {
-    if (!row.feedback) return;
-    setSelectedRow(row);
-    setFeedbackOpen(true);
-  };
-
-  const assignmentOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    rows.forEach((r) => {
-      if (r.assignment.id && r.assignment.title) {
-        map.set(r.assignment.id, r.assignment.title);
-      }
-    });
-    return Array.from(map.entries());
-  }, [rows]);
-
-  const students = useMemo(() => {
-    const map = new Map<string, { id: string; fullname: string; email: string }>();
-    rows.forEach((r) => {
-      if (!map.has(r.student.id)) {
-        map.set(r.student.id, r.student);
-      }
-    });
-    return Array.from(map.values()).sort((a, b) => (a.fullname || "").localeCompare(b.fullname || "", "vi", { sensitivity: "base" }));
-  }, [rows]);
-
-  const assignments = useMemo(() => {
-    const map = new Map<string, { id: string; title: string; type: string; dueDate: string | null }>();
-    rows.forEach((r) => {
-      if (!map.has(r.assignment.id)) {
-        map.set(r.assignment.id, r.assignment);
-      }
-    });
-    return Array.from(map.values()).sort((a, b) => {
-      const at = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-      const bt = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-      return at - bt;
-    });
-  }, [rows]);
-
-  const studentAssignmentMap = useMemo(() => {
-    const map = new Map<string, Map<string, Row>>();
-    rows.forEach((r) => {
-      let perStudent = map.get(r.student.id);
-      if (!perStudent) {
-        perStudent = new Map<string, Row>();
-        map.set(r.student.id, perStudent);
-      }
-      perStudent.set(r.assignment.id, r);
-    });
-    return map;
-  }, [rows]);
-
-  const studentStats = useMemo(() => {
-    const acc = new Map<string, { sum: number; gradedCount: number; pendingCount: number; latest: number }>();
-    rows.forEach((r) => {
-      const id = r.student.id;
-      let s = acc.get(id);
-      if (!s) {
-        s = { sum: 0, gradedCount: 0, pendingCount: 0, latest: 0 };
-        acc.set(id, s);
-      }
-      if (typeof r.grade === "number") {
-        s.sum += r.grade;
-        s.gradedCount += 1;
-      } else {
-        s.pendingCount += 1;
-      }
-      const t = r.submittedAt
-        ? new Date(r.submittedAt).getTime()
-        : r.assignment.dueDate
-        ? new Date(r.assignment.dueDate).getTime()
-        : 0;
-      if (t > s.latest) s.latest = t;
-    });
-
-    const result = new Map<
-      string,
-      { average: number | null; gradedCount: number; pendingCount: number; latest: number }
-    >();
-    acc.forEach((s, id) => {
-      result.set(id, {
-        average: s.gradedCount > 0 ? s.sum / s.gradedCount : null,
-        gradedCount: s.gradedCount,
-        pendingCount: s.pendingCount,
-        latest: s.latest,
+      const res = await fetch(`/api/teachers/classrooms/${classroomId}/grades/export?${usp.toString()}`, {
+        method: "GET",
       });
-    });
-    return result;
-  }, [rows]);
 
-  const filteredAssignments = useMemo(
-    () =>
-      assignments.filter(
-        (a) => assignmentFilter === "all" || a.id === assignmentFilter,
-      ),
-    [assignments, assignmentFilter],
-  );
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.message || "Không thể xuất Excel");
+      }
 
-  const sortedStudents = useMemo(() => {
-    const list = [...students];
-    if (sortKey === "grade") {
-      list.sort((a, b) => {
-        const sa = studentStats.get(a.id)?.average ?? -1;
-        const sb = studentStats.get(b.id)?.average ?? -1;
-        return sb - sa;
+      const blob = await res.blob();
+      const cd = res.headers.get("content-disposition") || "";
+      const m = cd.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+      const filename = decodeURIComponent((m?.[1] || m?.[2] || "bang-diem.xlsx").trim());
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("[ClassroomGrades] export error", e);
+      toast({
+        title: "Không thể xuất Excel",
+        description: e instanceof Error ? e.message : "Có lỗi xảy ra",
+        variant: "destructive",
       });
-    } else if (sortKey === "recent") {
-      list.sort((a, b) => {
-        const ta = studentStats.get(a.id)?.latest ?? 0;
-        const tb = studentStats.get(b.id)?.latest ?? 0;
-        return tb - ta;
-      });
+    } finally {
+      setExporting(false);
     }
-    return list;
-  }, [students, studentStats, sortKey]);
-
-  const exportExcel = () => {
-    const header = ["student", "email", "assignment", "type", "due", "submitted", "grade"];
-    const rows = visibleRows.map((r) => [
-      r.student.fullname,
-      r.student.email,
-      r.assignment.title,
-      r.assignment.type,
-      r.assignment.dueDate ?? "",
-      r.submittedAt ?? "",
-      r.grade ?? "",
-    ]);
-    exportToXlsx("grades", header, rows, { sheetName: "Grades" });
   };
-
-  const visibleRows = useMemo(
-    () =>
-      sorted.filter(
-        (r) => assignmentFilter === "all" || r.assignment.id === assignmentFilter,
-      ),
-    [sorted, assignmentFilter],
-  );
 
   return (
-    <div
-      ref={cardRef}
-      className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-5 sm:p-7 space-y-6"
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-slate-900">Bảng điểm lớp học</h2>
-          <p className="text-sm text-slate-600">Theo dõi điểm và tình trạng chấm bài.</p>
-        </div>
-        <Button variant="outline" onClick={exportExcel}>
-          <Download className="h-4 w-4 mr-2" />
-          Xuất Excel
-        </Button>
-      </div>
-
-      <StatsGrid
-        items={[
-          { icon: <Award className="h-5 w-5" />, color: "from-emerald-200 to-green-200", label: "Điểm TB", value: metrics.average > 0 ? metrics.average.toFixed(1) : "N/A" },
-          { icon: <CheckCircle2 className="h-5 w-5" />, color: "from-sky-200 to-blue-200", label: "Đã chấm", value: String(metrics.totalGraded) },
-          { icon: <Clock className="h-5 w-5" />, color: "from-amber-200 to-orange-200", label: "Chưa chấm", value: String(metrics.totalPending) },
-          { icon: <TrendingUp className="h-5 w-5" />, color: "from-blue-200 to-sky-200", label: "Cao nhất", value: metrics.highest !== null ? metrics.highest.toFixed(1) : "—" },
-          { icon: <TrendingDown className="h-5 w-5" />, color: "from-rose-200 to-amber-200", label: "Thấp nhất", value: metrics.lowest !== null ? metrics.lowest.toFixed(1) : "—" },
-        ]}
-      />
-
-      <GradeFiltersToolbar
-        assignments={assignmentOptions.map(([id, title]) => ({ id, title }))}
-        assignmentId={assignmentFilter}
-        onAssignmentChange={setAssignmentFilter}
-        status={status}
-        onStatusChange={setStatus}
-        sortKey={sortKey}
-        onSortChange={setSortKey}
-        search={searchInput}
-        onSearchChange={setSearchInput}
-      />
-
-      {error ? (
-        <EmptyState title="Không tải được bảng điểm" description={error} variant="teacher" />
-      ) : isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-      ) : rows.length === 0 ? (
-        <EmptyState title="Không có dữ liệu" description="Không có bản ghi nào phù hợp với bộ lọc hiện tại." variant="teacher" />
-      ) : (
-        <>
-          <div className="bg-white/90 rounded-3xl border border-slate-100 overflow-auto shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-            <Table className="min-w-[720px]">
-              <TableHeader>
-                <TableRow className="bg-blue-50/60">
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[220px]">Học sinh</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase w-[90px] text-center">Điểm TB</TableHead>
-                  {filteredAssignments.map((a) => (
-                    <TableHead
-                      key={a.id}
-                      className="text-xs font-semibold tracking-wide text-slate-600 uppercase min-w-[120px]"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="truncate" title={a.title}>{a.title || "Bài tập"}</span>
-                        {a.dueDate && (
-                          <span className="text-[11px] font-normal text-slate-500">
-                            Hạn: {formatDate(a.dueDate)}
-                          </span>
-                        )}
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedStudents.map((student) => {
-                  const stats = studentStats.get(student.id);
-                  return (
-                    <TableRow
-                      key={student.id}
-                      className="hover:bg-blue-50/40 transition-colors"
-                    >
-                      <TableCell className="whitespace-nowrap align-top">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-slate-900 truncate">
-                            {student.fullname || "Không tên"}
-                          </span>
-                          <span className="text-xs text-slate-500 truncate">
-                            {student.email}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center align-top">
-                        {stats && stats.average !== null ? (
-                          <span
-                            className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${getGradeBadgeClass(
-                              stats.average,
-                            )}`}
-                          >
-                            {stats.average.toFixed(1)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">N/A</span>
-                        )}
-                      </TableCell>
-                      {filteredAssignments.map((assignment) => {
-                        const cellRow = studentAssignmentMap.get(student.id)?.get(assignment.id) || null;
-                        if (!cellRow) {
-                          return (
-                            <TableCell key={assignment.id} className="text-center align-top">
-                              <span
-                                className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${getGradeBadgeClass(
-                                  null,
-                                )}`}
-                              >
-                                —
-                              </span>
-                            </TableCell>
-                          );
-                        }
-
-                        const gradeValue = cellRow.grade;
-                        const statusBadge = getStatusBadge(cellRow);
-                        const label =
-                          gradeValue !== null
-                            ? gradeValue.toFixed(1)
-                            : cellRow.submittedAt
-                            ? "Chờ chấm"
-                            : "Chưa nộp";
-
-                        const tooltipParts = [
-                          `Bài: ${assignment.title}`,
-                          `Trạng thái: ${statusBadge.label}`,
-                          `Hạn nộp: ${assignment.dueDate ? formatDate(assignment.dueDate) : "—"}`,
-                          `Đã nộp: ${cellRow.submittedAt ? formatDate(cellRow.submittedAt) : "—"}`,
-                          `Điểm: ${gradeValue !== null ? gradeValue.toFixed(1) : "—"}`,
-                        ];
-                        if (cellRow.feedback) {
-                          tooltipParts.push(`Nhận xét: ${cellRow.feedback}`);
-                        }
-
-                        return (
-                          <TableCell key={assignment.id} className="text-center align-top">
-                            <button
-                              type="button"
-                              onClick={cellRow.feedback ? () => handleOpenFeedback(cellRow) : undefined}
-                              className={`inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap leading-none ${getGradeBadgeClass(
-                                gradeValue,
-                              )} ${
-                                cellRow.feedback
-                                  ? "hover:shadow-md hover:bg-opacity-90 transition-colors"
-                                  : "cursor-default"
-                              }`}
-                              title={tooltipParts.join("\n")}
-                            >
-                              <span>{label}</span>
-                              {cellRow.feedback && <MessageCircle className="h-3.5 w-3.5" />}
-                            </button>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+    <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+      <div
+        ref={cardRef}
+        className="bg-white/90 rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-5 sm:p-7 space-y-6"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-slate-900">Điểm số lớp học</h2>
+            <p className="text-sm text-slate-600">Theo dõi điểm và tình trạng chấm bài.</p>
           </div>
 
-          {selectedRow && (
-            <Dialog
-              open={feedbackOpen}
-              onOpenChange={(open: boolean) => {
-                setFeedbackOpen(open);
-                if (!open) {
-                  setSelectedRow(null);
-                }
-              }}
-            >
-              <DialogContent onClose={() => setFeedbackOpen(false)}>
-                <DialogHeader>
-                  <DialogTitle>Nhận xét cho học sinh</DialogTitle>
-                  <DialogDescription>
-                    {selectedRow.student.fullname} - {selectedRow.assignment.title}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="px-6 py-4 text-sm text-slate-800 whitespace-pre-line max-h-[50vh] overflow-y-auto">
-                  {selectedRow.feedback}
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="students">Theo học sinh</TabsTrigger>
+            <TabsTrigger value="assignments">Theo bài tập</TabsTrigger>
+            <TabsTrigger value="matrix">Ma trận</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <StatsGrid items={statsItems} />
+
+        <TabsContent value="students" className="mt-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="w-full sm:max-w-md">
+              <Input
+                value={studentSearch}
+                onChange={(e) => {
+                  setStudentSearch(e.target.value);
+                  setStudentPage(1);
+                }}
+                placeholder="Tìm học sinh theo tên hoặc email..."
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <Select
+                value={String(studentPageSize)}
+                onChange={(e) => {
+                  setStudentPageSize(Number(e.target.value));
+                  setStudentPage(1);
+                }}
+              >
+                <option value="10">10 HS/trang</option>
+                <option value="15">15 HS/trang</option>
+                <option value="20">20 HS/trang</option>
+                <option value="30">30 HS/trang</option>
+                <option value="50">50 HS/trang</option>
+              </Select>
+            </div>
+          </div>
+
+          {studentError ? (
+            <EmptyState title="Không tải được danh sách" description={studentError} variant="teacher" />
+          ) : studentLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : studentSummaries.length === 0 ? (
+            <EmptyState
+              title="Không có dữ liệu"
+              description="Không có học sinh nào phù hợp với tìm kiếm hiện tại."
+              variant="teacher"
+            />
+          ) : (
+            <div className="space-y-3">
+              {studentSummaries.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between p-4 border rounded-2xl bg-white hover:bg-slate-50/40 transition-colors"
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="h-11 w-11 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                      <span className="text-indigo-600 font-bold text-base">
+                        {s.fullname.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold text-slate-900">{s.fullname}</div>
+                      <div className="truncate text-sm text-slate-600">{s.email}</div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Badge variant="outline" className="bg-white">
+                          {s.stats.submittedCount}/{s.stats.totalAssignments} bài
+                        </Badge>
+                        {s.stats.overdueMissingCount > 0 && (
+                          <Badge variant="warning">
+                            Quá hạn: {s.stats.overdueMissingCount}
+                          </Badge>
+                        )}
+                        {s.stats.averageGrade !== null && (
+                          <Badge variant="success">ĐTB: {s.stats.averageGrade.toFixed(1)}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        void openStudentDetail(s);
+                      }}
+                    >
+                      Xem chi tiết
+                    </Button>
+                  </div>
                 </div>
-                <DialogFooter>
-                  <Button onClick={() => setFeedbackOpen(false)}>Đóng</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              ))}
+
+              {studentPagination && studentPagination.total > studentPagination.pageSize && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 text-sm text-slate-600">
+                  <div>
+                    Trang{" "}
+                    <span className="font-semibold text-slate-900">{studentPage}</span> /{" "}
+                    {Math.max(1, studentPagination.totalPages ?? 1)} • Tổng{" "}
+                    <span className="font-semibold text-slate-900">
+                      {studentPagination.total.toLocaleString("vi-VN")}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setStudentPage(Math.max(1, studentPage - 1))}
+                      disabled={studentPage <= 1}
+                    >
+                      Trước
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setStudentPage(studentPage + 1)}
+                      disabled={studentPage >= Math.max(1, studentPagination.totalPages ?? 1)}
+                    >
+                      Sau
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
-        </>
+        </TabsContent>
+
+        <TabsContent value="assignments" className="mt-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="w-full sm:max-w-md">
+              <Input
+                value={assignmentSearch}
+                onChange={(e) => {
+                  setAssignmentSearch(e.target.value);
+                  setAssignmentPage(1);
+                }}
+                placeholder="Tìm bài tập theo tiêu đề..."
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <Select
+                value={String(assignmentPageSize)}
+                onChange={(e) => {
+                  setAssignmentPageSize(Number(e.target.value));
+                  setAssignmentPage(1);
+                }}
+              >
+                <option value="10">10 bài/trang</option>
+                <option value="15">15 bài/trang</option>
+                <option value="20">20 bài/trang</option>
+                <option value="30">30 bài/trang</option>
+                <option value="50">50 bài/trang</option>
+              </Select>
+            </div>
+          </div>
+
+          {assignmentError ? (
+            <EmptyState title="Không tải được danh sách" description={assignmentError} variant="teacher" />
+          ) : assignmentLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : assignmentSummaries.length === 0 ? (
+            <EmptyState
+              title="Không có dữ liệu"
+              description="Không có bài tập nào phù hợp với tìm kiếm hiện tại."
+              variant="teacher"
+            />
+          ) : (
+            <div className="space-y-3">
+              {assignmentSummaries.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 border rounded-2xl bg-white hover:bg-slate-50/40 transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold text-slate-900">{a.title}</div>
+                    <div className="mt-1 flex flex-wrap gap-2 items-center text-sm text-slate-600">
+                      <Badge variant="outline" className="bg-white">
+                        {a.type}
+                      </Badge>
+                      <span className="text-xs">Hạn: {a.dueDate ? new Date(a.dueDate).toLocaleDateString("vi-VN") : "—"}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                    <Badge variant="outline" className="bg-white">
+                      {a.stats.submittedCount}/{a.stats.totalStudents} nộp
+                    </Badge>
+                    {a.stats.overdueMissingCount > 0 && (
+                      <Badge variant="warning">Quá hạn: {a.stats.overdueMissingCount}</Badge>
+                    )}
+                    {a.stats.averageGrade !== null && (
+                      <Badge variant="success">ĐTB: {a.stats.averageGrade.toFixed(1)}</Badge>
+                    )}
+                    <Badge variant="outline" className="bg-white">
+                      Chờ: {a.stats.pendingCount}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+
+              {assignmentPagination && assignmentPagination.total > assignmentPagination.pageSize && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 text-sm text-slate-600">
+                  <div>
+                    Trang{" "}
+                    <span className="font-semibold text-slate-900">{assignmentPage}</span> /{" "}
+                    {Math.max(1, assignmentPagination.totalPages ?? 1)} • Tổng{" "}
+                    <span className="font-semibold text-slate-900">
+                      {assignmentPagination.total.toLocaleString("vi-VN")}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setAssignmentPage(Math.max(1, assignmentPage - 1))}
+                      disabled={assignmentPage <= 1}
+                    >
+                      Trước
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setAssignmentPage(assignmentPage + 1)}
+                      disabled={assignmentPage >= Math.max(1, assignmentPagination.totalPages ?? 1)}
+                    >
+                      Sau
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="matrix" className="mt-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="w-full sm:max-w-md">
+              <Input
+                value={matrixSearch}
+                onChange={(e) => {
+                  setMatrixSearch(e.target.value);
+                  setMatrixPage(1);
+                }}
+                placeholder="Tìm học sinh theo tên hoặc email..."
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <Select
+                value={String(matrixColumns)}
+                onChange={(e) => {
+                  setMatrixColumns(Number(e.target.value));
+                  setMatrixColPage(1);
+                }}
+              >
+                <option value="6">6 cột</option>
+                <option value="8">8 cột</option>
+                <option value="10">10 cột</option>
+                <option value="12">12 cột</option>
+                <option value="15">15 cột</option>
+                <option value="20">20 cột</option>
+                <option value="30">30 cột</option>
+              </Select>
+
+              <Select
+                value={String(matrixPageSize)}
+                onChange={(e) => {
+                  setMatrixPageSize(Number(e.target.value));
+                  setMatrixPage(1);
+                }}
+              >
+                <option value="10">10 HS/trang</option>
+                <option value="15">15 HS/trang</option>
+                <option value="20">20 HS/trang</option>
+                <option value="30">30 HS/trang</option>
+                <option value="50">50 HS/trang</option>
+              </Select>
+
+              <Button
+                type="button"
+                onClick={downloadExport}
+                disabled={exporting || matrixLoading}
+              >
+                {exporting ? "Đang xuất..." : "Xuất Excel"}
+              </Button>
+            </div>
+          </div>
+
+          {matrixColumnPagination && matrixColumnPagination.totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-slate-600">
+              <div>
+                Cột bài tập: Trang{" "}
+                <span className="font-semibold text-slate-900">{matrixColPage}</span> /{" "}
+                {Math.max(1, matrixColumnPagination.totalPages ?? 1)}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMatrixColPage(Math.max(1, matrixColPage - 1))}
+                  disabled={matrixColPage <= 1}
+                >
+                  Trước
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setMatrixColPage(matrixColPage + 1)}
+                  disabled={matrixColPage >= Math.max(1, matrixColumnPagination.totalPages ?? 1)}
+                >
+                  Sau
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {matrixError ? (
+            <EmptyState title="Không tải được bảng điểm" description={matrixError} variant="teacher" />
+          ) : matrixLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : matrixStudents.length === 0 ? (
+            <EmptyState
+              title="Không có dữ liệu"
+              description="Không có học sinh nào phù hợp với tìm kiếm hiện tại."
+              variant="teacher"
+            />
+          ) : (
+            <>
+              <GradebookGrid students={matrixStudents} assignments={matrixAssignments} cells={matrixCells} />
+
+              {matrixPagination && matrixPagination.total > matrixPagination.pageSize && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 text-sm text-slate-600">
+                  <div>
+                    Trang{" "}
+                    <span className="font-semibold text-slate-900">{matrixPage}</span> /{" "}
+                    {Math.max(1, matrixPagination.totalPages ?? 1)} • Tổng{" "}
+                    <span className="font-semibold text-slate-900">
+                      {matrixPagination.total.toLocaleString("vi-VN")}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setMatrixPage(Math.max(1, matrixPage - 1))}
+                      disabled={matrixPage <= 1}
+                    >
+                      Trước
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setMatrixPage(matrixPage + 1)}
+                      disabled={matrixPage >= Math.max(1, matrixPagination.totalPages ?? 1)}
+                    >
+                      Sau
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
+
+      {detailStudent && (
+        <Dialog
+          open={detailOpen}
+          onOpenChange={(v) => {
+            setDetailOpen(v);
+            if (!v) {
+              setDetailStudent(null);
+              setDetailRows([]);
+              setDetailStats(null);
+              setDetailError(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-3xl" onClose={() => setDetailOpen(false)}>
+            <DialogHeader variant="teacher">
+              <DialogTitle variant="teacher">Chi tiết điểm học sinh</DialogTitle>
+              <DialogDescription variant="teacher">
+                {detailStudent.fullname} • {detailStudent.email}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="px-6 py-5 space-y-4">
+              {detailError ? (
+                <EmptyState title="Không tải được dữ liệu" description={detailError} variant="teacher" />
+              ) : detailLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : (
+                <>
+                  {detailStats && (
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="text-xs font-semibold text-slate-600">Điểm TB</div>
+                        <div className="mt-1 font-semibold text-slate-900">{detailStats.averageGrade.toFixed(1)}</div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="text-xs font-semibold text-slate-600">Đã chấm</div>
+                        <div className="mt-1 font-semibold text-slate-900">{detailStats.totalGraded}</div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="text-xs font-semibold text-slate-600">Chờ</div>
+                        <div className="mt-1 font-semibold text-slate-900">{detailStats.totalPending}</div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="text-xs font-semibold text-slate-600">Tổng</div>
+                        <div className="mt-1 font-semibold text-slate-900">{detailStats.totalSubmissions}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                    <div className="max-h-[55vh] overflow-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-900">Bài tập</th>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-900">Hạn</th>
+                            <th className="px-4 py-3 text-left font-semibold text-slate-900">Trạng thái</th>
+                            <th className="px-4 py-3 text-right font-semibold text-slate-900">Điểm</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detailRows.map((r) => (
+                            <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/40">
+                              <td className="px-4 py-3">
+                                <div className="font-semibold text-slate-900">{r.assignmentTitle}</div>
+                                <div className="text-xs text-slate-600">{r.assignmentType}</div>
+                              </td>
+                              <td className="px-4 py-3 text-slate-700">
+                                {r.dueDate ? new Date(r.dueDate).toLocaleDateString("vi-VN") : "—"}
+                              </td>
+                              <td className="px-4 py-3">
+                                {r.status === "graded" ? (
+                                  <Badge variant="success">Đã chấm</Badge>
+                                ) : r.status === "submitted" ? (
+                                  <Badge variant="warning">Chờ chấm</Badge>
+                                ) : (
+                                  <Badge variant="outline">Chưa nộp</Badge>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-900">
+                                {r.grade !== null ? r.grade.toFixed(1) : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="button" onClick={() => setDetailOpen(false)}>
+                Đóng
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
-    </div>
+      </div>
+    </Tabs>
   );
 }

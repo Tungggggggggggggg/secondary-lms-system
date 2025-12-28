@@ -162,9 +162,6 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        <Button variant="outline" onClick={fetchSettings} disabled={loading || saving}>
-          Tải lại
-        </Button>
         <Button onClick={save} disabled={loading || saving}>
           {saving ? "Đang lưu..." : "Lưu thay đổi"}
         </Button>
