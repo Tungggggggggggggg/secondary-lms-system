@@ -1,0 +1,26 @@
+@startuml activity-anti-cheat-normalize
+title Activity - Anti-cheat event pipeline (Normalize -> Store -> Notify)
+
+start
+:Client detect event\n(tab/blur/fullscreen/copy...);
+
+:POST /api/exam-events\n{assignmentId,eventType,attempt,metadata};
+
+:Validate role STUDENT + membership;
+:Validate metadata size <= 10KB;
+
+:Persist ExamEvent(eventType, metadata);
+
+if (eventType thuộc warning set?) then (yes)
+  :Notify teacher\n(TEACHER_ANTI_CHEAT_ALERT);
+endif
+
+:Teacher monitor load events;
+:Compute suspicionScore\n(rule-based);
+if (Teacher yêu cầu AI summary?) then (yes)
+  :POST /api/ai/anti-cheat/summary;
+  :Gemini generate summary;
+endif
+
+stop
+@enduml

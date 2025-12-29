@@ -1,0 +1,35 @@
+@startuml usecase-parent
+left to right direction
+title Use Case chi tiết - Phụ huynh (Parent)
+
+actor "Phụ huynh" as Parent
+
+rectangle "EduVerse - Parent Portal" {
+  usecase "Đăng nhập" as UC_Login
+
+  usecase "Gửi yêu cầu liên kết tới học sinh" as UC_LinkRequest
+  usecase "Nhập mã mời để liên kết (accept invitation code)" as UC_AcceptInvite
+  usecase "Quản lý danh sách con" as UC_Children
+
+  usecase "Xem điểm / tiến độ học tập" as UC_Grades
+  usecase "Xem thống kê dashboard" as UC_Stats
+  usecase "Xem AI Smart Summary" as UC_ParentSummary
+  usecase "Nhận tóm tắt định kỳ (Cron)" as UC_Weekly
+
+  usecase "Nhận thông báo" as UC_Notif
+  usecase "Chat với giáo viên" as UC_Chat
+}
+
+Parent --> UC_Login
+Parent --> UC_LinkRequest
+Parent --> UC_AcceptInvite
+Parent --> UC_Children
+Parent --> UC_Grades
+Parent --> UC_Stats
+Parent --> UC_ParentSummary
+Parent --> UC_Notif
+Parent --> UC_Chat
+
+UC_Weekly ..> UC_ParentSummary : <<include>>
+
+@enduml

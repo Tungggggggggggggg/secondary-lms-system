@@ -1,0 +1,49 @@
+@startuml usecase-student
+left to right direction
+title Use Case chi tiết - Học sinh (Student)
+
+actor "Học sinh" as Student
+
+rectangle "EduVerse - Student Portal" {
+  usecase "Đăng ký / Đăng nhập" as UC_Login
+  usecase "Quên/Đặt lại mật khẩu" as UC_Reset
+
+  usecase "Tham gia lớp (join by code)" as UC_JoinClass
+  usecase "Xem bài giảng + học liệu" as UC_ViewLessons
+
+  usecase "Làm bài Quiz" as UC_DoQuiz
+  usecase "Tạo attempt (server-side seed)" as UC_Attempt
+  usecase "Nộp Quiz (auto-grade)" as UC_SubmitQuiz
+
+  usecase "Làm bài tự luận" as UC_DoEssay
+  usecase "Nộp bài dạng file" as UC_FileSubmit
+  usecase "Xem/tải file đã nộp (signed url)" as UC_FileSignedUrl
+
+  usecase "Gửi sự kiện thi (anti-cheat)" as UC_ExamEvents
+
+  usecase "Hỏi AI Tutor (RAG)" as UC_Tutor
+
+  usecase "Xem thông báo" as UC_Notif
+  usecase "Chat (nhắn tin)" as UC_Chat
+
+  usecase "Xử lý yêu cầu liên kết phụ huynh" as UC_ParentLink
+}
+
+Student --> UC_Login
+Student --> UC_Reset
+Student --> UC_JoinClass
+Student --> UC_ViewLessons
+Student --> UC_DoQuiz
+Student --> UC_DoEssay
+Student --> UC_FileSubmit
+Student --> UC_Tutor
+Student --> UC_Notif
+Student --> UC_Chat
+Student --> UC_ParentLink
+Student --> UC_ExamEvents
+
+UC_DoQuiz ..> UC_Attempt : <<include>>
+UC_DoQuiz ..> UC_SubmitQuiz : <<include>>
+UC_FileSubmit ..> UC_FileSignedUrl : <<extend>>
+
+@enduml

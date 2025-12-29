@@ -1,0 +1,28 @@
+@startuml seq-announcement-post-and-notify
+title Sequence - Teacher đăng announcement + notify students
+
+actor Teacher
+actor Student
+participant "Web UI" as UI
+participant "API\nPOST /api/classrooms/{classId}/announcements" as PostAPI
+participant "API\nGET /api/classrooms/{classId}/announcements" as ListAPI
+participant "DB (Prisma)\nAnnouncement + ClassroomStudent" as DB
+participant "NotificationRepo" as Notif
+
+Teacher -> UI : Nhập nội dung + đăng
+UI -> PostAPI : POST {content}
+PostAPI -> PostAPI : Auth TEACHER\nisTeacherOfClassroom()
+PostAPI -> DB : create Announcement(classroomId,authorId,content)
+DB --> PostAPI : announcementId
+PostAPI -> DB : find classroom students
+PostAPI -> Notif : addMany STUDENT_ANNOUNCEMENT_NEW\n(actionUrl student)
+PostAPI --> UI : 201 {announcement}
+
+Student -> UI : Mở bảng tin lớp
+UI -> ListAPI : GET (page,pageSize,q,sort,hasAttachment)
+ListAPI -> ListAPI : Auth STUDENT\nisStudentInClassroom()
+ListAPI -> DB : findMany Announcement + attachments + count
+DB --> ListAPI : items+pagination
+ListAPI --> UI : list announcements
+
+@enduml

@@ -1,0 +1,33 @@
+@startuml seq-anti-cheat-ai-summary
+title Sequence - Teacher yêu cầu AI summary anti-cheat
+
+actor Teacher
+participant "Web UI\nMonitor" as UI
+participant "API\nGET /api/exam-events" as EventAPI
+participant "API\nGET /api/teachers/assignments/{id}/anti-cheat/score" as ScoreAPI
+participant "API\nPOST /api/ai/anti-cheat/summary" as AiAPI
+participant "DB (Prisma)\nExamEvent" as DB
+participant "Scoring\ncomputeQuizAntiCheatScore" as Scoring
+participant "Gemini API" as Gemini
+
+Teacher -> UI : Mở trang monitor
+UI -> EventAPI : GET events
+EventAPI -> DB : findMany ExamEvent
+DB --> EventAPI : events
+EventAPI --> UI : events
+
+UI -> ScoreAPI : GET (assignmentId, studentId, attempt)
+ScoreAPI -> DB : findMany ExamEvent
+ScoreAPI -> Scoring : compute score + breakdown
+Scoring --> ScoreAPI : score
+ScoreAPI --> UI : score+breakdown
+
+Teacher -> UI : Bấm "AI Summary"
+UI -> AiAPI : POST {assignmentId, studentId, attempt?}
+AiAPI -> DB : fetch max 250 events
+AiAPI -> Scoring : compute score (for prompt)
+AiAPI -> Gemini : generateContent (structured)
+Gemini --> AiAPI : summary JSON/text
+AiAPI --> UI : summary + score + riskLevel
+
+@enduml

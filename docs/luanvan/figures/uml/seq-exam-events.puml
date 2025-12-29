@@ -1,0 +1,23 @@
+@startuml seq-exam-events
+title Sequence - Ghi nhận Exam Events (Anti-cheat)
+
+actor Student
+participant "Web UI" as UI
+participant "API\nPOST /api/exam-events" as API
+participant "DB (Prisma)\nExamEvent" as DB
+participant "NotificationRepo" as Notif
+actor Teacher
+
+Student -> UI : chuyển tab / blur / fullscreen exit / copy-paste...
+UI -> API : POST {assignmentId,eventType,attempt,metadata}
+API -> API : Auth STUDENT + membership + validate metadata size
+API -> DB : create ExamEvent
+API -> Notif : nếu eventType thuộc warningEvents\n→ notify teacher
+API --> UI : success
+
+Teacher -> "API\nGET /api/exam-events" : query assignmentId,studentId,attempt...
+"API\nGET /api/exam-events" -> DB : findMany ExamEvent
+DB --> "API\nGET /api/exam-events" : events
+"API\nGET /api/exam-events" --> Teacher : events
+
+@enduml

@@ -1,0 +1,52 @@
+@startuml usecase-teacher-extended
+left to right direction
+title Use Case chi tiết - Giáo viên (Teacher - Extended)
+
+actor "Giáo viên" as Teacher
+
+rectangle "EduVerse - Teacher Portal" {
+  usecase "Quản lý lớp học" as UC_Classroom
+  usecase "Quản lý thông báo lớp\n(Announcements)" as UC_Announce
+
+  usecase "Quản lý khóa học" as UC_Course
+  usecase "Quản lý bài giảng" as UC_Lesson
+  usecase "Tải lên học liệu\n(lesson/assignment files)" as UC_Attach
+
+  usecase "Kích hoạt indexing RAG" as UC_Index
+  usecase "Theo dõi kết quả indexing\n(processed/skipped/errors)" as UC_IndexStats
+
+  usecase "Tạo bài tập (ESSAY/QUIZ)" as UC_AssignmentCreate
+  usecase "Giao bài cho lớp" as UC_AssignToClass
+  usecase "Xem danh sách bài nộp" as UC_ViewSubs
+  usecase "Chấm bài tự luận\n(gợi ý AI)" as UC_AiGrade
+
+  usecase "Giám sát thi (monitor)" as UC_Monitor
+  usecase "Xem nhật ký exam events" as UC_EventLog
+  usecase "Tính suspicionScore" as UC_Score
+  usecase "Yêu cầu AI tóm tắt anti-cheat" as UC_AntiCheatAI
+
+  usecase "Chat với học sinh/phụ huynh" as UC_Chat
+  usecase "Xem thông báo" as UC_Notif
+}
+
+Teacher --> UC_Classroom
+Teacher --> UC_Announce
+Teacher --> UC_Course
+Teacher --> UC_Lesson
+Teacher --> UC_AssignmentCreate
+Teacher --> UC_AssignToClass
+Teacher --> UC_ViewSubs
+Teacher --> UC_AiGrade
+Teacher --> UC_Monitor
+Teacher --> UC_Chat
+Teacher --> UC_Notif
+
+UC_Lesson ..> UC_Attach : <<include>>
+UC_AssignmentCreate ..> UC_AssignToClass : <<extend>>
+UC_IndexStats ..> UC_Index : <<include>>
+
+UC_Monitor ..> UC_EventLog : <<include>>
+UC_Monitor ..> UC_Score : <<include>>
+UC_AntiCheatAI ..> UC_Score : <<extend>>
+
+@enduml

@@ -1,0 +1,36 @@
+@startuml seq-announcement-comments-and-replies
+title Sequence - Comment/Reply announcement + notifications
+
+actor Student
+actor Teacher
+participant "Web UI" as UI
+participant "API\nGET /api/announcements/{annId}/comments" as GetAPI
+participant "API\nPOST /api/announcements/{annId}/comments" as PostAPI
+participant "DB (Prisma)\nAnnouncement, AnnouncementComment" as DB
+participant "NotificationRepo" as Notif
+
+Student -> UI : Mở chi tiết announcement
+UI -> GetAPI : GET (page,pageSize,recent?)
+GetAPI -> GetAPI : Auth + (teacher owner OR student in classroom)
+GetAPI -> DB : find announcement.classroomId\nfind comments + replies
+DB --> GetAPI : nested comments
+GetAPI --> UI : comments
+
+Student -> UI : Gửi comment/reply
+UI -> PostAPI : POST {content,parentId?}
+PostAPI -> PostAPI : Auth + permission\n(rate limit)
+PostAPI -> DB : create AnnouncementComment
+PostAPI -> DB : lookup classroom.teacherId
+PostAPI -> Notif : notify teacher\nTEACHER_ANNOUNCEMENT_COMMENT_NEW
+
+alt reply to a student comment
+  PostAPI -> Notif : notify parentAuthorId\nSTUDENT_ANNOUNCEMENT_REPLY
+end
+
+PostAPI --> UI : 201 {comment}
+
+Teacher -> UI : Xem comment (có thể includeHidden)
+UI -> GetAPI : GET includeHidden=true
+GetAPI --> UI : comments
+
+@enduml

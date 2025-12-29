@@ -1,0 +1,69 @@
+@startuml db-auth-admin-audit
+title ERD - Auth / Admin / Audit
+
+left to right direction
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "users" as users {
+  * id : String
+  --
+  email : String
+  password : String?
+  role : UserRole
+  roleSelectedAt : DateTime?
+  createdAt : DateTime
+}
+
+entity "sessions" as sessions {
+  * id : String
+  --
+  userId : String
+  expires : DateTime
+}
+
+entity "password_resets" as password_resets {
+  * id : String
+  --
+  email : String
+  token : String
+  expires : DateTime
+  completed : Boolean
+}
+
+entity "organizations" as organizations {
+  * id : String
+  --
+  status : OrganizationStatus
+}
+
+entity "organization_members" as org_members {
+  * id : String
+  --
+  organizationId : String
+  userId : String
+  roleInOrg : OrgRole?
+}
+
+entity "system_settings" as system_settings {
+  * key : String
+  --
+  value : Json?
+}
+
+entity "audit_logs" as audit_logs {
+  * id : String
+  --
+  actorId : String
+  organizationId : String?
+  action : String
+  createdAt : DateTime
+}
+
+users ||--o{ sessions : userId
+users ||--o{ audit_logs : actorId
+organizations ||--o{ audit_logs : organizationId
+organizations ||--o{ org_members : organizationId
+users ||--o{ org_members : userId
+
+@enduml
