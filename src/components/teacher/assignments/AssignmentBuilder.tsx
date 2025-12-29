@@ -1,38 +1,38 @@
  "use client";
 
- import React, { useCallback, useEffect, useMemo, useState } from "react";
- import { useRouter } from "next/navigation";
- import { useToast } from "@/hooks/use-toast";
- import { Card, CardContent, CardHeader } from "@/components/ui/card";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import { Label } from "@/components/ui/label";
- import { Textarea } from "@/components/ui/textarea";
- import {
-   ArrowLeft,
-   BookOpen,
-   Brain,
-   ChevronRight,
-   Eye,
-   FileText,
-   Home,
-   Users,
- } from "lucide-react";
- import type { LucideIcon } from "lucide-react";
- import {
-   AssignmentData,
-   AssignmentType,
-   SubmissionFormat,
-   QuizQuestion,
- } from "@/types/assignment-builder";
- import { AntiCheatConfig } from "@/types/exam-system";
- import EssayContentBuilder from "./EssayContentBuilder";
- import QuizContentBuilder from "./QuizContentBuilder";
- import ClassroomSelector from "./ClassroomSelector";
- import { WizardStepper, StepFooter, OptionTile } from "@/components/shared";
- import { useAutoSave, generateDraftKey } from "@/hooks/useAutoSave";
- import { buildStepValidation } from "@/validation/assignmentBuilder";
- import RichTextPreview from "@/components/shared/RichTextPreview";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  ArrowLeft,
+  BookOpen,
+  Brain,
+  ChevronRight,
+  Eye,
+  FileText,
+  Home,
+  Users,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  AssignmentData,
+  AssignmentType,
+  SubmissionFormat,
+  QuizQuestion,
+} from "@/types/assignment-builder";
+import { AntiCheatConfig } from "@/types/exam-system";
+import EssayContentBuilder from "./EssayContentBuilder";
+import QuizContentBuilder from "./QuizContentBuilder";
+import ClassroomSelector from "./ClassroomSelector";
+import { WizardStepper, StepFooter, OptionTile } from "@/components/shared";
+import { useAutoSave, generateDraftKey } from "@/hooks/useAutoSave";
+import { buildStepValidation } from "@/validation/assignmentBuilder";
+import RichTextPreview from "@/components/shared/RichTextPreview";
 
  type Mode = "create" | "edit";
  type Step = "type" | "basic" | "content" | "classrooms" | "preview";
@@ -271,6 +271,8 @@
 export default function AssignmentBuilder({ mode, assignmentId }: AssignmentBuilderProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
 
   const steps = mode === "create" ? createSteps : editSteps;
   const [currentStep, setCurrentStep] = useState<Step>(steps[0].key);
@@ -379,6 +381,18 @@ export default function AssignmentBuilder({ mode, assignmentId }: AssignmentBuil
   const goBack = useCallback(() => {
     if (!isFirstStep) setCurrentStep(steps[currentStepIndex - 1].key);
   }, [isFirstStep, steps, currentStepIndex]);
+
+  const handleGlobalBack = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+    router.push("/dashboard/teacher/assignments");
+  }, [router, returnTo]);
 
   const canProceed = useCallback(
     () => buildStepValidation(currentStep, data).ok,
@@ -556,7 +570,7 @@ export default function AssignmentBuilder({ mode, assignmentId }: AssignmentBuil
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
-                onClick={() => router.push("/dashboard/teacher/assignments")}
+                onClick={handleGlobalBack}
                 className="flex items-center gap-2 hover:bg-gray-100"
               >
                 <ArrowLeft className="h-4 w-4" /> Quay lại
