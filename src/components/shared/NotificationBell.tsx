@@ -198,8 +198,13 @@ export default function NotificationBell(props?: NotificationBellProps) {
     } catch {}
 
     if (n.actionUrl && typeof n.actionUrl === "string") {
+      // Chuẩn hoá một số URL cũ để điều hướng đúng trang
+      let target = n.actionUrl;
+      if (target.endsWith("/submissions/files")) {
+        target = target.replace(/\/submissions\/files$/, "/submissions");
+      }
       setOpen(false);
-      router.push(n.actionUrl);
+      router.push(target);
     }
   };
 

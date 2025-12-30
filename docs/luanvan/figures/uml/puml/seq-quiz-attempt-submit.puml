@@ -1,0 +1,32 @@
+@startuml seq-quiz-attempt-submit
+title Sequence - Quiz attempt start + submit + auto-grade
+
+actor Student
+participant "Web UI\nQuizAssignmentForm" as UI
+participant "API\nPOST /api/students/assignments/{id}/attempts/start" as StartAPI
+participant "DB (Prisma)\nAssignmentAttempt" as AttemptDB
+participant "API\nPOST /api/students/assignments/{id}/submit" as SubmitAPI
+participant "DB (Prisma)\nAssignmentSubmission" as SubDB
+participant "AutoGrade\n(auto-grade)" as AutoGrade
+participant "NotificationRepo" as Notif
+
+Student -> UI : Bấm "Bắt đầu làm"
+UI -> StartAPI : POST
+StartAPI -> StartAPI : Auth STUDENT + classroom membership
+StartAPI -> AttemptDB : create/find AssignmentAttempt\n(status=IN_PROGRESS, shuffleSeed,...)
+AttemptDB --> StartAPI : attemptId, attemptNumber, shuffleSeed
+StartAPI --> UI : attempt info
+
+... Trong lúc làm, UI có thể POST /api/exam-events ...
+
+Student -> UI : Bấm "Nộp bài"
+UI -> SubmitAPI : POST {answers[], presentation{questionOrder, optionOrder}}
+SubmitAPI -> SubmitAPI : validate answers + deadline + attempts
+SubmitAPI -> AutoGrade : autoGradeQuiz()
+AutoGrade --> SubmitAPI : grade + feedback
+SubmitAPI -> SubDB : create AssignmentSubmission\n(content=answers JSON, grade, feedback, attempt=nextAttempt)
+SubmitAPI -> AttemptDB : updateMany endedAt=now\nstatus='SUBMITTED'
+SubmitAPI -> Notif : add teacher notification\n(need grading / new submission)
+SubmitAPI --> UI : success + grade
+
+@enduml

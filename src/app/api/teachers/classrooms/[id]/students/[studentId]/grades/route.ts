@@ -4,6 +4,20 @@ import { errorResponse, getAuthenticatedUser, getRequestId, isTeacherOfClassroom
 import { getEffectiveDeadline, isAssignmentOverdue } from "@/lib/grades/assignmentDeadline";
 import { join, sqltag as sql } from "@prisma/client/runtime/library";
 
+type ParentInfo = {
+  id: string;
+  fullname: string;
+  email: string;
+};
+
+type StudentInfo = {
+  id: string;
+  fullname: string;
+  email: string;
+  joinedAt: string;
+  parents: ParentInfo[];
+};
+
 interface TeacherStudentSubmissionRow {
   id: string;
   assignmentId: string;
@@ -61,6 +75,41 @@ export async function GET(
       return errorResponse(403, "Forbidden - Not your classroom", { requestId });
     }
 
+    const [classroomStudent, parentLinks] = await Promise.all([
+      prisma.classroomStudent.findUnique({
+        where: { classroomId_studentId: { classroomId, studentId } },
+        select: {
+          joinedAt: true,
+          student: { select: { id: true, fullname: true, email: true } },
+        },
+      }),
+      prisma.parentStudent.findMany({
+        where: { studentId, status: "ACTIVE" },
+        select: { parent: { select: { id: true, fullname: true, email: true } } },
+      }),
+    ]);
+
+    if (!classroomStudent) {
+      return errorResponse(404, "Student not found in classroom", { requestId });
+    }
+
+    const fullname =
+      classroomStudent.student.fullname?.trim() ||
+      classroomStudent.student.email.split("@")[0] ||
+      "Học sinh";
+
+    const student: StudentInfo = {
+      id: classroomStudent.student.id,
+      fullname,
+      email: classroomStudent.student.email,
+      joinedAt: classroomStudent.joinedAt.toISOString(),
+      parents: parentLinks.map((x) => ({
+        id: x.parent.id,
+        fullname: x.parent.fullname,
+        email: x.parent.email,
+      })),
+    };
+
     // Lấy danh sách assignmentId thuộc classroom
     const ac = await prisma.assignmentClassroom.findMany({
       where: { classroomId },
@@ -71,7 +120,18 @@ export async function GET(
     );
     if (assignmentIds.length === 0) {
       return NextResponse.json(
-        { success: true, data: [], statistics: { totalGraded: 0, averageGrade: 0 }, requestId },
+        {
+          success: true,
+          student,
+          data: [],
+          statistics: {
+            totalSubmissions: 0,
+            totalGraded: 0,
+            totalPending: 0,
+            averageGrade: 0,
+          },
+          requestId,
+        },
         { status: 200 }
       );
     }
@@ -165,6 +225,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: true,
+        student,
         data: allRows,
         statistics: {
           totalSubmissions: totalAssignments,

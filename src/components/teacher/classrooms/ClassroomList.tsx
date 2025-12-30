@@ -12,7 +12,6 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useClassroomsQuery } from "@/hooks/use-classrooms-query";
 import { Search as SearchIcon, Lock, BookOpen } from "lucide-react";
-import { ViewToggle, type ViewMode } from "@/components/shared";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ClassroomList() {
@@ -38,7 +37,6 @@ export default function ClassroomList() {
 
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name" | "students">("newest");
   const [searchQuery, setSearchQuery] = useState("");
-  const [view, setView] = useState<ViewMode>("table");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteClassroom, setInviteClassroom] = useState<ClassroomResponse | null>(null);
 
@@ -116,16 +114,11 @@ export default function ClassroomList() {
             <option value="name">Theo tên</option>
             <option value="students">Số học sinh</option>
           </Select>
-          <ViewToggle value={view} onChange={setView} />
         </div>
       </div>
 
       {items.length > 0 ? (
-        <div
-          className={
-            view === "table" ? "grid md:grid-cols-3 gap-6" : "space-y-3"
-          }
-        >
+        <div className="grid md:grid-cols-3 gap-6">
           {items.map((classroom: ClassroomResponse) => (
             <article
               key={classroom.id}

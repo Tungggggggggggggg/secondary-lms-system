@@ -30,74 +30,80 @@ export async function GET(req: NextRequest) {
       const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      const [
-        totalClassrooms,
-        newClassroomsThisWeek,
-        totalStudentsRows,
-        newStudentsThisMonth,
-        totalLessons,
-        newLessonsThisMonth,
-        pendingSubmissions,
-      ] = await Promise.all([
-        // 1. Đếm tổng số lớp học của teacher
-        prisma.classroom.count({
-          where: { teacherId: userId, isActive: true },
-        }),
+      const rows = await prisma.$queryRaw<
+        Array<{
+          totalClassrooms: number;
+          newClassroomsThisWeek: number;
+          totalStudents: number;
+          newStudentsThisMonth: number;
+          totalLessons: number;
+          newLessonsThisMonth: number;
+          pendingSubmissions: number;
+        }>
+      >`
+        SELECT
+          (SELECT COUNT(*)::int
+            FROM "classrooms" c
+            WHERE c."teacherId" = ${userId} AND c."isActive" = true
+          ) as "totalClassrooms",
+          (SELECT COUNT(*)::int
+            FROM "classrooms" c
+            WHERE c."teacherId" = ${userId} AND c."createdAt" >= ${oneWeekAgo}
+          ) as "newClassroomsThisWeek",
+          (SELECT COUNT(DISTINCT cs."studentId")::int
+            FROM "classroom_students" cs
+            JOIN "classrooms" c ON c."id" = cs."classroomId"
+            WHERE c."teacherId" = ${userId} AND c."isActive" = true
+          ) as "totalStudents",
+          (SELECT COUNT(*)::int
+            FROM "classroom_students" cs
+            JOIN "classrooms" c ON c."id" = cs."classroomId"
+            WHERE c."teacherId" = ${userId} AND c."isActive" = true AND cs."joinedAt" >= ${oneMonthAgo}
+          ) as "newStudentsThisMonth",
+          (SELECT COUNT(*)::int
+            FROM "lessons" l
+            JOIN "courses" co ON co."id" = l."courseId"
+            WHERE co."authorId" = ${userId}
+          ) as "totalLessons",
+          (SELECT COUNT(*)::int
+            FROM "lessons" l
+            JOIN "courses" co ON co."id" = l."courseId"
+            WHERE co."authorId" = ${userId} AND l."createdAt" >= ${oneMonthAgo}
+          ) as "newLessonsThisMonth",
+          (SELECT COUNT(*)::int
+            FROM "assignment_submissions" s
+            JOIN "assignments" a ON a."id" = s."assignmentId"
+            WHERE a."authorId" = ${userId} AND s."grade" IS NULL
+          ) as "pendingSubmissions";
+      `;
 
-        // 2. Đếm số lớp mới trong tuần này
-        prisma.classroom.count({
-          where: { teacherId: userId, createdAt: { gte: oneWeekAgo } },
-        }),
+      const row = rows[0] ?? {
+        totalClassrooms: 0,
+        newClassroomsThisWeek: 0,
+        totalStudents: 0,
+        newStudentsThisMonth: 0,
+        totalLessons: 0,
+        newLessonsThisMonth: 0,
+        pendingSubmissions: 0,
+      };
 
-        // 3. Đếm tổng số học sinh (unique) trong tất cả các lớp của teacher
-        prisma.$queryRaw<Array<{ total: bigint }>>`
-          SELECT COUNT(DISTINCT cs."studentId")::bigint as total
-          FROM "classroom_students" cs
-          JOIN "classrooms" c ON c."id" = cs."classroomId"
-          WHERE c."teacherId" = ${userId} AND c."isActive" = true;
-        `,
-
-        // 4. Đếm số học sinh mới trong tháng này
-        prisma.classroomStudent.count({
-          where: {
-            classroom: { teacherId: userId, isActive: true },
-            joinedAt: { gte: oneMonthAgo },
-          },
-        }),
-
-        // 6. Đếm tổng số bài giảng (lessons) trong các khóa học của teacher
-        prisma.lesson.count({
-          where: { course: { authorId: userId } },
-        }),
-
-        // 7. Đếm số bài giảng mới trong tháng này
-        prisma.lesson.count({
-          where: { course: { authorId: userId }, createdAt: { gte: oneMonthAgo } },
-        }),
-
-        // 8. Đếm số bài tập chờ chấm (submissions chưa có grade)
-        prisma.assignmentSubmission.count({
-          where: { assignment: { authorId: userId }, grade: null },
-        }),
-      ]);
-
-      const totalStudents = Number(totalStudentsRows[0]?.total ?? 0);
+      const totalStudents = row.totalStudents;
 
       // 5. Tính phần trăm thay đổi học sinh
-      const studentsLastMonth = totalStudents - newStudentsThisMonth;
+      const studentsLastMonth = totalStudents - row.newStudentsThisMonth;
       const studentsChange = studentsLastMonth > 0
-        ? Math.round((newStudentsThisMonth / studentsLastMonth) * 100)
+        ? Math.round((row.newStudentsThisMonth / studentsLastMonth) * 100)
         : 0;
 
       // Tạo response data
       const stats = {
         totalStudents,
-        totalClassrooms,
-        totalLessons,
-        pendingSubmissions,
+        totalClassrooms: row.totalClassrooms,
+        totalLessons: row.totalLessons,
+        pendingSubmissions: row.pendingSubmissions,
         studentsChange,
-        classroomsChange: newClassroomsThisWeek,
-        lessonsChange: newLessonsThisMonth,
+        classroomsChange: row.newClassroomsThisWeek,
+        lessonsChange: row.newLessonsThisMonth,
       };
 
       return NextResponse.json({

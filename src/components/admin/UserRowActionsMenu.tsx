@@ -30,7 +30,14 @@ export default function UserRowActionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" color="slate" disabled={disabled} className="min-w-24">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          color="slate"
+          disabled={disabled}
+          className="min-w-24 transition-all active:scale-95 active:translate-y-[1px]"
+        >
           Thao tác
         </Button>
       </DropdownMenuTrigger>

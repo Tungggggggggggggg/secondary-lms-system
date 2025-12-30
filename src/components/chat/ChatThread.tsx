@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MessageDTO } from "@/hooks/use-chat";
 import { useSession } from "next-auth/react";
-import { CornerUpLeft, Image as ImageIcon, Paperclip } from "lucide-react";
+import { ChevronDown, ChevronUp, CornerUpLeft, Image as ImageIcon, Paperclip, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateLabel, formatTimeLabel } from "@/lib/date";
 
@@ -31,29 +31,77 @@ type Props = {
   participants?: Participant[];
   onReply: (message: MessageDTO) => void;
   selfUserId?: string;
+  showSearch?: boolean;
 };
 
-export default function ChatThread({ color = "amber", messages, participants, onReply, selfUserId }: Props) {
+export default function ChatThread({ color = "amber", messages, participants, onReply, selfUserId, showSearch = true }: Props) {
   const { data: session } = useSession();
   const me = selfUserId || getSessionUserId(session);
   const endRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
+
+  useEffect(() => {
+    if (!showSearch && search) {
+      setSearch("");
+      setActiveMatchIndex(0);
+    }
+  }, [showSearch, search]);
+
   const ringColor = color === "green" ? "ring-green-400" : color === "blue" ? "ring-blue-400" : "ring-amber-400";
-  const jumpToMessage = (mid?: string | null) => {
+  const jumpToMessage = useCallback((mid?: string | null) => {
     if (!mid) return;
-    const el = messageRefs.current[mid] || document.getElementById(`msg-${mid}`) as HTMLDivElement | null;
+    const el = messageRefs.current[mid] || (document.getElementById(`msg-${mid}`) as HTMLDivElement | null);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", ringColor, "ring-offset-1", "ring-offset-gray-50");
-      setTimeout(() => {
-        el.classList.remove("ring-2", ringColor, "ring-offset-1", "ring-offset-gray-50");
-      }, 1200);
     }
+  }, []);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const matchIds = useMemo(() => {
+    if (!normalizedSearch) return [];
+    return messages
+      .filter((m) => (m.content || "").toLowerCase().includes(normalizedSearch))
+      .map((m) => m.id);
+  }, [messages, normalizedSearch]);
+
+  useEffect(() => {
+    if (!normalizedSearch) {
+      setActiveMatchIndex(0);
+      return;
+    }
+    setActiveMatchIndex(0);
+    if (matchIds.length > 0) {
+      jumpToMessage(matchIds[0]);
+    }
+  }, [jumpToMessage, matchIds, normalizedSearch]);
+
+  const canNavigateMatches = matchIds.length > 0;
+  const goPrev = () => {
+    if (!canNavigateMatches) return;
+    const nextIndex = (activeMatchIndex - 1 + matchIds.length) % matchIds.length;
+    setActiveMatchIndex(nextIndex);
+    jumpToMessage(matchIds[nextIndex]);
+  };
+
+  const goNext = () => {
+    if (!canNavigateMatches) return;
+    const nextIndex = (activeMatchIndex + 1) % matchIds.length;
+    setActiveMatchIndex(nextIndex);
+    jumpToMessage(matchIds[nextIndex]);
   };
 
   const palette = {
@@ -68,8 +116,82 @@ export default function ChatThread({ color = "amber", messages, participants, on
     linkOther: color === "green" ? "text-green-600" : color === "blue" ? "text-blue-600" : "text-amber-600",
   };
 
+  const searchPalette = {
+    bg: color === "green" ? "bg-green-50/70" : color === "blue" ? "bg-blue-50/70" : "bg-amber-50/70",
+    border: color === "green" ? "border-green-200" : color === "blue" ? "border-blue-200" : "border-amber-200",
+    icon: color === "green" ? "text-green-500" : color === "blue" ? "text-blue-500" : "text-amber-500",
+    ring: color === "green" ? "focus:ring-green-400" : color === "blue" ? "focus:ring-blue-400" : "focus:ring-amber-400",
+  };
+
   return (
     <div className={cn("flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-2 scrollbar-stable overscroll-contain min-w-0", palette.threadBg)}>
+      {showSearch && (
+        <div className={cn("sticky top-0 z-10 -mx-3 px-3 pb-2", searchPalette.bg, "backdrop-blur")}>
+          <div className={cn("rounded-2xl border p-2", searchPalette.border, "bg-white/70")}>
+            <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4", searchPalette.icon)} />
+              <input
+                ref={searchInputRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm trong hội thoại..."
+                className={cn(
+                  "w-full h-10 pl-9 pr-10 text-sm rounded-xl border bg-white outline-none focus:ring-2",
+                  searchPalette.border,
+                  searchPalette.ring
+                )}
+              />
+              {search.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-slate-100"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <X className="h-4 w-4 text-slate-500" />
+                </button>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={goPrev}
+              disabled={!canNavigateMatches}
+              className={cn(
+                "h-10 w-10 inline-flex items-center justify-center rounded-xl border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed",
+                searchPalette.border
+              )}
+              aria-label="Kết quả trước"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={!canNavigateMatches}
+              className={cn(
+                "h-10 w-10 inline-flex items-center justify-center rounded-xl border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed",
+                searchPalette.border
+              )}
+              aria-label="Kết quả sau"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+          {normalizedSearch.length > 0 ? (
+            <div className="mt-1 text-xs text-slate-600">
+              {matchIds.length > 0 ? (
+                <span>
+                  Kết quả <span className="font-semibold text-slate-900">{activeMatchIndex + 1}</span> / {matchIds.length}
+                </span>
+              ) : (
+                <span>Không tìm thấy kết quả.</span>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+      )}
       {messages.map((m, index) => {
         const mine = !!me && m.sender.id === me;
         const sender = !mine ? m.sender : undefined;
@@ -80,7 +202,15 @@ export default function ChatThread({ color = "amber", messages, participants, on
 
         const isNewDate = !prevMessage || formatDateLabel(new Date(prevMessage.createdAt)) !== formatDateLabel(createdAt);
         const isFirstOfGroup = isNewDate || prevMessage?.sender.id !== m.sender.id;
-        const isLastOfGroup = !nextMessage || nextMessage?.sender.id !== m.sender.id || formatDateLabel(new Date(nextMessage.createdAt)) !== formatDateLabel(createdAt);
+        const isLastOfGroup =
+          !nextMessage ||
+          nextMessage?.sender.id !== m.sender.id ||
+          formatDateLabel(new Date(nextMessage.createdAt)) !== formatDateLabel(createdAt);
+
+        const isActiveMatch =
+          !!normalizedSearch &&
+          matchIds.length > 0 &&
+          m.id === matchIds[activeMatchIndex];
 
         return (
           <div key={m.id} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -121,7 +251,8 @@ export default function ChatThread({ color = "amber", messages, participants, on
                         "rounded-tr-sm": !isFirstOfGroup && !!mine,
                         "rounded-bl-2xl": !!mine,
                         "rounded-br-2xl": !mine,
-                      }
+                      },
+                      isActiveMatch ? `ring-2 ${ringColor} ring-offset-1 ring-offset-gray-50` : undefined
                     )}
                     id={`msg-${m.id}`}
                     ref={(el) => { messageRefs.current[m.id] = el; }}

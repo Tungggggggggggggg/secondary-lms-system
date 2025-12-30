@@ -2,20 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
-import { AlertTriangle, Users, BarChart3, Target, LayoutList, LayoutGrid } from "lucide-react";
+import { AlertTriangle, Users, BarChart3, Target } from "lucide-react";
 import StudentList, { StudentListItem } from "@/components/teacher/students/StudentList";
 import StudentListSkeleton from "@/components/teacher/students/StudentListSkeleton";
 import StudentFiltersToolbar, {
   type StudentSortKey,
-  type StudentStatusFilter,
 } from "@/components/teacher/students/StudentFiltersToolbar";
 import { useClassroom } from "@/hooks/use-classroom";
 import { EmptyState } from "@/components/shared";
 import { PageHeader } from "@/components/shared";
 import Breadcrumb, { type BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { StatsGrid } from "@/components/shared";
-import StudentsTable from "@/components/teacher/students/StudentsTable";
-import { exportToXlsx } from "@/lib/excel";
 import { Button } from "@/components/ui/button";
 
 type TeacherStudentsApiResponse = {
@@ -52,7 +49,6 @@ export default function StudentsPage() {
   const students = useMemo(() => studentsData ?? [], [studentsData]);
 
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<StudentStatusFilter>("all");
   const [sortKey, setSortKey] = useState<StudentSortKey>("name");
   const [search, setSearch] = useState<string>("");
 
@@ -65,10 +61,6 @@ export default function StudentsPage() {
 
     if (selectedClassId !== "all") {
       list = list.filter((s) => s.classroomId === selectedClassId);
-    }
-
-    if (statusFilter !== "all") {
-      list = list.filter((s) => s.status === statusFilter);
     }
 
     const searchValue = search.trim().toLowerCase();
@@ -95,7 +87,7 @@ export default function StudentsPage() {
     });
 
     return list;
-  }, [students, selectedClassId, statusFilter, search, sortKey]);
+  }, [students, selectedClassId, search, sortKey]);
 
   const isLoading = loadingClassrooms || loadingStudents;
   const error = classroomError || (studentsError ? String(studentsError) : null);
@@ -138,44 +130,6 @@ export default function StudentsPage() {
       avgGrade,
     };
   }, [students]);
-
-  // View toggle
-  const [view, setView] = useState<"list" | "table">(() => {
-    if (typeof window === "undefined") return "table";
-    return (window.localStorage.getItem("teacher:students:view") as "list" | "table") || "table";
-  });
-  useEffect(() => {
-    try { window.localStorage.setItem("teacher:students:view", view); } catch {}
-  }, [view]);
-
-  // Export Excel theo bộ lọc hiện tại
-  const onExportFiltered = () => {
-    const header = [
-      "id",
-      "fullname",
-      "classroomId",
-      "classroomName",
-      "classroomCode",
-      "averageGrade",
-      "submissionRate",
-      "submittedCount",
-      "totalAssignments",
-      "status",
-    ];
-    const rows = filteredStudents.map((s) => [
-      s.id,
-      s.fullname,
-      s.classroomId,
-      s.classroomName,
-      s.classroomCode,
-      s.averageGrade ?? "",
-      Math.round(s.submissionRate),
-      s.submittedCount,
-      s.totalAssignments,
-      s.status,
-    ]);
-    exportToXlsx(`students-${rows.length}`, header, rows, { sheetName: "Students" });
-  };
   const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Dashboard", href: "/dashboard/teacher/dashboard" },
     { label: "Học sinh", href: "/dashboard/teacher/students" },
@@ -205,9 +159,7 @@ export default function StudentsPage() {
           { icon: <Target className="h-5 w-5" />, color: "from-blue-200 to-indigo-100", label: "Điểm trung bình", value: overview.avgGrade !== null ? overview.avgGrade.toFixed(1) : "-", subtitle: "TB các học sinh có điểm" },
         ]}
         onItemClick={(_, idx) => {
-          if (idx === 0) setStatusFilter("all");
           if (idx === 1) setSortKey("attendance");
-          if (idx === 2) setStatusFilter("warning");
           if (idx === 3) setSortKey("grade");
         }}
       />
@@ -221,60 +173,11 @@ export default function StudentsPage() {
         }))}
         selectedClassId={selectedClassId}
         onClassChange={(id) => setSelectedClassId(id)}
-        status={statusFilter}
-        onStatusChange={(status) => setStatusFilter(status)}
         sortKey={sortKey}
         onSortChange={(key) => setSortKey(key)}
         search={search}
         onSearchChange={(value) => setSearch(value)}
-        onReset={() => {
-          setSelectedClassId("all");
-          setStatusFilter("all");
-          setSortKey("name");
-          setSearch("");
-        }}
       />
-
-      {/* Hành động chung */}
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="text-xs font-semibold text-blue-700">Chế độ xem:</div>
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            color="blue"
-            onClick={onExportFiltered}
-            className="rounded-xl border-blue-200"
-            aria-label="Xuất Excel theo bộ lọc"
-          >
-            Xuất Excel
-          </Button>
-          {/* View toggle */}
-          <div
-            className="inline-flex rounded-xl border border-blue-200 overflow-hidden bg-background"
-            role="group"
-            aria-label="Chọn chế độ xem danh sách hoặc bảng"
-          >
-            <button
-              type="button"
-              onClick={() => setView("list")}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "list" ? "bg-blue-600 text-white" : "bg-background text-blue-700 hover:bg-blue-50"}`}
-              aria-pressed={view === "list"}
-            >
-              <LayoutList className="h-4 w-4" /> Danh sách
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("table")}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm border-l border-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${view === "table" ? "bg-blue-600 text-white" : "bg-background text-blue-700 hover:bg-blue-50"}`}
-              aria-pressed={view === "table"}
-            >
-              <LayoutGrid className="h-4 w-4" /> Bảng
-            </button>
-          </div>
-        </div>
-      </div>
       
 
       {/* Student List */}
@@ -306,29 +209,9 @@ export default function StudentsPage() {
           title="Chưa có học sinh nào để hiển thị"
           description="Hãy kiểm tra bộ lọc hoặc thêm học sinh vào lớp học của bạn."
           variant="teacher"
-          action={
-            <Button
-              type="button"
-              color="blue"
-              size="sm"
-              className="mt-2 rounded-xl px-4 py-2"
-              onClick={() => {
-                // Điều hướng tới màn quản lý lớp nếu cần, tạm thởi chỉ gọi lại fetch
-                void handleRefresh();
-              }}
-            >
-              Làm mới dữ liệu
-            </Button>
-          }
         />
       ) : (
-        <>
-          {view === "list" ? (
-            <StudentList students={filteredStudents} />
-          ) : (
-            <StudentsTable students={filteredStudents} selectable={false} />
-          )}
-        </>
+        <StudentList students={filteredStudents} />
       )}
     </div>
   );

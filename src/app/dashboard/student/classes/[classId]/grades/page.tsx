@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useStudentGrades, GradeEntry } from "@/hooks/use-student-grades";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,71 +25,34 @@ export default function StudentClassroomGradesPage() {
   const params = useParams();
   const classId = params.classId as string;
 
-  const { grades, statistics, isLoading, error, fetchClassroomGrades } =
+  const { grades, statistics, pagination, isLoading, error, fetchClassroomGradesPaged } =
     useStudentGrades();
 
   const [sortBy, setSortBy] = useState<
     "newest" | "grade_desc" | "grade_asc" | "due_date"
   >("newest");
   const [statusFilter, setStatusFilter] = useState<"all" | "graded" | "submitted" | "pending">("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<
     { assignmentTitle: string; feedback: string } | null
   >(null);
 
-  // Load grades khi component mount
+  // Load grades (server-side status/sort/pagination)
   useEffect(() => {
     if (classId) {
-      fetchClassroomGrades(classId);
+      setPage(1);
+      fetchClassroomGradesPaged(classId, {
+        page: 1,
+        pageSize,
+        status: statusFilter,
+        sort: sortBy,
+        append: false,
+      });
     }
-  }, [classId, fetchClassroomGrades]);
-
-  // Sort grades
-  const filteredAndSortedGrades = useMemo(() => {
-    let sorted = [...grades];
-    if (statusFilter !== "all") {
-      sorted = sorted.filter((g) => g.status === statusFilter);
-    }
-
-    switch (sortBy) {
-      case "grade_desc":
-        sorted.sort((a, b) => {
-          const gradeA = a.grade ?? 0;
-          const gradeB = b.grade ?? 0;
-          return gradeB - gradeA;
-        });
-        break;
-      case "grade_asc":
-        sorted.sort((a, b) => {
-          const gradeA = a.grade ?? 0;
-          const gradeB = b.grade ?? 0;
-          return gradeA - gradeB;
-        });
-        break;
-      case "due_date":
-        sorted.sort((a, b) => {
-          const timeA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-          const timeB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-          return timeA - timeB;
-        });
-        break;
-      case "newest":
-      default:
-        sorted.sort((a, b) => {
-          const timeA = a.submittedAt
-            ? new Date(a.submittedAt).getTime()
-            : 0;
-          const timeB = b.submittedAt
-            ? new Date(b.submittedAt).getTime()
-            : 0;
-          return timeB - timeA;
-        });
-        break;
-    }
-
-    return sorted;
-  }, [grades, sortBy, statusFilter]);
+  }, [classId, fetchClassroomGradesPaged, sortBy, statusFilter]);
 
   const formatDate = (value: string | null | undefined) => {
     if (!value) return "—";
@@ -105,6 +67,7 @@ export default function StudentClassroomGradesPage() {
     if (grade === null) {
       return "bg-amber-50 text-amber-700 border border-amber-100";
     }
+
     if (grade >= 5) {
       return "bg-emerald-50 text-emerald-700 border border-emerald-100";
     }
@@ -129,7 +92,15 @@ export default function StudentClassroomGradesPage() {
             <h3 className="font-semibold mb-1">Lỗi tải danh sách điểm số</h3>
             <p className="text-sm mb-4 text-rose-600">{error}</p>
             <Button
-              onClick={() => fetchClassroomGrades(classId)}
+              onClick={() =>
+                fetchClassroomGradesPaged(classId, {
+                  page: 1,
+                  pageSize,
+                  status: statusFilter,
+                  sort: sortBy,
+                  append: false,
+                })
+              }
               size="sm"
               color="green"
             >
@@ -204,8 +175,8 @@ export default function StudentClassroomGradesPage() {
         }}
       />
 
-      {/* Grades Table */}
-      {isLoading ? (
+      {/* Grades List */}
+      {isLoading && grades.length === 0 ? (
         <div className="bg-card/90 rounded-2xl border border-border shadow-sm overflow-hidden">
           <div className="space-y-3 p-4 sm:p-6">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -217,7 +188,7 @@ export default function StudentClassroomGradesPage() {
             ))}
           </div>
         </div>
-      ) : filteredAndSortedGrades.length === 0 ? (
+      ) : grades.length === 0 ? (
         <div className="bg-card/90 rounded-2xl border border-border p-8 sm:p-12 text-center shadow-sm">
           <div className="flex justify-center mb-4">
             <BarChart3 className="h-12 w-12 text-green-600" />
@@ -230,50 +201,20 @@ export default function StudentClassroomGradesPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-card/90 rounded-2xl border border-border shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-green-50/60 border-b border-border">
-                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Bài tập
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Loại
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Hạn nộp
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Ngày nộp
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Điểm
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Nhận xét
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Trạng thái
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAndSortedGrades.map((grade) => (
-                <TableRow key={grade.id} className="hover:bg-green-50/40 transition-colors">
-                  <TableCell className="font-medium text-foreground">
+        <div className="space-y-3">
+          {grades.map((grade) => (
+            <div
+              key={grade.id}
+              className="bg-card/90 rounded-2xl border border-border shadow-sm p-4 sm:p-5 hover:bg-green-50/30 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-base font-semibold text-foreground truncate">
                     {grade.assignmentTitle}
-                  </TableCell>
-                  <TableCell>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <AssignmentTypeBadge type={grade.assignmentType} />
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(grade.dueDate ?? null)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {grade.submittedAt ? formatDate(grade.submittedAt) : "Chưa nộp"}
-                  </TableCell>
 
-                  <TableCell>
                     {grade.grade !== null ? (
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${getGradeBadgeClass(
@@ -291,31 +232,57 @@ export default function StudentClassroomGradesPage() {
                         Chưa chấm
                       </span>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    {grade.feedback ? (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenFeedback(grade)}
-                        className="inline-flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-100 hover:border-green-200 transition-colors shadow-sm"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        <span>Xem</span>
-                      </button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">
-                        Không có
-                      </span>
-                    )}
-                  </TableCell>
 
-                  <TableCell>
                     <GradeStatusBadge status={grade.status} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-muted-foreground">
+                    <div>Hạn nộp: {formatDate(grade.dueDate ?? null)}</div>
+                    <div>
+                      Ngày nộp: {grade.submittedAt ? formatDate(grade.submittedAt) : "Chưa nộp"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="shrink-0">
+                  {grade.feedback ? (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenFeedback(grade)}
+                      className="inline-flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-100 hover:border-green-200 transition-colors shadow-sm"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span>Xem</span>
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">Không có</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {pagination?.hasMore ? (
+            <div className="pt-2 flex justify-center">
+              <Button
+                color="green"
+                disabled={isLoading}
+                onClick={() => {
+                  const nextPage = page + 1;
+                  setPage(nextPage);
+                  fetchClassroomGradesPaged(classId, {
+                    page: nextPage,
+                    pageSize,
+                    status: statusFilter,
+                    sort: sortBy,
+                    append: true,
+                  });
+                }}
+              >
+                {isLoading ? "Đang tải..." : "Tải thêm"}
+              </Button>
+            </div>
+          ) : null}
         </div>
       )}
 

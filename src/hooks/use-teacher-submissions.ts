@@ -14,6 +14,8 @@ export interface TeacherSubmission {
   // Extended fields for file-based submissions
   isFileSubmission?: boolean;
   filesCount?: number;
+  // Khi là bài essay+BOTH, fileSubmissionId dùng để tải file từ card văn bản
+  fileSubmissionId?: string;
   student: {
     id: string;
     fullname: string;
@@ -148,9 +150,40 @@ export function useTeacherSubmissions() {
 
         const result = await fetcher<{ success: true; data: SubmissionsResponse }>(url);
         const data = result.data as SubmissionsResponse;
-        setSubmissions(data.submissions ?? []);
+
+        // Merge file-based submissions vào cùng card với bài essay (nếu có) theo student.id
+        const raw = data.submissions ?? [];
+        const items: TeacherSubmission[] = raw.map((s) => ({ ...s }));
+
+        // Map studentId -> index của submission text đầu tiên
+        const textIndexByStudent = new Map<string, number>();
+        items.forEach((s, idx) => {
+          if (!s.isFileSubmission && s.student?.id && !textIndexByStudent.has(s.student.id)) {
+            textIndexByStudent.set(s.student.id, idx);
+          }
+        });
+
+        const merged: TeacherSubmission[] = [];
+        for (const s of items) {
+          if (s.isFileSubmission && s.student?.id) {
+            const idx = textIndexByStudent.get(s.student.id);
+            if (idx !== undefined) {
+              const target = items[idx];
+              const existing = target.filesCount ?? 0;
+              target.filesCount = existing + (s.filesCount ?? 0);
+              if (!target.fileSubmissionId) {
+                target.fileSubmissionId = s.id;
+              }
+              // Không push card file riêng nữa
+              continue;
+            }
+          }
+          merged.push(s);
+        }
+
+        setSubmissions(merged);
         setPagination({
-          total: data.total ?? 0,
+          total: merged.length,
           page: data.page ?? 1,
           limit: data.limit ?? 50,
           hasMore: data.hasMore ?? false,

@@ -19,7 +19,6 @@ interface AdminUsersToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
   onSubmit: () => void;
-  onReset?: () => void;
   right?: ReactNode;
   className?: string;
 }
@@ -31,12 +30,9 @@ export default function AdminUsersToolbar({
   search,
   onSearchChange,
   onSubmit,
-  onReset,
   right,
   className,
 }: AdminUsersToolbarProps) {
-  const canReset = !!onReset && (roleValue !== "" || search.trim().length > 0);
-
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between gap-3">
@@ -54,7 +50,7 @@ export default function AdminUsersToolbar({
                 onClick={() => onRoleChange(opt.value)}
                 aria-pressed={active}
                 className={cn(
-                  "h-9 px-3 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
+                  "h-9 px-3 rounded-lg text-sm font-semibold whitespace-nowrap transition-all active:scale-95 active:translate-y-[1px]",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400",
                   active ? `${opt.badgeClass} border border-transparent` : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 )}
@@ -81,11 +77,6 @@ export default function AdminUsersToolbar({
           <Button type="button" variant="default" size="sm" onClick={onSubmit}>
             Tìm kiếm
           </Button>
-          {canReset ? (
-            <Button type="button" variant="outline" size="sm" onClick={onReset}>
-              Reset
-            </Button>
-          ) : null}
         </div>
 
         {right ? <div className="flex md:hidden items-center gap-2 justify-end">{right}</div> : null}

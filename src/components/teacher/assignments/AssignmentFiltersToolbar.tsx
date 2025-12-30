@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, RotateCcw } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,7 +21,6 @@ interface AssignmentFiltersToolbarProps {
   search: string;
   onSearchChange: (q: string) => void;
   className?: string;
-  onReset?: () => void;
 }
 
 export default function AssignmentFiltersToolbar({
@@ -34,7 +33,6 @@ export default function AssignmentFiltersToolbar({
   search,
   onSearchChange,
   className,
-  onReset,
 }: AssignmentFiltersToolbarProps) {
   const [localQ, setLocalQ] = useState(search);
 
@@ -83,17 +81,6 @@ export default function AssignmentFiltersToolbar({
             <option value="due">Hạn nộp (gần nhất)</option>
             <option value="submissions">Nhiều bài nộp</option>
           </Select>
-
-          {onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="inline-flex items-center gap-2 h-11 rounded-xl border border-blue-200 px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-              aria-label="Đặt lại bộ lọc"
-            >
-              <RotateCcw className="h-4 w-4" /> Reset
-            </button>
-          )}
         </div>
       </div>
 

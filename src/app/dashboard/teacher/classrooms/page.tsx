@@ -25,18 +25,17 @@ export default function ClassroomsPage() {
         title="Lớp học của tôi"
         subtitle="Quản lí và theo dõi các lớp học của bạn"
         role="teacher"
+        actions={
+          <Button
+            type="button"
+            color="blue"
+            variant="primary"
+            onClick={() => router.push("/dashboard/teacher/classrooms/new")}
+          >
+            Tạo lớp học mới
+          </Button>
+        }
       />
-
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          color="blue"
-          variant="primary"
-          onClick={() => router.push("/dashboard/teacher/classrooms/new")}
-        >
-          Tạo lớp học mới
-        </Button>
-      </div>
 
       {/* Classroom List */}
       <ClassroomList />

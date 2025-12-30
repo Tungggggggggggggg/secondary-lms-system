@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type FeedSort = "new" | "comments" | "attachments";
+export type FeedSort = "new" | "oldest" | "comments" | "attachments";
 export type FeedToolbarValue = { q: string; sort: FeedSort; hasAttachment: boolean };
 
 type Props = {
@@ -55,6 +55,7 @@ export default function FeedToolbar({ value, onChange, className }: Props) {
         aria-label="Sắp xếp bài đăng"
       >
         <option value="new">Mới nhất</option>
+        <option value="oldest">Cũ nhất</option>
         <option value="comments">Nhiều bình luận</option>
         <option value="attachments">Nhiều đính kèm</option>
       </Select>

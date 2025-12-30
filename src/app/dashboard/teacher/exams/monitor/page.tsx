@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,6 @@ import {
   Users, 
   Clock, 
   AlertTriangle, 
-  RefreshCw,
   Settings,
   Eye,
   Shield,
@@ -122,7 +121,6 @@ const mockStudentSessions: Array<{
  */
 export default function ExamMonitorPage() {
   const { toast } = useToast();
-  const { mutate } = useSWRConfig();
 
   const { data: teacherAssignmentsData } = useSWR<TeacherAssignmentsApiResponse>(
     TEACHER_ASSIGNMENTS_KEY,
@@ -173,7 +171,6 @@ export default function ExamMonitorPage() {
     typeof value === "object" && value !== null;
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
-  const [manualRefreshKey, setManualRefreshKey] = useState(0);
   const [assignmentIdInput, setAssignmentIdInput] = useState("");
   const [studentIdInput, setStudentIdInput] = useState("");
   const [attemptInput, setAttemptInput] = useState<string>("");
@@ -352,7 +349,7 @@ export default function ExamMonitorPage() {
     return () => {
       cancelled = true;
     };
-  }, [effectiveAssignmentId, manualRefreshKey]);
+  }, [effectiveAssignmentId]);
 
   const severityOf = (type: string): 'low' | 'medium' | 'high' | 'info' => {
     if (type === 'SESSION_STARTED' || type === 'AUTO_SAVED' || type === 'SESSION_RESUMED') return 'info';
@@ -854,22 +851,6 @@ export default function ExamMonitorPage() {
     void callTeacherOverride(sessionKey, "TERMINATE");
   };
 
-  const handleManualRefresh = () => {
-    const effectiveIdForLogs = assignmentIdFromQuery || assignmentIdInput.trim();
-    if (!effectiveIdForLogs) {
-      toast({
-        title: "Chưa chọn bài thi",
-        description: "Vui lòng nhập mã bài thi trước khi làm mới dữ liệu.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    void fetchEvents(effectiveIdForLogs);
-    void mutate(TEACHER_ASSIGNMENTS_KEY);
-    setManualRefreshKey((v) => v + 1);
-  };
-
   return (
     <div className="min-h-screen bg-muted">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -888,14 +869,6 @@ export default function ExamMonitorPage() {
           subtitle="Theo dõi và quản lý các phiên thi đang diễn ra"
           actions={
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={handleManualRefresh}
-                className="inline-flex items-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Làm mới
-              </Button>
               <Button className="inline-flex items-center gap-2">
                 <Settings className="w-4 h-4" />
                 Cài đặt
@@ -1180,29 +1153,28 @@ export default function ExamMonitorPage() {
                   )}
 
                   {antiScore?.breakdown?.length ? (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead>
-                          <tr className="text-left border-b">
-                            <th className="py-2 pr-4">Rule</th>
-                            <th className="py-2 pr-4">Số lần</th>
-                            <th className="py-2 pr-4">Điểm</th>
-                            <th className="py-2 pr-4">Ghi chú</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {antiScore.breakdown.map((b) => (
-                            <tr key={b.ruleId} className="border-b align-top">
-                              <td className="py-2 pr-4 font-medium">{b.title}</td>
-                              <td className="py-2 pr-4">{b.count}</td>
-                              <td className="py-2 pr-4">{b.points}/{b.maxPoints}</td>
-                              <td className="py-2 pr-4 text-muted-foreground max-w-[520px] whitespace-pre-wrap break-words">
+                    <div className="space-y-2">
+                      {antiScore.breakdown.map((b) => (
+                        <div
+                          key={b.ruleId}
+                          className="rounded-lg border border-border bg-card p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="font-medium truncate" title={b.title}>
+                                {b.title}
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words">
                                 {b.details}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </div>
+                            </div>
+                            <div className="shrink-0 text-right text-sm">
+                              <div className="font-semibold">{b.points}/{b.maxPoints}</div>
+                              <div className="text-xs text-muted-foreground">{b.count} lần</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ) : null}
 
@@ -1274,38 +1246,33 @@ export default function ExamMonitorPage() {
 
                     <div className="space-y-4">
                       <h3 className="font-medium">Top học sinh có nhiều cảnh báo</h3>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                          <thead>
-                            <tr className="text-left border-b">
-                              <th className="py-2 pr-4">Học sinh</th>
-                              <th className="py-2 pr-4">Attempt</th>
-                              <th className="py-2 pr-4">Tổng event</th>
-                              <th className="py-2 pr-4">Cảnh báo cao</th>
-                              <th className="py-2 pr-4">Cảnh báo TB</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {summaryByStudentAttempt.slice(0, 10).map((row) => {
-                              const flagged = row.high >= 1 || (row.high + row.medium) >= 3;
-                              return (
-                                <tr
-                                  key={`${row.studentId}|${row.attempt}`}
-                                  className={`border-b ${flagged ? 'bg-red-50' : ''}`}
-                                >
-                                  <td className="py-2 pr-4">
-                                    {row.fullname}{' '}
+                      <div className="space-y-2">
+                        {summaryByStudentAttempt.slice(0, 10).map((row) => {
+                          const flagged = row.high >= 1 || (row.high + row.medium) >= 3;
+                          return (
+                            <div
+                              key={`${row.studentId}|${row.attempt}`}
+                              className={`rounded-lg border border-border p-3 ${flagged ? "bg-red-50" : "bg-card"}`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="font-medium truncate" title={row.fullname}>
+                                    {row.fullname}{" "}
                                     <span className="text-muted-foreground text-xs">({row.studentId})</span>
-                                  </td>
-                                  <td className="py-2 pr-4">{row.attempt ?? '-'}</td>
-                                  <td className="py-2 pr-4">{row.count}</td>
-                                  <td className="py-2 pr-4">{row.high}</td>
-                                  <td className="py-2 pr-4">{row.medium}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                                  </div>
+                                  <div className="mt-1 text-xs text-muted-foreground">
+                                    Attempt: {row.attempt ?? "-"}
+                                  </div>
+                                </div>
+
+                                <div className="shrink-0 text-right text-sm">
+                                  <div className="font-semibold">{row.count} events</div>
+                                  <div className="text-xs text-muted-foreground">Cao: {row.high} • TB: {row.medium}</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </>

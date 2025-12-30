@@ -1,0 +1,12 @@
+@startuml state-assignment-attempt
+title State - AssignmentAttempt (QUIZ)
+
+[*] --> IN_PROGRESS : POST /api/students/assignments/{id}/attempts/start
+IN_PROGRESS --> PAUSED_BY_TEACHER : POST /api/teachers/assignments/{id}/attempts/override (PAUSE)
+PAUSED_BY_TEACHER --> IN_PROGRESS : override (RESUME)
+IN_PROGRESS --> TERMINATED_TEACHER : override (TERMINATE)
+IN_PROGRESS --> SUBMITTED : POST /api/students/assignments/{id}/submit
+SUBMITTED --> [*]
+TERMINATED_TEACHER --> [*]
+
+@enduml

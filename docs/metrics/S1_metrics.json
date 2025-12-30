@@ -3,16 +3,19 @@
   "data": {
     "timeRangeMinutes": 60,
     "stats": {
-      "totalRequests": 15,
-      "averageResponseTime": 11835,
-      "slowRequests": 15,
+      "totalRequests": 10,
+      "averageResponseTime": 5187,
+      "slowRequests": 10,
       "errorRate": 0,
+      "p50": 4994,
+      "p95": 5450,
+      "p99": 5450,
       "topSlowEndpoints": [
         {
           "endpoint": "POST /api/ai/tutor/chat",
-          "averageDuration": 11835,
-          "maxDuration": 13142,
-          "requestCount": 15
+          "averageDuration": 5187,
+          "maxDuration": 7416,
+          "requestCount": 10
         }
       ]
     },
@@ -20,120 +23,80 @@
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 12731,
-        "timestamp": "2025-12-24T18:37:38.793Z",
+        "duration": 5100,
+        "timestamp": "2025-12-28T20:09:10.244Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 11386,
-        "timestamp": "2025-12-24T18:38:25.607Z",
+        "duration": 4871,
+        "timestamp": "2025-12-28T20:10:00.288Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 13059,
-        "timestamp": "2025-12-24T18:39:14.292Z",
+        "duration": 5216,
+        "timestamp": "2025-12-28T20:10:50.611Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 11493,
-        "timestamp": "2025-12-24T18:40:01.716Z",
+        "duration": 4330,
+        "timestamp": "2025-12-28T20:11:40.032Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 12241,
-        "timestamp": "2025-12-24T18:40:49.465Z",
+        "duration": 4994,
+        "timestamp": "2025-12-28T20:12:30.119Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 11261,
-        "timestamp": "2025-12-24T18:41:35.790Z",
+        "duration": 5174,
+        "timestamp": "2025-12-28T20:13:20.417Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 12747,
-        "timestamp": "2025-12-24T18:42:23.564Z",
+        "duration": 4833,
+        "timestamp": "2025-12-28T20:14:10.358Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 11190,
-        "timestamp": "2025-12-24T18:43:09.789Z",
+        "duration": 4484,
+        "timestamp": "2025-12-28T20:14:59.939Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 11701,
-        "timestamp": "2025-12-24T18:43:56.515Z",
+        "duration": 7416,
+        "timestamp": "2025-12-28T20:15:52.464Z",
         "success": true,
         "statusCode": 200
       },
       {
         "endpoint": "/api/ai/tutor/chat",
         "method": "POST",
-        "duration": 11824,
-        "timestamp": "2025-12-24T18:44:43.372Z",
-        "success": true,
-        "statusCode": 200
-      },
-      {
-        "endpoint": "/api/ai/tutor/chat",
-        "method": "POST",
-        "duration": 10951,
-        "timestamp": "2025-12-24T18:45:29.353Z",
-        "success": true,
-        "statusCode": 200
-      },
-      {
-        "endpoint": "/api/ai/tutor/chat",
-        "method": "POST",
-        "duration": 13142,
-        "timestamp": "2025-12-24T18:46:17.525Z",
-        "success": true,
-        "statusCode": 200
-      },
-      {
-        "endpoint": "/api/ai/tutor/chat",
-        "method": "POST",
-        "duration": 11594,
-        "timestamp": "2025-12-24T18:47:04.147Z",
-        "success": true,
-        "statusCode": 200
-      },
-      {
-        "endpoint": "/api/ai/tutor/chat",
-        "method": "POST",
-        "duration": 10634,
-        "timestamp": "2025-12-24T18:47:49.807Z",
-        "success": true,
-        "statusCode": 200
-      },
-      {
-        "endpoint": "/api/ai/tutor/chat",
-        "method": "POST",
-        "duration": 11571,
-        "timestamp": "2025-12-24T18:48:36.404Z",
+        "duration": 5450,
+        "timestamp": "2025-12-28T20:16:43.028Z",
         "success": true,
         "statusCode": 200
       }

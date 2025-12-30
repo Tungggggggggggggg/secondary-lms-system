@@ -1,0 +1,127 @@
+@startuml db-communication
+title ERD - Communication (Chat / Announcements / Notifications / Parent link)
+
+left to right direction
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "users" as users {
+  * id : String
+  --
+  role : UserRole
+  fullname : String?
+  email : String
+}
+
+entity "parent_students" as parent_students {
+  * id : String
+  --
+  parentId : String
+  studentId : String
+  status : LinkStatus
+  createdAt : DateTime
+}
+
+entity "notifications" as notifications {
+  * id : String
+  --
+  userId : String
+  type : String?
+  title : String
+  description : String?
+  actionUrl : String?
+  severity : NotificationSeverity
+  read : Boolean
+  createdAt : DateTime
+  meta : Json?
+}
+
+entity "conversations" as conversations {
+  * id : String
+  --
+  type : ConversationType
+  createdById : String
+  classId : String?
+  contextStudentId : String?
+  createdAt : DateTime
+}
+
+entity "conversation_participants" as conversation_participants {
+  * id : String
+  --
+  conversationId : String
+  userId : String
+  lastReadAt : DateTime?
+  joinedAt : DateTime
+}
+
+entity "messages" as messages {
+  * id : String
+  --
+  conversationId : String
+  senderId : String
+  content : String
+  createdAt : DateTime
+  parentId : String?
+}
+
+entity "chat_attachments" as chat_attachments {
+  * id : String
+  --
+  messageId : String
+  storagePath : String
+  mimeType : String
+  sizeBytes : Int
+  name : String
+}
+
+entity "announcements" as announcements {
+  * id : String
+  --
+  classroomId : String
+  authorId : String
+  pinnedAt : DateTime?
+  createdAt : DateTime
+}
+
+entity "announcement_comments" as announcement_comments {
+  * id : String
+  --
+  announcementId : String
+  authorId : String
+  parentId : String?
+  createdAt : DateTime
+}
+
+entity "announcement_attachments" as announcement_attachments {
+  * id : String
+  --
+  announcementId : String
+  uploadedById : String
+  path : String
+  mimeType : String?
+  sizeBytes : Int?
+}
+
+users ||--o{ notifications : userId
+
+users ||--o{ parent_students : parentId
+users ||--o{ parent_students : studentId
+
+users ||--o{ conversations : createdById
+conversations ||--o{ conversation_participants : conversationId
+users ||--o{ conversation_participants : userId
+
+conversations ||--o{ messages : conversationId
+users ||--o{ messages : senderId
+messages ||--o{ chat_attachments : messageId
+messages ||--o{ messages : parentId
+
+users ||--o{ announcements : authorId
+announcements ||--o{ announcement_comments : announcementId
+users ||--o{ announcement_comments : authorId
+announcement_comments ||--o{ announcement_comments : parentId
+announcements ||--o{ announcement_attachments : announcementId
+users ||--o{ announcement_attachments : uploadedById
+
+@enduml

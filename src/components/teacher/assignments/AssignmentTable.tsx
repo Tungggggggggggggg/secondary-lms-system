@@ -15,10 +15,9 @@ type Props = {
   onEdit?: (id: string) => void;
   onSubmissions?: (id: string) => void;
   onDelete?: (id: string) => void;
-  onDuplicate?: (id: string) => void;
 };
 
-export default function AssignmentTable({ items, onView, onEdit, onSubmissions, onDelete, onDuplicate }: Props) {
+export default function AssignmentTable({ items, onView, onEdit, onSubmissions, onDelete }: Props) {
   const [columns, setColumns] = useState<Record<AssignmentTableColumnKey, boolean>>({
     title: true,
     type: true,
@@ -126,7 +125,6 @@ export default function AssignmentTable({ items, onView, onEdit, onSubmissions, 
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onSelect={() => onSubmissions?.(a.id)}>Xem bài nộp</DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => onDuplicate?.(a.id)}>Nhân bản</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600" onSelect={() => onDelete?.(a.id)}>
                             <Trash2 className="h-4 w-4 mr-2" /> Xoá

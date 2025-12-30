@@ -1,0 +1,25 @@
+@startuml usecase-admin
+left to right direction
+title Use Case chi tiết - Quản trị viên (Admin)
+
+actor "Quản trị viên" as Admin
+
+rectangle "EduVerse - Admin Console" {
+  usecase "Quản lý người dùng\n(list/create/update/disable/reset-pass)" as UC_Users
+  usecase "Quản lý lớp học\n(status/students/teacher/force-delete)" as UC_Classrooms
+  usecase "Quản lý tổ chức\n(organizations + members)" as UC_Orgs
+  usecase "Cấu hình hệ thống\n(system settings)" as UC_Settings
+  usecase "Xem audit logs" as UC_Audit
+  usecase "Xem thống kê hệ thống" as UC_Stats
+  usecase "Test notification" as UC_TestNotif
+}
+
+Admin --> UC_Users
+Admin --> UC_Classrooms
+Admin --> UC_Orgs
+Admin --> UC_Settings
+Admin --> UC_Audit
+Admin --> UC_Stats
+Admin --> UC_TestNotif
+
+@enduml

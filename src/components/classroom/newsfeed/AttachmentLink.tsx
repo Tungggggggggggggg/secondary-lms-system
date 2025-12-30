@@ -41,14 +41,33 @@ export default function AttachmentLink({ file }: AttachmentLinkProps) {
     if (isLoading) return;
     setIsLoading(true);
     const url = await resolveUrl();
-    setIsLoading(false);
-    if (!url) return;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    if (!url) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Tải file về như blob để có thể ép trình duyệt tải xuống (kể cả với URL cross-origin)
+      const response = await fetch(url);
+      if (!response.ok) {
+        setIsLoading(false);
+        return;
+      }
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // Giải phóng URL tạm
+      URL.revokeObjectURL(blobUrl);
+    } finally {
+      setIsLoading(false);
+    }
   }, [file.name, isLoading, resolveUrl]);
 
   return (

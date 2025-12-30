@@ -1,0 +1,37 @@
+@startuml seq-file-submission-server-upload
+title Sequence - Nộp bài dạng file (Server-side upload)
+
+actor "Student" as Student
+participant "Web UI\n(Student)" as UI
+participant "API\nPOST /api/submissions/upload" as UploadAPI
+participant "Supabase Storage\n(lms-submissions)" as Storage
+participant "API\nPOST /api/submissions" as MetaAPI
+participant "DB (Prisma)\nSubmission, SubmissionFile" as DB
+participant "API\nPUT /api/submissions" as ConfirmAPI
+participant "NotificationRepo" as Notif
+
+Student -> UI : Chọn file + bấm Upload
+UI -> UploadAPI : multipart/form-data\n?assignmentId=...
+UploadAPI -> UploadAPI : Auth STUDENT + validate size/mime
+UploadAPI -> Storage : upload(key=submissions/{assignmentId}/{studentId}/...)
+Storage --> UploadAPI : {path}
+UploadAPI --> UI : storagePath + mimeType + sizeBytes
+
+UI -> MetaAPI : JSON {assignmentId, status:"draft", files:[...]}
+MetaAPI -> DB : upsert Submission(status=draft)\ncreateMany SubmissionFile
+DB --> MetaAPI : submissionId
+MetaAPI --> UI : submissionId
+
+Student -> UI : Bấm "Nộp bài"
+UI -> ConfirmAPI : JSON {assignmentId}
+ConfirmAPI -> DB : update Submission.status="submitted"
+ConfirmAPI -> Notif : add teacher notification\nTEACHER_SUBMISSION_NEED_GRADING
+ConfirmAPI --> UI : success
+
+== Khi cần xem/preview ==
+UI -> "API GET /api/submissions/signed-url" : path=storagePath
+"API GET /api/submissions/signed-url" -> Storage : createSignedUrl(path, TTL=10m)
+Storage --> "API GET /api/submissions/signed-url" : signedUrl
+"API GET /api/submissions/signed-url" --> UI : signedUrl
+
+@enduml

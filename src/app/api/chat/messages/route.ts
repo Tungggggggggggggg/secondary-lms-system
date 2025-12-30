@@ -19,7 +19,12 @@ export async function GET(req: NextRequest) {
   if (!allowed) return errorResponse(403, "Forbidden");
 
   try {
-    const raw = await listMessages(conversationId, 200);
+    const limitParam = searchParams.get("limit");
+    const parsedLimit = limitParam ? Number(limitParam) : NaN;
+    const limit = Number.isFinite(parsedLimit) ? parsedLimit : 100;
+    const safeLimit = Math.min(Math.max(limit, 20), 200);
+
+    const raw = await listMessages(conversationId, safeLimit);
 
     type MessageAttachment = {
       id: string;

@@ -3,8 +3,14 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { errorResponse, getAuthenticatedUser } from "@/lib/api-utils";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
+
+const LESSON_FILES_BUCKET =
+  process.env.SUPABASE_ASSIGNMENTS_BUCKET ||
+  process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ||
+  "lms-submissions";
 
 const updateSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -19,7 +25,24 @@ async function assertTeacherOwnsLesson(teacherId: string, courseId: string, less
       courseId,
       course: { authorId: teacherId },
     },
-    select: { id: true, courseId: true, title: true, content: true, order: true, createdAt: true, updatedAt: true },
+    select: {
+      id: true,
+      courseId: true,
+      title: true,
+      content: true,
+      order: true,
+      createdAt: true,
+      updatedAt: true,
+      attachments: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          name: true,
+          storagePath: true,
+          mimeType: true,
+        },
+      },
+    },
   });
   return lesson;
 }
@@ -37,7 +60,61 @@ export async function GET(req: NextRequest, ctx: { params: { courseId: string; l
     const lesson = await assertTeacherOwnsLesson(user.id, courseId, lessonId);
     if (!lesson) return errorResponse(404, "Lesson not found");
 
-    return NextResponse.json({ success: true, data: lesson }, { status: 200 });
+    type LessonAttachmentRow = {
+      id: string;
+      name: string;
+      storagePath: string;
+      mimeType: string;
+    };
+
+    const admin = supabaseAdmin;
+    const attachmentsRaw = ((lesson as any).attachments ?? []) as LessonAttachmentRow[];
+    const attachments = await Promise.all(
+      attachmentsRaw.map(async (a) => {
+        let url: string | null = null;
+        if (admin) {
+          try {
+            const { data, error } = await admin.storage
+              .from(LESSON_FILES_BUCKET)
+              .createSignedUrl(a.storagePath, 900);
+            if (!error) {
+              url = data?.signedUrl || null;
+            }
+          } catch (e) {
+            console.error("[TeacherLessonDetail] createSignedUrl error", {
+              lessonId,
+              attachmentId: a.id,
+              path: a.storagePath,
+              error: String(e),
+            });
+          }
+        }
+        return {
+          id: a.id,
+          name: a.name,
+          storagePath: a.storagePath,
+          mimeType: a.mimeType,
+          url,
+        };
+      })
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: lesson.id,
+          courseId: lesson.courseId,
+          title: lesson.title,
+          content: lesson.content,
+          order: lesson.order,
+          createdAt: lesson.createdAt,
+          updatedAt: lesson.updatedAt,
+          attachments,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("[GET /api/teachers/courses/[courseId]/lessons/[lessonId]] Error", error);
     return errorResponse(500, "Internal server error");

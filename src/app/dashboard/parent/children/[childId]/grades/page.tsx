@@ -3,7 +3,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +19,6 @@ import { ArrowLeft, Award, CheckCircle2, Clock, ChevronDown, MessageCircle, Spar
 import Link from "next/link";
 import { useParentGrades, GradeEntry } from "@/hooks/use-parent-grades";
 import type { ParentStudentRelationship } from "@/types/parent";
-import { exportToXlsx } from "@/lib/excel";
 
 // types imported from shared module; SWR fetcher is provided globally
 
@@ -242,18 +240,6 @@ export default function ParentChildGradesPage() {
   };
 
   // Export Excel helper
-  function downloadExcel() {
-    const header = ["Lớp học", "Bài tập", "Loại", "Điểm", "Nhận xét", "Nộp lúc"];
-    const rows = filteredAndSortedGrades.map((g) => [
-      g.classroom?.name || "",
-      g.assignmentTitle,
-      g.assignmentType,
-      g.grade !== null && g.grade !== undefined ? g.grade.toFixed(1) : "",
-      g.feedback || "",
-      g.submittedAt ? new Date(g.submittedAt).toISOString() : "",
-    ]);
-    exportToXlsx(`diem-so-${selectedChild?.student.fullname || childId}`, header, rows, { sheetName: "Grades" });
-  }
 
   if (childrenLoading) {
     return (
@@ -366,9 +352,6 @@ export default function ParentChildGradesPage() {
               </span>
             )}
           </Button>
-          <Button onClick={downloadExcel} className="rounded-full px-5">
-            Xuất Excel
-          </Button>
         </div>
       </div>
 
@@ -461,7 +444,7 @@ export default function ParentChildGradesPage() {
         />
       </div>
 
-      {/* Grades Table */}
+      {/* Grades List */}
       {isLoading ? (
         <div className="text-center py-12 text-gray-500 animate-pulse">
           Đang tải danh sách điểm số...
@@ -480,43 +463,41 @@ export default function ParentChildGradesPage() {
         </div>
       ) : (
         <>
-          <div className="bg-white/90 rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.06)] border border-amber-100 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-amber-50/60">
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Lớp học</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Bài tập</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Loại</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Điểm</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Nhận xét</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Ngày nộp</TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Trạng thái</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedGrades.map((grade) => {
-                  const statusBadge = getStatusBadge(grade.status);
-                  return (
-                    <TableRow
-                      key={grade.id}
-                      className="hover:bg-amber-50/40 transition-colors"
-                    >
-                      <TableCell>
+          <div className="space-y-3">
+            {filteredAndSortedGrades.map((grade) => {
+              const statusBadge = getStatusBadge(grade.status);
+              const gradeLabel =
+                grade.grade !== null && grade.grade !== undefined
+                  ? grade.grade.toFixed(1)
+                  : grade.submittedAt
+                  ? "Chờ chấm"
+                  : "—";
+
+              return (
+                <div
+                  key={grade.id}
+                  className="bg-white/90 rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.06)] border border-amber-100 p-4 sm:p-5"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
                         {grade.classroom ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{grade.classroom.icon}</span>
-                            <span className="font-medium text-slate-900">
-                              {grade.classroom.name}
+                          <span className="inline-flex items-center gap-2">
+                            <span className="text-base" aria-hidden="true">
+                              {grade.classroom.icon}
                             </span>
-                          </div>
+                            <span className="font-semibold text-slate-800">{grade.classroom.name}</span>
+                          </span>
                         ) : (
-                          <span className="text-slate-400">N/A</span>
+                          <span className="font-semibold text-slate-800">N/A</span>
                         )}
-                      </TableCell>
-                      <TableCell className="font-medium text-slate-900">
+                      </div>
+
+                      <div className="mt-1 text-sm sm:text-base font-semibold text-slate-900 break-words">
                         {grade.assignmentTitle}
-                      </TableCell>
-                      <TableCell>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
                         <span
                           className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
                             grade.assignmentType === "ESSAY"
@@ -524,31 +505,17 @@ export default function ParentChildGradesPage() {
                               : "bg-orange-50 text-orange-700 border border-orange-100"
                           }`}
                         >
-                          {grade.assignmentType === "ESSAY"
-                            ? "Tự luận"
-                            : "Trắc nghiệm"}
+                          {grade.assignmentType === "ESSAY" ? "Tự luận" : "Trắc nghiệm"}
                         </span>
-                      </TableCell>
-                      <TableCell>
-                        {grade.grade !== null ? (
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${getGradeBadgeClass(
-                              grade.grade,
-                            )}`}
-                          >
-                            {grade.grade.toFixed(1)}
-                          </span>
-                        ) : (
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${getGradeBadgeClass(
-                              null,
-                            )}`}
-                          >
-                            Chưa chấm
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-700">
+                          Nộp: {grade.submittedAt ? formatDate(grade.submittedAt) : "Chưa nộp"}
+                        </span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border border-slate-200 bg-white/80 text-slate-700">
+                          Hạn: {grade.dueDate ? formatDate(grade.dueDate) : "—"}
+                        </span>
+                      </div>
+
+                      <div className="mt-3">
                         {grade.feedback ? (
                           <button
                             type="button"
@@ -556,27 +523,32 @@ export default function ParentChildGradesPage() {
                             className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 hover:border-amber-200 transition-colors shadow-sm"
                           >
                             <MessageCircle className="h-4 w-4" />
-                            <span>Xem</span>
+                            <span>Xem nhận xét</span>
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Không có</span>
+                          <span className="text-xs text-slate-400 italic">Không có nhận xét</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {grade.submittedAt ? formatDate(grade.submittedAt) : "Chưa nộp"}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusBadge.className}`}
-                        >
-                          {statusBadge.label}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex flex-col items-end gap-2">
+                      <span
+                        className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${getGradeBadgeClass(
+                          grade.grade,
+                        )}`}
+                      >
+                        {gradeLabel}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusBadge.className}`}
+                      >
+                        {statusBadge.label}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {hasMore && (

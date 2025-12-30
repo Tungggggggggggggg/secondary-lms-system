@@ -1,0 +1,36 @@
+@startuml seq-cron-index-lesson-embeddings
+title Sequence - Cron: index lesson embeddings (CRON_SECRET)
+
+actor "Vercel Cron" as Cron
+participant "API\nGET|POST /api/cron/index-lesson-embeddings" as API
+participant "DB (Prisma)\nLesson + LessonEmbeddingChunk" as DB
+participant "indexLessonEmbeddings()" as Indexer
+participant "Gemini API" as Gemini
+participant "AuditRepo" as Audit
+
+Cron -> API : GET ?limit&courseId&lessonId&dryRun&force...
+API -> API : Verify CRON_SECRET header\n(x-cron-secret or Bearer)
+API -> API : Validate query (zod)
+API -> API : Check GEMINI_API_KEY (unless dryRun)
+
+API -> DB : find lessons (by lessonId/courseId/limit)
+DB --> API : lessons
+
+loop for each lesson
+  alt skipUnchangedLessons && not force
+    API -> DB : aggregate lastIndexedAt vs lesson.updatedAt
+    DB --> API : lastIndexedAt, count
+    API -> API : skip if unchanged
+  end
+
+  API -> Indexer : indexLessonEmbeddings(lesson.content, options)
+  Indexer -> Gemini : embed chunks (retry/backoff)
+  Gemini --> Indexer : vectors
+  Indexer -> DB : upsert chunks + delete old if needed
+  Indexer --> API : stats (totalChunks, embeddedChunks,...)
+  API -> Audit : write CRON_INDEX_LESSON_EMBEDDINGS
+end
+
+API --> Cron : report processedLessons, skipped, errors, stoppedReason
+
+@enduml

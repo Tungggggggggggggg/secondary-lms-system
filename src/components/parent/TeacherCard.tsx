@@ -43,7 +43,7 @@ export default function TeacherCard({
     <Card className={`border-amber-100 hover:shadow-lg hover:border-amber-200 transition-all duration-300 hover:scale-102 group ${className}`}>
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg transition-transform duration-300 group-hover:scale-110">
+          <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white text-sm font-bold transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
             {initial}
           </div>
           <div className="flex-1">

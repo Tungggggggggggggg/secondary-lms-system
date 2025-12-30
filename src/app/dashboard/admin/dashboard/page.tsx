@@ -1,6 +1,4 @@
 "use client";
-
-import Link from "next/link";
 import { StatsGrid, type StatItem, InitialBadge, KpiSkeletonGrid, ErrorBanner } from "@/components/shared";
 import Button from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -69,16 +67,6 @@ export default function AdminDashboardPage() {
         <AdminPageHeader
           title="Tổng quan quản trị"
           subtitle="Theo dõi chỉ số hệ thống và phân bố người dùng."
-          actions={
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href="/dashboard/admin/users">Quản lý người dùng</Link>
-              </Button>
-              <Button asChild variant="default" size="sm">
-                <Link href="/dashboard/admin/settings">Cài đặt hệ thống</Link>
-              </Button>
-            </div>
-          }
         />
 
         {error ? <ErrorBanner message={error} onRetry={() => mutate()} /> : null}

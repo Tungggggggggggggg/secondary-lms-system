@@ -1,0 +1,32 @@
+@startuml seq-chat-attachments
+title Sequence - Chat: gửi tin nhắn kèm tệp (server upload + signed url)
+
+actor User as U
+participant "Web UI\nChat" as UI
+participant "API\nPOST /api/chat/conversations/{id}/attachments" as UpAPI
+participant "Supabase Storage\n(chat-files)" as Storage
+participant "API\nPOST /api/chat/messages" as MsgAPI
+participant "DB (Prisma)\nMessage + ChatAttachment" as DB
+participant "NotificationRepo" as Notif
+
+U -> UI : Chọn file đính kèm
+UI -> UpAPI : multipart/form-data file
+UpAPI -> UpAPI : Auth + check participant + validate mime/size
+UpAPI -> Storage : upload(chat/{conversationId}/{uuid}-{name})
+Storage --> UpAPI : path
+UpAPI --> UI : {path,name,mimeType,sizeBytes}
+
+U -> UI : Gõ nội dung + Send
+UI -> MsgAPI : POST {conversationId,content,attachments:[{path...}]}
+MsgAPI -> MsgAPI : check participant
+MsgAPI -> DB : create Message + ChatAttachment
+MsgAPI -> Notif : nếu sender là TEACHER\n→ notify PARENT participants
+MsgAPI --> UI : success
+
+== Load messages ==
+UI -> "API\nGET /api/chat/messages" : conversationId
+"API\nGET /api/chat/messages" -> DB : listMessages
+"API\nGET /api/chat/messages" -> Storage : createSignedUrl(each attachment)
+"API\nGET /api/chat/messages" --> UI : messages + signedUrl
+
+@enduml

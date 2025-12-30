@@ -96,7 +96,7 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
       classroomId: string,
       page = 1,
       pageSize = 10,
-      filters?: { q?: string; sort?: "new" | "comments" | "attachments"; hasAttachment?: boolean }
+      filters?: { q?: string; sort?: "new" | "oldest" | "comments" | "attachments"; hasAttachment?: boolean }
     ): Promise<void> => {
       try {
         setIsLoading(true);
@@ -106,7 +106,9 @@ export function useAnnouncements(options: UseAnnouncementsOptions = {}) {
         if (filters?.sort) params.set("sort", filters.sort);
         if (typeof filters?.hasAttachment !== "undefined") params.set("hasAttachment", String(!!filters.hasAttachment));
         const url = `/api/classrooms/${classroomId}/announcements?${params.toString()}`;
-        const json = await fetcher<{ success: true; data: AnnouncementItem[]; pagination?: unknown }>(url);
+        const json = await fetcher<{ success: true; data: AnnouncementItem[]; pagination?: unknown }>(url, {
+          cache: "no-store",
+        });
         const nextItems = (json.data || []) as AnnouncementItem[];
 
         setAnnouncements((prev) => {

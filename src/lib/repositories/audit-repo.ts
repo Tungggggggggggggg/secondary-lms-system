@@ -22,12 +22,13 @@ export const auditRepo = {
     });
   },
 
-  async query(params: { organizationId?: string | null; actorId?: string | null; action?: string | null; from?: Date | null; to?: Date | null; limit?: number; cursor?: string | null }) {
-    const { organizationId, actorId, action, from, to, limit = 50, cursor } = params;
+  async query(params: { organizationId?: string | null; actorId?: string | null; action?: string | null; entityType?: string | null; from?: Date | null; to?: Date | null; limit?: number; cursor?: string | null }) {
+    const { organizationId, actorId, action, entityType, from, to, limit = 50, cursor } = params;
     const where: any = {};
     if (organizationId) where.organizationId = organizationId;
     if (actorId) where.actorId = actorId;
     if (action) where.action = action;
+    if (entityType) where.entityType = entityType;
     if (from || to) where.createdAt = { gte: from || undefined, lte: to || undefined };
 
     const items = await prisma.auditLog.findMany({

@@ -217,7 +217,7 @@ export default function AssignmentDetailPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <Breadcrumb items={breadcrumbItems} />
-                <BackButton href="/dashboard/teacher/assignments" />
+                <BackButton />
             </div>
 
             <PageHeader

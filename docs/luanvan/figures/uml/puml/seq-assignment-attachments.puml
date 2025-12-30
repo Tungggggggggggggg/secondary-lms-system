@@ -1,0 +1,27 @@
+@startuml seq-assignment-attachments
+title Sequence - Teacher upload assignment attachment + list signed URLs
+
+actor Teacher
+participant "Web UI\nAssignment Editor" as UI
+participant "API\nPOST /api/assignments/{id}/upload" as UpAPI
+participant "API\nGET /api/assignments/{id}/files" as ListAPI
+participant "Supabase Storage\n(bucket)" as Storage
+participant "DB (Prisma)\nAssignmentFile" as DB
+
+Teacher -> UI : Upload file đính kèm
+UI -> UpAPI : multipart/form-data file
+UpAPI -> UpAPI : Auth TEACHER\nisTeacherOfAssignment()
+UpAPI -> Storage : upload(assignment/{assignmentId}/{uuid}-{name})
+Storage --> UpAPI : path
+UpAPI -> DB : create AssignmentFile(file_type='ATTACHMENT',path,...)
+DB --> UpAPI : fileId
+UpAPI --> UI : 201 {path,id}
+
+Teacher -> UI : Load danh sách file
+UI -> ListAPI : GET
+ListAPI -> ListAPI : Auth TEACHER (or STUDENT member)
+ListAPI -> DB : list AssignmentFile(file_type='ATTACHMENT')
+ListAPI -> Storage : createSignedUrl(each path, 15m, download=true)
+ListAPI --> UI : files + url
+
+@enduml

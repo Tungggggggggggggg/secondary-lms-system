@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, RotateCcw } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 export type StudentStatusFilter = "all" | "active" | "warning" | "inactive";
@@ -20,28 +19,22 @@ interface StudentFiltersToolbarProps {
   classrooms: ClassroomOption[];
   selectedClassId: string;
   onClassChange: (id: string) => void;
-  status: StudentStatusFilter;
-  onStatusChange: (status: StudentStatusFilter) => void;
   sortKey: StudentSortKey;
   onSortChange: (sortKey: StudentSortKey) => void;
   search: string;
   onSearchChange: (query: string) => void;
   className?: string;
-  onReset?: () => void;
 }
 
 export default function StudentFiltersToolbar({
   classrooms,
   selectedClassId,
   onClassChange,
-  status,
-  onStatusChange,
   sortKey,
   onSortChange,
   search,
   onSearchChange,
   className,
-  onReset,
 }: StudentFiltersToolbarProps) {
   const [localSearch, setLocalSearch] = useState(search);
 
@@ -97,50 +90,8 @@ export default function StudentFiltersToolbar({
             <option value="grade">Sắp xếp theo điểm</option>
             <option value="attendance">Sắp xếp theo chuyên cần</option>
           </Select>
-          {onReset && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="inline-flex items-center gap-2 h-11 rounded-xl border border-blue-200 px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-              aria-label="Đặt lại bộ lọc"
-            >
-              <RotateCcw className="h-4 w-4" /> Reset
-            </button>
-          )}
         </div>
       </div>
-
-      <Tabs
-        value={status}
-        onValueChange={(value) => onStatusChange(value as StudentStatusFilter)}
-      >
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 rounded-xl bg-blue-100/60 text-blue-700">
-          <TabsTrigger
-            value="all"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
-          >
-            Tất cả
-          </TabsTrigger>
-          <TabsTrigger
-            value="active"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
-          >
-            Tốt
-          </TabsTrigger>
-          <TabsTrigger
-            value="warning"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
-          >
-            Cần chú ý
-          </TabsTrigger>
-          <TabsTrigger
-            value="inactive"
-            className="data-[state=active]:bg-background data-[state=active]:text-foreground"
-          >
-            Không hoạt động
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
     </div>
   );
 }

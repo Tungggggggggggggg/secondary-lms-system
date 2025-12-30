@@ -49,7 +49,7 @@ export default function AssignmentSubmissionsPage() {
         title="Chấm bài tập"
         subtitle="Xem và chấm điểm các bài nộp của học sinh"
         role="teacher"
-        actions={<BackButton href={`/dashboard/teacher/assignments/${assignmentId}`} />}
+        actions={<BackButton />}
       />
 
       <SubmissionsList

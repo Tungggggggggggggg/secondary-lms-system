@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     const organizationId = searchParams.get("organizationId") || undefined;
     const actorId = searchParams.get("actorId") || undefined;
     const action = searchParams.get("action") || undefined;
+    const entityType = searchParams.get("entityType") || undefined;
     const fromStr = searchParams.get("from") || undefined;
     const toStr = searchParams.get("to") || undefined;
     const cursor = searchParams.get("cursor") || undefined;
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
       organizationId: organizationId ?? null,
       actorId: actorId ?? null,
       action: action ?? null,
+      entityType: entityType ?? null,
       from: from ?? null,
       to: to ?? null,
       limit,

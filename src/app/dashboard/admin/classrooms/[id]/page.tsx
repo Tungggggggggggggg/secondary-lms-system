@@ -732,32 +732,6 @@ export default function AdminClassroomDetailPage() {
     }
   };
 
-  const exportStudentsExcel = async () => {
-    if (!classroomId) return;
-    try {
-      const res = await fetch(`/api/admin/classrooms/${classroomId}/students/export`, { cache: "no-store" });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json?.message || "Không thể export Excel");
-      }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `classroom_students_${classroom?.code || classroomId}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      toast({
-        title: "Không thể export Excel",
-        description: err instanceof Error ? err.message : "Có lỗi xảy ra",
-        variant: "destructive",
-      });
-    }
-  };
-
   const toggleArchive = async () => {
     if (!classroomId || !classroom) return;
 
@@ -832,7 +806,6 @@ export default function AdminClassroomDetailPage() {
             isActive={classroom.isActive}
             teacherName={classroom.teacher?.fullname}
             teacherEmail={classroom.teacher?.email}
-            onExportStudents={exportStudentsExcel}
             onToggleArchive={toggleArchive}
             onEdit={openEdit}
             onChangeTeacher={openChangeTeacher}

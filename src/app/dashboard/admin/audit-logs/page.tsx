@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminAuditFilterBar from "@/components/admin/AdminAuditFilterBar";
 import AuditMetadataPreview from "@/components/admin/AuditMetadataPreview";
@@ -8,6 +9,7 @@ import Button from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Badge from "@/components/ui/badge";
 import fetcher from "@/lib/fetcher";
 
 type AuditLogItem = {
@@ -38,6 +40,7 @@ export default function AdminAuditLogsPage() {
 
   const [actorFilter, setActorFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
+  const [entityTypeFilter, setEntityTypeFilter] = useState("");
   const [fromFilter, setFromFilter] = useState("");
   const [toFilter, setToFilter] = useState("");
 
@@ -53,6 +56,7 @@ export default function AdminAuditLogsPage() {
       params.set("limit", "50");
       if (actorFilter.trim()) params.set("actorId", actorFilter.trim());
       if (actionFilter.trim()) params.set("action", actionFilter.trim());
+      if (entityTypeFilter.trim()) params.set("entityType", entityTypeFilter.trim());
       if (fromFilter) params.set("from", fromFilter);
       if (toFilter) params.set("to", toFilter);
       if (cursorParam) params.set("cursor", cursorParam);
@@ -74,6 +78,69 @@ export default function AdminAuditLogsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatDateLabel = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      const today = new Date();
+      const todayKey = today.toISOString().slice(0, 10);
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const yesterdayKey = yesterday.toISOString().slice(0, 10);
+      const key = d.toISOString().slice(0, 10);
+      if (key === todayKey) return "Hôm nay";
+      if (key === yesterdayKey) return "Hôm qua";
+      return d.toLocaleDateString("vi-VN");
+    } catch {
+      return iso.slice(0, 10);
+    }
+  };
+
+  const groupedLogs = useMemo(() => {
+    const groups: Record<string, AuditLogItem[]> = {};
+    for (const log of logs) {
+      const key = (log.createdAt || "").slice(0, 10);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(log);
+    }
+    const entries = Object.entries(groups).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+    return entries;
+  }, [logs]);
+
+  const renderEntityLink = (log: AuditLogItem) => {
+    const id = log.entityId;
+    if (!id) return <span className="text-[10px] text-muted-foreground">ID: (none)</span>;
+    if (log.entityType === "USER") {
+      return (
+        <Link
+          href={`/dashboard/admin/users/${id}`}
+          className="text-[10px] text-blue-600 hover:underline"
+        >
+          ID: {id}
+        </Link>
+      );
+    }
+    if (log.entityType === "CLASSROOM") {
+      return (
+        <Link
+          href={`/dashboard/admin/classrooms/${id}`}
+          className="text-[10px] text-blue-600 hover:underline"
+        >
+          ID: {id}
+        </Link>
+      );
+    }
+    if (log.entityType === "ORGANIZATION") {
+      return (
+        <Link
+          href={`/dashboard/admin/organizations/${id}`}
+          className="text-[10px] text-blue-600 hover:underline"
+        >
+          ID: {id}
+        </Link>
+      );
+    }
+    return <span className="text-[10px] text-muted-foreground">ID: {id}</span>;
   };
 
   useEffect(() => {
@@ -107,19 +174,14 @@ export default function AdminAuditLogsPage() {
           action={actionFilter}
           onActorChange={setActorFilter}
           onActionChange={setActionFilter}
+          entityType={entityTypeFilter}
+          onEntityTypeChange={setEntityTypeFilter}
           from={fromFilter}
           to={toFilter}
           onFromChange={setFromFilter}
           onToChange={setToFilter}
           loading={loading}
           onSubmit={() => fetchLogs({ reset: true, cursor: null })}
-          onReset={() => {
-            setActorFilter("");
-            setActionFilter("");
-            setFromFilter("");
-            setToFilter("");
-            fetchLogs({ reset: true, cursor: null });
-          }}
         />
 
         {error ? (
@@ -130,7 +192,7 @@ export default function AdminAuditLogsPage() {
 
         <div className="rounded-xl border border-border overflow-hidden">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur">
               <TableRow>
                 <TableHead className="text-xs font-semibold">Thời gian</TableHead>
                 <TableHead className="text-xs font-semibold">Action</TableHead>
@@ -155,34 +217,74 @@ export default function AdminAuditLogsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                logs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="py-2 whitespace-nowrap">{formatTime(log.createdAt)}</TableCell>
-                    <TableCell className="py-2 font-semibold text-foreground">{log.action}</TableCell>
-                    <TableCell className="py-2">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{log.entityType}</span>
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[220px]">
-                          ID: {log.entityId || "(none)"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <div className="flex flex-col">
-                        <span className="text-foreground">{log.actorId}</span>
-                        <span className="text-[10px] text-muted-foreground">Role: {log.actorRole || "(n/a)"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <span className="text-[10px] text-muted-foreground">{log.organizationId || "—"}</span>
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <span className="text-[10px] text-muted-foreground">{log.ip || "—"}</span>
-                    </TableCell>
-                    <TableCell className="py-2 max-w-[260px]">
-                      <AuditMetadataPreview metadata={log.metadata} />
-                    </TableCell>
-                  </TableRow>
+                groupedLogs.map(([dayKey, dayLogs]) => (
+                  <>
+                    <TableRow key={dayKey + "-header"} className="bg-muted/40">
+                      <TableCell colSpan={7} className="py-1.5 text-[11px] font-semibold text-slate-700">
+                        {formatDateLabel(dayLogs[0]?.createdAt || dayKey)}
+                      </TableCell>
+                    </TableRow>
+                    {dayLogs.map((log) => (
+                      <TableRow
+                        key={log.id}
+                        className="hover:bg-muted/40 transition-colors"
+                      >
+                        <TableCell className="py-2 whitespace-nowrap text-[11px]">
+                          {formatTime(log.createdAt)}
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge
+                            variant={
+                              log.action.startsWith("USER_") || log.action.startsWith("CLASSROOM_")
+                                ? "warning"
+                                : "outline"
+                            }
+                            className="text-[10px] font-mono tracking-tight"
+                          >
+                            {log.action}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-[11px] text-foreground">
+                              {log.entityType}
+                            </span>
+                            <div className="truncate max-w-[220px]">
+                              {renderEntityLink(log)}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex flex-col">
+                            <span className="text-[11px] text-foreground break-all">
+                              {log.actorId}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Badge
+                                variant="outline"
+                                className="px-1 py-0 text-[9px] font-semibold border-slate-300 text-slate-700"
+                              >
+                                {log.actorRole || "(n/a)"}
+                              </Badge>
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <span className="text-[10px] text-muted-foreground">
+                            {log.organizationId || "—"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <span className="text-[10px] text-muted-foreground">
+                            {log.ip || "—"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-2 max-w-[260px]">
+                          <AuditMetadataPreview metadata={log.metadata} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
                 ))
               )}
             </TableBody>

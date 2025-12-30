@@ -14,7 +14,7 @@ const getQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
   q: z.string().max(200).default(""),
-  sort: z.enum(["new", "comments", "attachments"]).default("new"),
+  sort: z.enum(["new", "oldest", "comments", "attachments"]).default("new"),
   hasAttachment: z.enum(["true", "false"]).optional(),
 });
 
@@ -87,6 +87,8 @@ export async function GET(
         ? { comments: { _count: "desc" } }
         : sort === "attachments"
         ? { attachments: { _count: "desc" } }
+        : sort === "oldest"
+        ? { createdAt: "asc" }
         : { createdAt: "desc" };
     const orderBy: any[] = [{ pinnedAt: "desc" }, secondaryOrder];
 

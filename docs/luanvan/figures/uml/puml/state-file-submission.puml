@@ -1,0 +1,14 @@
+@startuml state-file-submission
+title State - Submission (file-based)
+
+[*] --> Draft : POST /api/submissions(status=draft)
+Draft --> Draft : POST /api/submissions\n(update metadata/files)
+Draft --> Submitted : PUT /api/submissions
+Submitted --> [*]
+
+note right of Draft
+File upload diễn ra trước qua:
+POST /api/submissions/upload
+end note
+
+@enduml

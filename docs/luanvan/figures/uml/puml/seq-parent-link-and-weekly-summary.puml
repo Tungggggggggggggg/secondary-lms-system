@@ -1,0 +1,39 @@
+@startuml seq-parent-link-and-weekly-summary
+title Sequence - Parent link + Weekly summary (Cron)
+
+actor Parent
+actor Student
+participant "API\nPOST /api/parent/link-requests" as ParentReqAPI
+participant "API\nGET /api/student/link-requests" as StudentListAPI
+participant "API\nPOST /api/student/link-requests/{id}/approve" as ApproveAPI
+participant "DB\n(Repo + Prisma)" as DB
+participant "Cron\n/api/cron/parent-weekly-summary" as Cron
+participant "Gemini API" as Gemini
+participant "Cache\n(parentSummaryCache)" as Cache
+participant "NotificationRepo" as Notif
+
+Parent -> ParentReqAPI : POST {studentId,message}
+ParentReqAPI -> DB : create link request (PENDING)
+ParentReqAPI --> Parent : 201
+
+Student -> StudentListAPI : GET (list received)
+StudentListAPI -> DB : listByStudent
+StudentListAPI --> Student : items
+
+Student -> ApproveAPI : POST approve
+ApproveAPI -> DB : update request APPROVED\ncreate ParentStudent(status=ACTIVE)
+ApproveAPI --> Student : success
+
+== Weekly summary ==
+Cron -> Cron : cron-secret auth
+Cron -> DB : list ParentStudent(status=ACTIVE)
+Cron -> Cache : read cache (bucket)
+alt not cached
+  Cron -> DB : build snapshot (grades/submissions)
+  Cron -> Gemini : generateParentSmartSummary
+  Cron -> Cache : write cache
+  Cron -> Notif : addMany "Tóm tắt tuần..."
+end
+Cron --> Cron : report processed/skipped/notified
+
+@enduml

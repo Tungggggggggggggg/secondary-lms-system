@@ -1,0 +1,36 @@
+@startuml seq-announcement-attachments
+title Sequence - Announcement attachments (upload + download)
+
+actor Teacher
+actor Student
+participant "Web UI" as UI
+participant "API\nPOST /api/announcements/{annId}/attachments" as UpAPI
+participant "API\nGET /api/announcements/{annId}/attachments" as ListAPI
+participant "API\nGET /api/announcements/attachments/{fileId}/download" as DlAPI
+participant "Supabase Storage\n(bucket)" as Storage
+participant "DB (Prisma)\nAnnouncementAttachment" as DB
+
+Teacher -> UI : Chọn file đính kèm
+UI -> UpAPI : multipart/form-data file
+UpAPI -> UpAPI : Auth TEACHER\nisTeacherOfClassroom()
+UpAPI -> Storage : upload(announcement/{annId}/{uuid}-{name})
+Storage --> UpAPI : path
+UpAPI -> DB : create AnnouncementAttachment(path,name,size,mimeType,uploadedById)
+DB --> UpAPI : attachmentId
+UpAPI --> UI : 201 attachment
+
+Student -> UI : Mở danh sách attachments
+UI -> ListAPI : GET
+ListAPI -> ListAPI : Auth STUDENT\nisStudentInClassroom()
+ListAPI -> DB : list AnnouncementAttachment
+DB --> ListAPI : items
+ListAPI --> UI : items
+
+Student -> UI : Bấm tải file
+UI -> DlAPI : GET fileId
+DlAPI -> DlAPI : Auth + permission
+DlAPI -> Storage : createSignedUrl(path, 5m)
+Storage --> DlAPI : signedUrl
+DlAPI --> UI : {url,fileName}
+
+@enduml

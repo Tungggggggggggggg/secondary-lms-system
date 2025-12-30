@@ -130,12 +130,6 @@ export default function AdminClassroomsPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
-  const handleResetFilters = () => {
-    setStatus("");
-    setSearch("");
-    fetchClassrooms(1, "", "");
-  };
-
   const fetchClassrooms = async (nextPage = page, nextStatus = status, nextSearch = search) => {
     try {
       setLoading(true);
@@ -252,30 +246,6 @@ export default function AdminClassroomsPage() {
     }
   };
 
-  const exportStudentsExcel = async () => {
-    if (!studentsTarget) return;
-    try {
-      const res = await fetch(`/api/admin/classrooms/${studentsTarget.id}/students/export`, { cache: "no-store" });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json?.message || "Không thể xuất Excel");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `classroom-${studentsTarget.code}-students.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      toast({
-        title: "Không thể xuất Excel",
-        description: e instanceof Error ? e.message : "Có lỗi xảy ra",
-        variant: "destructive",
-      });
-    }
-  };
-
   const fetchTeachers = async (q: string) => {
     try {
       setTeacherLoading(true);
@@ -296,6 +266,17 @@ export default function AdminClassroomsPage() {
       setTeacherLoading(false);
     }
   };
+
+  // Tự động lọc giáo viên khi gõ trong dialog Tạo lớp học
+  useEffect(() => {
+    if (!createOpen) return;
+    const q = teacherQuery.trim();
+    const timeout = setTimeout(() => {
+      void fetchTeachers(q);
+    }, 400);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherQuery, createOpen]);
 
   const genCode = () => {
     setCreateCode(generateClassroomCode());
@@ -321,6 +302,17 @@ export default function AdminClassroomsPage() {
       setChangeTeacherLoading(false);
     }
   };
+
+  // Tự động lọc giáo viên mới khi gõ tên/email trong dialog đổi giáo viên
+  useEffect(() => {
+    if (!changeTeacherOpen) return;
+    const q = changeTeacherQuery.trim();
+    const timeout = setTimeout(() => {
+      void fetchChangeTeacherOptions(q);
+    }, 400);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [changeTeacherQuery, changeTeacherOpen]);
 
   const createClassroom = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -381,8 +373,8 @@ export default function AdminClassroomsPage() {
     setChangeTeacherError(null);
     setChangeTeacherQuery("");
     setChangeTeacherOptions([]);
-    setChangeTeacherId(item.teacher?.id ?? "");
-    fetchChangeTeacherOptions("");
+    // Bắt buộc admin phải chọn lại giáo viên mới, không tự động chọn sẵn
+    setChangeTeacherId("");
     setChangeTeacherOpen(true);
   };
 
@@ -818,15 +810,6 @@ export default function AdminClassroomsPage() {
               >
                 Tạo lớp học
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fetchClassrooms(page, status, search)}
-                disabled={loading}
-              >
-                Tải lại
-              </Button>
             </div>
           }
         />
@@ -841,7 +824,6 @@ export default function AdminClassroomsPage() {
             search={search}
             onSearchChange={setSearch}
             onSubmit={() => fetchClassrooms(1, status, search)}
-            onReset={handleResetFilters}
           />
 
           <div className="rounded-xl border border-border overflow-hidden">
@@ -866,9 +848,6 @@ export default function AdminClassroomsPage() {
                         description="Thử thay đổi bộ lọc hoặc đặt lại tìm kiếm để xem thêm kết quả."
                         action={
                           <div className="flex items-center justify-center gap-2">
-                            <Button type="button" variant="outline" onClick={handleResetFilters}>
-                              Reset bộ lọc
-                            </Button>
                             <Button
                               type="button"
                               onClick={() => {
@@ -923,7 +902,12 @@ export default function AdminClassroomsPage() {
                         </TableCell>
                         <TableCell className="py-3 text-right">
                           <div className="inline-flex items-center gap-2">
-                            <Button asChild variant="outline" size="sm">
+                            <Button
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className="transition-all active:scale-95 active:translate-y-[1px]"
+                            >
                               <Link href={`/dashboard/admin/classrooms/${c.id}`}>Chi tiết</Link>
                             </Button>
 
@@ -961,7 +945,7 @@ export default function AdminClassroomsPage() {
       >
         <DialogContent
           onClose={() => setCreateOpen(false)}
-          className="w-[min(760px,calc(100vw-2rem))] max-w-none max-h-[85vh]"
+          className="w-[min(92vw,44rem)] max-w-xl max-h-[80vh]"
         >
           <DialogHeader>
             <DialogTitle>Tạo lớp học</DialogTitle>
@@ -1009,12 +993,6 @@ export default function AdminClassroomsPage() {
                 <Input
                   value={teacherQuery}
                   onChange={(e) => setTeacherQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      fetchTeachers(teacherQuery);
-                    }
-                  }}
                   placeholder="Tìm theo tên hoặc email..."
                   disabled={createLoading || teacherLoading}
                 />
@@ -1034,16 +1012,8 @@ export default function AdminClassroomsPage() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="text-[11px] text-muted-foreground">
-                  Gõ để tìm rồi chọn trong danh sách.
+                  Gõ tên hoặc email, danh sách giáo viên sẽ tự lọc.
                 </div>
-                <button
-                  type="button"
-                  onClick={() => fetchTeachers(teacherQuery)}
-                  disabled={createLoading || teacherLoading}
-                  className="text-[11px] font-semibold text-foreground hover:text-foreground/80 disabled:opacity-60"
-                >
-                  {teacherLoading ? "Đang tải..." : "Tải danh sách"}
-                </button>
               </div>
               {teacherError && (
                 <div className="text-[12px] text-destructive">{teacherError}</div>
@@ -1097,7 +1067,7 @@ export default function AdminClassroomsPage() {
       >
         <DialogContent
           onClose={() => setEditOpen(false)}
-          className="w-[min(720px,calc(100vw-2rem))] max-w-none max-h-[80vh]"
+          className="w-[min(92vw,42rem)] max-w-xl max-h-[80vh]"
         >
           <DialogHeader>
             <DialogTitle>Chỉnh sửa lớp</DialogTitle>
@@ -1179,7 +1149,7 @@ export default function AdminClassroomsPage() {
       >
         <DialogContent
           onClose={() => setStudentsOpen(false)}
-          className="w-[min(980px,calc(100vw-2rem))] max-w-none max-h-[85vh]"
+          className="w-[min(96vw,56rem)] max-w-3xl max-h-[80vh]"
         >
           <DialogHeader>
             <DialogTitle>Danh sách học sinh</DialogTitle>
@@ -1280,7 +1250,7 @@ export default function AdminClassroomsPage() {
                       fetchClassroomStudents({ page: next, q: studentsSearch });
                     }}
                     disabled={studentsLoading || studentsPage <= 1}
-                    className="rounded-full border border-border px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 text-foreground/80"
+                    className="rounded-full border border-border px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 text-foreground/80 transition-all active:scale-95 active:translate-y-[1px]"
                   >
                     Trước
                   </button>
@@ -1293,7 +1263,7 @@ export default function AdminClassroomsPage() {
                       fetchClassroomStudents({ page: next, q: studentsSearch });
                     }}
                     disabled={studentsLoading || studentsPage >= Math.max(1, Math.ceil(studentsTotal / studentsPageSize))}
-                    className="rounded-full border border-border px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 text-foreground/80"
+                    className="rounded-full border border-border px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted/50 text-foreground/80 transition-all active:scale-95 active:translate-y-[1px]"
                   >
                     Sau
                   </button>
@@ -1305,12 +1275,6 @@ export default function AdminClassroomsPage() {
           <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setStudentsOpen(false)} disabled={studentsLoading}>
               Đóng
-            </Button>
-            <Button variant="outline" onClick={exportStudentsExcel} disabled={studentsLoading || !studentsTarget}>
-              Xuất Excel
-            </Button>
-            <Button onClick={() => fetchClassroomStudents({ page: 1, q: studentsSearch })} disabled={studentsLoading || !studentsTarget}>
-              {studentsLoading ? "Đang tải..." : "Tải lại"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1328,7 +1292,7 @@ export default function AdminClassroomsPage() {
       >
         <DialogContent
           onClose={() => setChangeTeacherOpen(false)}
-          className="w-[min(720px,calc(100vw-2rem))] max-w-none max-h-[75vh]"
+          className="w-[min(92vw,42rem)] max-w-xl max-h-[75vh]"
         >
           <DialogHeader>
             <DialogTitle>Đổi giáo viên phụ trách</DialogTitle>
@@ -1351,12 +1315,6 @@ export default function AdminClassroomsPage() {
                   <Input
                     value={changeTeacherQuery}
                     onChange={(e) => setChangeTeacherQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        fetchChangeTeacherOptions(changeTeacherQuery);
-                      }
-                    }}
                     placeholder="Tìm theo tên hoặc email..."
                     disabled={changeTeacherSubmitting || changeTeacherLoading}
                   />
@@ -1375,15 +1333,9 @@ export default function AdminClassroomsPage() {
                   </Select>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="text-[11px] text-muted-foreground">Gõ để tìm rồi chọn trong danh sách.</div>
-                  <button
-                    type="button"
-                    onClick={() => fetchChangeTeacherOptions(changeTeacherQuery)}
-                    disabled={changeTeacherSubmitting || changeTeacherLoading}
-                    className="text-[11px] font-semibold text-foreground hover:text-foreground/80 disabled:opacity-60"
-                  >
-                    {changeTeacherLoading ? "Đang tải..." : "Tải danh sách"}
-                  </button>
+                  <div className="text-[11px] text-muted-foreground">
+                    Gõ tên hoặc email, danh sách giáo viên sẽ tự lọc.
+                  </div>
                 </div>
               </div>
             </div>
@@ -1416,7 +1368,7 @@ export default function AdminClassroomsPage() {
       >
         <DialogContent
           onClose={() => setBulkOpen(false)}
-          className="w-[min(980px,calc(100vw-2rem))] max-w-none max-h-[85vh]"
+          className="w-[min(96vw,56rem)] max-w-3xl max-h-[85vh]"
         >
           <DialogHeader>
             <DialogTitle>Thêm học sinh hàng loạt</DialogTitle>

@@ -1,0 +1,29 @@
+@startuml seq-notifications
+title Sequence - Notifications: list + mark read + mark all read
+
+actor User
+participant "Web UI" as UI
+participant "API\nGET /api/notifications" as ListAPI
+participant "API\nPATCH /api/notifications/{id}" as ReadAPI
+participant "API\nPOST /api/notifications/mark-all-read" as AllAPI
+participant "NotificationRepo" as Repo
+
+User -> UI : Mở dropdown thông báo
+UI -> ListAPI : GET
+ListAPI -> Repo : list(userId)+countUnread(userId)
+Repo --> ListAPI : items+unread
+ListAPI --> UI : items+unread
+
+User -> UI : Click 1 thông báo
+UI -> ReadAPI : PATCH
+ReadAPI -> Repo : markRead(userId,id)
+Repo --> ReadAPI : updated
+ReadAPI --> UI : ok
+
+User -> UI : Mark all read
+UI -> AllAPI : POST
+AllAPI -> Repo : markAllRead(userId)
+Repo --> AllAPI : count
+AllAPI --> UI : count
+
+@enduml

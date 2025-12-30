@@ -222,7 +222,7 @@ export async function PUT(req: NextRequest) {
                     type: "TEACHER_SUBMISSION_NEED_GRADING",
                     title: `Cần chấm bài (file): ${assignmentRow?.title || "Bài tập"}`,
                     description: "Có học sinh vừa nộp bài dạng file.",
-                    actionUrl: `/dashboard/teacher/assignments/${assignmentId}/submissions/files`,
+                    actionUrl: `/dashboard/teacher/assignments/${assignmentId}/submissions`,
                     dedupeKey: `fileSubmit:${assignmentId}:${user.id}:${submission.id}`,
                     meta: { assignmentId, studentId: user.id, submissionId: submission.id, classroomId: teacherRow?.classroomId },
                 });

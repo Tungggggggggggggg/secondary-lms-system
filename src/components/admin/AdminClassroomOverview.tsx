@@ -15,7 +15,6 @@ interface AdminClassroomOverviewProps {
   isActive: boolean;
   teacherName?: string | null;
   teacherEmail?: string | null;
-  onExportStudents?: () => void;
   onToggleArchive?: () => void;
   onEdit?: () => void;
   onChangeTeacher?: () => void;
@@ -33,7 +32,6 @@ export default function AdminClassroomOverview({
   isActive,
   teacherName,
   teacherEmail,
-  onExportStudents,
   onToggleArchive,
   onEdit,
   onChangeTeacher,
@@ -100,7 +98,7 @@ export default function AdminClassroomOverview({
       {archived ? (
         <Alert className="rounded-2xl border-amber-200 bg-amber-50/80">
           <AlertDescription className="text-[11px] text-amber-900">
-            Lớp đã lưu trữ: cho phép xem, export, khôi phục hoặc xóa vĩnh viễn.
+            Lớp đã lưu trữ: cho phép xem, khôi phục hoặc xóa vĩnh viễn.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -114,6 +112,7 @@ export default function AdminClassroomOverview({
             color="blue"
             onClick={onBulkAddStudents}
             disabled={archived}
+            className="transition-all active:scale-95 active:translate-y-[1px]"
           >
             Thêm HS
           </Button>
@@ -126,6 +125,7 @@ export default function AdminClassroomOverview({
             color="slate"
             onClick={onEdit}
             disabled={archived}
+            className="transition-all active:scale-95 active:translate-y-[1px]"
           >
             Sửa lớp
           </Button>
@@ -138,19 +138,9 @@ export default function AdminClassroomOverview({
             color="slate"
             onClick={onChangeTeacher}
             disabled={archived}
+            className="transition-all active:scale-95 active:translate-y-[1px]"
           >
             Đổi GV
-          </Button>
-        ) : null}
-        {onExportStudents ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            color="slate"
-            onClick={onExportStudents}
-          >
-            Xuất Excel
           </Button>
         ) : null}
         {onToggleArchive ? (
@@ -161,7 +151,7 @@ export default function AdminClassroomOverview({
             color="slate"
             onClick={onToggleArchive}
             className={cn(
-              "border-amber-200 text-amber-700 hover:bg-amber-50",
+              "border-amber-200 text-amber-700 hover:bg-amber-50 transition-all active:scale-95 active:translate-y-[1px]",
               isActive ? "" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
             )}
           >
@@ -176,7 +166,7 @@ export default function AdminClassroomOverview({
             color="slate"
             onClick={onForceDelete}
             disabled={!archived || forceDeleting}
-            className="border-destructive/20 text-destructive/90 hover:bg-destructive/5"
+            className="border-destructive/20 text-destructive/90 hover:bg-destructive/5 transition-all active:scale-95 active:translate-y-[1px]"
           >
             {forceDeleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
           </Button>

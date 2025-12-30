@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,18 @@ const isStoredSubmissionFile = (v: unknown): v is StoredSubmissionFile => {
     return typeof obj.storagePath === "string";
 };
 
-export default function FileSubmissionPanel({ assignmentId }: { assignmentId: string }) {
+export interface FileSubmissionPanelHandle {
+    hasFiles: () => boolean;
+    submitFiles: () => Promise<boolean>;
+}
+
+interface FileSubmissionPanelProps {
+    assignmentId: string;
+    showSubmitButton?: boolean;
+}
+
+const FileSubmissionPanel = forwardRef<FileSubmissionPanelHandle, FileSubmissionPanelProps>(
+  function FileSubmissionPanel({ assignmentId, showSubmitButton = true }, ref) {
     const { toast } = useToast();
     const [files, setFiles] = useState<File[]>([]);
     const [uploaded, setUploaded] = useState<{ fileName: string; mimeType: string; sizeBytes: number; storagePath: string }[]>([]);
@@ -257,6 +268,19 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
         })();
     }, [assignmentId, fetchSignedUrl]);
 
+    useImperativeHandle(
+        ref,
+        () => ({
+            hasFiles: () => files.length > 0 || uploaded.length > 0,
+            submitFiles: async () => {
+                if (files.length === 0 && uploaded.length === 0) return false;
+                await confirmSubmit();
+                return true;
+            },
+        }),
+        [confirmSubmit, files.length, uploaded.length]
+    );
+
     return (
         <Card className="p-4">
             <div
@@ -324,19 +348,16 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
                 <div className="text-xs text-muted-foreground">Tổng {(totalSize / (1024 * 1024)).toFixed(2)} MB</div>
             </div>
 
-            {/* Đã gộp hiển thị bản nháp vào khung kéo-thả phía trên */}
-
             <div className="mt-6 flex gap-2">
-                <Button onClick={saveDraft} disabled={(files.length === 0 && uploaded.length === 0) || isSaving || isUploading}>
-                    {isSaving || isUploading ? "Đang lưu..." : "Lưu những thay đổi"}
-                </Button>
                 <Button variant="outline" onClick={() => setFiles([])} disabled={isSaving || isUploading}>
                     Xoá tệp mới chọn
                 </Button>
                 <div className="flex-1" />
-                <Button onClick={confirmSubmit} disabled={(uploaded.length === 0 && files.length === 0) || isSubmitting || status === "submitted"}>
-                    {isSubmitting ? "Đang xác nhận..." : (status === "submitted" ? "Đã nộp bài" : "Xác nhận nộp bài")}
-                </Button>
+                {showSubmitButton && (
+                    <Button onClick={confirmSubmit} disabled={(uploaded.length === 0 && files.length === 0) || isSubmitting || status === "submitted"}>
+                        {isSubmitting ? "Đang nộp..." : (status === "submitted" ? "Đã nộp bài" : "Nộp bài")}
+                    </Button>
+                )}
             </div>
 
             {/* Edit dialog - modern layout */}
@@ -403,6 +424,6 @@ export default function FileSubmissionPanel({ assignmentId }: { assignmentId: st
             </Dialog>
         </Card>
     );
-}
+});
 
-
+export default FileSubmissionPanel;

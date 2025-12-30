@@ -1,0 +1,149 @@
+@startuml db-learning-assessment
+title ERD - Learning & Assessment (Classroom / Assignment / Attempt / Submission / ExamEvent)
+
+left to right direction
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+entity "users" as users {
+  * id : String
+  --
+  role : UserRole
+  email : String
+}
+
+entity "classrooms" as classrooms {
+  * id : String
+  --
+  teacherId : String
+  code : String
+  isActive : Boolean
+}
+
+entity "classroom_students" as classroom_students {
+  * id : String
+  --
+  classroomId : String
+  studentId : String
+  joinedAt : DateTime
+}
+
+entity "assignments" as assignments {
+  * id : String
+  --
+  authorId : String
+  type : AssignmentType
+  max_attempts : Int?
+  anti_cheat_config : Json?
+  dueDate : DateTime?
+  openAt : DateTime?
+  lockAt : DateTime?
+  timeLimitMinutes : Int?
+}
+
+entity "assignment_classrooms" as assignment_classrooms {
+  * id : String
+  --
+  assignmentId : String
+  classroomId : String
+}
+
+entity "questions" as questions {
+  * id : String
+  --
+  assignmentId : String
+  type : QuestionType
+  order : Int
+}
+
+entity "question_options" as question_options {
+  * id : String
+  --
+  questionId : String
+  label : String
+  isCorrect : Boolean
+  order : Int
+}
+
+entity "assignment_attempts" as assignment_attempts {
+  * id : String
+  --
+  assignmentId : String
+  studentId : String
+  attemptNumber : Int
+  shuffleSeed : Int
+  timeLimitMinutes : Int?
+  status : String?
+  startedAt : DateTime
+  endedAt : DateTime?
+}
+
+entity "assignment_submissions" as assignment_submissions {
+  * id : String
+  --
+  assignmentId : String
+  studentId : String
+  attempt : Int
+  content : String
+  grade : Float?
+  feedback : String?
+  submittedAt : DateTime
+  presentation : Json?
+  contentSnapshot : Json?
+}
+
+entity "submissions" as submissions {
+  * id : String
+  --
+  assignmentId : String
+  studentId : String
+  status : String  <<draft/submitted>>
+  createdAt : DateTime
+}
+
+entity "submission_files" as submission_files {
+  * id : String
+  --
+  submissionId : String
+  storagePath : String
+  mimeType : String
+  sizeBytes : Int
+  fileName : String
+}
+
+entity "exam_events" as exam_events {
+  * id : String
+  --
+  assignmentId : String
+  studentId : String
+  attempt : Int?
+  eventType : String
+  createdAt : DateTime
+  metadata : Json?
+}
+
+users ||--o{ classrooms : teacherId
+classrooms ||--o{ classroom_students : classroomId
+users ||--o{ classroom_students : studentId
+
+users ||--o{ assignments : authorId
+assignments ||--o{ assignment_classrooms : assignmentId
+classrooms ||--o{ assignment_classrooms : classroomId
+
+assignments ||--o{ questions : assignmentId
+questions ||--o{ question_options : questionId
+
+assignments ||--o{ assignment_attempts : assignmentId
+users ||--o{ assignment_attempts : studentId
+
+assignments ||--o{ assignment_submissions : assignmentId
+users ||--o{ assignment_submissions : studentId
+
+assignments ||--o{ submissions : assignmentId
+users ||--o{ submissions : studentId
+submissions ||--o{ submission_files : submissionId
+
+assignments ||--o{ exam_events : assignmentId
+users ||--o{ exam_events : studentId
+
+@enduml

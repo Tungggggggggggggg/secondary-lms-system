@@ -55,6 +55,14 @@ export async function GET(_req: NextRequest) {
       return errorResponse(401, "Unauthorized");
     }
 
+    const sp = _req.nextUrl.searchParams;
+    const pageRaw = Number(sp.get("page") ?? "1");
+    const pageSizeRaw = Number(sp.get("pageSize") ?? "20");
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+    const pageSize = Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? Math.min(100, Math.floor(pageSizeRaw)) : 20;
+    const q = (sp.get("q") ?? "").trim().toLowerCase();
+    const sort = (sp.get("sort") ?? "newest").toString();
+
     if (authUser.role !== "STUDENT") {
       return errorResponse(403, "Forbidden - Student role required");
     }
@@ -237,6 +245,53 @@ export async function GET(_req: NextRequest) {
 
     const grades = [...submissionGrades, ...missingGrades];
 
+    let filteredGrades = grades;
+    if (q) {
+      filteredGrades = filteredGrades.filter((g) => {
+        const classroomName = (g.classroom?.name ?? "").toLowerCase();
+        const title = (g.assignmentTitle ?? "").toLowerCase();
+        const feedback = (g.feedback ?? "").toLowerCase();
+        return title.includes(q) || classroomName.includes(q) || feedback.includes(q);
+      });
+    }
+
+    switch (sort) {
+      case "grade_desc":
+        filteredGrades.sort((a, b) => (b.grade ?? 0) - (a.grade ?? 0));
+        break;
+      case "grade_asc":
+        filteredGrades.sort((a, b) => (a.grade ?? 0) - (b.grade ?? 0));
+        break;
+      case "due_date":
+        filteredGrades.sort((a, b) => {
+          const timeA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+          const timeB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+          return timeA - timeB;
+        });
+        break;
+      case "classroom":
+        filteredGrades.sort((a, b) => {
+          const nameA = a.classroom?.name || "";
+          const nameB = b.classroom?.name || "";
+          return nameA.localeCompare(nameB);
+        });
+        break;
+      case "newest":
+      default:
+        filteredGrades.sort((a, b) => {
+          const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+          const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+          return timeB - timeA;
+        });
+        break;
+    }
+
+    const total = filteredGrades.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const currentPage = Math.min(page, totalPages);
+    const start = (currentPage - 1) * pageSize;
+    const pageItems = filteredGrades.slice(start, start + pageSize);
+
     // Tính điểm trung bình: chỉ tính bài đã chấm + bài quá hạn chưa nộp (0). Không tính bài chưa đến hạn hoặc dueDate=null.
     const gradedSubmissions = latestSubmissions.filter((sub: StudentGradesSubmissionRow) => sub.grade !== null);
     const overdueMissingCount = missingGrades.filter((g) => g.grade === 0).length;
@@ -254,15 +309,22 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        data: grades,
+        data: pageItems,
         statistics: {
           totalSubmissions: totalAssignments,
           totalGraded,
           totalPending,
-          averageGrade: Math.round(averageGrade * 10) / 10, // Làm tròn 1 chữ số thập phân
+          averageGrade: Math.round(averageGrade * 10) / 10,
+        },
+        pagination: {
+          page: currentPage,
+          pageSize,
+          total,
+          totalPages,
+          hasMore: currentPage < totalPages,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: unknown) {
     console.error("[ERROR] [GET] /api/students/grades - Error:", error);

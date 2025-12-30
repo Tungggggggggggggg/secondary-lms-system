@@ -167,10 +167,16 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
 
   const flatItems = groups.flatMap((g) => g.items);
 
+  const asideBaseBg = role === "admin" ? "hsl(var(--card))" : "#ffffff";
+
   const containerStyle: CSSProperties = {
     ...containerVars,
-    backgroundColor: rolePalette.bg,
+    backgroundColor: asideBaseBg,
     borderColor: rolePalette.border,
+  };
+
+  const contentBgStyle: CSSProperties = {
+    backgroundColor: rolePalette.bg,
   };
 
   const isAdmin = role === "admin";
@@ -189,7 +195,10 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
         expanded ? "w-[var(--sb-w-expanded)]" : "w-[var(--sb-w-collapsed)]"
       } text-slate-700 border-r shadow-sm z-50 transition-[width,transform] duration-300 ease-in-out flex flex-col overflow-hidden transform ${expanded ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
     >
-      <div className={`${expanded ? "p-5" : "px-2 py-4"} flex h-full flex-col overflow-hidden`}>
+      <div
+        style={contentBgStyle}
+        className={`${expanded ? "p-5" : "px-2 py-4"} flex h-full flex-col overflow-hidden`}
+      >
         <div
           className={`sticky top-0 z-20 flex items-center ${
             expanded ? "justify-between" : "justify-center"
@@ -263,7 +272,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                       {active && (
                         <span className="sr-only" aria-current="page">Trang hiện tại</span>
                       )}
-                      {messageHref === item.href && unreadBadge && (
+                      {messageHref === item.href && unreadBadge && !active && (
                         <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
                           {unreadBadge}
                         </span>
@@ -295,7 +304,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                     <Tooltip content={item.label}>
                       <Icon className={`h-5 w-5 transition-colors ${active ? accent.iconActive : accent.iconBase}`} />
                     </Tooltip>
-                    {isMessages && unreadBadge && (
+                    {isMessages && unreadBadge && !active && (
                       <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5">
                         {unreadBadge}
                       </span>

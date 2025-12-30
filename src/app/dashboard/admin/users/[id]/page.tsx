@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Input from "@/components/ui/input";
-import { BookOpenCheck, LineChart, Users } from "lucide-react";
+import { BookOpenCheck } from "lucide-react";
 import fetcher from "@/lib/fetcher";
 
 type UserStats = {
@@ -325,7 +325,6 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                 title="Lớp đang dạy"
                 description="Danh sách lớp (GV)"
                 count={related.teacherClassrooms.length}
-                tone="primary"
               >
                 {related.teacherClassrooms.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-indigo-200/80 bg-indigo-50/40 px-6 py-8 text-center">
@@ -372,24 +371,6 @@ export default function AdminUserDetailPage({ params }: { params: { id: string }
                 )}
               </AdminUserSectionCard>
             ) : null}
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <QuickStatCard
-                icon={BookOpenCheck}
-                label="Lớp (GV)"
-                value={user.stats.teacherClassrooms}
-              />
-              <QuickStatCard
-                icon={Users}
-                label="Lớp (HS)"
-                value={user.stats.studentEnrollments}
-              />
-              <QuickStatCard
-                icon={LineChart}
-                label="Liên kết (PH)"
-                value={user.stats.parentRelations}
-              />
-            </div>
 
             {user && userRole === "STUDENT" && related?.studentClassrooms ? (
               <AdminUserSectionCard

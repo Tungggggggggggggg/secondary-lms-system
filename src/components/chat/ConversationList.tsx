@@ -5,16 +5,8 @@ import { ConversationItem } from "@/hooks/use-chat";
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/ui/avatar";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-
-type SearchResultItem = {
-  id: string;
-  conversationId: string;
-  conversationName: string;
-  senderName: string;
-  content: string;
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -28,17 +20,6 @@ function getSessionUserId(session: unknown): string | undefined {
   return typeof id === "string" ? id : undefined;
 }
 
-function isSearchResultItem(value: unknown): value is SearchResultItem {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.id === "string" &&
-    typeof value.conversationId === "string" &&
-    typeof value.conversationName === "string" &&
-    typeof value.senderName === "string" &&
-    typeof value.content === "string"
-  );
-}
-
 type Props = {
   color?: "green" | "blue" | "amber";
   items: ConversationItem[];
@@ -49,44 +30,7 @@ type Props = {
 export default function ConversationList({ color = "amber", items, selectedId, onSelect }: Props) {
   const { data: session } = useSession();
   const me = getSessionUserId(session);
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResultItem[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  useEffect(() => {
-    if (query.length < 3) {
-      setResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const debounce = setTimeout(() => {
-      setIsSearching(true);
-      fetch(`/api/chat/search?q=${encodeURIComponent(query)}`)
-        .then((res) => res.json() as Promise<unknown>)
-        .then((raw) => {
-          if (cancelled) return;
-          if (!isRecord(raw) || raw.success !== true || !Array.isArray(raw.data)) {
-            setResults([]);
-            return;
-          }
-          setResults(raw.data.filter(isSearchResultItem));
-        })
-        .catch(() => {
-          if (!cancelled) setResults([]);
-        })
-        .finally(() => {
-          if (!cancelled) setIsSearching(false);
-        });
-    }, 500);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(debounce);
-    };
-  }, [query]);
+  const [query, setQuery] = useState("");
 
   const palette = {
     headerBorder: color === "green" ? "border-green-100" : color === "blue" ? "border-blue-100" : "border-amber-100",
@@ -104,6 +48,19 @@ export default function ConversationList({ color = "amber", items, selectedId, o
     badgeText: color === "green" ? "text-green-700" : color === "blue" ? "text-blue-700" : "text-amber-700",
     unreadBg: color === "green" ? "bg-green-600" : color === "blue" ? "bg-blue-600" : "bg-amber-600",
   };
+
+  const filteredItems = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((c) => {
+      const names = (me ? c.participants.filter((p) => p.userId !== me) : c.participants)
+        .map((p) => p.fullname)
+        .filter(Boolean)
+        .join(", ")
+        .toLowerCase();
+      return names.includes(q);
+    });
+  }, [items, me, query]);
 
   const renderConversationItem = (c: ConversationItem) => {
     const otherParticipants = c.participants.filter((p) => p.userId !== me);
@@ -162,7 +119,7 @@ export default function ConversationList({ color = "amber", items, selectedId, o
           <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${palette.searchIcon}`} />
           <input
             type="text"
-            placeholder="Tìm kiếm tin nhắn..."
+            placeholder="Tìm hội thoại..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className={`w-full pl-9 pr-4 py-2 text-sm border ${palette.inputBorder} rounded-full ${palette.inputBg} focus:bg-white focus:ring-2 ${palette.inputRing} outline-none transition-all text-gray-900 ${palette.inputPlaceholder}`}
@@ -170,28 +127,12 @@ export default function ConversationList({ color = "amber", items, selectedId, o
         </div>
       </div>
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-2 scrollbar-hover overscroll-contain">
-        {query.length >= 3 ? (
-          <div>
-            {isSearching ? (
-              <p className={`text-center ${palette.labelText} p-4 font-medium`}>Đang tìm...</p>
-            ) : results.length > 0 ? (
-              results.map(result => (
-                <button
-                  key={result.id}
-                  type="button"
-                  onClick={() => onSelect(result.conversationId)}
-                  className={`w-full text-left p-2 rounded-lg transition-colors border border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${palette.itemRing} ${palette.itemHover}`}
-                >
-                  <p className={`text-xs ${palette.labelText} truncate font-medium`}>{result.conversationName}</p>
-                  <p className="font-semibold text-sm truncate text-gray-900">{result.senderName}: <span className="font-normal opacity-80">{result.content}</span></p>
-                </button>
-              ))
-            ) : (
-              <p className={`text-center ${palette.labelText} p-4 font-medium`}>Không tìm thấy kết quả.</p>
-            )}
-          </div>
+        {filteredItems.length > 0 ? (
+          filteredItems.map(renderConversationItem)
+        ) : query.trim() ? (
+          <p className={`text-center ${palette.labelText} p-4 font-medium`}>Không tìm thấy hội thoại.</p>
         ) : (
-          items.length > 0 ? items.map(renderConversationItem) : <div className={`text-sm ${palette.labelText} p-4 font-medium`}>Chưa có hội thoại nào</div>
+          <div className={`text-sm ${palette.labelText} p-4 font-medium`}>Chưa có hội thoại nào</div>
         )}
       </div>
     </div>
