@@ -353,6 +353,27 @@ export async function POST(
       });
     } catch {}
 
+    // Ghi thêm examEvent để trang giám sát thi nhận biết phiên đã hoàn thành
+    try {
+      await prisma.examEvent.create({
+        data: {
+          assignmentId,
+          studentId: user.id,
+          attempt: nextAttempt,
+          eventType: "SESSION_COMPLETED",
+          metadata: {
+            source: "SUBMIT_API",
+            submissionId: submission.id,
+            attemptNumber: nextAttempt,
+            grade: calculatedGrade,
+            autoFeedback,
+          } as any,
+        },
+      });
+    } catch (e) {
+      console.error("[SUBMIT] Failed to create SESSION_COMPLETED examEvent", e);
+    }
+
     return NextResponse.json(
       {
         success: true,

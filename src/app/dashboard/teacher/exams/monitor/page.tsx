@@ -867,14 +867,6 @@ export default function ExamMonitorPage() {
           role="teacher"
           title="Giám sát thi trực tuyến"
           subtitle="Theo dõi và quản lý các phiên thi đang diễn ra"
-          actions={
-            <div className="flex items-center gap-3">
-              <Button className="inline-flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Cài đặt
-              </Button>
-            </div>
-          }
         />
 
         <ExamStatsOverview
