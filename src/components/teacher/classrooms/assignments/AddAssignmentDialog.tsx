@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { AssignmentT } from "@/hooks/use-assignments";
 import { useClassroomAssignments } from "@/hooks/use-classroom-assignments";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +47,7 @@ export default function AddAssignmentDialog({
   onSuccess,
 }: AddAssignmentDialogProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"select" | "create">("select");
   const { value: selectedAssignments, toggle, clear, selectAll } =
     useSelection<string>();
@@ -278,9 +280,8 @@ export default function AddAssignmentDialog({
                 </p>
                 <Button
                   onClick={() => {
-                    window.open(
-                      `/dashboard/teacher/assignments/new?returnTo=/dashboard/teacher/classrooms/${classroomId}/assignments`,
-                      "_blank"
+                    router.push(
+                      `/dashboard/teacher/assignments/new?returnTo=/dashboard/teacher/classrooms/${classroomId}/assignments`
                     );
                   }}
                 >

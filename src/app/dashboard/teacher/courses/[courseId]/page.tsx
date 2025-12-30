@@ -443,7 +443,7 @@ export default function Page() {
         showIcon={false}
         actions={
           <div className="hidden sm:flex items-center gap-2">
-            <Button variant="outline" onClick={() => router.push("/dashboard/teacher/courses")}>
+            <Button variant="outline" onClick={() => router.back()}>
               Quay lại
             </Button>
             <Button variant="outline" onClick={openCreateFromFileDialog}>

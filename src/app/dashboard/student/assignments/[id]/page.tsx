@@ -126,6 +126,27 @@ export default function StudentAssignmentDetailPage({
 
   const [activeTab, setActiveTab] = useState<"work" | "review">("work");
 
+  const showNoMoreAttemptsToast = () => {
+    if (!assignment) return;
+
+    const gradedSubmission = !!submission && submission.grade !== null;
+    const noMoreQuizAttempts =
+      assignment.type === "QUIZ" && gradedSubmission && !(assignment.allowNewAttempt ?? false);
+    const gradedEssay = assignment.type === "ESSAY" && gradedSubmission;
+
+    if (!noMoreQuizAttempts && !gradedEssay) return;
+
+    const description = noMoreQuizAttempts
+      ? "Bạn đã sử dụng hết số lần làm bài cho bài tập này. Hãy xem lại kết quả ở tab \"Xem bài nộp\"."
+      : "Bài tập này đã được chấm điểm. Bạn chỉ có thể xem lại kết quả, không thể nộp lại.";
+
+    toast({
+      title: "Không thể nộp lại bài",
+      description,
+      variant: "destructive",
+    });
+  };
+
   // Load assignment detail và submission
   useEffect(() => {
     if (!assignmentId) return;
@@ -213,6 +234,11 @@ export default function StudentAssignmentDetailPage({
   const handleEssaySubmitCombined = async (content: string) => {
     if (!assignmentId) return;
 
+    if (assignment && submission && submission.grade !== null) {
+      showNoMoreAttemptsToast();
+      return;
+    }
+
     const trimmed = content.trim();
     const hasText = !!trimmed;
     const hasFiles = filePanelRef.current?.hasFiles() ?? false;
@@ -265,6 +291,11 @@ export default function StudentAssignmentDetailPage({
   const handleEssaySubmit = async (content: string) => {
     if (!assignmentId) return;
 
+    if (assignment && submission && submission.grade !== null) {
+      showNoMoreAttemptsToast();
+      return;
+    }
+
     const result = await submitAssignment(assignmentId, { content });
 
     if (result) {
@@ -294,6 +325,11 @@ export default function StudentAssignmentDetailPage({
     presentation?: { questionOrder: string[]; optionOrder: Record<string, string[]>; seed?: number | string; versionHash?: string }
   ) => {
     if (!assignmentId) return;
+
+    if (assignment && !(assignment.allowNewAttempt ?? true)) {
+      showNoMoreAttemptsToast();
+      return;
+    }
 
     const payload: SubmitAssignmentRequest = presentation ? { answers, presentation } : { answers };
     const result = await submitAssignment(assignmentId, payload);
@@ -425,6 +461,10 @@ export default function StudentAssignmentDetailPage({
   const locked = lockAt ? now > lockAt : false;
   const workDisabled = (notOpened || locked) && !canEdit;
 
+  const quizReadonly =
+    assignment.type === "QUIZ" &&
+    !(assignment.allowNewAttempt ?? true);
+
   const headerSubmission = submission
     ? submission
     : fileSubmission
@@ -499,7 +539,16 @@ export default function StudentAssignmentDetailPage({
         </TabsList>
 
         <TabsContent value="work">
-          {workDisabled ? (
+          {quizReadonly ? (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl p-6 text-sm">
+              <div className="font-semibold mb-1">Bạn đã hoàn thành bài trắc nghiệm này</div>
+              <p>
+                Bài đã được chấm điểm và bạn không thể làm lại. Hãy xem chi tiết kết quả ở tab
+                {" "}
+                <span className="font-semibold">"Xem bài nộp"</span>.
+              </p>
+            </div>
+          ) : workDisabled ? (
             <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-6">
               <div className="font-semibold mb-1">Hiện chưa thể làm bài</div>
               <div className="text-sm">{(openAt && new Date() < openAt) ? `Bài sẽ mở lúc ${openAt.toLocaleString("vi-VN")}` : (lockAt ? `Bài đã khoá lúc ${lockAt.toLocaleString("vi-VN")}` : "Không khả dụng")}</div>

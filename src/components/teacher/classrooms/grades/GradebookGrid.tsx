@@ -201,20 +201,52 @@ export default function GradebookGrid({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="px-6 py-5 space-y-3 text-sm text-slate-800">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                  <div className="text-xs font-semibold text-slate-600">Trạng thái</div>
-                  <div className="mt-1 font-semibold">
-                    {selected.status === "graded"
-                      ? "Đã chấm"
-                      : selected.status === "submitted"
-                      ? "Chờ chấm"
-                      : selected.status === "overdue"
-                      ? "Quá hạn"
-                      : "Chưa nộp"}
+            <div className="px-6 py-5 space-y-4 text-sm text-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-1 min-w-0">
+                  <div className="text-xs font-semibold text-slate-500">Học sinh</div>
+                  <div className="text-sm font-semibold text-slate-900 truncate">{selected.student.fullname}</div>
+                  <div className="text-xs text-slate-500 truncate">{selected.student.email}</div>
+                </div>
+
+                <div className="flex items-end gap-4">
+                  <div className="space-y-1 text-right">
+                    <div className="text-xs font-semibold text-slate-500">Trạng thái</div>
+                    <span
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold border ${
+                        selected.status === "graded"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : selected.status === "submitted"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : selected.status === "overdue"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-slate-50 text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      {selected.status === "graded"
+                        ? "Đã chấm"
+                        : selected.status === "submitted"
+                        ? "Chờ chấm"
+                        : selected.status === "overdue"
+                        ? "Quá hạn"
+                        : "Chưa nộp"}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-3 min-w-[96px] text-center shadow-sm">
+                    <div className="text-[11px] uppercase tracking-wide text-slate-500">Điểm</div>
+                    <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
+                      {selected.cell?.grade !== null && selected.cell?.grade !== undefined
+                        ? selected.cell.grade.toFixed(1)
+                        : selected.status === "overdue"
+                        ? "0"
+                        : "—"}
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                   <div className="text-xs font-semibold text-slate-600">Hạn nộp</div>
                   <div className="mt-1 font-semibold">{formatDateTime(selected.assignment.dueDate)}</div>
@@ -224,21 +256,23 @@ export default function GradebookGrid({
                   <div className="mt-1 font-semibold">{formatDateTime(selected.cell?.submittedAt ?? null)}</div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                  <div className="text-xs font-semibold text-slate-600">Điểm</div>
+                  <div className="text-xs font-semibold text-slate-600">Tình trạng nộp</div>
                   <div className="mt-1 font-semibold">
-                    {selected.cell?.grade !== null && selected.cell?.grade !== undefined
-                      ? selected.cell.grade.toFixed(1)
+                    {selected.status === "graded"
+                      ? "Bài đã được chấm điểm"
+                      : selected.status === "submitted"
+                      ? "Học sinh đã nộp, chờ chấm"
                       : selected.status === "overdue"
-                      ? "0"
-                      : "—"}
+                      ? "Quá hạn, tính điểm 0 nếu chưa chấm"
+                      : "Học sinh chưa nộp bài"}
                   </div>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="text-xs font-semibold text-slate-600">Nhận xét</div>
-                <div className="mt-2 whitespace-pre-line text-slate-800 max-h-[30vh] overflow-y-auto">
-                  {selected.cell?.feedback ? selected.cell.feedback : "—"}
+                <div className="mt-2 whitespace-pre-line text-slate-800 max-h-[30vh] overflow-y-auto text-sm">
+                  {selected.cell?.feedback ? selected.cell.feedback : "Chưa có nhận xét cho bài làm này."}
                 </div>
               </div>
             </div>

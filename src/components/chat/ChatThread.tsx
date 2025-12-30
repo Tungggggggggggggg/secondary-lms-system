@@ -31,13 +31,15 @@ type Props = {
   participants?: Participant[];
   onReply: (message: MessageDTO) => void;
   selfUserId?: string;
+  showSearch?: boolean;
 };
 
-export default function ChatThread({ color = "amber", messages, participants, onReply, selfUserId }: Props) {
+export default function ChatThread({ color = "amber", messages, participants, onReply, selfUserId, showSearch = true }: Props) {
   const { data: session } = useSession();
   const me = selfUserId || getSessionUserId(session);
   const endRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [search, setSearch] = useState("");
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
@@ -46,29 +48,38 @@ export default function ChatThread({ color = "amber", messages, participants, on
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
+
+  useEffect(() => {
+    if (!showSearch && search) {
+      setSearch("");
+      setActiveMatchIndex(0);
+    }
+  }, [showSearch, search]);
+
   const ringColor = color === "green" ? "ring-green-400" : color === "blue" ? "ring-blue-400" : "ring-amber-400";
   const jumpToMessage = useCallback((mid?: string | null) => {
     if (!mid) return;
-    const el = messageRefs.current[mid] || document.getElementById(`msg-${mid}`) as HTMLDivElement | null;
+    const el = messageRefs.current[mid] || (document.getElementById(`msg-${mid}`) as HTMLDivElement | null);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", ringColor, "ring-offset-1", "ring-offset-gray-50");
-      setTimeout(() => {
-        el.classList.remove("ring-2", ringColor, "ring-offset-1", "ring-offset-gray-50");
-      }, 1200);
     }
-  }, [ringColor]);
+  }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
   const matchIds = useMemo(() => {
-    if (normalizedSearch.length < 2) return [];
+    if (!normalizedSearch) return [];
     return messages
       .filter((m) => (m.content || "").toLowerCase().includes(normalizedSearch))
       .map((m) => m.id);
   }, [messages, normalizedSearch]);
 
   useEffect(() => {
-    if (normalizedSearch.length < 2) {
+    if (!normalizedSearch) {
       setActiveMatchIndex(0);
       return;
     }
@@ -114,12 +125,14 @@ export default function ChatThread({ color = "amber", messages, participants, on
 
   return (
     <div className={cn("flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-2 scrollbar-stable overscroll-contain min-w-0", palette.threadBg)}>
-      <div className={cn("sticky top-0 z-10 -mx-3 px-3 pb-2", searchPalette.bg, "backdrop-blur")}> 
-        <div className={cn("rounded-2xl border p-2", searchPalette.border, "bg-white/70")}> 
-          <div className="flex items-center gap-2">
+      {showSearch && (
+        <div className={cn("sticky top-0 z-10 -mx-3 px-3 pb-2", searchPalette.bg, "backdrop-blur")}>
+          <div className={cn("rounded-2xl border p-2", searchPalette.border, "bg-white/70")}>
+            <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4", searchPalette.icon)} />
               <input
+                ref={searchInputRef}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm trong hội thoại..."
@@ -165,7 +178,7 @@ export default function ChatThread({ color = "amber", messages, participants, on
               <ChevronDown className="h-4 w-4" />
             </button>
           </div>
-          {normalizedSearch.length >= 2 ? (
+          {normalizedSearch.length > 0 ? (
             <div className="mt-1 text-xs text-slate-600">
               {matchIds.length > 0 ? (
                 <span>
@@ -178,7 +191,7 @@ export default function ChatThread({ color = "amber", messages, participants, on
           ) : null}
         </div>
       </div>
-
+      )}
       {messages.map((m, index) => {
         const mine = !!me && m.sender.id === me;
         const sender = !mine ? m.sender : undefined;
@@ -189,7 +202,15 @@ export default function ChatThread({ color = "amber", messages, participants, on
 
         const isNewDate = !prevMessage || formatDateLabel(new Date(prevMessage.createdAt)) !== formatDateLabel(createdAt);
         const isFirstOfGroup = isNewDate || prevMessage?.sender.id !== m.sender.id;
-        const isLastOfGroup = !nextMessage || nextMessage?.sender.id !== m.sender.id || formatDateLabel(new Date(nextMessage.createdAt)) !== formatDateLabel(createdAt);
+        const isLastOfGroup =
+          !nextMessage ||
+          nextMessage?.sender.id !== m.sender.id ||
+          formatDateLabel(new Date(nextMessage.createdAt)) !== formatDateLabel(createdAt);
+
+        const isActiveMatch =
+          !!normalizedSearch &&
+          matchIds.length > 0 &&
+          m.id === matchIds[activeMatchIndex];
 
         return (
           <div key={m.id} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -230,7 +251,8 @@ export default function ChatThread({ color = "amber", messages, participants, on
                         "rounded-tr-sm": !isFirstOfGroup && !!mine,
                         "rounded-bl-2xl": !!mine,
                         "rounded-br-2xl": !mine,
-                      }
+                      },
+                      isActiveMatch ? `ring-2 ${ringColor} ring-offset-1 ring-offset-gray-50` : undefined
                     )}
                     id={`msg-${m.id}`}
                     ref={(el) => { messageRefs.current[m.id] = el; }}

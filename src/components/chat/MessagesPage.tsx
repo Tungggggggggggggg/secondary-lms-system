@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { useConversations, useMessages, markRead, MessageDTO } from "@/hooks/use-chat";
 import ConversationList from "@/components/chat/ConversationList";
@@ -9,7 +7,7 @@ import ChatThread from "@/components/chat/ChatThread";
 import ChatComposer from "@/components/chat/ChatComposer";
 import ConversationInfoPanel from "@/components/chat/ConversationInfoPanel";
 import { useSearchParams } from "next/navigation";
-import { Users, MessageSquare } from "lucide-react";
+import { Users, MessageSquare, Search } from "lucide-react";
 
 type Props = { role?: "teacher" | "student" | "parent" };
 
@@ -17,8 +15,9 @@ export default function MessagesPage({ role = "teacher" }: Props) {
   const { conversations, isLoading, refresh } = useConversations();
   const params = useSearchParams();
   const preselect = params?.get("open");
-    const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [isParticipantPanelOpen, setIsParticipantPanelOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isParticipantPanelOpen, setIsParticipantPanelOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<MessageDTO | null>(null);
 
   useEffect(() => {
@@ -118,30 +117,48 @@ export default function MessagesPage({ role = "teacher" }: Props) {
   };
 
   return (
-    <div className="flex h-full min-h-0 text-sm text-gray-800 overflow-hidden">
-      {/* Conversation List */}
-      <div className={`w-[300px] md:w-[320px] lg:w-[360px] xl:w-[380px] ${palette.listContainerBg} border-r ${palette.listBorder} flex flex-col min-h-0 overflow-hidden shrink-0`}>
-        <div className={`p-4 border-b ${palette.listBorder} ${palette.listHeaderBg}`}>
-          <div className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <MessageSquare
-              className={`h-5 w-5 ${colorKey === "green" ? "text-green-600" : colorKey === "blue" ? "text-blue-600" : "text-amber-600"}`}
-              aria-hidden="true"
-            />
-            <span>Tin nhắn</span>
+    <div className="h-full w-full px-4 py-4 md:px-6 md:py-5">
+      <div className="h-full rounded-2xl border border-slate-200 bg-white shadow-sm flex min-h-0 text-sm text-gray-800 overflow-hidden">
+        {/* Conversation List */}
+        <div
+          className={`w-[280px] md:w-[300px] lg:w-[340px] xl:w-[360px] ${palette.listContainerBg} border-r ${palette.listBorder} flex flex-col min-h-0 overflow-hidden shrink-0`}
+        >
+          <div className={`p-4 border-b ${palette.listBorder} ${palette.listHeaderBg}`}>
+            <div className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <MessageSquare
+                className={`h-5 w-5 ${
+                  colorKey === "green" ? "text-green-600" : colorKey === "blue" ? "text-blue-600" : "text-amber-600"
+                }`}
+                aria-hidden="true"
+              />
+              <span>Tin nhắn</span>
+            </div>
+            <p className={`text-xs ${palette.labelText} mt-1 font-medium`}>
+              {role === "teacher" ? "Giáo viên" : role === "student" ? "Học sinh" : "Phụ huynh"}
+            </p>
           </div>
-          <p className={`text-xs ${palette.labelText} mt-1 font-medium`}>
-            {role === "teacher" ? "Giáo viên" : role === "student" ? "Học sinh" : "Phụ huynh"}
-          </p>
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-11 rounded-xl bg-white/60 border border-white/80 shadow-sm animate-pulse"
+                />
+              ))}
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="p-4 text-xs text-slate-500 leading-relaxed">
+              Chưa có hội thoại nào.
+              <br />
+              Hãy bắt đầu bằng cách gửi tin nhắn từ danh sách học sinh hoặc phụ huynh.
+            </div>
+          ) : (
+            <ConversationList color={colorKey} items={conversations} selectedId={selectedId} onSelect={handleSelect} />
+          )}
         </div>
-        {isLoading ? (
-          <div className="p-4 text-sm text-gray-500">Đang tải...</div>
-        ) : (
-          <ConversationList color={colorKey} items={conversations} selectedId={selectedId} onSelect={handleSelect} />
-        )}
-      </div>
 
-      {/* Main Chat Area (scroller) */}
-      <div className={`flex-1 flex flex-col ${palette.mainBg} min-h-0 overflow-y-auto overflow-x-hidden`}>
+        {/* Main Chat Area (scroller) */}
+        <div className={`flex-1 flex flex-col ${palette.mainBg} min-h-0 overflow-y-auto overflow-x-hidden`}>
         {selected ? (
           <>
             {/* Chat Header */}
@@ -160,25 +177,38 @@ export default function MessagesPage({ role = "teacher" }: Props) {
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => setIsParticipantPanelOpen(!isParticipantPanelOpen)}
-                className={`p-2 rounded-full transition-colors ${
-                  isParticipantPanelOpen
-                    ? colorKey === "green"
-                      ? "bg-green-100 text-green-600"
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsSearchOpen((v) => !v)}
+                  className={`p-2 rounded-full transition-colors ${
+                    isSearchOpen
+                      ? palette.toggleBtnActive
+                      : palette.toggleBtnHover
+                  }`}
+                  title="Tìm trong hội thoại"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setIsParticipantPanelOpen(!isParticipantPanelOpen)}
+                  className={`p-2 rounded-full transition-colors ${
+                    isParticipantPanelOpen
+                      ? colorKey === "green"
+                        ? "bg-green-100 text-green-600"
+                        : colorKey === "blue"
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-amber-100 text-amber-600"
+                      : colorKey === "green"
+                      ? "hover:bg-green-50"
                       : colorKey === "blue"
-                      ? "bg-blue-100 text-blue-600"
-                      : "bg-amber-100 text-amber-600"
-                    : colorKey === "green"
-                    ? "hover:bg-green-50"
-                    : colorKey === "blue"
-                    ? "hover:bg-blue-50"
-                    : "hover:bg-amber-50"
-                }`}
-                title="Thông tin hội thoại"
-              >
-                <Users className="h-5 w-5" />
-              </button>
+                      ? "hover:bg-blue-50"
+                      : "hover:bg-amber-50"
+                  }`}
+                  title="Thông tin hội thoại"
+                >
+                  <Users className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Chat Thread và Composer */}
@@ -190,6 +220,7 @@ export default function MessagesPage({ role = "teacher" }: Props) {
                   participants={selected.participants}
                   onReply={setReplyingTo}
                   selfUserId={selected.self.userId}
+                  showSearch={isSearchOpen}
                 />
                 <div className={`sticky bottom-0 z-20 ${palette.stickyHeaderBg} backdrop-blur supports-[backdrop-filter]:bg-white/80 border-t ${palette.composerBorder}`}>
                   <ChatComposer
@@ -217,6 +248,7 @@ export default function MessagesPage({ role = "teacher" }: Props) {
             Chọn một hội thoại để bắt đầu nhắn tin
           </div>
         )}
+        </div>
       </div>
     </div>
   );
