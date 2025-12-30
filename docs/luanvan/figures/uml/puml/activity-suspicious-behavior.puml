@@ -9,7 +9,8 @@ start
 
 repeat
 :Theo dõi tín hiệu (network/visibility/focus/clipboard);
-if (Mất kết nối?) then (Có)
+
+if (Mất kết nối / offline / reconnect?) then (Có)
   :Log SESSION_PAUSED\n(metadata.disconnectType);
   :Auto-save bài làm;
   :Yêu cầu/áp dụng grace period;
@@ -17,7 +18,7 @@ if (Mất kết nối?) then (Có)
 endif
 
 if (Chuyển tab / mất focus?) then (Có)
-  :Log TAB_SWITCH_DETECTED hoặc\nSESSION_PAUSED (PAGE_HIDDEN/WINDOW_BLUR);
+  :Log TAB_SWITCH_DETECTED\n(metadata.source=visibilitychange|window_blur);
 endif
 
 if (Copy/Paste?) then (Có)

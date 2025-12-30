@@ -1,4 +1,4 @@
-@startuml flow_rag
+@startuml flow-rag
 title Quy trình RAG Tutor (Activity)
 
 start

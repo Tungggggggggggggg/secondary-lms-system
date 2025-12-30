@@ -1,4 +1,4 @@
-@startuml EduVerse_System_Context
+@startuml context-eduverse
 title EduVerse - Sơ đồ bối cảnh hệ thống (Context Diagram)
 
 left to right direction
