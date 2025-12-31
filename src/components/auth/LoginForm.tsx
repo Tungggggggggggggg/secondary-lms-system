@@ -42,6 +42,7 @@ export default function LoginForm() {
         try {
             const result = await signIn("credentials", {
                 redirect: false,
+                callbackUrl: "/dashboard",
                 email,
                 password,
             });
@@ -92,32 +93,9 @@ export default function LoginForm() {
                 description: "Chào mừng bạn đến với LMS!",
             });
 
-            try {
-                const session = await getSession();
-                const roleSelectedAt = session?.user?.roleSelectedAt;
-                if (!roleSelectedAt) {
-                    router.push("/auth/select-role");
-                    return;
-                }
-
-                const role = session?.user?.role?.toString().toUpperCase();
-                if (role === "ADMIN") {
-                    router.push("/dashboard/admin/dashboard");
-                } else if (role === "TEACHER") {
-                    router.push("/dashboard/teacher/dashboard");
-                } else if (role === "PARENT") {
-                    router.push("/dashboard/parent/dashboard");
-                } else {
-                    // Mặc định STUDENT
-                    router.push("/dashboard/student/dashboard");
-                }
-            } catch (err) {
-                console.warn(
-                    "Redirect decision failed, defaulting to /dashboard",
-                    err
-                );
-                router.push("/dashboard");
-            }
+            const targetUrl = result?.url || "/dashboard";
+            router.replace(targetUrl);
+            router.refresh();
         } catch (err: unknown) {
             console.error("Login error (client)", err);
             toast({
