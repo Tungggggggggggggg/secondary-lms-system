@@ -132,21 +132,8 @@ export default function LoginForm() {
                     Chào mừng đến với EduVerse!
                 </h1>
                 <p className="text-sm text-gray-600">
-                    Học tập thú vị cùng Lịch sử, Địa lý & Tiếng Anh
+                    Hệ thống học tập thông minh cho mọi môn học
                 </p>
-
-                {/* Subject Tags */}
-                <div className="flex gap-2 justify-center mt-4 flex-wrap">
-                    <span className="bg-gradient-to-r from-blue-50 to-pink-50 px-3 py-1.5 rounded-full text-xs font-medium text-blue-900">
-                        📜 Lịch sử
-                    </span>
-                    <span className="bg-gradient-to-r from-blue-50 to-pink-50 px-3 py-1.5 rounded-full text-xs font-medium text-blue-900">
-                        🗺️ Địa lý
-                    </span>
-                    <span className="bg-gradient-to-r from-blue-50 to-pink-50 px-3 py-1.5 rounded-full text-xs font-medium text-blue-900">
-                        🗣️ Tiếng Anh
-                    </span>
-                </div>
             </div>
 
             {/* Form */}

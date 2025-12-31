@@ -428,6 +428,12 @@ export default function QuizAssignmentForm({
           optOrder[q.id] = (optionOrders && optionOrders[q.id]) ? optionOrders[q.id] : q.options.map((o) => o.id);
         });
         onSubmit(answersArray, { questionOrder: qOrder, optionOrder: optOrder }).catch(() => {});
+        try {
+          void logEvent('SESSION_COMPLETED', {
+            reason: 'AUTO_SUBMIT_TIMEOUT',
+            totalQuestions: assignment.questions.length,
+          });
+        } catch {}
       }
     };
     tick();
@@ -723,6 +729,13 @@ export default function QuizAssignmentForm({
     });
 
     await onSubmit(answersArray, { questionOrder: qOrder, optionOrder: optOrder });
+    try {
+      void logEvent('SESSION_COMPLETED', {
+        reason: 'MANUAL_SUBMIT',
+        answeredCount,
+        totalQuestions,
+      });
+    } catch {}
     try {
       window.localStorage.removeItem(draftKey);
       window.localStorage.removeItem(fillDraftKey);

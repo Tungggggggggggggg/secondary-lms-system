@@ -96,27 +96,39 @@
     pdftitle={Luận văn Tốt nghiệp - Smart LMS},
 }
 
+\usepackage{tikz}
+\usetikzlibrary{calc}
+
 \begin{document}
 
 % ======================================================
 % TRANG BÌA
 % ======================================================
 \begin{titlepage}
+\begin{tikzpicture}[remember picture, overlay]
+
+    \coordinate (TL) at ($(current page.north west) + (2.5cm, -1.0cm)$);
+    \coordinate (BR) at ($(current page.south east) + (-1.0cm, 1.0cm)$);
+
+    \draw [line width=0.8pt] (TL) rectangle (BR);
+    
+    \draw [line width=2.5pt] ($(TL) + (0.2cm, -0.2cm)$) rectangle ($(BR) + (-0.2cm, 0.2cm)$);
+\end{tikzpicture}
     \centering
     {\large \textbf{BỘ GIÁO DỤC VÀ ĐÀO TẠO}} \\
     {\large \textbf{TRƯỜNG ĐẠI HỌC GIAO THÔNG VẬN TẢI TP.HCM}} \\
-    {\large \textbf{KHOA CÔNG NGHỆ THÔNG TIN}}
+    {\large \textbf{VIỆN CÔNG NGHỆ THÔNG TIN VÀ ĐIỆN, ĐIỆN TỬ}}
     
     \vspace{1.5cm}
     \begin{figure}[h]
       \centering
       \IfFileExists{docs/luanvan/figures/uth-logo.png}{
-        \includegraphics[width=0.35\textwidth]{docs/luanvan/figures/uth-logo.png}
+        \includegraphics[width=0.5\textwidth]{docs/luanvan/figures/uth-logo.png}
       }{
         \IfFileExists{figures/uth-logo.png}{
-          \includegraphics[width=0.35\textwidth]{figures/uth-logo.png}
+          \includegraphics[width=0.5\textwidth]{figures/uth-logo.png}
         }{
-          \framebox{\parbox{0.35\textwidth}{\centering
+          \framebox{\parbox{0.5\textwidth}{\centering
             \vspace{1cm}
             \textbf{LOGO TRƯỜNG} \\
             \small\textit{(Image Placeholder)}
@@ -127,7 +139,7 @@
     \end{figure}
     
     \vspace{1.5cm}
-    {\Large \textbf{LUẬN VĂN TỐT NGHIỆP ĐẠI HỌC}} \\
+    {\Large \textbf{LUẬN VĂN TỐT NGHIỆP}} \\
     
     \vspace{1cm}
     \begin{spacing}{1.5}
@@ -135,14 +147,15 @@
     \end{spacing}
     
     \vspace{2cm}
-    \begin{flushright}
-        \begin{tabular}{l p{6cm}}
-            \textbf{Giảng viên hướng dẫn:} & \textbf{ThS. Bùi Trọng Hiếu} \\
-            \textbf{Sinh viên thực hiện:}     & \textbf{Nguyễn Quốc Tùng (MS: 2251120259)} \\
-                                              & \textbf{Nguyễn Võ Thành (MS: 2251120246)} \\
-            \textbf{Lớp:}                     & \textbf{CN22E}
-        \end{tabular}
-    \end{flushright}
+\begin{tabular}{@{}l l@{}}
+  \textbf{Giảng viên hướng dẫn:} & \textbf{ThS. Bùi Trọng Hiếu} \\
+  \textbf{Sinh viên thực hiện:} &
+  \begin{tabular}[t]{@{}l@{}}
+    \textbf{Nguyễn Quốc Tùng - 2251120259} \\
+    \textbf{Nguyễn Võ Thành - 2251120246}
+  \end{tabular} \\
+  \textbf{Lớp:} & \textbf{CN22E}
+\end{tabular}
 
     \vfill
     {\large \textbf{TP. HỒ CHÍ MINH, NĂM 2025}}
@@ -153,41 +166,43 @@
 % ======================================================
 \pagenumbering{roman}
 
-\chapter*{Lời cam đoan}
-\phantomsection
-\addcontentsline{toc}{chapter}{Lời cam đoan}
-Chúng tôi xin cam đoan đây là công trình nghiên cứu của nhóm dưới sự hướng dẫn của giảng viên hướng dẫn. Các kết quả nêu trong luận văn là trung thực và chưa từng được công bố trong bất kỳ công trình nào khác. Mọi sự giúp đỡ cho việc thực hiện luận văn này đã được cảm ơn và các thông tin trích dẫn trong luận văn đã được chỉ rõ nguồn gốc.
-
 \chapter*{Lời mở đầu}
 \phantomsection
 \addcontentsline{toc}{chapter}{Lời mở đầu}
-Sự bùng nổ của Trí tuệ nhân tạo tạo sinh (Generative AI) đã mở ra những cơ hội chưa từng có trong việc cá nhân hóa giáo dục. Tuy nhiên, các hệ thống Quản lý học tập (LMS) hiện nay tại Việt Nam chủ yếu vẫn đóng vai trò là kho lưu trữ tài liệu tĩnh, thiếu đi tính tương tác thông minh và khả năng hỗ trợ học sinh học tập chủ động.
 
-Dự án này được thực hiện với mong muốn xây dựng một hệ sinh thái học tập "Smart LMS" dành cho cấp trung học. Điểm đột phá của hệ thống là việc ứng dụng kỹ thuật Retrieval-Augmented Generation (RAG) để tạo ra một Trợ lý ảo (AI Tutor) có khả năng hiểu sâu sắc nội dung bài giảng của giáo viên, từ đó phản hồi chính xác thắc mắc của học sinh. Bên cạnh đó, hệ thống tích hợp các công cụ giám sát thi cử dựa trên AI nhằm đảm bảo tính liêm chính trong môi trường học tập trực tuyến.
+Trong bối cảnh cuộc Cách mạng công nghiệp 4.0, chuyển đổi số trong giáo dục không còn là một lựa chọn mà đã trở thành xu thế tất yếu. Sự bùng nổ của Trí tuệ nhân tạo tạo sinh (Generative AI) đang tái định hình cách thức con người tiếp cận tri thức, chuyển dịch từ mô hình học tập thụ động sang học tập chủ động và cá nhân hóa.
+
+Tuy nhiên, tại Việt Nam, phần lớn các Hệ thống Quản lý học tập (LMS) hiện hành vẫn dừng lại ở vai trò là kho lưu trữ tài liệu số hóa, thiếu đi sự tương tác thông minh và khả năng thấu hiểu người học. Điều này tạo ra một "điểm nghẽn" trong việc nâng cao chất lượng đào tạo trực tuyến, đặc biệt là trong việc hỗ trợ giải đáp thắc mắc tức thời và đảm bảo tính liêm chính trong thi cử.
+
+Xuất phát từ thực tiễn đó và niềm đam mê công nghệ, chúng tôi thực hiện đề tài: \textbf{"Nghiên cứu và xây dựng hệ thống quản lý học tập thông minh (Smart LMS) dựa trên kiến trúc RAG và mô hình ngôn ngữ lớn"}. Đề tài không chỉ là một nhiệm vụ tốt nghiệp, mà còn là nỗ lực của chúng tôi trong việc kiến tạo một hệ sinh thái giáo dục mang tên \textbf{EduVerse} -- nơi AI đóng vai trò là người trợ giảng tận tụy (AI Tutor) và là giám thị công tâm, giúp thu hẹp khoảng cách giữa công nghệ và giáo dục thực tiễn.
+
+Chúng tôi hy vọng rằng, kết quả nghiên cứu này sẽ đóng góp một góc nhìn mới về ứng dụng Generative AI trong trường học, hướng tới một môi trường giáo dục thông minh, hiệu quả và minh bạch hơn.
 
 \newpage
 
 \chapter*{Lời cảm ơn}
 \phantomsection
 \addcontentsline{toc}{chapter}{Lời cảm ơn}
-Trong quá trình thực hiện luận văn và xây dựng hệ thống \textbf{EduVerse}, chúng tôi đã nhận được sự hướng dẫn, hỗ trợ và động viên từ nhiều cá nhân và đơn vị. Chúng tôi xin bày tỏ lòng biết ơn sâu sắc đến \textbf{ThS. Bùi Trọng Hiếu} -- người đã tận tình định hướng, góp ý chuyên môn và tạo điều kiện thuận lợi để nhóm hoàn thành đề tài. Những nhận xét khoa học, sự nghiêm khắc trong phương pháp làm việc và tinh thần trách nhiệm của thầy là nền tảng quan trọng giúp chúng tôi hình thành tư duy nghiên cứu và hoàn thiện sản phẩm theo đúng chuẩn mực học thuật.
 
-    Chúng tôi xin trân trọng cảm ơn \textbf{Khoa Công nghệ Thông tin -- Trường Đại học Giao thông vận tải TP.HCM} đã cung cấp môi trường học tập, tài liệu tham khảo và cơ sở hạ tầng cần thiết trong suốt quá trình học tập cũng như khi triển khai luận văn. Đồng thời, chúng tôi xin cảm ơn các thầy cô trong Khoa đã trang bị những kiến thức nền tảng về công nghệ phần mềm, cơ sở dữ liệu và trí tuệ nhân tạo -- là những mảnh ghép không thể thiếu để hiện thực hóa đề tài.
+Để hoàn thành luận văn tốt nghiệp này, bên cạnh sự nỗ lực của bản thân, chúng tôi đã nhận được sự quan tâm, động viên và hướng dẫn tận tình từ quý Thầy Cô, gia đình và bạn bè.
 
-Cuối cùng, chúng tôi xin cảm ơn gia đình và bạn bè đã luôn đồng hành, khích lệ tinh thần và tạo điều kiện về thời gian để có thể tập trung hoàn thành luận văn. Mặc dù đã cố gắng hết sức, luận văn khó tránh khỏi những thiếu sót; chúng tôi kính mong nhận được sự góp ý của quý thầy cô để tiếp tục hoàn thiện trong học tập và công việc sau này.
+Lời đầu tiên, chúng tôi xin gửi lời tri ân sâu sắc nhất đến \textbf{ThS. Bùi Trọng Hiếu}. Thầy không chỉ là người trực tiếp hướng dẫn, định hướng đề tài mà còn là người đã truyền cảm hứng, khắt khe trong tiêu chuẩn khoa học và tận tâm chỉ bảo chúng tôi trong từng bước đi của dự án. Những lời khuyên quý báu và sự kiên nhẫn của Thầy chính là kim chỉ nam giúp nhóm vượt qua những thách thức kỹ thuật để hoàn thiện hệ thống \textbf{EduVerse}.
 
+Chúng tôi xin trân trọng cảm ơn Ban Giám hiệu, cùng quý Thầy Cô thuộc \textbf{Viện Công nghệ thông tin và Điện, điện tử -- Trường Đại học Giao thông vận tải TP.HCM}. Môi trường học tập năng động và những kiến thức nền tảng vững chắc mà quý Thầy Cô đã truyền đạt trong suốt những năm qua là hành trang vô giá để chúng tôi thực hiện đề tài này.
+
+Cuối cùng, chúng tôi xin dành lời cảm ơn chân thành đến gia đình và những người bạn đã luôn là hậu phương vững chắc, luôn thấu hiểu và sẻ chia những khó khăn trong suốt quá trình thực hiện luận văn.
+
+Mặc dù đã nỗ lực hết mình với tinh thần cầu thị nghiêm túc, song do giới hạn về thời gian và kiến thức, luận văn khó tránh khỏi những thiếu sót. Chúng tôi kính mong nhận được những ý kiến đóng góp quý báu từ quý Thầy Cô trong Hội đồng và các bạn để đề tài được hoàn thiện và phát triển tốt hơn trong tương lai.
+
+Chúng tôi xin chân thành cảm ơn!
+
+\vspace{1.5cm}
+\begin{flushright}
+    \textit{TP. Hồ Chí Minh, tháng 12 năm 2025} \\
+    \textbf{Nhóm sinh viên thực hiện}
+\end{flushright}
 \newpage
 
-\chapter*{Tóm tắt luận văn}
-\phantomsection
-\addcontentsline{toc}{chapter}{Tóm tắt luận văn}
-Trong bối cảnh chuyển đổi số giáo dục và sự phát triển mạnh mẽ của Trí tuệ nhân tạo tạo sinh, các hệ thống Quản lý học tập (LMS) truyền thống tại Việt Nam vẫn chủ yếu đóng vai trò lưu trữ học liệu, thiếu khả năng tương tác thông minh và hạn chế trong việc giám sát liêm chính học thuật. Dự án nghiên cứu và xây dựng hệ thống \textbf{EduVerse} -- một nền tảng Smart LMS tích hợp mô-đun \textbf{AI Tutor} theo kiến trúc \textbf{Retrieval-Augmented Generation (RAG)} và mô-đun \textbf{chống gian lận} dựa trên nhật ký sự kiện.
-
-Về mặt kỹ thuật, hệ thống sử dụng \textbf{Next.js App Router}, \textbf{PostgreSQL} với \textbf{pgvector} để lưu trữ embedding và thực hiện truy vấn tương đồng. Lớp AI được vận hành bởi \textbf{Gemini API} với mô hình \textbf{\texttt{gemini-2.5-flash-lite}} cho các tác vụ sinh nội dung và \texttt{gemini-embedding-001} cho tạo vector ngữ nghĩa. 
-
-Kết quả đo thực nghiệm end-to-end cho thấy hiệu năng ấn tượng của hệ thống: độ trễ phản hồi trung bình của API RAG Tutor đạt \textbf{5.2s (P95 5.5s)} ; cơ chế ghi nhận \texttt{ExamEvent} đạt \textbf{200/200} yêu cầu thành công với độ trễ trung bình cực thấp \textbf{0.8s (P95 1.4s)} ; và mô-đun AI Anti-cheat Summary đạt độ trễ trung bình \textbf{5.6s (P95 6.3s)}. Những kết quả này minh chứng cho tính khả thi và hiệu quả của việc ứng dụng LLM thế hệ mới vào môi trường giáo dục trực tuyến.
-
-\newpage
 \phantomsection
 \addcontentsline{toc}{chapter}{Mục lục}
 \tableofcontents
@@ -296,7 +311,7 @@ Trí tuệ nhân tạo tạo sinh (GenAI) đại diện cho một bước tiến
 Bản chất của các Mô hình ngôn ngữ lớn (LLM) hiện nay dựa trên kiến trúc Transformer với cơ chế Tự chú ý (Self-Attention). Cơ chế này cho phép mô hình xác định trọng số tầm quan trọng của các từ trong một câu dựa trên ngữ cảnh toàn cục, thay vì xử lý tuần tự như các kiến trúc cũ (RNN/LSTM). Đây là nền tảng cốt lõi giúp AI Tutor hiểu được những khái niệm chuyên sâu trong bài giảng của giáo viên.
 
 \subsection{Mô hình Gemini 2.5 Flash Lite trong môi trường giáo dục}
-Lựa chọn Gemini 2.5 Flash Lite không chỉ dựa trên hiệu năng mà còn dựa trên tính kinh tế và kỹ thuật:
+Lựa chọn Gemini 2.5 Flash Lite \cite{gemini} không chỉ dựa trên hiệu năng mà còn dựa trên tính kinh tế và kỹ thuật:
 \begin{itemize}
     \item \textbf{Cửa sổ ngữ cảnh (Context Window):} Với khả năng xử lý lên tới hàng triệu token, mô hình giải quyết được bài toán "quên ngữ cảnh" khi tài liệu bài giảng kéo dài hàng trăm trang.
     \item \textbf{Flash Architecture:} Được tối ưu hóa cho độ trễ thấp (Low Latency), đáp ứng yêu cầu phản hồi dưới 5 giây trong môi trường học tập thời gian thực.
@@ -304,7 +319,7 @@ Lựa chọn Gemini 2.5 Flash Lite không chỉ dựa trên hiệu năng mà cò
 \end{itemize}
 
 \section{Kiến trúc Tăng cường truy xuất tri thức (RAG)}
-Kiến trúc RAG (Retrieval-Augmented Generation) là giải pháp trọng tâm để loại bỏ hiện tượng "ảo tưởng" (hallucination) của AI.
+Kiến trúc RAG (Retrieval-Augmented Generation) là giải pháp trọng tâm để loại bỏ hiện tượng "ảo tưởng" (hallucination) của AI \cite{rag}.
 \subsection{Mô hình hóa quy trình RAG}
 Thay vì tin tưởng tuyệt đối vào tri thức có sẵn trong LLM, RAG buộc mô hình phải dựa trên "Sự thật nguồn" (Ground Truth) được cung cấp. Quy trình gồm 4 giai đoạn:
 1. \textbf{Chuẩn hóa \& Phân mảnh (Pre-processing):} Dữ liệu được làm sạch và chia nhỏ để đảm bảo mỗi đoạn vector mang một ngữ nghĩa tập trung.
@@ -313,21 +328,40 @@ Thay vì tin tưởng tuyệt đối vào tri thức có sẵn trong LLM, RAG bu
 4. \textbf{Sinh nội dung có điều kiện (Conditioned Generation):} LLM đóng vai trò như một bộ xử lý ngôn ngữ, tổng hợp câu trả lời dựa trên các "bằng chứng" đã truy xuất.
 
 \section{Quản trị dữ liệu Vector với pgvector}
-Hệ thống sử dụng phần mở rộng \texttt{pgvector} trên PostgreSQL để thực hiện các phép toán không gian.
+Hệ thống sử dụng phần mở rộng \texttt{pgvector} \cite{pgvector} trên PostgreSQL để thực hiện các phép toán không gian.
 \subsection{Độ tương đồng Cosine và ý nghĩa hình học}
 Phép đo độ tương đồng Cosine được sử dụng để xác định khoảng cách giữa câu hỏi của học sinh và tri thức trong bài giảng. Việc sử dụng pgvector cho phép thực hiện các truy vấn vector đồng thời với các truy vấn quan hệ truyền thống (thông tin người dùng, lớp học), giúp duy trì tính toàn vẹn dữ liệu (ACID) mà các CSDL vector thuần túy thường bỏ qua.
 
 \section{Nền tảng hạ tầng và Công nghệ triển khai}
 Việc lựa chọn Stack công nghệ được định hướng theo kiến trúc Serverless và Edge-first:
 \begin{itemize}
-    \item \textbf{Next.js 14 (App Router):} Tối ưu hóa Rendering phía máy chủ (SSR) để giảm thời gian phản hồi trang đầu tiên (TTFB).
-    \item \textbf{Prisma ORM:} Đảm bảo tính an toàn về kiểu dữ liệu (Type-safety), ngăn chặn các lỗi logic tại tầng truy cập dữ liệu.
-    \item \textbf{Supabase Ecosystem:} Cung cấp hạ tầng Backend-as-a-Service (BaaS) giúp quản lý tập trung từ Storage, Database đến Auth, giúp hệ thống có khả năng mở rộng (Scalability) linh hoạt.
+    \item \textbf{Next.js 14 (App Router)\cite{nextjs}:} Tối ưu hóa Rendering phía máy chủ (SSR) để giảm thời gian phản hồi trang đầu tiên (TTFB).
+    \item \textbf{Prisma ORM\cite{prisma}:} Đảm bảo tính an toàn về kiểu dữ liệu (Type-safety), ngăn chặn các lỗi logic tại tầng truy cập dữ liệu.
+    \item \textbf{Supabase Ecosystem\cite{supabase}:} Cung cấp hạ tầng Backend-as-a-Service (BaaS) giúp quản lý tập trung từ Storage, Database đến Auth, giúp hệ thống có khả năng mở rộng (Scalability) linh hoạt.
 \end{itemize}
 
 \section{Lý thuyết về Giám sát hành vi dựa trên sự kiện (Event-driven)}
 Hệ thống chống gian lận (Anti-cheat) được xây dựng dựa trên lý thuyết giám sát luồng sự kiện. Thay vì chặn người dùng một cách cứng nhắc, hệ thống thu thập các tín hiệu gián tiếp (Tab switching, Blur events) để xây dựng một mô hình rủi ro định lượng. Cách tiếp cận này giúp giáo viên có cái nhìn toàn cảnh về hành vi của thí sinh mà không làm gián đoạn quá trình làm bài.
 
+\section{So sánh và lựa chọn giải pháp công nghệ}
+Để đảm bảo hệ thống EduVerse đáp ứng các yêu cầu về hiệu năng và tính toàn vẹn dữ liệu, nhóm nghiên cứu đã thực hiện so sánh các giải pháp lưu trữ vector và mô hình ngôn ngữ trước khi đi đến quyết định cuối cùng.
+
+\subsection{Lựa chọn cơ sở dữ liệu Vector}
+Bảng \ref{tab:vector-db-comparison} trình bày so sánh giữa việc sử dụng cơ sở dữ liệu vector chuyên dụng (như Pinecone/Milvus) và giải pháp tích hợp PostgreSQL với pgvector.
+
+\begin{table}[H]
+\centering
+\small
+\caption{So sánh giải pháp lưu trữ Vector}
+\label{tab:vector-db-comparison}
+\begin{tabularx}{\textwidth}{|p{3.5cm}|X|X|}
+\hline
+\textbf{Tiêu chí} & \textbf{Database Vector chuyên dụng (VD: Pinecone)} & \textbf{PostgreSQL + pgvector (Đã chọn)} \\ \hline
+Kiến trúc & Tách biệt, cần đồng bộ dữ liệu. & Tích hợp sẵn trong RDBMS. \\ \hline
+Tính toàn vẹn (ACID) & Khó đảm bảo tính nhất quán giữa dữ liệu nghiệp vụ và vector. & Đảm bảo ACID, join trực tiếp giữa bảng vector và bảng Users/Lessons. \\ \hline
+Chi phí & Tốn kém chi phí duy trì hạ tầng riêng. & Tận dụng hạ tầng CSDL sẵn có, tối ưu chi phí. \\ \hline
+\end{tabularx}
+\end{table}
 
 % ======================================================
 % CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
@@ -686,16 +720,15 @@ Cơ chế RBAC được thực thi đồng thời ở hai lớp:
 
 \begin{figure}[H]
   \centering
-  \IfFileExists{figures/ui/ch4-auth-select-role.png}{
-    \includegraphics[width=0.92\textwidth]{figures/ui/ch4-auth-select-role.png}
-  }{
-    \framebox{\parbox{0.92\textwidth}{\centering
-      \vspace{0.8cm}
-      (Hình minh họa) Màn hình đăng nhập / lựa chọn vai trò trước khi truy cập portal
-      \vspace{0.8cm}
-    }}
-  }
-  \caption{Minh họa luồng xác thực và lựa chọn vai trò (RBAC) trước khi truy cập hệ thống}
+  \includegraphics[width=0.92\textwidth]{figures/ui/ch4-auth.png}
+  \caption{Minh họa màn hình đăng nhập của hệ thống}
+  \label{fig:ch4-auth}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{figures/ui/ch4-select-role.png}
+  \caption{Minh họa màn hình lựa chọn vai trò (RBAC) trước khi truy cập portal}
   \label{fig:ch4-auth-select-role}
 \end{figure}
 
@@ -745,15 +778,7 @@ Luồng AI Tutor được cung cấp qua \path{POST /api/ai/tutor/chat}. Endpoin
 
 \begin{figure}[H]
   \centering
-  \IfFileExists{figures/ui/ch4-ai-tutor-chat.png}{
-    \includegraphics[width=0.92\textwidth]{figures/ui/ch4-ai-tutor-chat.png}
-  }{
-    \framebox{\parbox{0.92\textwidth}{\centering
-      \vspace{0.8cm}
-      (Hình minh họa) Giao diện AI Tutor Chat và nguồn tham chiếu
-      \vspace{0.8cm}
-    }}
-  }
+  \includegraphics[width=0.92\textwidth]{figures/ui/ch4-ai-tutor-chat.png}
   \caption{Minh họa AI Tutor: câu trả lời dựa trên học liệu (RAG) và danh sách nguồn tham chiếu}
   \label{fig:ch4-ai-tutor-chat}
 \end{figure}
@@ -776,15 +801,7 @@ Từ danh sách sự kiện, hệ thống tính \texttt{suspicionScore} trong mi
 
 \begin{figure}[H]
   \centering
-  \IfFileExists{figures/ui/ch4-exam-anti-cheat-warning.png}{
-    \includegraphics[width=0.92\textwidth]{figures/ui/ch4-exam-anti-cheat-warning.png}
-  }{
-    \framebox{\parbox{0.92\textwidth}{\centering
-      \vspace{0.8cm}
-      (Hình minh họa) Cảnh báo anti-cheat trong lúc làm bài
-      \vspace{0.8cm}
-    }}
-  }
+  \includegraphics[width=0.92\textwidth]{figures/ui/ch4-exam-anti-cheat-warning.png}
   \caption{Minh họa tín hiệu anti-cheat phía client và cảnh báo trong quá trình làm bài}
   \label{fig:ch4-exam-anti-cheat-warning}
 \end{figure}
@@ -800,15 +817,7 @@ Từ danh sách sự kiện, hệ thống tính \texttt{suspicionScore} trong mi
 
 \begin{figure}[H]
   \centering
-  \IfFileExists{figures/ui/ch4-teacher-anti-cheat-summary.png}{
-    \includegraphics[width=0.92\textwidth]{figures/ui/ch4-teacher-anti-cheat-summary.png}
-  }{
-    \framebox{\parbox{0.92\textwidth}{\centering
-      \vspace{0.8cm}
-      (Hình minh họa) Giao diện giáo viên: điểm nghi ngờ và tóm tắt AI
-      \vspace{0.8cm}
-    }}
-  }
+  \includegraphics[width=0.92\textwidth]{figures/ui/ch4-teacher-anti-cheat-summary.png}
   \caption{Minh họa giao diện giáo viên: điểm nghi ngờ và bản tóm tắt AI phục vụ rà soát nhanh}
   \label{fig:ch4-teacher-anti-cheat-summary}
 \end{figure}
@@ -1003,7 +1012,7 @@ Trong đó \texttt{sentEvents} là số sự kiện client gửi và \texttt{rec
 \begin{table}[H]
 \centering
 \small
-\caption{Độ tin cậy ghi nhận ExamEvent (đề xuất báo cáo theo định nghĩa recorded/sent)}
+\caption{Độ tin cậy ghi nhận ExamEvent (kết quả thực nghiệm S2)}
 \label{tab:exam-event-reliability}
 \begingroup
 \setlength{\tabcolsep}{6pt}
@@ -1012,7 +1021,7 @@ Trong đó \texttt{sentEvents} là số sự kiện client gửi và \texttt{rec
 \hline
 \textbf{Đối tượng đo} & \textbf{sentEvents} & \textbf{recordedEvents} & \textbf{successRate (\%)} \\
 \hline
-\path{POST /api/exam-events} (S2) & 200 & \textit{(điền số liệu)} & \textit{(điền số liệu)} \\
+\path{POST /api/exam-events} (S2) & 200 & 200 & 100\% \\
 \hline
 \end{tabular}
 \endgroup
@@ -1125,6 +1134,33 @@ Trong tương lai, hệ thống có thể được nâng cấp theo các hướn
   \item \textbf{Mở rộng trải nghiệm đa nền tảng:} phát triển ứng dụng di động và cơ chế thông báo đẩy nhằm tăng tính liên tục trải nghiệm.
 \end{itemize}
 
+\section{Giá trị mang lại và điểm khác biệt so với các hệ thống LMS phổ biến}
+Bên cạnh việc hiện thực hoá các chức năng LMS truyền thống (quản lý lớp học, học liệu, bài tập và giao tiếp), hệ thống EduVerse được định hướng như một \textbf{Smart LMS} tập trung vào (i) tăng cường tương tác học tập dựa trên tri thức nội bộ và (ii) hỗ trợ đảm bảo liêm chính trong đánh giá trực tuyến. Từ đó, hệ thống mang lại giá trị thực tiễn cho các nhóm người dùng chính như sau.
+
+\subsection{Lợi ích theo nhóm người dùng}
+\begin{itemize}
+  \item \textbf{Học sinh (Student):} nhận được hỗ trợ hỏi đáp theo ngữ cảnh học liệu của lớp thông qua AI Tutor (RAG), giúp giảm thời gian ``kẹt kiến thức'' ngoài giờ học và tăng tính chủ động; câu trả lời kèm nguồn tham chiếu giúp người học kiểm chứng và học đúng trọng tâm.
+  \item \textbf{Giáo viên (Teacher):} giảm tải các câu hỏi lặp lại nhờ AI Tutor; có công cụ giám sát thi dựa trên nhật ký sự kiện và điểm nghi ngờ, đồng thời có bản tóm tắt AI phục vụ rà soát nhanh thay vì phải đọc log thô.
+  \item \textbf{Phụ huynh (Parent):} có kênh theo dõi tiến độ/điểm số và nhận thông tin tổng hợp, tăng khả năng phối hợp giữa gia đình và nhà trường trong việc hỗ trợ học tập.
+  \item \textbf{Quản trị viên (Admin):} quản trị người dùng, lớp học và phân quyền rõ ràng theo RBAC; tăng khả năng kiểm soát vận hành và chuẩn hoá truy cập tài nguyên.
+\end{itemize}
+
+\subsection{Điểm khác biệt so với các hệ thống tương tự}
+So với các hệ thống LMS phổ biến vốn tập trung vào lưu trữ học liệu và quản lý quy trình giao--nộp bài, EduVerse có một số điểm khác biệt trọng tâm:
+\begin{itemize}
+  \item \textbf{AI Tutor theo kiến trúc RAG (grounded):} thay vì sinh câu trả lời theo tri thức chung, hệ thống truy xuất ngữ cảnh từ kho học liệu nội bộ (pgvector) và trả lời kèm danh sách nguồn tham chiếu, qua đó giảm rủi ro ``ảo tưởng'' và tăng độ tin cậy trong môi trường giáo dục.
+  \item \textbf{Chống gian lận dựa trên sự kiện (event-driven) và diễn giải cho giáo viên:} hệ thống ghi nhận hành vi trong quá trình làm bài, tính điểm nghi ngờ theo cơ chế rule-based (có giới hạn theo từng nhóm hành vi) và cung cấp bản tóm tắt AI hỗ trợ giáo viên ra quyết định nhanh, thay vì chỉ áp dụng biện pháp chặn cứng nhắc.
+  \item \textbf{Kiểm soát vận hành và chi phí AI:} các endpoint AI áp dụng rate-limit theo IP và theo người dùng nhằm hạn chế lạm dụng và kiểm soát chi phí; tách các tác vụ nặng (như indexing) theo hướng tối ưu trải nghiệm.
+\end{itemize}
+
+\subsection{Bằng chứng định lượng về khả năng vận hành}
+Kết quả đo thực nghiệm ở Chương 5 cung cấp bằng chứng định lượng cho khả năng vận hành của các luồng trọng tâm:
+\begin{itemize}
+  \item \textbf{Luồng AI Tutor (E1):} độ trễ P95 xấp xỉ \textbf{5.45s} với tỉ lệ lỗi \textbf{0\%} (Bảng \ref{tab:experiment-results}). Độ trễ cao hơn là phù hợp với bản chất phụ thuộc dịch vụ AI và truy vấn CSDL từ xa.
+  \item \textbf{Luồng ghi nhận ExamEvent (E2):} độ trễ P95 xấp xỉ \textbf{1.40s}, tỉ lệ lỗi \textbf{0\%} và độ tin cậy ghi nhận \textbf{100\%} (Bảng \ref{tab:experiment-results} và Bảng \ref{tab:exam-event-reliability}), cho thấy hệ thống có thể xử lý tần suất sự kiện cao một cách ổn định.
+  \item \textbf{Luồng Anti-cheat AI Summary (E3):} độ trễ P95 xấp xỉ \textbf{6.31s} với tỉ lệ lỗi \textbf{0\%} (Bảng \ref{tab:experiment-results}), phản ánh mức độ phù hợp cho tác vụ ``diễn giải'' phục vụ giáo viên.
+\end{itemize}
+
 \section{Kết luận}
 EduVerse chứng minh tính khả thi của việc tích hợp RAG và LLM vào hệ thống LMS theo hướng ưu tiên tính kiểm chứng, khả năng vận hành và kiểm soát chi phí. Các kết quả đạt được là nền tảng cho việc tiếp tục hoàn thiện và triển khai trong bối cảnh giáo dục thực tế.
 
@@ -1174,54 +1210,47 @@ Google DeepMind, ``Gemini: A Family of Highly Capable Multimodal Models,'' 2023.
 % PHỤ LỤC
 % ======================================================
 \appendix
-\chapter*{Phụ lục}
+\renewcommand{\chaptername}{PHỤ LỤC}
 \phantomsection
 \addcontentsline{toc}{chapter}{Phụ lục}
 
-\chapter{Danh sách endpoint tiêu biểu và phạm vi truy cập}
-\begin{table}[H]
-\centering
-\small
-\caption{Một số endpoint tiêu biểu của hệ thống}
-\label{tab:appendix-api}
-\begingroup
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\textwidth}{|p{4.2cm}|p{2.8cm}|X|}
-\hline
-\textbf{Endpoint} & \textbf{Vai trò} & \textbf{Mô tả} \\
-\hline
-\path{POST /api/ai/tutor/chat} & Student & Hỏi đáp dựa trên học liệu theo kiến trúc RAG. \\
-\hline
-\path{POST /api/exam-events} & Student & Ghi nhận sự kiện giám sát thi theo thời gian gần thực. \\
-\hline
-\path{POST /api/ai/anti-cheat/summary} & Teacher & Tính điểm nghi ngờ và sinh tóm tắt hỗ trợ diễn giải. \\
-\hline
-\end{tabularx}
-\endgroup
-\end{table}
+\chapter{Liên kết dự án và triển khai}
+Mã nguồn và triển khai tham khảo:
 
-\chapter{Tham số kịch bản đo hiệu năng}
-\begin{table}[H]
-\centering
-\small
-\caption{Tham số kịch bản đo hiệu năng}
-\label{tab:appendix-scenarios}
-\begingroup
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\textwidth}{|p{1.0cm}|p{5.0cm}|p{1.5cm}|X|}
-\hline
-\textbf{S} & \textbf{Endpoint} & \textbf{N} & \textbf{Mục tiêu đo} \\
-\hline
-S1 & \path{POST /api/ai/tutor/chat} & 10 & Độ trễ RAG + gọi AI theo hành vi sử dụng ngắn hạn. \\
-\hline
-S2 & \path{POST /api/exam-events} & 200 & Độ trễ ghi CSDL khi tần suất sự kiện cao. \\
-\hline
-S3 & \path{POST /api/ai/anti-cheat/summary} & 8 & Độ trễ tổng hợp + gọi AI cho giáo viên theo ngưỡng kiểm soát. \\
-\hline
-\end{tabularx}
-\endgroup
-\end{table}
+\begin{itemize}
+  \item \textbf{GitHub repository:} \url{https://github.com/Tungggggggggggggg/secondary-lms-system}
+  \item \textbf{Deploy (Vercel):} \url{https://secondary-lms-system.vercel.app/}
+\end{itemize}
+
+\chapter{Một số giao diện Dashboard theo vai trò}
+Phần này cung cấp một số ảnh chụp màn hình (screenshot) nhằm minh họa giao diện dashboard tương ứng với từng vai trò trong hệ thống.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{figures/ui/appendix-dashboard-admin.png}
+  \caption{Dashboard vai trò Admin}
+  \label{fig:appendix-dashboard-admin}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{figures/ui/appendix-dashboard-teacher.png}
+  \caption{Dashboard vai trò Teacher}
+  \label{fig:appendix-dashboard-teacher}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{figures/ui/appendix-dashboard-student.png}
+  \caption{Dashboard vai trò Student}
+  \label{fig:appendix-dashboard-student}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{figures/ui/appendix-dashboard-parent.png}
+  \caption{Dashboard vai trò Parent}
+  \label{fig:appendix-dashboard-parent}
+\end{figure}
 
 \end{document}
