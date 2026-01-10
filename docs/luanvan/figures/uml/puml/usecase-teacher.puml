@@ -1,41 +1,45 @@
-@startuml
+@startuml usecase-teacher
 left to right direction
-title Use Case chi tiết - Giáo viên (Teacher)
+title Use Case chi tiết - Giáo viên
 
 actor "Giáo viên" as Teacher
 
 rectangle "EduVerse - Teacher Portal" {
   usecase "Quản lý lớp học" as UC_Classroom
   usecase "Quản lý khóa học" as UC_Course
-  usecase "Quản lý bài giảng" as UC_Lesson
-  usecase "Tải lên học liệu\n(attachments)" as UC_Attach
+  usecase "Quản lý bài học/học liệu" as UC_Content
+  usecase "Quản lý tệp/học liệu đính kèm" as UC_Attach
 
-  usecase "Kích hoạt indexing RAG\n(theo khóa/bài)" as UC_Index
-  usecase "Theo dõi trạng thái indexing" as UC_IndexStatus
+  usecase "Cập nhật kho tri thức cho AI Tutor" as UC_KnowledgeBase
+  usecase "Theo dõi trạng thái cập nhật kho tri thức" as UC_KnowledgeStatus
 
-  usecase "Tạo bài tập / Quiz" as UC_Assignment
-  usecase "Giám sát thi (monitor)" as UC_Monitor
-  usecase "Xem điểm nghi ngờ\n(suspicionScore + breakdown)" as UC_Score
-  usecase "Yêu cầu AI tóm tắt\nanti-cheat" as UC_AISummary
-
+  usecase "Tạo & giao bài tập/kiểm tra" as UC_Assignment
   usecase "Xem bài nộp" as UC_Submissions
-  usecase "Chấm bài tự luận\n(gợi ý AI)" as UC_GradeEssay
+  usecase "Chấm bài tự luận (hỗ trợ AI)" as UC_GradeEssay
+
+  usecase "Giám sát thi" as UC_Monitor
+  usecase "Đánh giá mức độ nghi ngờ gian lận" as UC_Score
+  usecase "Yêu cầu AI tóm tắt chống gian lận" as UC_AISummary
 }
 
 Teacher --> UC_Classroom
 Teacher --> UC_Course
-Teacher --> UC_Lesson
-Teacher --> UC_Attach
-Teacher --> UC_Index
-Teacher --> UC_IndexStatus
+Teacher --> UC_Content
+Teacher --> UC_KnowledgeBase
+Teacher --> UC_KnowledgeStatus
 Teacher --> UC_Assignment
-Teacher --> UC_Monitor
 Teacher --> UC_Submissions
 Teacher --> UC_GradeEssay
+Teacher --> UC_Monitor
+Teacher --> UC_Score
+Teacher --> UC_AISummary
 
-UC_Monitor --> UC_Score
-UC_AISummary ..> UC_Score : <<extend>>
-UC_IndexStatus ..> UC_Index : <<include>>
-UC_Lesson ..> UC_Attach : <<include>>
+UC_Content ..> UC_Attach : <<include>>
+UC_KnowledgeStatus ..> UC_KnowledgeBase : <<include>>
+
+UC_GradeEssay ..> UC_Submissions : <<include>>
+
+UC_Monitor ..> UC_Score : <<include>>
+UC_AISummary ..> UC_Monitor : <<extend>>
 
 @enduml

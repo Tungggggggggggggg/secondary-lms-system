@@ -1,49 +1,55 @@
 @startuml usecase-student
 left to right direction
-title Use Case chi tiết - Học sinh (Student)
+title Use Case chi tiết - Học sinh
 
 actor "Học sinh" as Student
 
 rectangle "EduVerse - Student Portal" {
-  usecase "Đăng ký / Đăng nhập" as UC_Login
-  usecase "Quên/Đặt lại mật khẩu" as UC_Reset
+  usecase "Xác thực tài khoản" as UC_Auth
+  usecase "Đặt lại mật khẩu" as UC_Reset
 
-  usecase "Tham gia lớp (join by code)" as UC_JoinClass
-  usecase "Xem bài giảng + học liệu" as UC_ViewLessons
+  usecase "Tham gia lớp học" as UC_JoinClass
+  usecase "Học theo bài học/học liệu" as UC_Learn
 
-  usecase "Làm bài Quiz" as UC_DoQuiz
-  usecase "Tạo attempt (server-side seed)" as UC_Attempt
-  usecase "Nộp Quiz (auto-grade)" as UC_SubmitQuiz
+  usecase "Làm bài trắc nghiệm" as UC_DoQuiz
+  usecase "Bắt đầu phiên làm bài" as UC_StartAttempt
+  usecase "Ghi nhận sự kiện giám sát trong khi làm bài" as UC_RecordEvents
+  usecase "Nộp bài trắc nghiệm" as UC_SubmitQuiz
 
   usecase "Làm bài tự luận" as UC_DoEssay
-  usecase "Nộp bài dạng file" as UC_FileSubmit
-  usecase "Xem/tải file đã nộp (signed url)" as UC_FileSignedUrl
+  usecase "Nộp bài tự luận" as UC_SubmitEssay
+  usecase "Đính kèm tệp khi nộp bài" as UC_AttachFiles
 
-  usecase "Gửi sự kiện thi (anti-cheat)" as UC_ExamEvents
+  usecase "Hỏi AI Tutor" as UC_Tutor
+  usecase "Nhận/Xem thông báo" as UC_Notif
+  usecase "Trao đổi (Chat)" as UC_Chat
 
-  usecase "Hỏi AI Tutor (RAG)" as UC_Tutor
-
-  usecase "Xem thông báo" as UC_Notif
-  usecase "Chat (nhắn tin)" as UC_Chat
-
-  usecase "Xử lý yêu cầu liên kết phụ huynh" as UC_ParentLink
+  usecase "Quản lý liên kết phụ huynh" as UC_ParentLink
+  usecase "Duyệt yêu cầu liên kết" as UC_ReviewLinkRequests
+  usecase "Tạo mã mời phụ huynh" as UC_CreateInvite
 }
 
-Student --> UC_Login
+Student --> UC_Auth
 Student --> UC_Reset
 Student --> UC_JoinClass
-Student --> UC_ViewLessons
+Student --> UC_Learn
 Student --> UC_DoQuiz
 Student --> UC_DoEssay
-Student --> UC_FileSubmit
 Student --> UC_Tutor
 Student --> UC_Notif
 Student --> UC_Chat
 Student --> UC_ParentLink
-Student --> UC_ExamEvents
 
-UC_DoQuiz ..> UC_Attempt : <<include>>
+UC_Reset ..> UC_Auth : <<extend>>
+
+UC_DoQuiz ..> UC_StartAttempt : <<include>>
+UC_DoQuiz ..> UC_RecordEvents : <<include>>
 UC_DoQuiz ..> UC_SubmitQuiz : <<include>>
-UC_FileSubmit ..> UC_FileSignedUrl : <<extend>>
+
+UC_DoEssay ..> UC_SubmitEssay : <<include>>
+UC_AttachFiles ..> UC_SubmitEssay : <<extend>>
+
+UC_ParentLink <|-- UC_ReviewLinkRequests
+UC_ParentLink <|-- UC_CreateInvite
 
 @enduml

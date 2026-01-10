@@ -5,74 +5,86 @@ left to right direction
 skinparam packageStyle rectangle
 
 actor "Khách" as Guest
+actor "Người dùng" as User
 actor "Học sinh" as Student
 actor "Giáo viên" as Teacher
 actor "Phụ huynh" as Parent
 actor "Quản trị viên" as Admin
+actor "Bộ lập lịch" as Scheduler
+
+Student --|> User
+Teacher --|> User
+Parent --|> User
+Admin --|> User
 
 rectangle "EduVerse" {
-  usecase "Đăng ký / Đăng nhập" as UC_Auth
-  usecase "Quên/Đặt lại mật khẩu" as UC_Reset
+  usecase "Xác thực tài khoản" as UC_Auth
+  usecase "Đặt lại mật khẩu" as UC_Reset
 
-  usecase "Tham gia lớp" as UC_JoinClass
-  usecase "Xem bài học/học liệu" as UC_ViewLessons
+  usecase "Học tập theo bài học/học liệu" as UC_Learn
+  usecase "Tham gia lớp học" as UC_JoinClass
 
-  usecase "Làm bài (Quiz/Essay)" as UC_DoAssignment
+  usecase "Thực hiện bài tập/kiểm tra" as UC_DoAssessment
   usecase "Nộp bài" as UC_Submit
 
-  usecase "Nhận thông báo" as UC_Notifications
-  usecase "Chat" as UC_Chat
+  usecase "Trao đổi (Chat)" as UC_Chat
+  usecase "Nhận/Xem thông báo" as UC_Notif
 
   usecase "Hỏi AI Tutor" as UC_Tutor
 
-  usecase "Tạo & quản lý lớp học" as UC_ManageClass
-  usecase "Quản lý khóa học/bài học" as UC_ManageCourse
-  usecase "Tạo bài tập/đề kiểm tra" as UC_CreateAssignment
-  usecase "Theo dõi tiến độ/kết quả" as UC_TrackProgress
+  usecase "Quản lý lớp học" as UC_ManageClass
+  usecase "Quản lý học liệu/bài học" as UC_ManageContent
+  usecase "Tạo & giao bài tập/kiểm tra" as UC_CreateAssign
+  usecase "Chấm điểm & phản hồi" as UC_Grade
+  usecase "Giám sát thi" as UC_Monitor
+  usecase "Tóm tắt chống gian lận (AI)" as UC_AntiCheatAI
 
-  usecase "Giám sát thi (event log)" as UC_ExamMonitoring
-  usecase "Tổng hợp chống gian lận (AI)" as UC_AntiCheatSummary
-
-  usecase "Liên kết phụ huynh - học sinh" as UC_ParentLink
-  usecase "Xem tiến độ/kết quả của con" as UC_ParentView
-  usecase "Nhận tóm tắt định kỳ" as UC_WeeklySummary
+  usecase "Thiết lập liên kết phụ huynh - học sinh" as UC_ParentLink
+  usecase "Theo dõi học tập của con" as UC_ParentTrack
+  usecase "Tạo & gửi tóm tắt học tập định kỳ" as UC_Weekly
 
   usecase "Quản trị người dùng" as UC_AdminUsers
+  usecase "Quản trị tổ chức" as UC_AdminOrgs
   usecase "Cấu hình hệ thống" as UC_AdminSettings
-  usecase "Xem nhật ký hoạt động" as UC_AdminAudit
+  usecase "Theo dõi nhật ký hệ thống" as UC_AdminAudit
+  usecase "Xem thống kê hệ thống" as UC_AdminStats
 }
 
 Guest --> UC_Auth
 Guest --> UC_Reset
 
 Student --> UC_JoinClass
-Student --> UC_ViewLessons
-Student --> UC_DoAssignment
+Student --> UC_Learn
+Student --> UC_DoAssessment
 Student --> UC_Submit
-Student --> UC_Notifications
-Student --> UC_Chat
 Student --> UC_Tutor
-Student --> UC_ExamMonitoring
+
+User --> UC_Chat
+User --> UC_Notif
 
 Teacher --> UC_ManageClass
-Teacher --> UC_ManageCourse
-Teacher --> UC_CreateAssignment
-Teacher --> UC_TrackProgress
-Teacher --> UC_Notifications
-Teacher --> UC_Chat
-Teacher --> UC_ExamMonitoring
-Teacher --> UC_AntiCheatSummary
+Teacher --> UC_ManageContent
+Teacher --> UC_CreateAssign
+Teacher --> UC_Grade
+Teacher --> UC_Monitor
+Teacher --> UC_AntiCheatAI
 
 Parent --> UC_ParentLink
-Parent --> UC_ParentView
-Parent --> UC_WeeklySummary
+Parent --> UC_ParentTrack
 Parent --> UC_Chat
+Parent --> UC_Notif
+
+Scheduler --> UC_Weekly
+Parent --> UC_Weekly
 
 Admin --> UC_AdminUsers
+Admin --> UC_AdminOrgs
 Admin --> UC_AdminSettings
 Admin --> UC_AdminAudit
+Admin --> UC_AdminStats
 
-UC_AntiCheatSummary ..> UC_ExamMonitoring : <<include>>
 UC_Reset ..> UC_Auth : <<extend>>
+UC_DoAssessment ..> UC_Submit : <<include>>
+UC_AntiCheatAI ..> UC_Monitor : <<extend>>
 
 @enduml

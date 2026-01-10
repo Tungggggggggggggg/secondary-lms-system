@@ -1,32 +1,32 @@
 @startuml usecase-teacher-extended
 left to right direction
-title Use Case chi tiết - Giáo viên (Teacher - Extended)
+title Use Case chi tiết - Giáo viên
 
 actor "Giáo viên" as Teacher
 
 rectangle "EduVerse - Teacher Portal" {
   usecase "Quản lý lớp học" as UC_Classroom
-  usecase "Quản lý thông báo lớp\n(Announcements)" as UC_Announce
+  usecase "Quản lý thông báo lớp học" as UC_Announce
 
   usecase "Quản lý khóa học" as UC_Course
-  usecase "Quản lý bài giảng" as UC_Lesson
-  usecase "Tải lên học liệu\n(lesson/assignment files)" as UC_Attach
+  usecase "Quản lý bài học/học liệu" as UC_Lesson
+  usecase "Quản lý tệp/học liệu đính kèm" as UC_Attach
 
-  usecase "Kích hoạt indexing RAG" as UC_Index
-  usecase "Theo dõi kết quả indexing\n(processed/skipped/errors)" as UC_IndexStats
+  usecase "Cập nhật kho tri thức cho AI Tutor" as UC_Index
+  usecase "Theo dõi kết quả cập nhật kho tri thức" as UC_IndexStats
 
-  usecase "Tạo bài tập (ESSAY/QUIZ)" as UC_AssignmentCreate
+  usecase "Tạo bài tập/kiểm tra" as UC_AssignmentCreate
   usecase "Giao bài cho lớp" as UC_AssignToClass
   usecase "Xem danh sách bài nộp" as UC_ViewSubs
-  usecase "Chấm bài tự luận\n(gợi ý AI)" as UC_AiGrade
+  usecase "Chấm bài tự luận (hỗ trợ AI)" as UC_AiGrade
 
-  usecase "Giám sát thi (monitor)" as UC_Monitor
-  usecase "Xem nhật ký exam events" as UC_EventLog
-  usecase "Tính suspicionScore" as UC_Score
-  usecase "Yêu cầu AI tóm tắt anti-cheat" as UC_AntiCheatAI
+  usecase "Giám sát thi" as UC_Monitor
+  usecase "Xem nhật ký giám sát" as UC_EventLog
+  usecase "Đánh giá mức độ nghi ngờ" as UC_Score
+  usecase "Yêu cầu AI tóm tắt chống gian lận" as UC_AntiCheatAI
 
-  usecase "Chat với học sinh/phụ huynh" as UC_Chat
-  usecase "Xem thông báo" as UC_Notif
+  usecase "Trao đổi (Chat) với học sinh/phụ huynh" as UC_Chat
+  usecase "Nhận/Xem thông báo" as UC_Notif
 }
 
 Teacher --> UC_Classroom
@@ -38,15 +38,19 @@ Teacher --> UC_AssignToClass
 Teacher --> UC_ViewSubs
 Teacher --> UC_AiGrade
 Teacher --> UC_Monitor
+Teacher --> UC_AntiCheatAI
 Teacher --> UC_Chat
 Teacher --> UC_Notif
 
 UC_Lesson ..> UC_Attach : <<include>>
-UC_AssignmentCreate ..> UC_AssignToClass : <<extend>>
 UC_IndexStats ..> UC_Index : <<include>>
+
+UC_AssignToClass ..> UC_AssignmentCreate : <<extend>>
+
+UC_AiGrade ..> UC_ViewSubs : <<include>>
 
 UC_Monitor ..> UC_EventLog : <<include>>
 UC_Monitor ..> UC_Score : <<include>>
-UC_AntiCheatAI ..> UC_Score : <<extend>>
+UC_AntiCheatAI ..> UC_Monitor : <<extend>>
 
 @enduml

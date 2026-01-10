@@ -1,35 +1,48 @@
 @startuml usecase-parent
 left to right direction
-title Use Case chi tiết - Phụ huynh (Parent)
+title Use Case chi tiết - Phụ huynh
 
 actor "Phụ huynh" as Parent
+actor "Bộ lập lịch" as Scheduler
 
 rectangle "EduVerse - Parent Portal" {
-  usecase "Đăng nhập" as UC_Login
+  usecase "Xác thực tài khoản" as UC_Auth
 
-  usecase "Gửi yêu cầu liên kết tới học sinh" as UC_LinkRequest
-  usecase "Nhập mã mời để liên kết (accept invitation code)" as UC_AcceptInvite
+  usecase "Thiết lập liên kết với học sinh" as UC_Link
+  usecase "Gửi yêu cầu liên kết" as UC_LinkRequest
+  usecase "Nhập mã mời liên kết" as UC_AcceptInvite
   usecase "Quản lý danh sách con" as UC_Children
 
-  usecase "Xem điểm / tiến độ học tập" as UC_Grades
-  usecase "Xem thống kê dashboard" as UC_Stats
-  usecase "Xem AI Smart Summary" as UC_ParentSummary
-  usecase "Nhận tóm tắt định kỳ (Cron)" as UC_Weekly
+  usecase "Theo dõi học tập của con" as UC_Track
+  usecase "Xem điểm & tiến độ học tập" as UC_Grades
+  usecase "Xem thống kê học tập" as UC_Stats
+  usecase "Xem tóm tắt học tập (AI)" as UC_AISummary
 
-  usecase "Nhận thông báo" as UC_Notif
-  usecase "Chat với giáo viên" as UC_Chat
+  usecase "Nhận tóm tắt học tập định kỳ" as UC_WeeklySummary
+  usecase "Tạo & gửi tóm tắt học tập định kỳ" as UC_SendWeekly
+
+  usecase "Nhận/Xem thông báo" as UC_Notif
+  usecase "Trao đổi (Chat) với giáo viên" as UC_Chat
 }
 
-Parent --> UC_Login
-Parent --> UC_LinkRequest
-Parent --> UC_AcceptInvite
+Parent --> UC_Auth
+Parent --> UC_Link
 Parent --> UC_Children
-Parent --> UC_Grades
-Parent --> UC_Stats
-Parent --> UC_ParentSummary
+Parent --> UC_Track
+Parent --> UC_AISummary
+Parent --> UC_WeeklySummary
 Parent --> UC_Notif
 Parent --> UC_Chat
 
-UC_Weekly ..> UC_ParentSummary : <<include>>
+UC_Link <|-- UC_LinkRequest
+UC_Link <|-- UC_AcceptInvite
+
+UC_Track <|-- UC_Grades
+UC_Track <|-- UC_Stats
+UC_Track <|-- UC_AISummary
+
+Scheduler --> UC_SendWeekly
+UC_SendWeekly ..> UC_AISummary : <<include>>
+UC_WeeklySummary ..> UC_Notif : <<include>>
 
 @enduml
